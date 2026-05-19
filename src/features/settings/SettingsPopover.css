@@ -228,6 +228,64 @@
   width: var(--task-w-provider);
 }
 
+/* ─── Update tab ──────────────────────────────────────────────── */
+
+.update-tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-version-line {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.update-version-current {
+  color: var(--fg-mute);
+}
+
+.update-version-arrow {
+  color: var(--fg-faint);
+  margin: 0 6px;
+}
+
+.update-version-latest {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.update-version-status {
+  color: var(--fg-faint);
+  margin-left: 8px;
+}
+
+.update-release-link {
+  margin-left: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.update-release-link:hover {
+  text-decoration: underline;
+}
+
+.update-progress-hint {
+  font-size: 11px;
+  color: var(--fg-faint);
+  line-height: 1.5;
+}
+
+.update-success {
+  color: var(--done);
+  background: var(--done-soft);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
 /* ─── Tab content wrapper(統一各 tab 垂直節奏)──────────────────── */
 
 .settings-tab-content {
