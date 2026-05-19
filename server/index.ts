@@ -4,6 +4,7 @@ import * as push from "./routes/push";
 import * as userConfigRoutes from "./routes/userConfig";
 import * as test from "./routes/test";
 import * as auth from "./routes/auth";
+import * as system from "./routes/system";
 import * as projectStore from "./lib/projectStore";
 import * as orchestrator from "./lib/runner/orchestrator";
 import * as syncJob from "./lib/runner/syncJob";
@@ -72,6 +73,10 @@ async function handle(req: Request): Promise<Response> {
       ok: true,
       data: { status: "up", testMode: testMode.isTestMode(), pid: process.pid, repo_path: process.cwd() },
     });
+  }
+
+  if (pathname === "/api/system/version" && method === "GET") {
+    return system.version();
   }
 
   if (pathname.startsWith("/api/auth/")) {
