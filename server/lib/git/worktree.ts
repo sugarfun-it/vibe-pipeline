@@ -2,6 +2,7 @@ import { join, dirname } from "node:path";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { projectHash } from "../hash";
 import { vibeHome } from "../paths";
+import { runCapture } from "../spawn";
 import type { DiffStat, DiffFile, FullDiff } from "../../../shared/types";
 export type { DiffStat, DiffFile, FullDiff };
 
@@ -18,17 +19,8 @@ export function exists(projectPath: string, pipelineId: string): boolean {
 }
 
 async function spawnGit(args: string[], cwd?: string): Promise<{ ok: boolean; out: string; err: string }> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [out, err] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  await proc.exited;
-  return { ok: proc.exitCode === 0, out: out.trim(), err: err.trim() };
+  const r = await runCapture(["git", ...args], { cwd });
+  return { ok: r.ok, out: r.out.trim(), err: r.err.trim() };
 }
 
 // 建/重用 worktree。已存在直接回 path,沒有就 add。

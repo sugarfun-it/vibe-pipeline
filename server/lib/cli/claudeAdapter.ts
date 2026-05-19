@@ -4,6 +4,7 @@
 //
 // 任何修改/優化都不該寫在這裡 — 這層只負責「搬家」。
 
+import { runCapture, spawnStreaming } from "../spawn";
 import type {
   CliAdapter,
   CliCapabilities,
@@ -25,13 +26,8 @@ export class ClaudeAdapter implements CliAdapter {
   };
 
   async checkAvailable(): Promise<boolean> {
-    try {
-      const proc = Bun.spawn(["claude", "--version"], { stdout: "pipe", stderr: "pipe", windowsHide: true });
-      await proc.exited;
-      return proc.exitCode === 0;
-    } catch {
-      return false;
-    }
+    const r = await runCapture(["claude", "--version"]);
+    return r.ok;
   }
 
   spawn(opts: SpawnOpts): SpawnedProcess {
@@ -80,7 +76,7 @@ function spawnQA(opts: QASpawnOpts): SpawnedProcess {
     }
   }
   args.push(userMessage);
-  return Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe", windowsHide: true });
+  return spawnStreaming<SpawnedProcess>(args, { cwd, stdout: "pipe", stderr: "pipe" });
 }
 
 function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
@@ -112,7 +108,7 @@ function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
   }
   args.push("--system-prompt", systemPrompt);
   args.push(initialMessage);
-  return Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe", windowsHide: true });
+  return spawnStreaming<SpawnedProcess>(args, { cwd, stdout: "pipe", stderr: "pipe" });
 }
 
 function spawnSplit(opts: SplitSpawnOpts): SpawnedProcess {
@@ -138,7 +134,7 @@ function spawnSplit(opts: SplitSpawnOpts): SpawnedProcess {
     "--disallowedTools",
     "Edit Write Task",
   ];
-  const proc = Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe", stdin: "pipe", windowsHide: true });
+  const proc = spawnStreaming<SpawnedProcess>(args, { cwd, stdout: "pipe", stderr: "pipe", stdin: "pipe" });
   // userMessage 走 stdin(沿用既有行為);呼叫端不再自己寫 stdin
   proc.stdin.write(userMessage);
   proc.stdin.end();

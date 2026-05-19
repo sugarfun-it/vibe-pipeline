@@ -5,6 +5,8 @@
 //
 // Returns null if user cancels.
 
+import { runCapture, spawnFireForget } from "./spawn";
+
 // PowerShell 7+ + .NET 8 → 現代 WPF OpenFolderDialog;舊環境 fallback 老的 FolderBrowserDialog。
 const PS_SCRIPT = `
 $ErrorActionPreference = 'Stop'
@@ -35,20 +37,13 @@ export async function pickFolder(): Promise<string | null> {
 }
 
 async function spawnText(cmd: string[]): Promise<string> {
-  const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
-  const out = (await new Response(proc.stdout).text()).trim();
-  await proc.exited;
-  return out;
+  const r = await runCapture(cmd);
+  return r.out.trim();
 }
 
 async function hasCommand(name: string): Promise<boolean> {
-  try {
-    const proc = Bun.spawn(["which", name], { stdout: "pipe", stderr: "pipe" });
-    await proc.exited;
-    return proc.exitCode === 0;
-  } catch {
-    return false;
-  }
+  const r = await runCapture(["which", name]);
+  return r.ok;
 }
 
 async function pickFolderWindows(): Promise<string | null> {
@@ -72,15 +67,15 @@ end try`;
 export async function revealFolder(path: string): Promise<void> {
   const platform = process.platform;
   if (platform === "win32") {
-    Bun.spawn(["explorer", path], { stdout: "ignore", stderr: "ignore" });
+    spawnFireForget(["explorer", path]);
     return;
   }
   if (platform === "darwin") {
-    Bun.spawn(["open", path], { stdout: "ignore", stderr: "ignore" });
+    spawnFireForget(["open", path]);
     return;
   }
   if (platform === "linux") {
-    Bun.spawn(["xdg-open", path], { stdout: "ignore", stderr: "ignore" });
+    spawnFireForget(["xdg-open", path]);
     return;
   }
   throw new Error(`Unsupported platform: ${platform}`);

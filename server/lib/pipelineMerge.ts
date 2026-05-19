@@ -7,6 +7,7 @@ import * as git from "./git";
 import { mergeTicketPrompt } from "./runner/mergeTicketPrompt";
 import { getTaskConfig } from "./userConfig";
 import { ensureDepsAfterMerge, type DepInstallResult } from "./depInstall";
+import { runCapture } from "./spawn";
 
 export type TriggerMergeResult =
   | { ok: true; ticketId: string; reused: boolean }
@@ -135,13 +136,8 @@ export type AutoMergeResult =
   | { ok: false; reason: "git_error"; error: string };
 
 async function spawnGit(args: string[], cwd: string): Promise<{ ok: boolean; out: string; err: string }> {
-  const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
-  const [out, err] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  await proc.exited;
-  return { ok: proc.exitCode === 0, out: out.trim(), err: err.trim() };
+  const r = await runCapture(["git", ...args], { cwd });
+  return { ok: r.ok, out: r.out.trim(), err: r.err.trim() };
 }
 
 export async function autoMergeNoAI(opts: {
