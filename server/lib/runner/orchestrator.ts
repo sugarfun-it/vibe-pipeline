@@ -311,6 +311,11 @@ export function runningCount(projectHash: string): number {
   return n;
 }
 
+// 全 project 還在跑的條數(ticket + sync 都算)— 給 system update preflight 用
+export function globalRunningCount(): number {
+  return running.size;
+}
+
 // 順位(1-based);不在 queue 回 0
 export function queuePosition(projectHash: string, pipelineId: string): number {
   const q = queues.get(projectHash);

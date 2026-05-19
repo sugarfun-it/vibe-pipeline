@@ -78,6 +78,9 @@ async function handle(req: Request): Promise<Response> {
   if (pathname === "/api/system/version" && method === "GET") {
     return system.version();
   }
+  if (pathname === "/api/system/update" && method === "POST") {
+    return system.update();
+  }
 
   if (pathname.startsWith("/api/auth/")) {
     if (pathname === "/api/auth/setup-init" && method === "POST") return auth.setupInit();

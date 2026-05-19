@@ -452,7 +452,9 @@ export type NotifEventType =
   // Frontend 主動 emit(action toast 同步留 inbox history),sev 由 caller 決定
   | "frontend_action_failed"
   | "frontend_action_warn"
-  | "frontend_action_info";
+  | "frontend_action_info"
+  // System(自動更新等全域系統事件)
+  | "system_updating";
 
 export type NotifEventMeta = {
   sev: NotifSeverity;
@@ -516,4 +518,6 @@ export const NOTIF_EVENTS: Record<NotifEventType, NotifEventMeta> = {
   frontend_action_failed: { sev: "block", phase: "P2", label: "前端動作失敗" },
   frontend_action_warn: { sev: "info", phase: "P2", label: "前端動作警告" },
   frontend_action_info: { sev: "muted", phase: "P2", label: "前端動作紀錄" },
+
+  system_updating: { sev: "info", phase: "P2", label: "系統更新中(backend 即將重啟)" },
 };
