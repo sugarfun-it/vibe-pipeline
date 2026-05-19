@@ -19,7 +19,7 @@
 // 純 append-only;沒有 rotation / GC(audit 量很小,一條 pipeline 一生大概 < 100 行)。
 
 import { join } from "node:path";
-import { existsSync, appendFileSync, readFileSync, mkdirSync } from "node:fs";
+import { readJsonl, appendJsonl } from "./jsonl";
 
 export type StateChangeEntry = {
   ts: number;
@@ -57,10 +57,6 @@ function auditFile(projectPath: string): string {
   return join(projectPath, ".vibe-pipeline", ".runtime", "audit.jsonl");
 }
 
-function auditDir(projectPath: string): string {
-  return join(projectPath, ".vibe-pipeline", ".runtime");
-}
-
 export function appendStateChange(opts: {
   projectPath: string;
   pipelineId: string;
@@ -79,8 +75,7 @@ export function appendStateChange(opts: {
     ...(opts.sourceDetail ? { sourceDetail: opts.sourceDetail } : {}),
   };
   try {
-    mkdirSync(auditDir(opts.projectPath), { recursive: true });
-    appendFileSync(auditFile(opts.projectPath), JSON.stringify(entry) + "\n", "utf8");
+    appendJsonl(auditFile(opts.projectPath), entry);
   } catch (e) {
     // 寫 audit 失敗絕不可以擋住 pipeline mutation;只 log。
     console.warn(`[auditLog] append failed for ${opts.pipelineId}:`, e);
@@ -92,27 +87,10 @@ export function listAudit(
   pipelineId: string,
   limit?: number
 ): StateChangeEntry[] {
-  const file = auditFile(projectPath);
-  if (!existsSync(file)) return [];
-  let text: string;
-  try {
-    text = readFileSync(file, "utf8");
-  } catch {
-    return [];
-  }
-  const lines = text.split(/\r?\n/);
-  const out: StateChangeEntry[] = [];
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    try {
-      const obj = JSON.parse(line) as StateChangeEntry;
-      if (obj && obj.pipelineId === pipelineId && obj.type === "state_change") {
-        out.push(obj);
-      }
-    } catch {
-      // 壞行跳過,不擋讀取
-    }
-  }
+  const all = readJsonl<StateChangeEntry>(auditFile(projectPath));
+  const out = all.filter(
+    (obj) => obj && obj.pipelineId === pipelineId && obj.type === "state_change"
+  );
   // 按 ts 降冪(最新在最前),取 limit
   out.sort((a, b) => b.ts - a.ts);
   if (typeof limit === "number" && limit > 0) return out.slice(0, limit);
@@ -121,8 +99,7 @@ export function listAudit(
 
 function appendRaw(projectPath: string, entry: AuditEntry): void {
   try {
-    mkdirSync(auditDir(projectPath), { recursive: true });
-    appendFileSync(auditFile(projectPath), JSON.stringify(entry) + "\n", "utf8");
+    appendJsonl(auditFile(projectPath), entry);
   } catch (e) {
     console.warn(`[auditLog] append failed:`, e);
   }
@@ -222,28 +199,14 @@ export function listUserActions(
   projectPath: string,
   filter: UserActionFilter = {}
 ): UserActionEntry[] {
-  const file = auditFile(projectPath);
-  if (!existsSync(file)) return [];
-  let text: string;
-  try {
-    text = readFileSync(file, "utf8");
-  } catch {
-    return [];
-  }
-  const lines = text.split(/\r?\n/);
+  const all = readJsonl<UserActionEntry>(auditFile(projectPath));
   const out: UserActionEntry[] = [];
-  for (const line of lines) {
-    if (!line.trim()) continue;
-    try {
-      const obj = JSON.parse(line) as UserActionEntry;
-      if (!obj || obj.type !== "user_action") continue;
-      if (filter.action && obj.action !== filter.action) continue;
-      if (filter.pipelineId && obj.pipelineId !== filter.pipelineId) continue;
-      if (filter.ticketId && obj.ticketId !== filter.ticketId) continue;
-      out.push(obj);
-    } catch {
-      // 壞行跳過
-    }
+  for (const obj of all) {
+    if (!obj || obj.type !== "user_action") continue;
+    if (filter.action && obj.action !== filter.action) continue;
+    if (filter.pipelineId && obj.pipelineId !== filter.pipelineId) continue;
+    if (filter.ticketId && obj.ticketId !== filter.ticketId) continue;
+    out.push(obj);
   }
   out.sort((a, b) => b.ts - a.ts);
   if (typeof filter.limit === "number" && filter.limit > 0) {
