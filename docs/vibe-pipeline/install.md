@@ -67,12 +67,18 @@ source ~/.bashrc
 
 ### 升級
 
+**Backend / Web UI**:不必再手動 `git pull`。開 PWA → **Settings →「更新」tab** 看版本,點「檢查更新」拉 GitHub latest release,點「套用更新」一鍵 backend `git pull` + `bun install`(若 dep 變)+ `bun run build` + 自我重啟;完成後 `<SwUpdateBanner>` 跳「套用更新」按下去 reload 套新 UI。詳見 [`../../README.md`](../../README.md) §自動更新。
+
+**`vbpl` CLI binary**:單檔 binary 自動更新不在 scope(backend 重啟不會替換 PATH 上的 `vbpl.exe`),要新 CLI feature 仍用:
+
 ```bash
 cd <vibe-pipeline-repo>
-git pull
+git pull                                                  # 或直接靠 Settings 一鍵更新拉好的 source
 bun run cli:build                                         # 出 dist-cli/vbpl.exe
 cp dist-cli/vbpl.exe ~/.vibe-pipeline/bin/vbpl.exe        # 蓋掉舊版,PATH 不必動
 ```
+
+只更 backend / UI(沒新 CLI feature)只用 Settings 一鍵流程即可,不需碰 binary。
 
 ## Push 通知 setup(零設定)
 

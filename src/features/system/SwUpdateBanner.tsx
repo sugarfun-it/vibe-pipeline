@@ -15,7 +15,7 @@ export function SwUpdateBanner() {
         className="sw-update-banner__btn"
         onClick={() => updateSW()}
       >
-        更新
+        套用更新
       </button>
       <button
         type="button"

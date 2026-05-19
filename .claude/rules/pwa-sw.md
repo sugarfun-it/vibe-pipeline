@@ -40,9 +40,11 @@ dev mode `bun run dev`(5173)SW 不註冊(plugin 預設行為),改 SW 邏輯要 `
 
 ## vite-plugin-pwa `registerType: 'autoUpdate'` 會 force full reload
 
-workbox-window 預設 `controlling` event 觸發 `window.location.reload()`,user 正在打字 / 看 modal / 跑 QA 都被打斷,體感「跟突然 refresh 一樣」。VP 改用 `registerType: 'prompt'` + `<SwUpdateBanner>` 讓 user 主動點「更新」才 reload(`src/lib/swUpdate.ts` 用 workbox-window 自管 `needRefresh` state + `messageSkipWaiting`)。
+workbox-window 預設 `controlling` event 觸發 `window.location.reload()`,user 正在打字 / 看 modal / 跑 QA 都被打斷,體感「跟突然 refresh 一樣」。VP 改用 `registerType: 'prompt'` + `<SwUpdateBanner>` 讓 user 主動點「套用更新」才 reload(`src/lib/swUpdate.ts` 用 workbox-window 自管 `needRefresh` state + `messageSkipWaiting`)。
 
 要改回 `autoUpdate` 前先確認 user 體感 OK — 設計信條:**執行中操作信號才該立即冪等**,「自動 reload」由 backend 替 user 決定打斷時機,不對等。
+
+`SwUpdateBanner` 按鈕 label 是「**套用更新**」(不是「更新」),對齊 Settings →「更新」tab 一鍵更新 flow 的同名按鈕:Settings 那顆按下去走 backend `git pull` + build + 重啟(server 端動作),完成後新 bundle 由 Workbox 偵測 → `<SwUpdateBanner>` 出現,按下去 = `messageSkipWaiting + reload`(client 端套用)。兩顆共用「套用更新」名稱,user 認知是同一動作的兩階段,改名前考慮整條 flow。
 
 ## mobile drawer / 全螢幕用 `100dvh` 不要 `100vh`
 

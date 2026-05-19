@@ -92,3 +92,17 @@
 - **`/dev/states` 視覺驗證頁全砍**(`be98ca4`):dev-only StatesGallery + e2e `dev-states.spec.ts` 共 -206 行。改 button 邏輯靠 TS exhaustive switch + 真實 board 驗即可,不必另開 fixture gallery
 - **Production inline magic px → 0**(`8dad22e`):SettingsPopover `push-toggle-row` / QADrawer `qadr-iter-limit-input` / PickerSelect `picker-item-icon` 3 處改 CSS class,對齊 frontend SKILL inline policy
 - **`/api/push/test` error 訊息對齊 gateway**(`653eeab`):從「檢查 FCM_SERVICE_ACCOUNT_PATH」(已廢 env)改「檢查 PUSH_GATEWAY_URL」
+
+---
+
+## 2026-05-20(自動更新落地)
+
+**Enduser 不必離開 PWA 進 terminal 跑 `git pull`**,Settings 一鍵搞定 backend + UI 更新(pipeline `019e40b31763-auto-update`,t1-t4)。
+
+- **t1 `/api/system/version`**:回當前 commit / branch / 是否髒,加 GitHub `releases/latest` 拉 latest release tag(unauthenticated public endpoint,有 cache 避免 rate limit);沒發 release → `latestRelease: null`
+- **t2 `/api/system/update`**:POST 觸發 backend `git pull` → `bun install`(若 `package.json` deps / `bun.lock` 有變)→ `bun run build` → detach 新 process 自我重啟,舊 process exit;期間 API 短暫 503,Settings poll auto-retry
+- **t3 Settings 第 4 tab「更新」**:顯版本 + 「檢查更新」/「套用更新」二鍵;沒新 release 時「套用更新」停用顯「已是最新」
+- **t4 `SwUpdateBanner` button label rename**:「更新」→「**套用更新**」,對齊 Settings 同名按鈕。整條 flow:Settings 按「套用更新」走 backend(server 端 pull+build+restart)→ 新 bundle 由 Workbox 偵測 → SwUpdateBanner 跳「套用更新」(client 端 skipWaiting + reload),user 認知是同一動作的兩階段
+- **版本來源 = GitHub release tag**(semver):maintainer `git tag vX.Y.Z && git push --tags`(GitHub 自動建 release entry,可走 Releases UI / `gh release create` 補 release notes),未發 release = enduser 看到「已是最新」
+- **不在 scope**:`vbpl` CLI binary 自動更新(backend 重啟不會替換 PATH 上 `vbpl.exe`,要新 CLI feature 仍走手動 `bun run cli:build` + 蓋 `~/.vibe-pipeline/bin/vbpl.exe`);Settings 一鍵流程只動 backend + UI source / build artifact
+- **文件**:`README.md` §自動更新、`docs/vibe-pipeline/install.md` §升級改成 Settings 一鍵主軸、`docs/vibe-pipeline/SKILL.md` 加自動更新段(enduser AI 引導 user 用 Settings tab)、`.claude/rules/pwa-sw.md` 補 SwUpdateBanner label 對齊 Settings update flow 說明
