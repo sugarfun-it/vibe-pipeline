@@ -1,7 +1,8 @@
 import { join } from "node:path";
-import { mkdir, rename, writeFile, chmod, readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { vibeHome } from "../paths";
+import { atomicWriteJson } from "../atomicWrite";
 
 export type AuthSession = {
   cookieHash: string;
@@ -48,19 +49,8 @@ export async function readAuth(): Promise<AuthState> {
 }
 
 export async function writeAuth(state: AuthState): Promise<void> {
-  const dir = authDir();
-  await mkdir(dir, { recursive: true });
-  const finalPath = authFilePath();
-  const tmpPath = finalPath + ".tmp";
-  const data = JSON.stringify(state, null, 2) + "\n";
-  await writeFile(tmpPath, data, "utf8");
+  await mkdir(authDir(), { recursive: true });
   // chmod 0600 — Windows 上 node fs.chmod 只保留 read-only bit,實際 ACL 不會限制其他 user
   // 真實安全只在 POSIX(macOS / Linux)成立;Windows 仰賴 user profile 目錄的 NTFS 預設權限
-  try {
-    await chmod(tmpPath, 0o600);
-  } catch {}
-  await rename(tmpPath, finalPath);
-  try {
-    await chmod(finalPath, 0o600);
-  } catch {}
+  await atomicWriteJson(authFilePath(), state, { chmod: 0o600 });
 }
