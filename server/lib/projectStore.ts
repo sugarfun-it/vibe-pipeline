@@ -2,6 +2,7 @@ import { join, basename, resolve } from "node:path";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { projectHash } from "./hash";
 import { vibeHome } from "./paths";
+import { atomicWriteJson } from "./atomicWrite";
 import type { Project } from "../../shared/types";
 
 // 注意:不要 cache 這條 path。e2e 一次 process 內 VP_HOME_OVERRIDE 不變但抽 function 比較乾淨,
@@ -36,9 +37,7 @@ async function readState(): Promise<State> {
 
 async function writeState(state: State): Promise<void> {
   if (!existsSync(stateDir())) mkdirSync(stateDir(), { recursive: true });
-  const tmp = stateFile() + ".tmp";
-  await Bun.write(tmp, JSON.stringify(state, null, 2));
-  await Bun.$`mv ${tmp} ${stateFile()}`.quiet();
+  await atomicWriteJson(stateFile(), state);
 }
 
 // 純 fs metadata,**不**呼 git。currentBranch 是裝飾用(TopBar 顯 chip),

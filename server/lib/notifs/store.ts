@@ -1,6 +1,7 @@
 import { join } from "node:path";
-import { existsSync, appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { ensureRuntime } from "../pipelineDir";
+import { readJsonl, appendJsonl } from "../jsonl";
 import type { NotifEventType, NotifRecord, NotifSeverity } from "../../../shared/types";
 export type { NotifRecord };
 
@@ -32,22 +33,13 @@ export function emit(
     pipelineId: params.pipelineId,
     sev: params.sev,
   };
-  appendFileSync(file(projectPath), JSON.stringify(r) + "\n");
+  appendJsonl(file(projectPath), r);
   return r;
 }
 
 export function list(projectPath: string, limit = 200): NotifRecord[] {
-  const f = file(projectPath);
-  if (!existsSync(f)) return [];
-  const text = readFileSync(f, "utf8");
-  const lines = text.split("\n").filter((l) => l.trim().length > 0);
-  const out: NotifRecord[] = [];
-  for (const line of lines.slice(-limit)) {
-    try {
-      out.push(JSON.parse(line));
-    } catch {}
-  }
-  return out.reverse();
+  const all = readJsonl<NotifRecord>(file(projectPath));
+  return all.slice(-limit).reverse();
 }
 
 function rewrite(projectPath: string, fn: (r: NotifRecord) => NotifRecord | null): void {

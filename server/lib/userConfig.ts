@@ -16,6 +16,7 @@
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { vibeHome } from "./paths";
+import { atomicWriteJson } from "./atomicWrite";
 import {
   DEFAULT_USER_CONFIG,
   PUSH_EVENT_KEYS,
@@ -131,12 +132,7 @@ export async function loadUserConfig(): Promise<UserConfig> {
 
 export async function writeUserConfig(cfg: UserConfig): Promise<UserConfig> {
   if (!existsSync(dir())) mkdirSync(dir(), { recursive: true });
-  // atomic write:序列化先 round-trip 驗證,避免 partial / 壞 JSON 寫出
-  const serialized = JSON.stringify(cfg, null, 2);
-  JSON.parse(serialized);
-  const tmp = file() + ".tmp";
-  await Bun.write(tmp, serialized);
-  await Bun.$`mv ${tmp} ${file()}`.quiet();
+  await atomicWriteJson(file(), cfg);
   return cfg;
 }
 

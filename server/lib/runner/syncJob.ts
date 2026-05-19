@@ -19,6 +19,7 @@ import * as orchestrator from "./orchestrator";
 import { vibeHome } from "../paths";
 import { getTaskConfigWithAdapter } from "../userConfig";
 import { syncAiPrompt } from "./syncAiPrompt";
+import { runCapture } from "../spawn";
 import type { SyncJob, SyncJobState } from "../../../shared/types";
 
 type PipelineLike = {
@@ -395,14 +396,8 @@ async function waitAndFinish(opts: {
   // 三條都成立 → 視為成功,完全不看 AI 字串。
   const wtPath = worktree.worktreePath(projectPath, pipelineId);
   const gitOk = async (args: string[]): Promise<{ ok: boolean; out: string }> => {
-    try {
-      const proc2 = Bun.spawn(["git", ...args], { cwd: wtPath, stdout: "pipe", stderr: "pipe" });
-      const out = await new Response(proc2.stdout).text();
-      const code = await proc2.exited;
-      return { ok: code === 0, out: out.trim() };
-    } catch {
-      return { ok: false, out: "" };
-    }
+    const r = await runCapture(["git", ...args], { cwd: wtPath });
+    return { ok: r.ok, out: r.out.trim() };
   };
   const statusRes = await gitOk(["status", "--porcelain"]);
   const hasConflictMarkers = statusRes.ok && statusRes.out
@@ -426,32 +421,14 @@ async function waitAndFinish(opts: {
 
   if (isPass) {
     // 取 merge commit hash
-    const headHash = await (async () => {
-      try {
-        const proc2 = Bun.spawn(
-          ["git", "rev-parse", "HEAD"],
-          { cwd: worktree.worktreePath(projectPath, pipelineId), stdout: "pipe", stderr: "pipe" }
-        );
-        const out = await new Response(proc2.stdout).text();
-        await proc2.exited;
-        return out.trim();
-      } catch {
-        return "";
-      }
-    })();
-    const headSubject = await (async () => {
-      try {
-        const proc3 = Bun.spawn(
-          ["git", "log", "-1", "--format=%s"],
-          { cwd: worktree.worktreePath(projectPath, pipelineId), stdout: "pipe", stderr: "pipe" }
-        );
-        const out = await new Response(proc3.stdout).text();
-        await proc3.exited;
-        return out.trim();
-      } catch {
-        return "";
-      }
-    })();
+    const headHash = (await runCapture(
+      ["git", "rev-parse", "HEAD"],
+      { cwd: worktree.worktreePath(projectPath, pipelineId) }
+    )).out.trim();
+    const headSubject = (await runCapture(
+      ["git", "log", "-1", "--format=%s"],
+      { cwd: worktree.worktreePath(projectPath, pipelineId) }
+    )).out.trim();
     await writeSyncJob(projectPath, pipelineId, {
       state: "done",
       startedAt,

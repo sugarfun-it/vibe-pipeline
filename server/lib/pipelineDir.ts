@@ -5,10 +5,10 @@ import {
   statSync,
   readdirSync,
   unlinkSync,
-  renameSync,
 } from "node:fs";
 import { currentBranch } from "./git";
 import { appendStateChange } from "./auditLog";
+import { atomicWriteJson } from "./atomicWrite";
 import type { Pipeline } from "../../shared/types";
 
 const DIR = ".vibe-pipeline";
@@ -137,41 +137,10 @@ export async function getResolvedDefaults(projectPath: string): Promise<Resolved
   };
 }
 
-// Atomic write:先寫 .tmp,parse 驗一次,再 rename 蓋過原檔。
+// Atomic write 走 server/lib/atomicWrite.ts:tmp → rename(Windows retry)→ 失敗清 tmp,
 // 中途任何失敗(序列化炸 / 磁碟滿 / parse 不過)→ 原檔不動。
 async function writeJson(path: string, data: unknown): Promise<void> {
-  const text = JSON.stringify(data, null, 2) + "\n";
-  // round-trip check:確認自己生的 JSON 真能 parse 回(防超大 number / Date 物件等惡作劇)
-  JSON.parse(text);
-  const tmp = path + ".tmp";
-  await Bun.write(tmp, text);
-  try {
-    await renameWithWindowsRetry(tmp, path);
-  } catch (e) {
-    try {
-      unlinkSync(tmp);
-    } catch {
-      // ignore
-    }
-    throw e;
-  }
-}
-
-async function renameWithWindowsRetry(tmp: string, path: string): Promise<void> {
-  const delays = process.platform === "win32" ? [0, 20, 50, 100, 200] : [0];
-  let lastErr: unknown;
-  for (const delay of delays) {
-    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
-    try {
-      renameSync(tmp, path);
-      return;
-    } catch (e) {
-      lastErr = e;
-      const code = (e as { code?: string }).code;
-      if (code !== "EPERM" && code !== "EBUSY") break;
-    }
-  }
-  throw lastErr;
+  await atomicWriteJson(path, data);
 }
 
 // idempotent:`.vibe-pipeline/` 已存在但內容缺(早期 partial init 失敗留的殘骸)→ 補齊;

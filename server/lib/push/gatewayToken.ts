@@ -10,10 +10,11 @@
 //
 // thread-safe:用記憶體 in-flight Promise 合併並發 ensure;寫檔走 atomic(.tmp → rename)。
 
-import { existsSync, mkdirSync, chmodSync } from "node:fs";
-import { readFile, writeFile, rename, unlink } from "node:fs/promises";
+import { existsSync, mkdirSync } from "node:fs";
+import { readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { vibeHome } from "../paths";
+import { atomicWriteText } from "../atomicWrite";
 
 function dir(): string {
   return join(vibeHome(), ".vibe-pipeline");
@@ -48,16 +49,8 @@ async function readTokenFile(): Promise<string | null> {
 async function writeTokenFile(token: string): Promise<void> {
   const d = dir();
   if (!existsSync(d)) mkdirSync(d, { recursive: true });
-  const p = file();
-  const tmp = `${p}.tmp`;
-  await writeFile(tmp, token, "utf-8");
-  await rename(tmp, p);
-  // posix only;Windows NTFS chmod 沒效果(見 rules/remote-access.md),靜默忽略
-  try {
-    chmodSync(p, 0o600);
-  } catch {
-    // ignore
-  }
+  // posix only;Windows NTFS chmod 沒效果(見 rules/remote-access.md),atomicWriteText 內已靜默忽略
+  await atomicWriteText(file(), token, { chmod: 0o600 });
 }
 
 export async function getToken(): Promise<string | null> {

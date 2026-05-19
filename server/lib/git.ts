@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { runCapture } from "./spawn";
 
 export function hasGit(projectPath: string): boolean {
   return existsSync(join(projectPath, ".git"));
@@ -7,28 +8,20 @@ export function hasGit(projectPath: string): boolean {
 
 export async function gitInit(projectPath: string): Promise<void> {
   if (hasGit(projectPath)) throw new Error("already_git_repo");
-  const proc = Bun.spawn(["git", "-C", projectPath, "init", "-b", "main"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  await proc.exited;
-  if (proc.exitCode !== 0) {
-    const err = await new Response(proc.stderr).text();
-    throw new Error(`git init failed: ${err.trim() || "exit " + proc.exitCode}`);
+  const r = await runCapture(["git", "-C", projectPath, "init", "-b", "main"]);
+  if (!r.ok) {
+    throw new Error(`git init failed: ${r.err.trim() || "exit " + r.exitCode}`);
   }
 }
 
 // 當前 HEAD 的 branch 短名(detached HEAD 或非 git repo 回 null)
 export async function currentBranch(projectPath: string): Promise<string | null> {
   if (!hasGit(projectPath)) return null;
-  const proc = Bun.spawn(
-    ["git", "-C", projectPath, "symbolic-ref", "--short", "-q", "HEAD"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-  await proc.exited;
-  if (proc.exitCode !== 0) return null;
-  const text = await new Response(proc.stdout).text();
-  const trimmed = text.trim();
+  const r = await runCapture([
+    "git", "-C", projectPath, "symbolic-ref", "--short", "-q", "HEAD",
+  ]);
+  if (!r.ok) return null;
+  const trimmed = r.out.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
@@ -40,12 +33,8 @@ export type WorkingTreeStatus =
   | { clean: false; modified: number; untracked: number; files: string[] };
 
 export async function workingTreeStatus(projectPath: string): Promise<WorkingTreeStatus> {
-  const proc = Bun.spawn(["git", "-C", projectPath, "status", "--porcelain"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = (await new Response(proc.stdout).text()).trim();
-  await proc.exited;
+  const r = await runCapture(["git", "-C", projectPath, "status", "--porcelain"]);
+  const out = r.out.trim();
   if (out.length === 0) return { clean: true };
   const lines = out.split(/\r?\n/);
   let modified = 0;
@@ -74,23 +63,13 @@ export async function deleteBranchForce(
     return { ok: false, error: "empty branch name" };
   }
   // 先確認 branch 存在 — 不存在 = 已沒事可做,當成功(冪等,allow re-run)
-  const check = Bun.spawn(
-    ["git", "-C", projectPath, "rev-parse", "--verify", "--quiet", `refs/heads/${branchName}`],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-  await check.exited;
-  if (check.exitCode !== 0) return { ok: true };
-  const proc = Bun.spawn(["git", "-C", projectPath, "branch", "-D", branchName], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [, errText] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+  const check = await runCapture([
+    "git", "-C", projectPath, "rev-parse", "--verify", "--quiet", `refs/heads/${branchName}`,
   ]);
-  await proc.exited;
-  if (proc.exitCode !== 0) {
-    return { ok: false, error: errText.trim() || `git branch -D exit ${proc.exitCode}` };
+  if (!check.ok) return { ok: true };
+  const r = await runCapture(["git", "-C", projectPath, "branch", "-D", branchName]);
+  if (!r.ok) {
+    return { ok: false, error: r.err.trim() || `git branch -D exit ${r.exitCode}` };
   }
   return { ok: true };
 }
@@ -99,14 +78,11 @@ export async function deleteBranchForce(
 // 過濾掉 pipeline/* (vibe-pipeline 自家建的 worktree branch)避免 base 撞自己
 export async function listBranches(projectPath: string): Promise<string[]> {
   if (!hasGit(projectPath)) return [];
-  const proc = Bun.spawn(
-    ["git", "-C", projectPath, "for-each-ref", "--format=%(refname:short)", "refs/heads/"],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-  await proc.exited;
-  if (proc.exitCode !== 0) return [];
-  const text = await new Response(proc.stdout).text();
-  return text
+  const r = await runCapture([
+    "git", "-C", projectPath, "for-each-ref", "--format=%(refname:short)", "refs/heads/",
+  ]);
+  if (!r.ok) return [];
+  return r.out
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0)

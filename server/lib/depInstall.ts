@@ -4,6 +4,7 @@
 
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
+import { runCapture } from "./spawn";
 
 export type DepInstallResult =
   | { ran: false; reason: "no_dep_change" }
@@ -12,18 +13,8 @@ export type DepInstallResult =
 
 const DEP_KEYS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
-async function spawnText(cmd: string[], cwd: string): Promise<{ ok: boolean; out: string; err: string }> {
-  const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
-  const [out, err] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  await proc.exited;
-  return { ok: proc.exitCode === 0, out, err };
-}
-
 async function readJsonAtCommit(projectPath: string, commit: string, file: string): Promise<Record<string, unknown> | null> {
-  const r = await spawnText(["git", "show", `${commit}:${file}`], projectPath);
+  const r = await runCapture(["git", "show", `${commit}:${file}`], { cwd: projectPath });
   if (!r.ok) return null;
   try { return JSON.parse(r.out); } catch { return null; }
 }
@@ -41,7 +32,7 @@ function depsChanged(before: Record<string, unknown> | null, after: Record<strin
 
 async function fileChangedInCommit(projectPath: string, commit: string, file: string): Promise<boolean> {
   // merge commit 第一 parent 是 base 前一個 HEAD;diff 對它看這檔有沒有變
-  const r = await spawnText(["git", "diff", "--name-only", `${commit}^1`, commit, "--", file], projectPath);
+  const r = await runCapture(["git", "diff", "--name-only", `${commit}^1`, commit, "--", file], { cwd: projectPath });
   return r.ok && r.out.trim().length > 0;
 }
 
@@ -71,7 +62,7 @@ export async function ensureDepsAfterMerge(projectPath: string, mergeCommit: str
 
   // 4. 跑 bun install
   const t0 = Date.now();
-  const r = await spawnText(["bun", "install"], projectPath);
+  const r = await runCapture(["bun", "install"], { cwd: projectPath });
   const durationMs = Date.now() - t0;
   if (!r.ok) {
     return { ran: true, ok: false, error: (r.err || r.out).trim().split(/\r?\n/).slice(-5).join("\n"), durationMs };
