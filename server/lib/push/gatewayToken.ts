@@ -24,9 +24,14 @@ function file(): string {
   return join(dir(), "gateway-token");
 }
 
-function gatewayUrl(): string | null {
+// maintainer-hosted gateway(對齊 server/lib/fcm/index.ts DEFAULT_GATEWAY_URL)
+// forker 自架 gateway → 用 PUSH_GATEWAY_URL env override
+const DEFAULT_GATEWAY_URL = "https://vp-gateway-799841449136.asia-east1.run.app";
+
+function gatewayUrl(): string {
   const v = process.env.PUSH_GATEWAY_URL?.trim();
-  return v && v.length > 0 ? v.replace(/\/+$/, "") : null;
+  const raw = v && v.length > 0 ? v : DEFAULT_GATEWAY_URL;
+  return raw.replace(/\/+$/, "");
 }
 
 function envOverride(): string | null {
@@ -74,9 +79,6 @@ export async function ensureToken(): Promise<string> {
       if (recheck) return recheck;
 
       const url = gatewayUrl();
-      if (!url) {
-        throw new Error("PUSH_GATEWAY_URL 未設定,無法 auto-issue token");
-      }
       const res = await fetch(`${url}/tokens/auto-issue`, {
         method: "POST",
         headers: { "content-type": "application/json" },
