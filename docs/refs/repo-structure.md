@@ -20,7 +20,11 @@ vibe-pipeline/
 │   ├── icon.svg               SVG 主 icon(對齊 TopBar Logo)
 │   └── icon-{192,512}.png     ImageMagick 從 SVG 產(`bun run icons`)
 ├── scripts/
-│   └── gen-icons.ts           SVG → PNG 工具腳本(需 ImageMagick)
+│   ├── gen-icons.ts           SVG → PNG 工具腳本(需 ImageMagick)
+│   ├── build-tarball.ts       maintainer 打 release tarball(嚴格白名單)
+│   ├── install.sh             enduser POSIX installer(curl … | sh)
+│   ├── install.ps1            enduser Windows installer(irm … | iex)
+│   ├── uninstall.sh / .ps1    對稱 uninstaller(只移 app/ + shim,保留 state)
 │
 ├── cli/                       vbpl CLI。約定見 vibe-pipeline-cli SKILL
 │   ├── vbpl.ts                entry — parseArgs + dispatch noun → commands/*
@@ -60,26 +64,39 @@ vibe-pipeline/
 ├── server/                    後端。職責邊界見 vibe-pipeline-backend SKILL
 │   ├── index.ts               Bun.serve 入口,route 表 + authGuard middleware
 │   ├── routes/                純 dispatch,不寫業務邏輯
-│   │   ├── projects.ts        /api/projects/* (含 pipelines CRUD + git-init + reveal)
+│   │   ├── _http.ts           ok/err/requireJsonUtf8/readJson 共用 Response 包裝
+│   │   ├── projects.ts        /api/projects/* (含 pipelines CRUD + git-init + reveal + 重置)
 │   │   ├── qa.ts              /api/.../qa/* (start / turn / finalize / cancel / drafts)
 │   │   ├── userConfig.ts      /api/user/config GET / PUT(跨 project per-task-class model)
 │   │   ├── auth.ts            /api/auth/{status,setup-init,setup-verify,login,logout,sessions,reset}
-│   │   └── push.ts            /api/push/{config,register,unregister,tokens,test}
+│   │   ├── push.ts            /api/push/{config,register,unregister,tokens,test}
+│   │   ├── system.ts          /api/system/{version,update}(self-update tarball flow)
+│   │   └── test.ts            test-mode only endpoint
 │   └── lib/                   純 IO + 邏輯,不知道 HTTP
-│       ├── projectStore.ts    ~/.vibe-pipeline/state.json 讀寫
+│       ├── projectStore.ts    ~/.vibe-pipeline/state.json 讀寫(toProject 純 fs 不呼 git)
 │       ├── pipelineDir.ts     <target-repo>/.vibe-pipeline/ 偵測 / 建立 / json 讀寫
 │       ├── hash.ts            absolute path → 8-char sha256
+│       ├── paths.ts           ~/.vibe-pipeline 等 path 集中
 │       ├── dialog.ts          OS native folder picker (osascript/powershell/zenity) + revealFolder
 │       ├── userConfig.ts      ~/.vibe-pipeline/config.json
 │       ├── git.ts             hasGit / gitInit
+│       ├── fs.ts              isExistingDirectory 等小 fs helper
+│       ├── jsonFile.ts        legacy json 讀寫 helper(新 code 走 atomicWrite)
+│       ├── spawn.ts           runCapture / spawnStreaming / spawnFireForget(default windowsHide)
+│       ├── atomicWrite.ts     atomicWriteJson / atomicWriteText(Win EPERM retry + chmod + JSON validate)
+│       ├── jsonl.ts           readJsonl<T> / appendJsonl<T>(audit log + notifs 用)
+│       ├── auditLog.ts        user_action / system 事件 append .runtime/audit.jsonl
+│       ├── systemVersion.ts   GitHub releases/latest 拉 + git HEAD diff(/api/system/version 用)
+│       ├── updater.ts         tarball self-update(performUpdate + spawnNewBackend)
+│       ├── testMode.ts        E2E / 測試 flag 中央開關
 │       ├── depInstall.ts      merge 後動 deps → 自動 bun install(見 CLAUDE.md §self-dogfood 加 npm dep)
 │       ├── pipelineMerge.ts   mechanical(git --no-ff)+ AI fallback merge
 │       ├── git/worktree.ts    ensure / remove / prune (per pipeline)
-│       ├── cli/               CliAdapter + claudeAdapter + codexAdapter + factory
+│       ├── cli/               CliAdapter + claudeAdapter + codexAdapter + factory(prompt 走 stdin + workerEnv)
 │       ├── auth/              storage / middleware / cookie / pending
-│       ├── push/tokenStore.ts ~/.vibe-pipeline/device_tokens.json
-│       ├── fcm/index.ts       firebase-admin init + fanoutPush + dead token 偵測
-│       ├── runner/            orchestrator / ticketWatcher / runnerPrompt / runLog
+│       ├── push/              tokenStore(轉 gateway HTTP) + gatewayToken(lazy auto-issue + SSOT ~/.vibe-pipeline/gateway-token)
+│       ├── fcm/index.ts       fanoutPush 走 maintainer-host gateway(無 firebase-admin)
+│       ├── runner/            orchestrator(killProcessTree 跨平台) / ticketWatcher / runnerPrompt / runLog / syncJob
 │       ├── notifs/store.ts    emit / list / markRead / dismiss → .runtime/notifs.jsonl
 │       └── qa/                claudeCli / draftStore / systemPrompt / splitTicket / schema
 │
@@ -100,9 +117,11 @@ vibe-pipeline/
 ├── docs/
 │   ├── CHANGELOG.md           歷次大改動
 │   ├── TODO.md                待動工清單(對應 phase 8 pipeline)
+│   ├── release/v<ver>.md      GitHub release notes(maintainer 寫,build-tarball.ts 不打包進 tarball)
 │   ├── refs/                  設計文件 / 競品對照 / 歷史 spec(maintainer 用)
 │   │   ├── README.md          refs 目錄索引(active / archive)
-│   │   └── repo-structure.md  本檔
+│   │   ├── repo-structure.md  本檔
+│   │   └── enduser-install-update-design.md   tarball install + update 設計
 │   └── vibe-pipeline/         enduser AI bundle(distributable)
 │       ├── SKILL.md
 │       ├── install.md
@@ -116,7 +135,8 @@ vibe-pipeline/
 │   │   └── vibe-pipeline-e2e/SKILL.md
 │   └── rules/                 path-specific 雷區(frontmatter `paths:` 標明適用範圍)
 │       ├── pwa-sw.md          SW / Workbox / vite-plugin-pwa
-│       └── remote-access.md   Tailscale / TOTP / FCM / network binding
+│       ├── remote-access.md   Tailscale / TOTP / FCM / network binding
+│       └── cli-codex.md       codex CLI spawn / sandbox / multi-agent
 │
 └── node_modules/              (gitignored)
 ```
@@ -125,11 +145,19 @@ vibe-pipeline/
 
 ```
 ~/.vibe-pipeline/              global runtime,跨 project 共用(在 user home)
+├── app/                       enduser install dir(install.sh / install.ps1 解 tarball 進來;dev clone 無此)
+├── app.download.tmp/          updater 下載 / 解壓 staging(performUpdate 用完即清)
+├── bin/vbpl[.exe]             CLI binary install path(對齊 pyenv/cargo/nvm 慣例)
 ├── state.json                 { lastProject, recentProjects: [{path, lastOpenedAt}] }
 ├── config.json                user-level model defaults(per-task-class)
 ├── auth.json                  TOTP secret 雜湊 + sessions[]
-├── device_tokens.json         FCM device tokens
+├── gateway-token              FCM gateway bearer token(lazy auto-issue,posix 0600)
+├── server.json                vbpl server start 記 vibe-pipeline repo path / PID / log path
+├── server.log                 vbpl server start 接的 backend stdout/stderr
+├── update.log                 self-update flow log(truncate per run)
 └── worktrees/<projHash>/<pipelineId>/   git worktree per pipeline,平行執行用
+
+舊 `device_tokens.json` 已不寫(2026-05-19 push gateway 接管,device token 全在 gateway Firestore)。
 
 <target-repo>/.vibe-pipeline/  每個 user target repo 內,由 init 建
 ├── config.json                (git tracked) project-level 設定

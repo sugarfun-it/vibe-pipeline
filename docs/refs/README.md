@@ -9,6 +9,7 @@
 | 檔 | 用途 |
 |---|---|
 | [`repo-structure.md`](repo-structure.md) | Repo 物理檔案 / 目錄結構 single source of truth |
+| [`enduser-install-update-design.md`](enduser-install-update-design.md) | enduser tarball install + Settings 一鍵 update 設計(install.sh/ps1 + updater.ts) |
 
 ## Postmortem / 引用中
 

@@ -28,6 +28,10 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - **`server/lib/runner/*`** Pipeline runner — orchestrator / runnerPrompt / runLog / ticketWatcher / syncJob
 - **`server/lib/auth/*`** TOTP middleware + storage + cookie + pending setup tokens
 - **`server/lib/push/*` + `server/lib/fcm/*`** Web Push token store + firebase-admin fanout
+- **`server/lib/spawn.ts`**(2026-05-20 集中)Subprocess 起點唯一統一入口:`runCapture` / `spawnStreaming` / `spawnFireForget` — **default `windowsHide:true`**(別自己 `Bun.spawn` 跳過,Windows 偶發跳 console window);`spawnStreaming` default `detached:true`(POSIX process group,給 killProcessTree 殺整棵用)
+- **`server/lib/atomicWrite.ts`**(2026-05-20 集中)`atomicWriteJson` / `atomicWriteText` 內含 Windows EPERM/EBUSY retry + posix chmod + JSON round-trip validation。任何 `~/.vibe-pipeline/*.json` / `pipelines/*.json` 寫入走這個,不要直接 `writeFileSync`
+- **`server/lib/jsonl.ts`**(2026-05-20 集中)`readJsonl<T>` / `appendJsonl<T>` 給 audit log + notifs 用,別自己 split `\n`
+- **`server/routes/_http.ts`** Response 包裝(`ok` / `err` / `requireJsonUtf8` / `readJson` / `isJsonUtf8`),route handler 統一用
 - **`shared/types.ts`** 跨前後端持久化 schema 的 single source of truth(`Pipeline / Ticket / TicketSpec / QAReply / Turn / Draft / NOTIF_EVENTS / TaskClass`)。**不要兩邊各定一份**
 - **`~/.vibe-pipeline/state.json`** 只存 global runtime(projects 清單 / last opened)。不存 pipeline / ticket 細節
 - **`<target>/.vibe-pipeline/.runtime/`** gitignored 暫存(qa-drafts / notifs.jsonl / logs)
@@ -73,6 +77,7 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - ticket commit 用 `git commit -F <tmpfile>` 多段 message,不用 `-m "...\n..."` 字面 \n
 - provider-aware dispatch:claude → Task tool;codex → 主 agent 用 `spawn_agent` → `wait_agent` → `close_agent` 三步 atomic in-process 序列(取代舊 Bash `codex exec` subprocess);`codexAdapter.spawnRunner` 自動加 `-c features.multi_agent=true`;工具限制走 sandbox 模式分流(executor / merge = `workspace-write`,critic = `read-only`)
 - **Stop = SIGKILL immediate**:user 按「停止」→ orchestrator SIGKILL child + 標 `state=paused`。**沒有 graceful 路徑、沒有 `stopping` 中介 state**(2026-05-17 簡化,見 root CLAUDE.md §Pause 路徑簡化)
+- **`killProcessTree(pid)` 跨平台**(2026-05-21):Windows `taskkill /T /F /PID <pid>`;POSIX `process.kill(-pid, "SIGKILL")` 殺整 process group(需 `spawnStreaming` default `detached:true` 建 group)+ fallback 殺單 pid。背景:Stop 只殺主 agent → orphan claude / codex children 留下吃 token
 - `recoverStale` server boot 掃 stale `running` → paused;同時修 legacy `stopping` 殘留(舊 schema 升級無痛);watchdog 抓死 PID
 
 ### Merge / Sync 二段式(`pipelineMerge.ts` + `syncJob.ts`)
@@ -109,7 +114,7 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 **2026-05-19 後架構**:VP backend 拔 `firebase-admin`,push 走 maintainer host 的 gateway(Cloud Run asia-east1 `https://vp-gateway-...run.app`)。service account key 集中在 gateway 端;同日 lazy auto-issue 落地後,enduser 端 token 由 backend 在 register 觸發點自動跟 gateway 申請,無需任何手動設定。
 
 - **`gatewayToken.ts`** lazy module(SSOT `~/.vibe-pipeline/gateway-token`):`getToken()` 被動讀(沒檔回 null) / `ensureToken()` 沒檔則 POST `gateway/tokens/auto-issue`(無 auth,gateway 端 IP rate-limit 5/UTC day)拿 + 寫檔 / `clearToken()` 砍檔。寫入 atomic `.tmp → rename` + posix `chmod 0600`(Windows NTFS chmod 不生效照雷區 §Windows ACL);in-flight Promise 合併並發 register 避免雙申請。`PUSH_GATEWAY_TOKEN` env 是 read-only override(forker / CI),env 設了就跳過檔案
-- `DEFAULT_GATEWAY_URL = https://vp-gateway-799841449136.asia-east1.run.app` 在 `fcm/index.ts` hardcode;`PUSH_GATEWAY_URL` env 可 override。enduser `.env` 完全不必設 push 相關 var
+- `DEFAULT_GATEWAY_URL = https://vp-gateway-799841449136.asia-east1.run.app` 在 `fcm/index.ts` **跟 `push/gatewayToken.ts` 兩處都 hardcode**(對齊,2026-05-21 補)。`PUSH_GATEWAY_URL` env 可 override。enduser `.env` 完全不必設 push 相關 var。改 url 兩處同步,別只改一邊 → `ensureToken` issue 不到 token
 - `tokenStore`:`register` / `unregister` 進入點呼 `ensureToken` 確保 token 存在 → 轉發到 gateway `POST /push/register` / `DELETE /push/token`;`listTokens` 用被動 `getToken`(避免誤觸 auto-issue rate limit)。本地不存 device tokens(舊 `~/.vibe-pipeline/device_tokens.json` 已不寫)
 - `fcm/index.ts`:`fanoutPush(payload)` = `fetch(gatewayUrl + '/push/send', { Authorization: 'Bearer ' + getToken(), body: payload })`;沒 token → warn + return [](不 throw),死 token 由 gateway 端 Firestore registry 偵測 + 清
 - 改 push code 不要假設 gateway 一定回 200;加 error log 但別 throw,push 是 best-effort
@@ -117,6 +122,21 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - 前景 / 背景 push 行為差異雷見 [`.claude/rules/pwa-sw.md`](../../../.claude/rules/pwa-sw.md) §Android push 行為
 - gateway service code 在 repo 內 `gateway/`(Bun + Firestore,~500 行,multi-tenant per-token registry,含 `/tokens/auto-issue` 無 auth 端點 + `/tokens/*` admin 端點);admin CLI `vp-gw-admin` 發 token / revoke / list
 - 設計 spec → [`docs/refs/archive/fcm-push-gateway-2026-05-17.md`](../../../docs/refs/archive/fcm-push-gateway-2026-05-17.md);maintainer ops note:Cloud Run max-instances=1 + $1/mo budget alert hard cap abuse,auto-issue IP rate-limit 5/day 防 token farm
+
+### Self-update(`server/lib/updater.ts` + `systemVersion.ts`)
+
+**2026-05-21 起 tarball 模式**(原 `git pull + bun install + bun run build` 改寫):enduser 安裝在 `~/.vibe-pipeline/app/` 沒 `.git/`,git pull 用不到。
+
+- `systemVersion.ts`:`getVersionStatus()` 讀當前 commit / branch + `fetchLatestRelease()` 打 GitHub `releases/latest`(unauthenticated,有 cache 避 rate limit)
+- `updater.ts`:
+  - `preflightCheck()`:兩條(`globalRunningCount()===0` + `hasUpdate`),git clean 已拔
+  - `performUpdate()`:GitHub releases/latest 取 .tar.gz / .zip asset(優先)→ fallback `tarball_url`(needsStripTopLevel=true)→ 下載 `~/.vibe-pipeline/app.download.tmp/` → 解壓 staging → resolve root(單一 top-level dir 視為 root)→ `rmrf(app/)` → `renameSync(root → app/)`;**純前進不 rollback**(spec C 決議,失敗 user 重跑 install script 即修)
+  - `spawnNewBackend(cwd)`:從新 `app/` `Bun.spawn(["bun","run","server/index.ts"], { cwd, detached:true, stdio:"ignore" })`
+  - update flow:route `system.ts:update` 跑 preflight → emit `system_update_started` notif → `performUpdate` → `spawnNewBackend(result.appPath)` → response 回 200 → setTimeout 500ms `process.exit(0)` 讓新 backend 接 3001
+  - log 全程 `~/.vibe-pipeline/update.log`(truncate 模式,只留本次)
+- **dev clone 永遠不被碰** — 在 dev repo 按 Settings「更新」也只動 `~/.vibe-pipeline/app/`;要驗 enduser update flow 另開 enduser-style 安裝
+- `scripts/build-tarball.ts`(maintainer 端)走嚴格白名單組 tarball,whitelist 清單見 README §Maintainer 發 release;新 server 子目錄要進 tarball **必須改本檔白名單**,否則 enduser 收到的 tarball 缺檔
+- 設計 ref → [`docs/refs/enduser-install-update-design.md`](../../../docs/refs/enduser-install-update-design.md)
 
 ### CLI adapter(`server/lib/cli/`)
 

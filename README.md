@@ -231,59 +231,6 @@ Maintainer ops:Firebase project / service account key / Cloud Run 配置 / cost 
 
 ---
 
-## 自動更新
-
-VP 內建一鍵更新,enduser 不必離開 PWA 進 terminal 跑 `git pull` + rebuild。
-
-### Enduser 操作
-
-1. **Settings →「更新」tab** 看當前 commit / GitHub latest release / 是否落後
-2. 點「**檢查更新**」打 `/api/system/version` 拉 GitHub latest release(走 `GET /repos/<owner>/<repo>/releases/latest`,unauthenticated)
-3. 有新版時點「**套用更新**」一鍵觸發 backend:下載 GitHub release tarball → 解壓蓋過 `~/.vibe-pipeline/app/`(純前進,不留 backup,失敗 user 重跑 install script 即修)→ 從新 `app/` spawn 新 backend(detached)→ 舊 backend exit。**dev clone(`~/code/vibe-pipeline/` 等)永遠不被碰**,在 dev 按更新等同建/更新一份獨立 `~/.vibe-pipeline/app/` 安裝;要驗完整 enduser update flow 請另開一個 enduser-style 安裝測試,設計細節見 [`docs/refs/enduser-install-update-design.md`](docs/refs/enduser-install-update-design.md)
-4. 完成後新 frontend bundle 被 Workbox 偵測為新版,**`<SwUpdateBanner>` 浮現「套用更新」按鈕**,user 按下去 reload 套用新 UI(skipWaiting + `window.location.reload()`)
-5. 中途 backend 重啟期間 API 短暫 503;Settings poll 自動 retry,30 秒內回復
-
-無新 release(maintainer 還沒 tag)時 Settings 顯「已是最新」,「套用更新」按鈕停用。
-
-### Maintainer 發 release
-
-GitHub release 是版本來源,**沒發 release = enduser 看不到新版**(就算 main 一直有新 commit)。流程:
-
-1. **bump version**:`package.json` 改 `version` + commit
-2. **寫 release notes**(optional):`docs/release/v<version>.md`
-3. **打 tarball**:`bun run scripts/build-tarball.ts v<version>`
-   - 白名單:`dist/`(預 build 前端)+ `server/` + `cli/` + `shared/` + `package.json` + `bun.lock` + `tsconfig.json` + `vite.config.ts` + `README.md`(+ `LICENSE` 若存在)
-   - 不含:`node_modules` / `public/`(已 bake 進 dist)/ 根 `index.html` / `tests/` / `scripts/` / `docs/` / `.claude/` / `.git/` / `.env*` / `gateway/` / `design/` / `CLAUDE.md` / `AGENTS.md`
-   - 預設要求 working tree clean;dev 試跑加 `--allow-dirty`
-   - 產出 `vibe-pipeline-v<version>.tar.gz`(已 gitignore)
-4. **tag + push**:`git tag v<version> && git push --tags`
-5. **發 release**:`gh release create v<version> --title v<version> --notes-file docs/release/v<version>.md vibe-pipeline-v<version>.tar.gz`
-
-tag 用 [semver](https://semver.org/) 慣例(`vMAJOR.MINOR.PATCH`)。未發 release → `/api/system/version` 回 `latestRelease: null` → enduser「套用更新」停用、顯「已是最新」。
-
-注:`scripts/` 不進 tarball,但 `install.sh` / `install.ps1` 從 `raw.githubusercontent.com` 抓,獨立於 tarball 發行物。
-
----
-
-## Service Worker / PWA 行為(2026-05-17 Workbox 整合)
-
-build pipeline 透過 [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) `injectManifest` 模式,把 Workbox precache manifest 注入既有的 `public/firebase-messaging-sw.js`,產出 `dist/firebase-messaging-sw.js`。**同一份 SW 同時跑 Workbox(precache + runtime cache + navigation fallback)跟 FCM(push handler + notificationclick)**,不再分兩個 SW。
-
-- **Precache**:所有 build 產物(JS / CSS / HTML / SVG / PNG,目前 9 entries / ~640 KiB),首次打開後立刻可離線顯靜態 shell
-- **Runtime cache**
-  - `/api/*` GET → StaleWhileRevalidate(cache name `api-cache`,排除非 GET;reload 立刻顯舊資料 + 背景 refresh)
-  - Google Fonts `fonts.googleapis.com` / `fonts.gstatic.com` → CacheFirst / SWR
-- **Navigation fallback**:離線 / SPA route 一律 fallback `/index.html`,可進畫面顯舊 cache(不再純白頁)
-- **FCM push handler**:原 `messaging.onBackgroundMessage` + `notificationclick` 邏輯維持,跟 Workbox 共存於同 SW;Android push 行為(SW 必須自己 `showNotification`)見 [`.claude/rules/pwa-sw.md`](.claude/rules/pwa-sw.md)
-- **dev mode 不註冊 SW** — `bun run dev`(5173)用 vite-plugin-pwa 預設行為,不會起 SW;要驗 PWA / precache / install prompt 必須 `bun run build && bun run preview`(4173)
-- **SW 註冊入口**仍是 `src/lib/fcm.ts`(user 在「設定 → 通知」啟用 push 時才 register),plugin `injectRegister: false` 不搶
-- **安裝 App**按鈕在「**設定 → 通知**」tab 末尾:Chromium 系(Edge / Chrome / Android Chrome)抓 `beforeinstallprompt` event 觸發系統安裝;iOS Safari 走「分享 → 加入主畫面」(按鈕顯 fallback 提示)
-- **PWA manifest** 在 `public/manifest.json`,補了 description / lang `zh-Hant` / dir / orientation `any` / categories / shortcuts(看 Board / 開設定)/ 既有 name / icons / theme_color #d4956d 維持。`manifest.webmanifest`(plugin 產)跟 `manifest.json`(手寫)並存,`index.html` 只 link 後者
-
-跑 Lighthouse PWA audit:`bun run build && bun run preview` → 開 http://localhost:4173 → DevTools → Lighthouse → PWA category。
-
----
-
 ## Repo 結構
 
 ```
@@ -307,18 +254,6 @@ SKILL 文件分兩種,動非 trivial 改動前先讀:
 - [vibe-pipeline-backend](.claude/skills/vibe-pipeline-backend/SKILL.md) — server / runner / sync
 - [vibe-pipeline-cli](.claude/skills/vibe-pipeline-cli/SKILL.md) — CLI 慣例
 - [vibe-pipeline-e2e](.claude/skills/vibe-pipeline-e2e/SKILL.md) — Playwright 覆蓋矩陣
-
----
-
-## 當前狀態
-
-Phase 1-5 全套已落地(CRUD + QA + Runner + Worktree + Merge/Sync + Auto + Tailscale + TOTP + FCM + cross-provider sub-agent + CLI)。**Self-dogfood**:本專案靠自己的 pipeline 推進自己的開發。
-
-可運作但未打磨:
-- Budget tracker UI(成本上限後端已強制執行,缺前端 dashboard)
-- Transient retry fixture(沒自然 reproduction case)
-- iOS PWA push(Android 驗過,iOS 需手動「加入主畫面」+ 16.4 以上)
-- `vbpl pipeline log --follow`(目前 one-shot 不會 tail)
 
 ---
 

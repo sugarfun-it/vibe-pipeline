@@ -118,7 +118,9 @@ class 命名走 BEM-ish 或 feature prefix(避雷 #1 prototype 命名空間殘�
 | `btn-accent` | 透明 accent 10% 底 + accent 邊 + accent 字 | **次要 CTA**,跟主 CTA 並排時用(e.g. `+ ticket` 在 RunButton 旁邊) |
 | `btn-primary` | accent 填 + 白字 | 主動作(RunButton 開始/繼續/重試/停止;empty pipeline 的 + ticket)|
 
-**RunButton 單按鈕原則**(2026-05-17 簡化):pipeline header 的 RunButton **永遠單一顆**,按其 label 隨 state 切換 — `idle/paused/failed` → 「開始 / 繼續 / 重試」(primary action 觸發 run);`running` → 「停止」(immediate SIGKILL → state=paused,沒有 graceful / 兩段式 / 「停止中」chip)。**不准回退成雙按鈕或加 stopping 中介態**;對應 backend 規則見 `vibe-pipeline-backend` SKILL § Runner。
+**RunButton 單按鈕原則**(2026-05-17 簡化):pipeline header 的 RunButton **永遠單一顆**,按其 label 隨 state 切換 — `idle/paused/failed/failed_transient` → 「開始 / 繼續 / 重試」(primary action 觸發 run);`running` → 「停止」(immediate SIGKILL → state=paused,沒有 graceful / 兩段式 / 「停止中」chip)。**不准回退成雙按鈕或加 stopping 中介態**;對應 backend 規則見 `vibe-pipeline-backend` SKILL § Runner。
+
+**重置 pipeline**(2026-05-20):FocusColumn overflow menu 單一「重置 pipeline」(不是「清 worktree」+「重跑全部」雙 button)。動作:刪 worktree dir + `git branch -D pipeline/<name>` + tickets done/failed → draft + state=planning。語意:整條 pipeline 砍掉重練,不只清 worktree(清 worktree 後 branch 還在,啟動會落後 base N commits)。
 
 **互斥規則**:同一視覺區域內**最多一顆 btn-primary**。範例:`+ ticket` 跟 `RunButton` 在 pipeline header 並排 — pipeline 有 ticket 時 RunButton 是 primary、+ ticket 降 `btn-accent`;沒 ticket 時 RunButton disabled,+ ticket 升 primary。避免兩顆都搶眼 user 不知按哪個。
 
@@ -176,9 +178,11 @@ root [`CLAUDE.md`](../../../CLAUDE.md) §不踩的雷 是全 repo 公用,本段�
 - polling / refetch 重複模式 → 用 `src/hooks/useApi.ts`(已存在)。簽名:`useApi(fetcher, { intervalMs?, gate?, idleMs?, refetchOnVisible?, deps?, cacheKey? })`,回 `{ data, error, refetch }`。已在 BoardScreen(notifs / pipelines / config)、FocusColumn(diffStat / syncStatus)、useQA(draft poll)用,新 polling component **先 reuse 別重發明**
 - **useApi 用法雷**(2026-05-20 踩過,別再來):
   - `deps` **只放 primitive**(string / boolean / number)。放 object ref(`project` / `pipeline`)會被 parent setState 拿新 ref 觸發 trigger refire,造成 mount fetch 完馬上又 fetch 一次(看到「同 endpoint 連續 2 次」)。改 `[project?.hash, project?.hasInit]` 等 primitive 解
-  - `intervalMs` 別小於 5s(對打 git 的 endpoint 至少 10s)。每個 git endpoint 一次 fork 多個 helper,Windows 上炸視窗(無 windowsHide 場景)+ 消耗 CPU
+  - `intervalMs` 別小於 5s(對打 git 的 endpoint 至少 10s,**merged pipeline 完全 gate 掉不 poll**)。每個 git endpoint 一次 fork 多個 helper,Windows 上炸視窗(無 windowsHide 場景)+ 消耗 CPU
   - `refetchOnFocus` 已拔 — `window.focus` 在「DevTools 點回 page / 切視窗」噪音太多,visibility + intervalMs 就夠
   - polling 用 `setTimeout` self-reschedule 不用 `setInterval`(已內建)— Chrome tab freeze 場景 setInterval callback 排隊,resume 一次爆量;self-reschedule 自然無排隊
+  - **300ms dedupe**:visibility + focus 雙觸發 / 同 deps 改值連續 setState 的場景內建 dedupe(已內建,不必自己擋)
+- **SW first-install 不 force reload**(`src/lib/swUpdate.ts`,2026-05-20):`navigator.serviceWorker.controller` 在 SW 首次 install 時是 null。`controlling` event handler 內 `hadController` flag captured at register time,**只在 hadController=true 時 reload**(已有 SW 換新版才 reload);first-install 不 reload 避免所有 component 二度 mount(撞「mount-1.5s 內每 endpoint fire 2 次」)
 
 之後若 cache invalidation / refetch / optimistic update 變痛了,**再考慮**引 react-query。**不要預先設計**。
 

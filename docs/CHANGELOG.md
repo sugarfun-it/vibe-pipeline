@@ -106,3 +106,43 @@
 - **版本來源 = GitHub release tag**(semver):maintainer `git tag vX.Y.Z && git push --tags`(GitHub 自動建 release entry,可走 Releases UI / `gh release create` 補 release notes),未發 release = enduser 看到「已是最新」
 - **不在 scope**:`vbpl` CLI binary 自動更新(backend 重啟不會替換 PATH 上 `vbpl.exe`,要新 CLI feature 仍走手動 `bun run cli:build` + 蓋 `~/.vibe-pipeline/bin/vbpl.exe`);Settings 一鍵流程只動 backend + UI source / build artifact
 - **文件**:`README.md` §自動更新、`docs/vibe-pipeline/install.md` §升級改成 Settings 一鍵主軸、`docs/vibe-pipeline/SKILL.md` 加自動更新段(enduser AI 引導 user 用 Settings tab)、`.claude/rules/pwa-sw.md` 補 SwUpdateBanner label 對齊 Settings update flow 說明
+
+---
+
+## 2026-05-20(spawn / atomic / jsonl 集中)
+
+- **`spawn-stdin-nested-fix`(Ruflo 借鏡 2 條,`edd3bdc`)**:claude / codex adapter prompt 全改走 stdin(`stdin: "pipe"` + `sink.write + end`),不再夾 positional arg。背景:Windows cmd.exe 對長 prompt / 含引號 / 控制字元的 positional 會 re-tokenize 把參數錯位(Ruflo issue #1852)。同時加 `workerEnv()` helper:`...process.env` + `CLAUDE_ENTRYPOINT=worker` + delete `CLAUDE_SESSION_ID` / `CLAUDE_PARENT_SESSION_ID`(Ruflo issue #1395:claude CLI 看到 nested-session var 會誤判 nested Claude Code session 直接拒跑)。claude 3 處 spawn 全套;codex 同步套(無害但統一)
+- **`refactor-helpers`(`2a0ec6a`)**:3 個 helper 集中
+  - `server/lib/spawn.ts`:`runCapture(args, opts)` / `spawnStreaming<T>(args, opts)` / `spawnFireForget(args)`,全 default `windowsHide: true`;`spawnStreaming` default `detached: true`(POSIX process group,給 killProcessTree 殺整棵用)
+  - `server/lib/atomicWrite.ts`:`atomicWriteJson` / `atomicWriteText`,內含 Windows EPERM/EBUSY retry + posix chmod 支援 + JSON round-trip validation
+  - `server/lib/jsonl.ts`:`readJsonl<T>` / `appendJsonl<T>` 給 audit log + notifs 用
+  - 動機:之前每處自己 `Bun.spawn` 沒 `windowsHide` → Windows 偶發跳 console window;atomic write `.tmp → rename` 同樣 pattern 散 5 處
+- **重置 pipeline**(`d9d1b1d`):FocusColumn overflow menu「清 worktree」+「重跑全部」雙 button 合一「重置 pipeline」。動作:`worktree.removeQuiet` + `git branch -D pipeline/<name>` + `mutatePipeline` 把 done / failed ticket 改回 draft + state=planning。背景:user 撞到清 worktree 後 branch 還在 → 啟動 pipeline 落後 base 10 commits,語意割裂
+- **console window flicker 治理**(`f379e93` ~ `c9bd817` 一連串):tab 切回時瞬間飆 N 個 git.exe 視窗 + 重複 fetch
+  - **f379e93 fix(sync-status polling)**:merged pipeline 也排除(之前每 5s 持續打 git)
+  - **018003f refactor(backend)**:`projectStore.toProject` 拔 `currentBranch()` 呼叫(metadata endpoint 純 fs,git lazy fetch);全 spawn 加 `windowsHide`
+  - **efcfea5 refactor(frontend)**:`useApi` polling 改 `setTimeout` self-rescheduling(不用 `setInterval`,避 Chrome tab freeze resume 一次爆量)+ 300ms dedupe(visibility + focus 雙觸發)+ `refetchOnFocus` 拔(focus 噪音太多)+ deps 強制 primitive(object ref 觸 trigger refire);`swUpdate.ts` 加 `hadController` flag(SW first-install 不 reload,避所有 component 二度 mount);BoardScreen / FocusColumn polling 從 3-5s → 10-30s
+  - **c9bd817 test(e2e)**:4 個 dev probe 升級成 regression assertion(`spawn-count.spec.ts` 只算 git.exe 新生 PID,8s 短窗避 polling 第二輪;`mount-probe.spec.ts` 抓 mount-1.5s 內每 endpoint 只 1 次)
+  - 設計 ref → [`refs/console-flicker-2026-05-20.md`](refs/console-flicker-2026-05-20.md)(待補)
+
+---
+
+## 2026-05-21(macOS / Linux + v0.1.0 release + enduser install)
+
+- **`macos-support`(`0884fbf`)**:
+  - **t1 spawnStreaming POSIX detached**:`spawnStreaming` default `detached: true` → POSIX 啟動新 process group,`killProcessTree(pid)` 在 POSIX 走 `process.kill(-pid, "SIGKILL")` 殺整棵 child;Windows 仍走 `taskkill /T /F /PID`。背景:Stop 只殺主 agent → orphan claude / codex children 留下吃 token
+  - **t2 vbpl binary cross-platform**:`bun build --compile --target=bun-darwin-arm64 / bun-darwin-x64 / bun-linux-x64`,`package.json` 加 `cli:build:mac` / `cli:build:mac-x64` / `cli:build:linux`;binary ~121 MB(bundle Bun runtime)
+- **types claude effort / model 補(`d7bfea6`)**:`shared/types.ts` `MODELS_BY_PROVIDER.claude` 補 haiku-4.5 / opus-4.5 / sonnet-4.5;`EFFORTS_BY_PROVIDER.claude` 補 `xhigh` / `max`(原本只 low/medium/high)。Settings model picker 露出全選項
+- **RunButton failed_transient 算可跑(`2f78246`)**:之前 `hasRunnableReal` 漏列 `failed_transient`,撞 `recoverStale` 標的 ticket → RunButton disable,user 沒辦法繼續。改成 failed_transient 也顯「繼續」(orchestrator.start 已自動 reset failed_transient → paused)
+- **v0.1.0 release(`9d170de` ~ `be5f5a9`,GitHub release `v0.1.0`)**:第一個 enduser-facing release。`docs/release/v0.1.0.md` 走 Bun/Vite-style 短 bullet(無 marketing,無 install 段,無 `# v0.1.0` heading 避跟 GitHub 標題重複);label rename `UpdateTab`「套用更新」→「更新」+ 補 `btn` base class(`9b0dcd5`);SwUpdateBanner 仍叫「套用更新」(兩按鈕兩階段:Settings 抓 + Banner 套)
+- **`enduser-install`(`9719f5d`)**:VP 從「dev clone repo + `git pull` 更新」改「tarball 解到 `~/.vibe-pipeline/app/` + 純前進更新」
+  - **t1 backend `/api/system/update` 改 tarball model**:`server/lib/updater.ts` 全重寫
+    - `preflightCheck` 拔 git clean(enduser 沒 `.git/`);只剩 `globalRunningCount() === 0` + `hasUpdate`
+    - `performUpdate`:GitHub `releases/latest` 取 .tar.gz / .zip asset(優先)→ fallback `tarball_url`(needsStripTopLevel=true)→ 下載 `~/.vibe-pipeline/app.download.tmp/release.tar.gz` → 解壓 staging → resolve root(單一 top-level dir → 視為 root) → `rmrf(app/)` → `renameSync(root → app/)`;**純前進不 rollback**(per spec C 決議,失敗 user 重跑 install script 即修)
+    - `spawnNewBackend`:從新 `~/.vibe-pipeline/app/` `Bun.spawn(["bun","run","server/index.ts"], { cwd, detached:true, stdio:"ignore" })`,~500ms 後 `process.exit(0)` 讓新 backend 接 3001
+    - 動機:enduser 安裝走 `~/.vibe-pipeline/app/` 沒 `.git/`,`git pull` 用不到;dev clone (`~/code/vibe-pipeline/` 等)**永遠不被碰**,在 dev 按更新等同建/更新一份獨立 `~/.vibe-pipeline/app/` 安裝
+  - **t2 install / uninstall scripts**:`scripts/install.sh`(POSIX) + `install.ps1`(Windows) + `uninstall.sh` / `uninstall.ps1`。1-line 裝完(`curl ... | sh` / `irm ... | iex`):Bun check(沒裝報錯)→ 抓 latest release → 下載 → 解壓蓋 `~/.vibe-pipeline/app/`(mv app → app.bak safety net,解壓失敗 rollback)→ `bun install` → 建 shim(POSIX `~/.local/bin/vbpl` / Windows `%LOCALAPPDATA%\vibe-pipeline\vbpl.cmd`)→ PATH check + 互動式 prompt(y/N 加 rc)→ auto `vbpl server start`。uninstall 只移 `app/` + shim,state / auth / worktrees 保留
+  - **t3 tarball 白名單 + maintainer release process**:`scripts/build-tarball.ts` 嚴格 whitelist(`dist/` + `server/` + `cli/` + `shared/` + `package.json` + `bun.lock` + `tsconfig.json` + `vite.config.ts` + `README.md` + optional `LICENSE`);**不含** `node_modules` / `public/`(已 bake 進 dist)/ `tests/` / `scripts/` / `docs/` / `.claude/` / `.git/` / `.env*` / `gateway/` / `design/` / `CLAUDE.md` / `AGENTS.md`;default require clean tree(`--allow-dirty` opt-in);產出 `vibe-pipeline-v<version>.tar.gz`(gitignored)
+  - **maintainer 發 release 流程**(README §自動更新更新):bump version → 寫 release notes → `bun run scripts/build-tarball.ts vX.Y.Z` → `git tag` → `gh release create ... .tar.gz`
+  - 設計 ref → [`refs/enduser-install-update-design.md`](refs/enduser-install-update-design.md)
+- **gatewayToken DEFAULT_GATEWAY_URL fallback fix**(working tree,未 commit):`server/lib/push/gatewayToken.ts` `gatewayUrl()` 之前沒 `PUSH_GATEWAY_URL` env 就回 null → `ensureToken` 直接 throw → enduser 從沒設過 env → 永遠 issue 不到 token。加 `DEFAULT_GATEWAY_URL` 對齊 `server/lib/fcm/index.ts`,return type 從 `string | null` → `string`

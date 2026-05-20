@@ -93,7 +93,9 @@ source ~/.bashrc
 
 ### 升級
 
-**Backend / Web UI**:不必再手動 `git pull`。開 PWA → **Settings →「更新」tab** 看版本,點「檢查更新」拉 GitHub latest release,點「套用更新」一鍵 backend `git pull` + `bun install`(若 dep 變)+ `bun run build` + 自我重啟;完成後 `<SwUpdateBanner>` 跳「套用更新」按下去 reload 套新 UI。詳見 [`../../README.md`](../../README.md) §自動更新。
+**Backend / Web UI**(走 install script 裝的 enduser):開 PWA → **Settings →「更新」tab** 看當前版本 vs GitHub latest release,點「更新」一鍵下載 release tarball → 解壓蓋過 `~/.vibe-pipeline/app/`(純前進,失敗 user 重跑 install script 即修)→ 從新 `app/` spawn 新 backend → 舊 backend exit;新前端 bundle 由 Workbox 偵測,`<SwUpdateBanner>` 跳「套用更新」按下去 reload 套新 UI。詳見 [`../../README.md`](../../README.md) §自動更新。
+
+**dev clone(`~/code/vibe-pipeline/` 等 git clone 來的)**:Settings 按「更新」也只動 `~/.vibe-pipeline/app/`,dev clone 永遠不被碰。要驗完整 enduser update flow → 另開一個 enduser-style 安裝測試。Dev 自己抓最新 source 仍走 `git pull` 手動。
 
 **`vbpl` CLI binary**:單檔 binary 自動更新不在 scope(backend 重啟不會替換 PATH 上的 `vbpl.exe`),要新 CLI feature 仍用:
 
