@@ -191,8 +191,11 @@ async function runTool(args: string[], cwd: string): Promise<void> {
 async function extractArchive(archivePath: string, outDir: string): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   const lower = archivePath.toLowerCase();
+  // --force-local 必加:Windows Bun.spawn 可能抓到 git for Windows 的 GNU tar(usr/bin),
+  // GNU tar 把 `C:\path` 當 SSH `host:path` 解析直接拒。bsdtar(System32 / libarchive ≥ 3.5)
+  // 也接受 --force-local 不會壞,POSIX GNU tar 同樣接受。加了統一安全。
   if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz")) {
-    await runTool(["tar", "-xzf", archivePath, "-C", outDir], outDir);
+    await runTool(["tar", "--force-local", "-xzf", archivePath, "-C", outDir], outDir);
     return;
   }
   if (lower.endsWith(".zip")) {
@@ -209,7 +212,7 @@ async function extractArchive(archivePath: string, outDir: string): Promise<void
         outDir
       );
     } else {
-      await runTool(["tar", "-xf", archivePath, "-C", outDir], outDir);
+      await runTool(["tar", "--force-local", "-xf", archivePath, "-C", outDir], outDir);
     }
     return;
   }

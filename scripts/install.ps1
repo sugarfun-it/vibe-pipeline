@@ -81,8 +81,10 @@ try {
   if ($isZip) {
     Expand-Archive -Path $tarball -DestinationPath $stage -Force
   } else {
-    # tar is built-in on Win10+
-    tar -xzf $tarball -C $stage
+    # tar is built-in on Win10+ (bsdtar at C:\Windows\System32\tar.exe);
+    # --force-local: if PATH resolves to git-for-Windows GNU tar, it would treat
+    # `C:\...` as `host:path` SSH spec. --force-local opts out (both bsdtar and GNU tar accept).
+    tar --force-local -xzf $tarball -C $stage
     if ($LASTEXITCODE -ne 0) { throw "tar failed (exit=$LASTEXITCODE)" }
   }
 
