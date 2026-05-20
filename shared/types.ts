@@ -49,12 +49,22 @@ export const PROVIDERS: Provider[] = ["claude", "codex"];
 // effort 對應 codex 的 `model_reasoning_effort` config key,OpenAI 標準 minimal/low/medium/high
 export const MODELS_BY_PROVIDER: Record<Provider, readonly ModelName[]> = {
   // claude:full ID 鎖明確版本(2026-05 主力組合)
-  claude: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-opus-4-6"],
+  // 第一個是該 provider 的預設值。新 model 出現就在這 array 加(`claude --model invalid` 會印錯誤但不列清單)。
+  claude: [
+    "claude-opus-4-7",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+    "claude-opus-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-6",
+  ],
   codex: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.2"],
 };
 
+// claude CLI `--effort <level>` 接受 5 個值(實測 `claude --effort invalid` 列出),
+// 對應 OpenAI reasoning_effort enum 擴張。codex 走 OpenAI 原版 4 級。
 export const EFFORTS_BY_PROVIDER: Record<Provider, readonly Effort[]> = {
-  claude: ["low", "medium", "high"],
+  claude: ["low", "medium", "high", "xhigh", "max"],
   codex: ["minimal", "low", "medium", "high"],
 };
 
