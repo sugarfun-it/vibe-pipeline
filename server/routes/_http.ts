@@ -1,4 +1,44 @@
 import type { ApiResponse, ApiErrorCode } from "../../shared/types";
+import * as projectStore from "../lib/projectStore";
+import * as pipelineDir from "../lib/pipelineDir";
+
+export type ProjectInfo = NonNullable<Awaited<ReturnType<typeof projectStore.findByHash>>>;
+
+export async function withProject(
+  hash: string,
+  fn: (project: ProjectInfo) => Promise<Response>,
+  opts?: { requireInit?: boolean }
+): Promise<Response> {
+  const project = await projectStore.findByHash(hash);
+  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
+  if (opts?.requireInit !== false && !pipelineDir.hasInit(project.path)) {
+    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
+  }
+  return fn(project);
+}
+
+export async function withPipeline(
+  hash: string,
+  pipelineId: string,
+  fn: (project: ProjectInfo, pipeline: Record<string, unknown>) => Promise<Response>,
+  opts?: { requireInit?: boolean }
+): Promise<Response> {
+  return withProject(hash, async (project) => {
+    const pipeline = await pipelineDir.readPipeline(project.path, pipelineId);
+    if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
+    return fn(project, pipeline as Record<string, unknown>);
+  }, opts);
+}
+
+export async function withJsonBody(
+  req: Request,
+  fn: (body: Record<string, unknown>) => Promise<Response>
+): Promise<Response> {
+  const guardErr = requireJsonUtf8(req);
+  if (guardErr) return guardErr;
+  const body = await readJson(req);
+  return fn(body);
+}
 
 export function ok<T>(data: T): Response {
   return Response.json({ ok: true, data } satisfies ApiResponse<T>);

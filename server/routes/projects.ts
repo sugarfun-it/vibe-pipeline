@@ -13,7 +13,7 @@ import { triggerMerge, autoMergeNoAI } from "../lib/pipelineMerge";
 import { pickFolder, revealFolder } from "../lib/dialog";
 import { projectHash } from "../lib/hash";
 import { isExistingDirectory } from "../lib/fs";
-import { requireJsonUtf8, ok, err, readJson } from "./_http";
+import { ok, err, withProject, withPipeline, withJsonBody } from "./_http";
 import type { ApiErrorCode, Project } from "../../shared/types";
 
 // validProjectPath 是 isExistingDirectory 在 routes 層的 alias,維持原本呼叫點不動。
@@ -92,13 +92,12 @@ export async function selectFolder(): Promise<Response> {
 }
 
 export async function openProject(req: Request): Promise<Response> {
-  const guardErr = requireJsonUtf8(req);
-  if (guardErr) return guardErr;
-  const body = await readJson(req);
-  const path = body.path as string | undefined;
-  if (!path || !validProjectPath(path)) return err("invalid_path", `Invalid path: ${path}`);
-  const project = await projectStore.open(path);
-  return ok(project);
+  return withJsonBody(req, async (body) => {
+    const path = body.path as string | undefined;
+    if (!path || !validProjectPath(path)) return err("invalid_path", `Invalid path: ${path}`);
+    const project = await projectStore.open(path);
+    return ok(project);
+  });
 }
 
 // Client-side folder picker:列當前路徑下的子資料夾 + 系統 drives(Windows)/ home(POSIX)
@@ -172,62 +171,38 @@ export async function browseFolder(req: Request): Promise<Response> {
 }
 
 export async function status(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  // 順帶夾 config 摘要(base_branch / cost_limit_usd),SettingsPopover 顯目前值用
-  let defaultBaseBranch: string | undefined;
-  let costLimitUsd: number | undefined;
-  if (project.hasInit) {
-    try {
-      const resolved = await pipelineDir.getResolvedDefaults(project.path);
-      defaultBaseBranch = resolved.base_branch;
-      costLimitUsd = resolved.cost_limit_usd;
-    } catch {
-      // ignore — config 讀失敗就 fallback
+  return withProject(hash, async (project) => {
+    // 順帶夾 config 摘要(base_branch / cost_limit_usd),SettingsPopover 顯目前值用
+    let defaultBaseBranch: string | undefined;
+    let costLimitUsd: number | undefined;
+    if (project.hasInit) {
+      try {
+        const resolved = await pipelineDir.getResolvedDefaults(project.path);
+        defaultBaseBranch = resolved.base_branch;
+        costLimitUsd = resolved.cost_limit_usd;
+      } catch {
+        // ignore — config 讀失敗就 fallback
+      }
     }
-  }
-  return ok({
-    ...project,
-    defaultBaseBranch,
-    costLimitUsd,
-  } satisfies Project & {
-    defaultBaseBranch?: string;
-    costLimitUsd?: number;
-  });
+    return ok({ ...project, defaultBaseBranch, costLimitUsd } satisfies Project & { defaultBaseBranch?: string; costLimitUsd?: number });
+  }, { requireInit: false });
 }
 
 export async function init(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
-  // pipelineDir.init 已 idempotent(2026-05-12 改):.vibe-pipeline/ 已存在但內容缺 → 補齊,
-  // 不再 throw already_initialized。route 層也不再前置擋 hasInit。
-  try {
-    await pipelineDir.init(project.path);
-  } catch (e) {
-    return err("internal_error", String(e), 500);
-  }
-  const refreshed = await projectStore.findByHash(hash);
-  return ok(refreshed);
+  return withProject(hash, async (project) => {
+    if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
+    // pipelineDir.init 已 idempotent(2026-05-12 改):.vibe-pipeline/ 已存在但內容缺 → 補齊,不再 throw already_initialized。
+    try { await pipelineDir.init(project.path); } catch (e) { return err("internal_error", String(e), 500); }
+    return ok(await projectStore.findByHash(hash));
+  }, { requireInit: false });
 }
 
 export async function listPipelines(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!pipelineDir.hasInit(project.path))
-    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
-  const items = await pipelineDir.listPipelines(project.path);
-  return ok(items);
+  return withProject(hash, async (project) => ok(await pipelineDir.listPipelines(project.path)));
 }
 
 export async function createPipeline(hash: string, req: Request): Promise<Response> {
-  const guardErr = requireJsonUtf8(req);
-  if (guardErr) return guardErr;
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!pipelineDir.hasInit(project.path))
-    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
-  const body = await readJson(req);
+  return withProject(hash, async (project) => withJsonBody(req, async (body) => {
   const name = (body.name as string) || "pipeline";
   const id = (body.id as string) || pipelineDir.generatePipelineId(name);
   // autoMerge:body 沒帶就讀 project config defaults.auto_merge,有帶就用 body 值(必須是 boolean)
@@ -243,32 +218,15 @@ export async function createPipeline(hash: string, req: Request): Promise<Respon
       ? body.branch
       : "pipeline/" + name.replace(/[\s/]+/g, "-");
   const state = typeof body.state === "string" && body.state.trim() ? body.state : "planning";
-  const data = {
-    ...body,
-    id,
-    name,
-    branch,
-    state,
-    autoMerge,
-    // createdAt 取 body 值(允許 import 帶舊時間)或 Date.now()
-    createdAt: typeof body.createdAt === "number" ? body.createdAt : Date.now(),
-    tickets: Array.isArray(body.tickets) ? body.tickets : [],
-  };
-  await pipelineDir.writePipeline(project.path, id, data, {
-    source: "api-create-pipeline",
-    sourceDetail: `POST /pipelines name=${name}`,
-  });
+  // createdAt 取 body 值(允許 import 帶舊時間)或 Date.now()
+  const data = { ...body, id, name, branch, state, autoMerge, createdAt: typeof body.createdAt === "number" ? body.createdAt : Date.now(), tickets: Array.isArray(body.tickets) ? body.tickets : [] };
+  await pipelineDir.writePipeline(project.path, id, data, { source: "api-create-pipeline", sourceDetail: `POST /pipelines name=${name}` });
   return ok(data);
+  }));
 }
 
 export async function getPipeline(hash: string, id: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!pipelineDir.hasInit(project.path))
-    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
-  const data = await pipelineDir.readPipeline(project.path, id);
-  if (!data) return err("not_found", `Pipeline not found: ${id}`, 404);
-  return ok(data);
+  return withPipeline(hash, id, async (_p, pipeline) => ok(pipeline));
 }
 
 // DELETE /api/projects/:hash/pipelines/:id — cascade 清 worktree + branch + json
@@ -281,9 +239,8 @@ export async function getPipeline(hash: string, id: string): Promise<Response> {
 // 任一步失敗 → 仍回 200(部分清完),body.partial=true + body.steps 標哪步壞
 // 完全 not_found(連 pipeline.json 都沒)→ 404
 export async function deletePipeline(hash: string, id: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.delete", pipelineId: id }, async () => {
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.delete", pipelineId: id }, async () => {
     // preflight — running / queued 拒絕
     if (orchestrator.isRunning(hash, id)) {
       return err("invalid_path", "Pipeline 在 running,先 stop 才能刪", 409);
@@ -301,11 +258,7 @@ export async function deletePipeline(hash: string, id: string): Promise<Response
     const pipelineName = typeof pipeline?.name === "string" ? pipeline.name : id;
 
     type StepResult = { ok: boolean; error?: string; skipped?: boolean };
-    const steps: { worktree: StepResult; branch: StepResult; json: StepResult } = {
-      worktree: { ok: false },
-      branch: { ok: false },
-      json: { ok: false },
-    };
+    const steps: { worktree: StepResult; branch: StepResult; json: StepResult } = { worktree: { ok: false }, branch: { ok: false }, json: { ok: false } };
 
     // 1. worktree(dir + prune)— 失敗繼續,後面 branch / json 仍要試
     try {
@@ -383,16 +336,11 @@ export async function deletePipeline(hash: string, id: string): Promise<Response
           }
         : {}),
     });
-  });
+  }));
 }
 
 export async function savePipeline(hash: string, id: string, req: Request): Promise<Response> {
-  const guardErr = requireJsonUtf8(req);
-  if (guardErr) return guardErr;
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!pipelineDir.hasInit(project.path))
-    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
+  return withProject(hash, async (project) => withJsonBody(req, async (body) => {
   const existing = (await pipelineDir.readPipeline(project.path, id)) as {
     state?: string;
   } | null;
@@ -412,7 +360,6 @@ export async function savePipeline(hash: string, id: string, req: Request): Prom
       409
     );
   }
-  const body = await readJson(req);
   // 最小 shape 驗證:防止空 body / 半個 body 把整條 pipeline.json 清光
   // (不做完整 spec 驗,只擋明顯壞掉)
   if (
@@ -440,39 +387,29 @@ export async function savePipeline(hash: string, id: string, req: Request): Prom
     prevStateHint: typeof existing.state === "string" ? existing.state : undefined,
   });
   return ok(data);
+  }));
 }
 
 export async function gitInit(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
-  if (git.hasGit(project.path))
-    return err("already_initialized", `.git already exists in ${project.path}`);
-  try {
-    await git.gitInit(project.path);
-  } catch (e) {
-    return err("internal_error", String(e), 500);
-  }
-  const refreshed = await projectStore.findByHash(hash);
-  return ok(refreshed);
+  return withProject(hash, async (project) => {
+    if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
+    if (git.hasGit(project.path)) return err("already_initialized", `.git already exists in ${project.path}`);
+    try { await git.gitInit(project.path); } catch (e) { return err("internal_error", String(e), 500); }
+    return ok(await projectStore.findByHash(hash));
+  }, { requireInit: false });
 }
 
 export async function reveal(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
-  try {
-    await revealFolder(project.path);
-  } catch (e) {
-    return err("internal_error", String(e), 500);
-  }
-  return ok({ ok: true });
+  return withProject(hash, async (project) => {
+    if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
+    try { await revealFolder(project.path); } catch (e) { return err("internal_error", String(e), 500); }
+    return ok({ ok: true });
+  }, { requireInit: false });
 }
 
 export async function runPipeline(hash: string, pipelineId: string, req?: Request): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.run", pipelineId, via: detectVia(req) }, async () => {
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.run", pipelineId, via: detectVia(req) }, async () => {
     if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
     if (!project.hasGit) return err("invalid_path", "Project 沒 .git/,先 git init 再跑 pipeline");
     // User 顯式按繼續 = 明確要重試:把所有 failed_transient ticket reset 成 paused,
@@ -493,26 +430,11 @@ export async function runPipeline(hash: string, pipelineId: string, req?: Reques
     } catch (e) {
       console.warn(`[runPipeline] reset failed_transient skipped: ${String(e)}`);
     }
-    const r = await orchestrator.start({
-      projectPath: project.path,
-      projectHash: hash,
-      pipelineId,
-    });
+    const r = await orchestrator.start({ projectPath: project.path, projectHash: hash, pipelineId });
     if (!r.ok) {
       // budget_exceeded → 402 Payment Required + body 帶 spent/limit 給前端顯示
       if (r.reason === "budget_exceeded") {
-        return Response.json(
-          {
-            ok: false,
-            error: {
-              code: "budget_exceeded" satisfies ApiErrorCode,
-              message: r.error,
-              spent: r.spent,
-              limit: r.limit,
-            },
-          },
-          { status: 402 }
-        );
+        return Response.json({ ok: false, error: { code: "budget_exceeded" satisfies ApiErrorCode, message: r.error, spent: r.spent, limit: r.limit } }, { status: 402 });
       }
       // 邏輯阻擋(state guard / 已在跑等)用 409 conflict;真正爆炸用 500
       const isConflict = /已在|完成|排隊|merge/.test(r.error);
@@ -520,37 +442,31 @@ export async function runPipeline(hash: string, pipelineId: string, req?: Reques
     }
     // queued: true 時,前端可立即顯示「排隊中(順位 N)」不等下一輪 poll
     return ok({ ok: true, queued: r.queued ?? false, position: r.position ?? 0 });
-  });
+  }));
 }
 
 // GET /api/projects/:hash/pipelines/:id/diff-stat
 // 給 UI polling 顯示「+N -M / K files」用,讓 user 在 runner 跑大任務時看到 worktree 真的有在改
 export async function pipelineDiffStat(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!project.hasGit) return ok(null);
-  const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-    baseBranch?: string;
-  } | null;
-  if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
-  const baseBranch = pipeline.baseBranch || "main";
-  const stat = await worktree.diffStat(project.path, pipelineId, baseBranch);
-  return ok(stat);
+  return withProject(hash, async (project) => {
+    if (!project.hasGit) return ok(null);
+    return withPipeline(hash, pipelineId, async (_p, plRaw) => {
+      const baseBranch = (plRaw as { baseBranch?: string }).baseBranch || "main";
+      return ok(await worktree.diffStat(project.path, pipelineId, baseBranch));
+    }, { requireInit: false });
+  }, { requireInit: false });
 }
 
 // GET /api/projects/:hash/pipelines/:id/diff
 // 完整 diff:檔案列表 + raw unified diff 文字。前端自己 parse 顯示。
 export async function pipelineDiff(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!project.hasGit) return ok(null);
-  const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-    baseBranch?: string;
-  } | null;
-  if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
-  const baseBranch = pipeline.baseBranch || "main";
-  const diff = await worktree.fullDiff(project.path, pipelineId, baseBranch);
-  return ok(diff);
+  return withProject(hash, async (project) => {
+    if (!project.hasGit) return ok(null);
+    return withPipeline(hash, pipelineId, async (_p, plRaw) => {
+      const baseBranch = (plRaw as { baseBranch?: string }).baseBranch || "main";
+      return ok(await worktree.fullDiff(project.path, pipelineId, baseBranch));
+    }, { requireInit: false });
+  }, { requireInit: false });
 }
 
 // /pause 跟 /stop 共用本 handler。
@@ -561,32 +477,23 @@ export async function pausePipeline(
   pipelineId: string,
   _req?: Request
 ): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.pause", pipelineId }, async () => {
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.pause", pipelineId }, async () => {
     // queued 狀態走 cancelQueued(直接從 queue 拔 + 標 paused);running 走立即停止。
     if (orchestrator.isQueued(hash, pipelineId)) {
-      const r = await orchestrator.cancelQueued({
-        projectPath: project.path,
-        projectHash: hash,
-        pipelineId,
-      });
+      const r = await orchestrator.cancelQueued({ projectPath: project.path, projectHash: hash, pipelineId });
       if (!r.ok) return err("invalid_path", r.error, 409);
       return ok({ ok: true, cancelled: true });
     }
 
-    const r = await orchestrator.stopImmediate({
-      projectPath: project.path,
-      projectHash: hash,
-      pipelineId,
-    });
+    const r = await orchestrator.stopImmediate({ projectPath: project.path, projectHash: hash, pipelineId });
     if (!r.ok) {
       const code: ApiErrorCode = r.code === "not_found" ? "not_found" : "invalid_path";
       const status = code === "not_found" ? 404 : 409;
       return err(code, r.error, status);
     }
     return ok({ ok: true });
-  });
+  }));
 }
 
 // AI merge(ticket-based):append 一張 mode=merge synthetic ticket 進 pipeline,
@@ -597,46 +504,25 @@ export async function pausePipeline(
 // clean → 回 {mode:"mechanical", mergeCommit};撞衝突 → fallback triggerMerge(AI)回 {mode:"ai", ticketId}
 // 其他失敗(dirty/no_git/...)→ 對應 error code
 export async function mergePipeline(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.merge", pipelineId }, async () => {
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.merge", pipelineId }, async () => {
 
   // 第 1 段:純 git merge
-  const mech = await autoMergeNoAI({
-    projectPath: project.path,
-    projectHash: hash,
-    pipelineId,
-    hasGit: project.hasGit,
-  });
+  const mech = await autoMergeNoAI({ projectPath: project.path, projectHash: hash, pipelineId, hasGit: project.hasGit });
 
   if (mech.ok) {
     // alreadyMerged 是 no-op,mergeCommit 不存在;clean merge 才會有 mergeCommit
     if ("mergeCommit" in mech && mech.mergeCommit) {
-      return ok({
-        ok: true,
-        mode: "mechanical" as const,
-        mergeCommit: mech.mergeCommit,
-        ...(mech.depInstall ? { depInstall: mech.depInstall } : {}),
-      });
+      return ok({ ok: true, mode: "mechanical" as const, mergeCommit: mech.mergeCommit, ...(mech.depInstall ? { depInstall: mech.depInstall } : {}) });
     }
     return ok({ ok: true, mode: "mechanical" as const, alreadyMerged: true });
   }
 
   // 衝突 → fallback AI 走全套 ticket-based merge(同舊 manual /merge 路徑)
   if (mech.reason === "conflict") {
-    const ai = await triggerMerge({
-      projectPath: project.path,
-      projectHash: hash,
-      pipelineId,
-      hasGit: project.hasGit,
-    });
+    const ai = await triggerMerge({ projectPath: project.path, projectHash: hash, pipelineId, hasGit: project.hasGit });
     if (ai.ok) {
-      return ok({
-        ok: true,
-        mode: "ai" as const,
-        ticketId: ai.ticketId,
-        conflictFiles: "conflictFiles" in mech ? mech.conflictFiles : [],
-      });
+      return ok({ ok: true, mode: "ai" as const, ticketId: ai.ticketId, conflictFiles: "conflictFiles" in mech ? mech.conflictFiles : [] });
     }
     // AI 升級也失敗 → 把 AI 那條 reason 映射回 HTTP
     switch (ai.reason) {
@@ -644,10 +530,7 @@ export async function mergePipeline(hash: string, pipelineId: string): Promise<R
       case "no_git":     return err("invalid_path", ai.error, 400);
       case "running":    return err("invalid_path", ai.error, 409);
       case "working_tree_dirty":
-        return Response.json(
-          { ok: false, error: { code: "invalid_path", message: ai.error, details: ai.details } },
-          { status: 409 }
-        );
+        return Response.json({ ok: false, error: { code: "invalid_path", message: ai.error, details: ai.details } }, { status: 409 });
       case "append_failed": return err("invalid_path", ai.error, 409);
       case "spawn_failed":  return err("invalid_path", ai.error, 500);
     }
@@ -661,23 +544,19 @@ export async function mergePipeline(hash: string, pipelineId: string): Promise<R
     case "working_tree_dirty":return err("invalid_path", mech.error, 409);
     case "git_error":         return err("invalid_path", mech.error, 500);
   }
-  });
+  }));
 }
 
 // GET sync 狀態:回 worktree 落後 base 幾個 commit
 // 給前端 chip 用,polling 1 次/3s 由前端控
 export async function syncStatus(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!project.hasGit) return ok({ behind: null });
-  const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-    branch?: string;
-    baseBranch?: string;
-  } | null;
-  if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
-  const baseBranch = pipeline.baseBranch || "main";
-  const behind = await worktree.behindBaseCount(project.path, pipelineId, baseBranch);
-  return ok({ behind, baseBranch });
+  return withProject(hash, async (project) => {
+    if (!project.hasGit) return ok({ behind: null });
+    return withPipeline(hash, pipelineId, async (_p, plRaw) => {
+      const baseBranch = (plRaw as { baseBranch?: string }).baseBranch || "main";
+      return ok({ behind: await worktree.behindBaseCount(project.path, pipelineId, baseBranch), baseBranch });
+    }, { requireInit: false });
+  }, { requireInit: false });
 }
 
 // POST /sync:嘗試直接 git merge(<1s,大多狀況不用 AI)
@@ -687,244 +566,179 @@ export async function syncStatus(hash: string, pipelineId: string): Promise<Resp
 // - merge 失敗(非衝突)→ syncJob.failed
 // 前置:state ∈ {ready, paused, planning, failed} 才允許,running/queued/merged 擋
 export async function syncPipeline(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.sync", pipelineId }, async () => {
-    if (!project.hasGit) return err("invalid_path", "Project 沒 .git/", 400);
-    if (orchestrator.isRunning(hash, pipelineId)) {
-      return err("invalid_path", "Pipeline 在跑,先 pause 才能 sync", 409);
-    }
-    const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-      state?: string;
-      branch?: string;
-      baseBranch?: string;
-      [k: string]: unknown;
-    } | null;
-    if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
-    if (pipeline.state === "queued") return err("invalid_path", "Pipeline 在排隊,等開跑後 pause 才能 sync", 409);
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.sync", pipelineId }, async () => {
+      if (!project.hasGit) return err("invalid_path", "Project 沒 .git/", 400);
+      if (orchestrator.isRunning(hash, pipelineId)) {
+        return err("invalid_path", "Pipeline 在跑,先 pause 才能 sync", 409);
+      }
+      const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
+        state?: string;
+        branch?: string;
+        baseBranch?: string;
+        [k: string]: unknown;
+      } | null;
+      if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
+      if (pipeline.state === "queued") return err("invalid_path", "Pipeline 在排隊,等開跑後 pause 才能 sync", 409);
 
-    const res = await syncJob.startSync({
-      projectPath: project.path,
-      projectHash: hash,
-      pipelineId,
-    });
-    if (!res.ok) return err("invalid_path", res.error, 409);
-    return ok({
-      ok: true,
-      state: res.state,
-      behind: res.behind,
-      conflictFiles: res.conflictFiles,
-    });
-  });
+      const res = await syncJob.startSync({ projectPath: project.path, projectHash: hash, pipelineId });
+      if (!res.ok) return err("invalid_path", res.error, 409);
+      return ok({ ok: true, state: res.state, behind: res.behind, conflictFiles: res.conflictFiles });
+    }), { requireInit: false });
 }
 
 // POST /sync/ai:user 在 conflict_await 狀態確認讓 AI 解衝突
 export async function syncConfirmAi(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.sync.confirmAi", pipelineId }, async () => {
-    const res = await syncJob.confirmAi({
-      projectPath: project.path,
-      projectHash: hash,
-      pipelineId,
-    });
-    if (!res.ok) return err("invalid_path", res.error, 409);
-    return ok({ ok: true });
-  });
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.sync.confirmAi", pipelineId }, async () => {
+      const res = await syncJob.confirmAi({ projectPath: project.path, projectHash: hash, pipelineId });
+      if (!res.ok) return err("invalid_path", res.error, 409);
+      return ok({ ok: true });
+    }), { requireInit: false });
 }
 
 // POST /sync/cancel:取消 sync(conflict_await 階段 = 不解了 / ai_running 階段 = 殺 AI)
 export async function syncCancel(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return withUserAudit(project.path, { action: "pipeline.sync.cancel", pipelineId }, async () => {
-    const res = await syncJob.cancelSync({
-      projectPath: project.path,
-      projectHash: hash,
-      pipelineId,
-    });
-    if (!res.ok) return err("invalid_path", res.error, 409);
-    return ok({ ok: true });
-  });
+  return withProject(hash, async (project) =>
+    withUserAudit(project.path, { action: "pipeline.sync.cancel", pipelineId }, async () => {
+      const res = await syncJob.cancelSync({ projectPath: project.path, projectHash: hash, pipelineId });
+      if (!res.ok) return err("invalid_path", res.error, 409);
+      return ok({ ok: true });
+    }), { requireInit: false });
 }
 
 // POST /sync/dismiss:user 看完 done / failed 狀態後 dismiss(把 syncJob 從 pipeline.json 拿掉)
 // 不負責清 git 狀態(done 已經乾淨;failed 已經 abort 過)
 export async function syncDismiss(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const p = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-    syncJob?: { state?: string };
-    [k: string]: unknown;
-  } | null;
-  if (!p) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
-  if (!p.syncJob) return ok({ ok: true });
-  if (p.syncJob.state === "ai_running" || p.syncJob.state === "merging") {
-    return err("invalid_path", "Sync 還在跑,先 cancel", 409);
-  }
-  const { syncJob: _drop, ...rest } = p;
-  void _drop;
-  await pipelineDir.writePipeline(project.path, pipelineId, rest, {
-    source: "api-sync-dismiss",
-    sourceDetail: "user dismissed syncJob",
-    prevStateHint: typeof (p as { state?: string }).state === "string" ? (p as { state: string }).state : undefined,
-  });
-  return ok({ ok: true });
+  return withPipeline(hash, pipelineId, async (project, pRaw) => {
+    const p = pRaw as { syncJob?: { state?: string }; [k: string]: unknown };
+    if (!p.syncJob) return ok({ ok: true });
+    if (p.syncJob.state === "ai_running" || p.syncJob.state === "merging") {
+      return err("invalid_path", "Sync 還在跑,先 cancel", 409);
+    }
+    const { syncJob: _drop, ...rest } = p;
+    void _drop;
+    await pipelineDir.writePipeline(project.path, pipelineId, rest, {
+      source: "api-sync-dismiss",
+      sourceDetail: "user dismissed syncJob",
+      prevStateHint: typeof (p as { state?: string }).state === "string" ? (p as { state: string }).state : undefined,
+    });
+    return ok({ ok: true });
+  }, { requireInit: false });
 }
 
 export async function listNotifs(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  return ok(notifs.list(project.path));
+  return withProject(hash, async (p) => ok(notifs.list(p.path)), { requireInit: false });
 }
 
 // POST /api/projects/:hash/notif
 // Frontend 主動 emit notif(action toast 同步進 inbox history)。
 // 只接受 frontend_action_* 三種 type;sev 由 caller 帶,不查 NOTIF_EVENTS 字典預設。
 export async function postNotif(hash: string, req: Request): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const guardErr = requireJsonUtf8(req);
-  if (guardErr) return guardErr;
-  const body = (await readJson(req)) as {
-    type?: string;
-    title?: string;
-    sub?: string;
-    pipelineId?: string;
-    sev?: string;
-  };
-  const ALLOWED_TYPES = new Set([
-    "frontend_action_failed",
-    "frontend_action_warn",
-    "frontend_action_info",
-  ]);
-  if (!body.type || !ALLOWED_TYPES.has(body.type)) {
-    return err("invalid_path", `notif type must be one of frontend_action_*`, 400);
-  }
-  if (!body.title || typeof body.title !== "string") {
-    return err("invalid_path", `notif.title required`, 400);
-  }
-  const ALLOWED_SEVS = new Set(["block", "info", "muted"]);
-  const sev = body.sev && ALLOWED_SEVS.has(body.sev)
-    ? (body.sev as "block" | "info" | "muted")
-    : body.type === "frontend_action_failed"
-    ? "block"
-    : body.type === "frontend_action_warn"
-    ? "info"
-    : "muted";
-  const rec = notifs.emit(project.path, {
-    type: body.type as
-      | "frontend_action_failed"
-      | "frontend_action_warn"
-      | "frontend_action_info",
-    title: body.title,
-    sub: typeof body.sub === "string" ? body.sub : undefined,
-    pipelineId: typeof body.pipelineId === "string" ? body.pipelineId : undefined,
-    sev,
-  });
-  return ok(rec);
+  return withProject(hash, async (project) => withJsonBody(req, async (rawBody) => {
+    const body = rawBody as {
+      type?: string;
+      title?: string;
+      sub?: string;
+      pipelineId?: string;
+      sev?: string;
+    };
+    const ALLOWED_TYPES = new Set([
+      "frontend_action_failed",
+      "frontend_action_warn",
+      "frontend_action_info",
+    ]);
+    if (!body.type || !ALLOWED_TYPES.has(body.type)) {
+      return err("invalid_path", `notif type must be one of frontend_action_*`, 400);
+    }
+    if (!body.title || typeof body.title !== "string") {
+      return err("invalid_path", `notif.title required`, 400);
+    }
+    const ALLOWED_SEVS = new Set(["block", "info", "muted"]);
+    const sev = body.sev && ALLOWED_SEVS.has(body.sev)
+      ? (body.sev as "block" | "info" | "muted")
+      : body.type === "frontend_action_failed"
+      ? "block"
+      : body.type === "frontend_action_warn"
+      ? "info"
+      : "muted";
+    const rec = notifs.emit(project.path, {
+      type: body.type as
+        | "frontend_action_failed"
+        | "frontend_action_warn"
+        | "frontend_action_info",
+      title: body.title,
+      sub: typeof body.sub === "string" ? body.sub : undefined,
+      pipelineId: typeof body.pipelineId === "string" ? body.pipelineId : undefined,
+      sev,
+    });
+    return ok(rec);
+  }), { requireInit: false });
 }
 
 export async function markNotifRead(hash: string, id: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  notifs.markRead(project.path, id);
-  return ok({ ok: true });
+  return withProject(hash, async (project) => { notifs.markRead(project.path, id); return ok({ ok: true }); }, { requireInit: false });
 }
 
 export async function markAllNotifsRead(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  notifs.markAllRead(project.path);
-  return ok({ ok: true });
+  return withProject(hash, async (project) => { notifs.markAllRead(project.path); return ok({ ok: true }); }, { requireInit: false });
 }
 
 export async function dismissNotif(hash: string, id: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  notifs.dismiss(project.path, id);
-  return ok({ ok: true });
+  return withProject(hash, async (project) => { notifs.dismiss(project.path, id); return ok({ ok: true }); }, { requireInit: false });
 }
 
 export async function dismissAllNotifs(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  notifs.dismissAll(project.path);
-  return ok({ ok: true });
+  return withProject(hash, async (project) => { notifs.dismissAll(project.path); return ok({ ok: true }); }, { requireInit: false });
 }
 
-export async function listPipelineRuns(
-  hash: string,
-  pipelineId: string
-): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const runs = await runLog.listRuns(project.path, pipelineId);
-  return ok(runs);
+export async function listPipelineRuns(hash: string, pipelineId: string): Promise<Response> {
+  return withProject(hash, async (project) => ok(await runLog.listRuns(project.path, pipelineId)), { requireInit: false });
 }
 
-export async function getPipelineRun(
-  hash: string,
-  pipelineId: string,
-  filename: string
-): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const run = await runLog.getRun(project.path, pipelineId, filename);
-  if (!run) return err("not_found", `Run log not found: ${filename}`, 404);
-  return ok(run);
+export async function getPipelineRun(hash: string, pipelineId: string, filename: string): Promise<Response> {
+  return withProject(hash, async (p) => {
+    const run = await runLog.getRun(p.path, pipelineId, filename);
+    return run ? ok(run) : err("not_found", `Run log not found: ${filename}`, 404);
+  }, { requireInit: false });
 }
 
 // GET /api/projects/:hash/pipelines/:id/audit?limit=50
 // 回該 pipeline 最近 N 筆 state_change audit entry(降冪,最新在最前)。
 // 給 RunHistory drawer 顯示「狀態變動歷史」timeline。
-export async function listPipelineAudit(
-  hash: string,
-  pipelineId: string,
-  req: Request
-): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const url = new URL(req.url);
-  const limitRaw = url.searchParams.get("limit");
-  const limit = limitRaw && /^\d+$/.test(limitRaw) ? Math.min(500, parseInt(limitRaw, 10)) : 50;
-  const entries = auditLog.listAudit(project.path, pipelineId, limit);
-  return ok(entries);
+export async function listPipelineAudit(hash: string, pipelineId: string, req: Request): Promise<Response> {
+  return withProject(hash, async (project) => {
+    const limitRaw = new URL(req.url).searchParams.get("limit");
+    const limit = limitRaw && /^\d+$/.test(limitRaw) ? Math.min(500, parseInt(limitRaw, 10)) : 50;
+    return ok(auditLog.listAudit(project.path, pipelineId, limit));
+  }, { requireInit: false });
 }
 
 // GET /api/projects/:hash/audit?type=user_action&action=&pipelineId=&ticketId=&limit=
 // 跨 pipeline / 跨 type query。目前只支援 type=user_action(state_change 走 pipeline-level endpoint)。
 export async function listProjectAudit(hash: string, req: Request): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const url = new URL(req.url);
-  const type = url.searchParams.get("type") ?? "user_action";
-  if (type !== "user_action") {
-    return err("invalid_path", `unsupported audit type: ${type}`, 400);
-  }
-  const action = url.searchParams.get("action") ?? undefined;
-  const pipelineId = url.searchParams.get("pipelineId") ?? undefined;
-  const ticketId = url.searchParams.get("ticketId") ?? undefined;
-  const limitRaw = url.searchParams.get("limit");
-  const limit = limitRaw && /^\d+$/.test(limitRaw) ? Math.min(500, parseInt(limitRaw, 10)) : 50;
-  const entries = auditLog.listUserActions(project.path, {
-    action,
-    pipelineId,
-    ticketId,
-    limit,
-  });
-  return ok(entries);
+  return withProject(hash, async (project) => {
+    const url = new URL(req.url);
+    const type = url.searchParams.get("type") ?? "user_action";
+    if (type !== "user_action") return err("invalid_path", `unsupported audit type: ${type}`, 400);
+    const action = url.searchParams.get("action") ?? undefined;
+    const pipelineId = url.searchParams.get("pipelineId") ?? undefined;
+    const ticketId = url.searchParams.get("ticketId") ?? undefined;
+    const limitRaw = url.searchParams.get("limit");
+    const limit = limitRaw && /^\d+$/.test(limitRaw) ? Math.min(500, parseInt(limitRaw, 10)) : 50;
+    return ok(auditLog.listUserActions(project.path, { action, pipelineId, ticketId, limit }));
+  }, { requireInit: false });
 }
 
 export async function revealWorktree(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  const path = worktree.worktreePath(project.path, pipelineId);
-  if (!existsSync(path)) {
-    return err("not_found", `Worktree 還沒建立(pipeline 還沒跑過)`, 404);
-  }
-  await revealFolder(path);
-  return ok({ ok: true, path });
+  return withProject(hash, async (project) => {
+    const path = worktree.worktreePath(project.path, pipelineId);
+    if (!existsSync(path)) {
+      return err("not_found", `Worktree 還沒建立(pipeline 還沒跑過)`, 404);
+    }
+    await revealFolder(path);
+    return ok({ ok: true, path });
+  }, { requireInit: false });
 }
 
 // POST /api/projects/:hash/pipelines/:id/reset
@@ -935,83 +749,65 @@ export async function revealWorktree(hash: string, pipelineId: string): Promise<
 // running 中擋。pipeline.json 本身保留(name / mode / goal / acceptance / prompt 等),只清 runtime 痕跡。
 // 對齊 prune 拔掉的舊邏輯(只刪 disk 不刪 branch 會造成 re-create 時 branch 已落後 base)。
 export async function resetPipelineRoute(hash: string, pipelineId: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
   if (orchestrator.isRunning(hash, pipelineId)) {
     return err("invalid_path", "Pipeline 還在跑,先 pause 再重置", 409);
   }
-  const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-    branch?: string;
-    tickets?: Array<Record<string, unknown>>;
-    [k: string]: unknown;
-  } | null;
-  if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
+  return withPipeline(hash, pipelineId, async (project, pipelineRaw) => {
+    const pipeline = pipelineRaw as {
+      branch?: string;
+      tickets?: Array<Record<string, unknown>>;
+      [k: string]: unknown;
+    };
 
-  // 1. 刪 worktree dir(throw-safe)
-  const wtRes = await worktree.removeQuiet(project.path, pipelineId);
-  if (!wtRes.ok) return err("internal_error", wtRes.error ?? "worktree remove failed", 500);
+    // 1. 刪 worktree dir(throw-safe)
+    const wtRes = await worktree.removeQuiet(project.path, pipelineId);
+    if (!wtRes.ok) return err("internal_error", wtRes.error ?? "worktree remove failed", 500);
 
-  // 2. 刪 branch ref(冪等;不存在當成功)
-  const branchName = pipeline.branch ?? `pipeline/${pipelineId}`;
-  if (project.hasGit) {
-    const br = await git.deleteBranchForce(project.path, branchName);
-    if (!br.ok) {
-      console.warn(`[resetPipeline ${pipelineId}] deleteBranch failed: ${br.error}`);
-      // not fatal — branch 刪不掉(可能有 worktree lock 殘留),user 可手動清
+    // 2. 刪 branch ref(冪等;不存在當成功)
+    const branchName = pipeline.branch ?? `pipeline/${pipelineId}`;
+    if (project.hasGit) {
+      const br = await git.deleteBranchForce(project.path, branchName);
+      if (!br.ok) {
+        console.warn(`[resetPipeline ${pipelineId}] deleteBranch failed: ${br.error}`);
+        // not fatal — branch 刪不掉(可能有 worktree lock 殘留),user 可手動清
+      }
     }
-  }
 
-  // 3. reset pipeline state + tickets
-  await pipelineDir.mutatePipeline(project.path, pipelineId, (p) => {
-    const tickets = (p.tickets ?? []).map((t) => {
-      const status = t.status;
-      const isTerminal =
-        status === "done" || status === "failed" ||
-        status === "failed_iter_limit" || status === "failed_transient";
-      if (!isTerminal) return t;
-      const { iter: _i, commits: _c, liveLog: _l, reason: _r, ...rest } = t;
-      void _i; void _c; void _l; void _r;
-      return { ...rest, status: "draft" };
+    // 3. reset pipeline state + tickets
+    await pipelineDir.mutatePipeline(project.path, pipelineId, (p) => {
+      const tickets = (p.tickets ?? []).map((t) => {
+        const status = t.status;
+        const isTerminal =
+          status === "done" || status === "failed" ||
+          status === "failed_iter_limit" || status === "failed_transient";
+        if (!isTerminal) return t;
+        const { iter: _i, commits: _c, liveLog: _l, reason: _r, ...rest } = t;
+        void _i; void _c; void _l; void _r;
+        return { ...rest, status: "draft" };
+      });
+      return { ...p, state: "planning", tickets };
+    }, {
+      source: "user-action",
+      sourceDetail: "POST /pipelines/:id/reset",
     });
-    return { ...p, state: "planning", tickets };
-  }, {
-    source: "user-action",
-    sourceDetail: "POST /pipelines/:id/reset",
-  });
 
-  return ok({ ok: true });
+    return ok({ ok: true });
+  }, { requireInit: false });
 }
 
 // GET /api/projects/:hash/config — 回完整四欄(含 fallback 預設)
 export async function getConfig(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!pipelineDir.hasInit(project.path))
-    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
-  const resolved = await pipelineDir.getResolvedDefaults(project.path);
-  return ok({ defaults: resolved });
+  return withProject(hash, async (project) => ok({ defaults: await pipelineDir.getResolvedDefaults(project.path) }));
 }
 
 // 回 400 with field-level error,body 結構 { ok:false, error:{ code, message, field } }
 function fieldErr(field: string, message: string): Response {
-  return Response.json(
-    {
-      ok: false,
-      error: { code: "invalid_path" satisfies ApiErrorCode, message, field },
-    },
-    { status: 400 }
-  );
+  return Response.json({ ok: false, error: { code: "invalid_path" satisfies ApiErrorCode, message, field } }, { status: 400 });
 }
 
 // PUT /api/projects/:hash/config — 接 partial body,只認可白名單欄位 + 型別驗證
 export async function updateConfig(hash: string, req: Request): Promise<Response> {
-  const guardErr = requireJsonUtf8(req);
-  if (guardErr) return guardErr;
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!pipelineDir.hasInit(project.path))
-    return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
-  const body = await readJson(req);
+  return withProject(hash, async (project) => withJsonBody(req, async (body) => {
   const cur = await pipelineDir.readConfig(project.path);
   const nextDefaults: NonNullable<pipelineDir.ProjectConfig["defaults"]> = {
     ...(cur.defaults ?? {}),
@@ -1076,28 +872,23 @@ export async function updateConfig(hash: string, req: Request): Promise<Response
   await orchestrator.triggerDispatch(project.path, hash);
   const resolved = await pipelineDir.getResolvedDefaults(project.path);
   return ok({ defaults: resolved });
+  }));
 }
 
 // GET /api/projects/:hash/runtime — 回 N/M(running 條數 / max_parallel)給 TopBar
 export async function getRuntime(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  // 即使 hasInit 還沒,也回 0/default(避免 TopBar 爆)
-  const max_parallel = pipelineDir.hasInit(project.path)
-    ? await pipelineDir.getMaxParallel(project.path)
-    : pipelineDir.DEFAULT_MAX_PARALLEL;
-  return ok({
-    runningCount: orchestrator.runningCount(hash),
-    maxParallel: max_parallel,
-  });
+  return withProject(hash, async (project) => {
+    // 即使 hasInit 還沒,也回 0/default(避免 TopBar 爆)
+    const maxParallel = project.hasInit ? await pipelineDir.getMaxParallel(project.path) : pipelineDir.DEFAULT_MAX_PARALLEL;
+    return ok({ runningCount: orchestrator.runningCount(hash), maxParallel });
+  }, { requireInit: false });
 }
 
 export async function listBranches(hash: string): Promise<Response> {
-  const project = await projectStore.findByHash(hash);
-  if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (!project.hasGit) return ok([]);
-  const branches = await git.listBranches(project.path);
-  return ok(branches);
+  return withProject(hash, async (project) => {
+    if (!project.hasGit) return ok([]);
+    return ok(await git.listBranches(project.path));
+  }, { requireInit: false });
 }
 
 export { projectHash };
