@@ -247,16 +247,21 @@ VP 內建一鍵更新,enduser 不必離開 PWA 進 terminal 跑 `git pull` + reb
 
 ### Maintainer 發 release
 
-GitHub release 是版本來源,**沒發 release = enduser 看不到新版**(就算 main 一直有新 commit)。發法:
+GitHub release 是版本來源,**沒發 release = enduser 看不到新版**(就算 main 一直有新 commit)。流程:
 
-```bash
-git tag v0.2.0
-git push --tags
-```
+1. **bump version**:`package.json` 改 `version` + commit
+2. **寫 release notes**(optional):`docs/release/v<version>.md`
+3. **打 tarball**:`bun run scripts/build-tarball.ts v<version>`
+   - 白名單:`dist/`(預 build 前端)+ `server/` + `cli/` + `shared/` + `package.json` + `bun.lock` + `tsconfig.json` + `vite.config.ts` + `README.md`(+ `LICENSE` 若存在)
+   - 不含:`node_modules` / `public/`(已 bake 進 dist)/ 根 `index.html` / `tests/` / `scripts/` / `docs/` / `.claude/` / `.git/` / `.env*` / `gateway/` / `design/` / `CLAUDE.md` / `AGENTS.md`
+   - 預設要求 working tree clean;dev 試跑加 `--allow-dirty`
+   - 產出 `vibe-pipeline-v<version>.tar.gz`(已 gitignore)
+4. **tag + push**:`git tag v<version> && git push --tags`
+5. **發 release**:`gh release create v<version> --title v<version> --notes-file docs/release/v<version>.md vibe-pipeline-v<version>.tar.gz`
 
-GitHub 偵測 tag 自動建 release entry(預設 release notes 是 commit list)。要客製 release notes 走 GitHub Releases UI 編輯該 entry,或用 `gh release create v0.2.0 --notes "..."`。tag 用 [semver](https://semver.org/) 慣例(`vMAJOR.MINOR.PATCH`)。
+tag 用 [semver](https://semver.org/) 慣例(`vMAJOR.MINOR.PATCH`)。未發 release → `/api/system/version` 回 `latestRelease: null` → enduser「套用更新」停用、顯「已是最新」。
 
-未發 release → `/api/system/version` 回 `latestRelease: null` → 「套用更新」永遠停用,enduser 看到「已是最新」。
+注:`scripts/` 不進 tarball,但 `install.sh` / `install.ps1` 從 `raw.githubusercontent.com` 抓,獨立於 tarball 發行物。
 
 ---
 
