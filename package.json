@@ -11,16 +11,16 @@
     "sub:dev": "concurrently -n vite,bun -c blue,yellow \"cross-env VITE_E2E_API_TARGET=http://127.0.0.1:3101 vite --port 5273\" \"cross-env PORT=3101 bun run server/index.ts\"",
     "sub:server": "cross-env PORT=3101 bun run server/index.ts",
     "sub:preview": "cross-env VITE_E2E_API_TARGET=http://127.0.0.1:3101 vite preview --port 4273",
-    "build": "tsc -b && vite build",
+    "build": "bun run scripts/with-build-version.ts -- tsc -b && bun run scripts/with-build-version.ts -- vite build",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
     "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
     "test:e2e:real": "playwright test --config=tests/e2e/playwright.real.config.ts",
     "icons": "bun run scripts/gen-icons.ts",
     "vbpl": "bun run cli/vbpl.ts",
-    "cli:build": "bun build --compile --minify --target=bun-windows-x64 cli/vbpl.ts --outfile dist-cli/vbpl.exe",
-    "cli:build:mac": "bun build --compile --minify --target=bun-darwin-arm64 cli/vbpl.ts --outfile dist-cli/vbpl-mac",
-    "cli:build:linux": "bun build --compile --minify --target=bun-linux-x64 cli/vbpl.ts --outfile dist-cli/vbpl-linux"
+    "cli:build": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-windows-x64 cli/vbpl.ts --outfile dist-cli/vbpl.exe",
+    "cli:build:mac": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-darwin-arm64 cli/vbpl.ts --outfile dist-cli/vbpl-mac",
+    "cli:build:linux": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-linux-x64 cli/vbpl.ts --outfile dist-cli/vbpl-linux"
   },
   "dependencies": {
     "firebase": "^12.13.0",

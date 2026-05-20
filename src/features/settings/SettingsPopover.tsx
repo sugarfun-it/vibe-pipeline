@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../../api/projects";
 import * as userConfigApi from "../../api/userConfig";
 import { SecurityTab } from "../auth/SecurityTab";
+import { UpdateTab } from "./UpdateTab";
 import { useAuthStatus } from "../auth/useAuthStatus";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import {
@@ -340,7 +341,7 @@ export function SettingsPopover({
   const [pushSaving, setPushSaving] = useState<Partial<Record<PushEventKey, boolean>>>({});
   const { status: authStatus } = useAuthStatus();
   // tab 切換 — 取代之前 stacked sections,避免 popover 越來越長
-  type TabKey = "project" | "ai" | "notifications" | "security";
+  type TabKey = "project" | "ai" | "notifications" | "update" | "security";
   const [activeTab, setActiveTab] = useState<TabKey>("project");
 
   function isAbortError(e: unknown): boolean {
@@ -706,6 +707,7 @@ export function SettingsPopover({
             { key: "project", label: "Project" },
             { key: "ai", label: "AI 任務" },
             { key: "notifications", label: "PWA" },
+            { key: "update", label: "更新" },
             ...(authStatus?.bound === true
               ? ([{ key: "security", label: "安全" }] as const)
               : []),
@@ -931,6 +933,12 @@ export function SettingsPopover({
               onActionError={onActionError}
             />
           </div>
+        </div>
+      )}
+
+      {activeTab === "update" && (
+        <div className="settings-tab-content">
+          <UpdateTab onActionError={onActionError} />
         </div>
       )}
 

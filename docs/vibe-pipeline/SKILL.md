@@ -198,6 +198,16 @@ vbpl pipeline sync <id> --cancel                       # 取消同步
 5. **「看這 pipeline 花了多少」**
    - `vbpl pipeline log <id> --json`,加總 `costUsd` 欄位
 
+## 自動更新(Settings →「更新」tab)
+
+VP 內建一鍵更新,user 不用離開 PWA 進 terminal。
+
+- user 抱怨「我這版怎麼沒新功能」/「該 update 了吧」/「最新版是?」→ 引導開 **Settings →「更新」tab**
+- 流程:看版本 → 點「檢查更新」拉 GitHub latest release → 有新版點「**套用更新**」backend 自跑 `git pull` + `bun install` + `bun run build` + 重啟 → 前端 `<SwUpdateBanner>` 跳「套用更新」按下去 reload
+- 中途 backend 重啟期間 API 短暫 503,30 秒內回復;不要叫 user retry,Settings 自己 poll
+- 沒新版時「套用更新」停用 + 顯「已是最新」 — maintainer 還沒 `git tag vX.Y.Z && git push --tags` 發 release 就會這樣
+- `vbpl` CLI binary **不在自動更新範圍**(backend 不替換 PATH 上的 exe);要新 CLI feature 才需要 user 跑 `bun run cli:build` + 蓋過 `~/.vibe-pipeline/bin/vbpl.exe`,見 [`install.md`](install.md) §升級
+
 ## 不要擅自做的事
 
 - **不要自動 retry failed pipeline / ticket** — 失敗有原因(衝突 / critic 不認可 / token 超限),先問 user

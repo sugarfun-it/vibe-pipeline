@@ -193,6 +193,35 @@ Maintainer ops:Firebase project / service account key / Cloud Run 配置 / cost 
 
 ---
 
+## 自動更新
+
+VP 內建一鍵更新,enduser 不必離開 PWA 進 terminal 跑 `git pull` + rebuild。
+
+### Enduser 操作
+
+1. **Settings →「更新」tab** 看當前 commit / GitHub latest release / 是否落後
+2. 點「**檢查更新**」打 `/api/system/version` 拉 GitHub latest release(走 `GET /repos/<owner>/<repo>/releases/latest`,unauthenticated)
+3. 有新版時點「**套用更新**」一鍵觸發 backend:`git pull` → `bun install`(若 dep 有變)→ `bun run build` → 自我重啟(detach 新 process,舊 process exit)
+4. 完成後新 frontend bundle 被 Workbox 偵測為新版,**`<SwUpdateBanner>` 浮現「套用更新」按鈕**,user 按下去 reload 套用新 UI(skipWaiting + `window.location.reload()`)
+5. 中途 backend 重啟期間 API 短暫 503;Settings poll 自動 retry,30 秒內回復
+
+無新 release(maintainer 還沒 tag)時 Settings 顯「已是最新」,「套用更新」按鈕停用。
+
+### Maintainer 發 release
+
+GitHub release 是版本來源,**沒發 release = enduser 看不到新版**(就算 main 一直有新 commit)。發法:
+
+```bash
+git tag v0.2.0
+git push --tags
+```
+
+GitHub 偵測 tag 自動建 release entry(預設 release notes 是 commit list)。要客製 release notes 走 GitHub Releases UI 編輯該 entry,或用 `gh release create v0.2.0 --notes "..."`。tag 用 [semver](https://semver.org/) 慣例(`vMAJOR.MINOR.PATCH`)。
+
+未發 release → `/api/system/version` 回 `latestRelease: null` → 「套用更新」永遠停用,enduser 看到「已是最新」。
+
+---
+
 ## Service Worker / PWA 行為(2026-05-17 Workbox 整合)
 
 build pipeline 透過 [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) `injectManifest` 模式,把 Workbox precache manifest 注入既有的 `public/firebase-messaging-sw.js`,產出 `dist/firebase-messaging-sw.js`。**同一份 SW 同時跑 Workbox(precache + runtime cache + navigation fallback)跟 FCM(push handler + notificationclick)**,不再分兩個 SW。
