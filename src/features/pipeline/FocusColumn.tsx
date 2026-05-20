@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircleIcon, CheckIconSm, CloseIcon, FolderIcon, HistoryIcon, MergeIcon, PlusIcon, RefreshIcon, TrashIcon } from "../../ui/icons";
+import { CheckIconSm, CloseIcon, PlusIcon, RefreshIcon } from "../../ui/icons";
 import { PipelineHistoryDrawer } from "./PipelineHistoryDrawer";
-import { STATE_COLOR, STATE_LABEL, TICKET_STATUS_LABEL, TICKET_STATUS_COLOR, fmtElapsed, fmtDuration, normalizeVerdict } from "../../data/pipelines";
+import { STATE_COLOR, TICKET_STATUS_LABEL, TICKET_STATUS_COLOR, fmtElapsed, fmtDuration, normalizeVerdict } from "../../data/pipelines";
 import { MODE_LABELS } from "../../api/qa";
-import { useConfirm } from "../../ui/ConfirmDialog";
 import { DiffModal } from "./DiffModal";
-import { useApi } from "../../hooks/useApi";
+import { useFocusPipeline } from "./useFocusPipeline";
+import { EmptyTickets } from "./EmptyTickets";
+import { OverflowMenu } from "./OverflowMenu";
+import { FocusTitle } from "./FocusTitle";
+import { ReadyBanner } from "./ReadyBanner";
 import type { IterStage, Pipeline, PipelineState, Ticket, TicketStatus } from "../../types/pipeline";
-import * as api from "../../api/projects";
 import type { RunSummary } from "../../api/projects";
 import "./focus.css";
+
+export { ReadyBanner } from "./ReadyBanner";
 
 // RunButton 狀態決策表(authoritative)— 加新 PipelineState 一定要在 switch 補,
 // 不然 TS exhaustive `never` 編譯就 fail。
@@ -191,122 +195,27 @@ export function FocusColumn({
   queuePosition?: number;
   splittingTicketId?: string | null;
 }) {
-  // Runs summary 給 head chip + RunButton 預估用。pipeline.id / state 變動就 refetch
-  // (state 變表示可能新跑完一次)。失敗安靜忽略 — 純資訊性。
-  const [runs, setRuns] = useState<RunSummary[]>([]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: pipeline.state is the refetch trigger (state change ≈ new run)
-  useEffect(() => {
-    if (!projectHash) return;
-    let cancelled = false;
-    api
-      .listPipelineRuns(projectHash, pipeline.id)
-      .then((arr) => {
-        if (!cancelled) setRuns(arr);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [projectHash, pipeline.id, pipeline.state]);
+  const {
+    diffStat,
+    runs,
+    spawning,
+    onStart,
+    behind,
+    totalCost,
+    lastRun,
+    stateColor,
+    stateLabel,
+    done,
+    total,
+    showMergeBanner,
+    syncActive,
+    lockedByState,
+  } = useFocusPipeline({ projectHash, pipeline, reloadKey, onRun });
 
-  // Worktree diff stat — fetch once on mount(讓 paused/ready 也看得到歷史 diff),
-  // running 時 poll 每 3s 看即時進度。merged 後不打(已合進 base 沒意義)。
   // DiffModal 開關 — 由 head 上 chip 點擊觸發,任何 banner 不在的狀態都看得到
   const [diffOpen, setDiffOpen] = useState(false);
-  const diffStatEnabled = !!projectHash && pipeline.state !== "merged" && pipeline.state !== "planning";
-  const diffLive = pipeline.state === "running";
-  const { data: diffStat } = useApi<api.DiffStat | null>(
-    () => (diffStatEnabled ? api.getDiffStat(projectHash!, pipeline.id) : Promise.resolve(null)),
-    {
-      // 10s — 1 次 git diff 在 Windows fork 5 個 helper subprocess(15 個視窗),3s 太貴
-      intervalMs: 10000,
-      gate: diffLive,
-      // reloadKey:user 手動 trigger(prune worktree / run / stop 等)立刻 refetch,不等 polling
-      deps: [projectHash, pipeline.id, pipeline.state, reloadKey],
-    }
-  );
-
-  // Sync status — worktree 落後 base 幾個 commit。planning 沒 worktree 不抓;merged 仍然抓
-  // (merged 不是終態,branch/worktree 還在,可以繼續加 ticket / sync / 再 merge)。
-  // 跟 diffStat 同節奏:running 才 poll(base 那時可能被別條 pipeline 推進);
-  // 其他 state 一次抓完,不同 pipeline.state 自動 refetch。
-  // syncJob.state 也當 deps:user 點 ✕ 關掉 done/failed chip → syncJob undefined → 觸發 refetch
-  // 否則 chip 消失但「落後 N · 同步」按鈕要等下次 polling 才出現
-  const syncJobState = pipeline.syncJob?.state;
-  // merged 排除 — 已合進 base 沒「落後」概念,sync chip 無意義;打了也只是浪費 git spawn
-  // (pipelinesResult 每 5s refetch → pipeline reference 變 → deps trigger → 持續 fire)
-  const syncEnabled = !!projectHash && pipeline.state !== "planning" && pipeline.state !== "merged";
-  const syncLive = pipeline.state === "running";
-  const { data: syncStatus } = useApi<api.SyncStatus | null>(
-    () => (syncEnabled ? api.getSyncStatus(projectHash!, pipeline.id) : Promise.resolve(null)),
-    {
-      // 30s — base branch 不會 30s 內推 N commit,5s 過頻;1 次 rev-list 在 Windows 12 個視窗
-      intervalMs: 30000,
-      gate: syncLive,
-      deps: [projectHash, pipeline.id, pipeline.state, syncJobState, reloadKey],
-    }
-  );
-  const behind = syncStatus?.behind ?? null;
-
-  const totalCost = runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
-  const lastRun = runs[0] ?? null;
-  const stateColor = STATE_COLOR[pipeline.state];
-  const stateLabel = STATE_LABEL[pipeline.state];
-  // mode=sync 是舊 synthetic ticket(已換 pipeline.syncJob),不計入 done/total
-  const realTickets = pipeline.tickets.filter((t) => t.mode !== "sync");
-  const done = realTickets.filter((t) => t.status === "done").length;
-  const total = realTickets.length;
-  const allDone = done === total && pipeline.state === "ready";
-  // 看是否有失敗 / paused 的 merge ticket(讓 banner 顯重試,不靠 RunButton 的繼續)
-  const failedMergeTicket = pipeline.tickets.find(
-    (t) =>
-      t.mode === "merge" &&
-      (t.status === "failed" ||
-        t.status === "failed_iter_limit" ||
-        t.status === "failed_transient" ||
-        t.status === "paused")
-  );
-  // ready = 全 ticket done 還沒合併;merged = 已合併;有失敗 merge → 也顯 banner 給 user 重試。
-  // 防護網:worktree 跟 base 沒 diff(rebase 完了 / 已 merged 過再 sync 完了 / 純讀 ticket)
-  // → allDone 路徑不顯 merge prompt(merge 出去也是 no-op);merged / failedMerge 仍顯
-  // (前者是「✓ 已合併」狀態 banner,後者要 user 重試,不分 diff)。
-  const noWorktreeDiff = diffStat !== null && diffStat.files === 0 && diffStat.added === 0 && diffStat.deleted === 0;
-  const showMergeBanner =
-    (allDone && !noWorktreeDiff) ||
-    pipeline.state === "merged" ||
-    !!failedMergeTicket;
-  const syncActive =
-    !!pipeline.syncJob &&
-    (pipeline.syncJob.state === "merging" ||
-      pipeline.syncJob.state === "conflict_await" ||
-      pipeline.syncJob.state === "ai_running");
-  const lockedByState =
-    pipeline.state === "running" ||
-    pipeline.state === "queued" ||
-    syncActive;
-
   // 「執行紀錄」drawer 開關(pipeline-level,不在 ticket drawer 內)
   const [historyOpen, setHistoryOpen] = useState(false);
-
-  // Spawning state:點 開始/繼續/重試 後到 polling 看到 state 跳出 [planning/paused/failed]。
-  // 解掉「點下去看似沒反應」的視覺空窗(POST 回 → state.json 寫入 → polling 抓到 ≤ 1.5s + claude 啟動 0~5s)。
-  const [spawning, setSpawning] = useState(false);
-  // pipeline.state 跳出可點擊狀態 = 真的進場了 → 清 spawning
-  useEffect(() => {
-    if (
-      pipeline.state !== "planning" &&
-      pipeline.state !== "paused" &&
-      pipeline.state !== "failed"
-    ) {
-      setSpawning(false);
-    }
-  }, [pipeline.state]);
-  // 安全網:15s 還沒進場視同失敗(打了 API 沒生效),解除 spawning 讓 user 重試
-  useEffect(() => {
-    if (!spawning) return;
-    const id = setTimeout(() => setSpawning(false), 15000);
-    return () => clearTimeout(id);
-  }, [spawning]);
 
   return (
     <main className="focus" key={pipeline.id}>
@@ -409,10 +318,7 @@ export function FocusColumn({
           <div className="focus-actions">
             <RunButton
               pipeline={pipeline}
-              onRun={(pid) => {
-                setSpawning(true);
-                onRun?.(pid);
-              }}
+              onRun={onStart}
               onStop={onStop}
               lastRun={lastRun}
               spawning={spawning}
@@ -704,425 +610,7 @@ function SyncConflictModal({
   );
 }
 
-function EmptyTickets({
-  hasActiveDraft,
-  onAddTicket,
-}: {
-  hasActiveDraft: boolean;
-  onAddTicket: () => void;
-}) {
-  return (
-    <div className="focus-empty">
-      <div className="focus-empty-title">
-        {hasActiveDraft ? "有一張 ticket 在 QA 中" : "還沒任何 ticket"}
-      </div>
-      <div className="focus-empty-desc">
-        {hasActiveDraft
-          ? "之前開了 QA 但沒收尾,點下方按鈕接續對話。"
-          : "用「+ ticket」開 QA drawer,跟 AI 對話收斂出 goal / acceptance / prompt,完成後加進 pipeline。"}
-      </div>
-      <button type="button"
-        className="btn btn-primary focus-empty-cta"
-        onClick={onAddTicket}
-      >
-        <PlusIcon /> {hasActiveDraft ? "接續 QA" : "建第一張 ticket"}
-      </button>
-    </div>
-  );
-}
 
-// Pipeline 級操作的 overflow menu(原本一字排開太擠,收進 ⋯ 內)。
-// 各 action 用 useConfirm() 二次確認(刪除 / 重跑全部);reveal 不需要。
-function OverflowMenu({
-  pipeline,
-  lockedByState,
-  onResetPipeline,
-  onRevealWorktree,
-  onDelete,
-  onToggleAutoMerge,
-  onShowHistory,
-}: {
-  pipeline: Pipeline;
-  lockedByState: boolean;
-  onResetPipeline?: (id: string) => void;
-  onRevealWorktree?: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onToggleAutoMerge?: (id: string, next: boolean) => void;
-  onShowHistory?: () => void;
-}) {
-  const confirm = useConfirm();
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  // 沒任何 action 可做就不顯示
-  if (!onResetPipeline && !onRevealWorktree && !onDelete && !onToggleAutoMerge && !onShowHistory) return null;
-
-  return (
-    <div ref={wrapRef} className="focus-overflow">
-      <button type="button"
-        className="btn"
-        onClick={() => setOpen((o) => !o)}
-        title="更多操作"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        ⋯
-      </button>
-      {open && (
-        <div role="menu" className="focus-overflow-menu">
-          {onToggleAutoMerge && (
-            <MenuItem
-              icon={<span style={{ color: pipeline.autoMerge ? "var(--done)" : "var(--fg-faint)" }}>{pipeline.autoMerge ? "●" : "○"}</span>}
-              label="自動合併"
-              hint={lockedByState ? "執行中無法操作" : pipeline.autoMerge ? "已開啟" : "未開啟"}
-              disabled={lockedByState}
-              onClick={() => {
-                onToggleAutoMerge(pipeline.id, !pipeline.autoMerge);
-              }}
-            />
-          )}
-          {onShowHistory && (
-            <MenuItem
-              icon={<HistoryIcon />}
-              label="執行紀錄"
-              hint=""
-              onClick={() => {
-                setOpen(false);
-                onShowHistory();
-              }}
-            />
-          )}
-          {onRevealWorktree && (
-            <MenuItem
-              icon={<FolderIcon />}
-              label="開啟 worktree"
-              hint=""
-              onClick={() => {
-                setOpen(false);
-                onRevealWorktree(pipeline.id);
-              }}
-            />
-          )}
-          {onResetPipeline && (
-            <MenuItem
-              icon={<RefreshIcon />}
-              label="重置 pipeline"
-              hint={lockedByState ? "執行中無法操作" : ""}
-              disabled={lockedByState}
-              danger
-              onClick={async () => {
-                setOpen(false);
-                const isMerged = pipeline.state === "merged";
-                const ndone = pipeline.tickets.filter((t) => t.status === "done").length;
-                const nfail = pipeline.tickets.filter((t) =>
-                  t.status === "failed" ||
-                  t.status === "failed_iter_limit" ||
-                  t.status === "failed_transient"
-                ).length;
-                const ok = await confirm({
-                  title: `重置 pipeline "${pipeline.name}"?`,
-                  warning: isMerged
-                    ? undefined
-                    : `未 merge 進 base 的 commit 會永久丟失(branch 會被刪)`,
-                  description:
-                    `會做三件事:\n` +
-                    ` · 刪 worktree dir(~/.vibe-pipeline/worktrees/<projHash>/${pipeline.id}/)\n` +
-                    ` · 刪 branch(pipeline/${pipeline.name})— 下次 Run 從 base 重建,不會落後\n` +
-                    ` · tickets 狀態回 draft:${ndone} done + ${nfail} failed\n\n` +
-                    (isMerged
-                      ? `已 merged,branch 的內容都在 base 上,刪 branch 無風險。`
-                      : `要保留 branch 上的 commit 請先 merge 或 cherry-pick → 再重置。`),
-                  confirmLabel: "重置",
-                  danger: true,
-                });
-                if (ok) onResetPipeline(pipeline.id);
-              }}
-            />
-          )}
-          {onDelete && (
-            <MenuItem
-              icon={<TrashIcon />}
-              label="刪除 pipeline"
-              hint={lockedByState ? "執行中無法操作" : ""}
-              disabled={lockedByState}
-              danger
-              onClick={async () => {
-                setOpen(false);
-                const isMerged = pipeline.state === "merged";
-                const ok = await confirm({
-                  title: `刪除 pipeline "${pipeline.name}"?`,
-                  warning: isMerged
-                    ? undefined
-                    : `此 pipeline 還沒 merge 進 base — 未 commit 的變動會永久丟失`,
-                  description: isMerged
-                    ? `已 merged,刪除無風險。\n` +
-                      `會清掉 pipeline.json + 對應 worktree (~/.vibe-pipeline/worktrees/...)。\n` +
-                      `branch 跟已 commit 的內容仍在 base 上看得到。`
-                    : `會清掉 pipeline.json + 對應 worktree。\n` +
-                      `已 commit 的 ticket commit 留在 branch 內(手動 git checkout 該 branch 救得回,但 vibe-pipeline UI 看不到)。\n` +
-                      `要保留請先 merge 或備份 → 再刪。`,
-                  confirmLabel: isMerged ? "刪除" : "強制刪除",
-                  danger: true,
-                });
-                if (ok) onDelete(pipeline.id);
-              }}
-            />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MenuItem({
-  icon,
-  label,
-  hint,
-  disabled,
-  danger,
-  onClick,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  hint?: string;
-  disabled?: boolean;
-  danger?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button type="button"
-      role="menuitem"
-      className={"pipeline-overflow-menu-item focus-overflow-item" + (danger ? " is-danger" : "")}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <span className="focus-overflow-item-icon">{icon}</span>
-      <span className="focus-overflow-item-label">{label}</span>
-      {hint && (
-        <span className="mono focus-overflow-item-hint">{hint}</span>
-      )}
-    </button>
-  );
-}
-
-// 可編輯的 pipeline title — 點 ✎ 進編輯模式,Enter 存,Esc 取消。
-// 重名 / 格式不對 / running 不准存。
-function FocusTitle({
-  pipeline,
-  onRename,
-  existingNames,
-}: {
-  pipeline: Pipeline;
-  onRename?: (pipelineId: string, newName: string) => void;
-  existingNames: string[];
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(pipeline.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // 切 pipeline(id) 或 name 從外部變動時 reset draft / 退出編輯模式
-  // biome-ignore lint/correctness/useExhaustiveDependencies: pipeline.id forces reset on pipeline switch even if name happens to match
-  useEffect(() => {
-    setDraft(pipeline.name);
-    setEditing(false);
-  }, [pipeline.id, pipeline.name]);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.select();
-  }, [editing]);
-
-  const trimmed = draft.trim();
-  const formatOk = /^[a-z0-9][a-z0-9-_]*$/.test(trimmed);
-  const taken =
-    trimmed !== pipeline.name && existingNames.includes(trimmed);
-  const valid = trimmed.length > 0 && formatOk && !taken;
-  const lockedByState =
-    pipeline.state === "running" ||
-    pipeline.state === "queued";
-
-  function commit() {
-    if (!valid || trimmed === pipeline.name) {
-      setEditing(false);
-      setDraft(pipeline.name);
-      return;
-    }
-    onRename?.(pipeline.id, trimmed);
-    setEditing(false);
-  }
-
-  if (editing) {
-    return (
-      <span className="focus-title-edit">
-        <input
-          ref={inputRef}
-          className={"mono focus-title-input" + (valid ? "" : " is-invalid")}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") {
-              setEditing(false);
-              setDraft(pipeline.name);
-            }
-          }}
-          spellCheck={false}
-          autoComplete="off"
-        />
-        <button type="button"
-          className="btn btn-primary"
-          onClick={commit}
-          disabled={!valid || trimmed === pipeline.name}
-          title={
-            taken
-              ? "名稱已存在"
-              : !formatOk
-              ? "只能 a-z / 0-9 / - / _,首字英數"
-              : "存"
-          }
-        >
-          ↵
-        </button>
-        <button type="button"
-          className="btn"
-          onClick={() => {
-            setEditing(false);
-            setDraft(pipeline.name);
-          }}
-          title="取消 (Esc)"
-        >
-          ✕
-        </button>
-      </span>
-    );
-  }
-
-  return (
-    <h2 className="focus-title focus-title-edit">
-      {pipeline.name}
-      {onRename && (
-        <button type="button"
-          className="btn btn-ghost focus-title-edit-btn"
-          onClick={() => setEditing(true)}
-          disabled={lockedByState}
-          title={lockedByState ? "running 中不能改名" : "改名"}
-        >
-          ✎
-        </button>
-      )}
-    </h2>
-  );
-}
-
-export function ReadyBanner({
-  pipeline,
-  onMerge,
-}: {
-  pipeline: Pipeline;
-  onMerge?: (id: string) => void;
-}) {
-  const confirm = useConfirm();
-  const commitCount = pipeline.tickets.reduce(
-    (sum, t) => sum + (t.commits?.length ?? 0),
-    0
-  );
-  const baseBranch = pipeline.baseBranch || "main";
-  const isMerged = pipeline.state === "merged";
-  const failedMerge = pipeline.tickets.find(
-    (t) =>
-      t.mode === "merge" &&
-      (t.status === "failed" ||
-        t.status === "failed_iter_limit" ||
-        t.status === "failed_transient" ||
-        t.status === "paused")
-  );
-  // 正在跑 AI merge ticket(append 後 ready / running)→ banner 切「合併中」+ button 收起,
-  // 避免「✓ ... 可以合併進 main」字樣繼續顯示讓 user 誤判成「合併成功」
-  const mergingTicket = pipeline.tickets.find(
-    (t) => t.mode === "merge" && (t.status === "ready" || t.status === "running")
-  );
-  const isMerging = !!mergingTicket && !isMerged;
-
-  return (
-    <div
-      className={
-        "banner fade-up " +
-        (isMerged ? "banner-ready" : failedMerge || isMerging ? "banner-paused" : "banner-ready")
-      }
-    >
-      <span
-        className="banner-icon"
-        style={{
-          color: isMerged
-            ? "var(--fg-mute)"
-            : failedMerge
-            ? "var(--failed)"
-            : isMerging
-            ? "var(--running)"
-            : "var(--done)",
-        }}
-      >
-        <CheckCircleIcon />
-      </span>
-      <div className="banner-body">
-        <div className="banner-title">
-          {isMerged
-            ? `已合併入 ${baseBranch}`
-            : failedMerge
-            ? `合併失敗 — 點下方重試或先處理 working tree`
-            : isMerging
-            ? `⏳ AI 合併中(撞衝突,正在解 — 約 2 分鐘)…`
-            : `所有 ticket 都 ✓ — 可以合併進 ${baseBranch}`}
-        </div>
-        <div className="banner-desc mono">
-          {pipeline.branch} → {baseBranch} · {commitCount} commit{commitCount === 1 ? "" : "s"}
-        </div>
-      </div>
-      {onMerge && !isMerged && !isMerging && (
-        <button type="button"
-          className="btn btn-primary"
-          onClick={async () => {
-            const isRetry = !!failedMerge;
-            const ok = await confirm({
-              title: isRetry
-                ? `重試合併 ${pipeline.branch} → ${baseBranch}?`
-                : `合併 ${pipeline.branch} → ${baseBranch}?`,
-              description:
-                `策略:先試純 git merge --no-ff(無 AI、毫秒級);撞衝突才 fallback 走 AI 全套(spawn runner + sub-agent 解 + 驗證)。\n\n` +
-                (isRetry
-                  ? `會清掉舊 lastAutoMergeError + 重跑流程。\n` +
-                    `若是 working tree 髒導致失敗,先 commit / stash 再重試,不然又 FAIL。`
-                  : `clean case 90% 場景秒結束,不燒 token。`),
-              confirmLabel: isRetry ? "重試合併" : `合併入 ${baseBranch}`,
-            });
-            if (ok) onMerge(pipeline.id);
-          }}
-          title={
-            failedMerge
-              ? "重試合併(先試 git,撞衝突 fallback AI)"
-              : `合併 ${pipeline.branch} → ${baseBranch}(先試 git,撞衝突 fallback AI)`
-          }
-        >
-          <MergeIcon /> {failedMerge ? "重試合併" : `合併入 ${baseBranch}`}
-        </button>
-      )}
-    </div>
-  );
-}
 
 export function TicketCard({
   ticket,
