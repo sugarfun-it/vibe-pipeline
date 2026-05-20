@@ -22,6 +22,42 @@ User 把 repo URL 給你的話,標準流程:
 
 ---
 
+## 安裝 (enduser)
+
+一行裝完(需先有 [Bun](https://bun.sh) ≥ 1.1 + Git):
+
+**macOS / Linux**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh
+```
+
+**Windows PowerShell**
+
+```powershell
+irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
+```
+
+script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/app/` → 建 `vbpl` shim → 問要不要加 PATH → 自動 `vbpl server start`(backend on `http://localhost:3001`)。
+
+拔掉:
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.sh | sh
+```
+
+```powershell
+# Windows
+irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.ps1 | iex
+```
+
+uninstall 只移除 `~/.vibe-pipeline/app/` 跟 shim;state / auth / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
+
+Maintainer / 改 source code → 看下面 §快速開始 §Maintainer 段。
+
+---
+
 ## 快速開始
 
 需要 [Bun](https://bun.sh)(≥ 1.1)+ Git。
@@ -203,7 +239,7 @@ VP 內建一鍵更新,enduser 不必離開 PWA 進 terminal 跑 `git pull` + reb
 
 1. **Settings →「更新」tab** 看當前 commit / GitHub latest release / 是否落後
 2. 點「**檢查更新**」打 `/api/system/version` 拉 GitHub latest release(走 `GET /repos/<owner>/<repo>/releases/latest`,unauthenticated)
-3. 有新版時點「**套用更新**」一鍵觸發 backend:`git pull` → `bun install`(若 dep 有變)→ `bun run build` → 自我重啟(detach 新 process,舊 process exit)
+3. 有新版時點「**套用更新**」一鍵觸發 backend:下載 GitHub release tarball → 解壓蓋過 `~/.vibe-pipeline/app/`(純前進,不留 backup,失敗 user 重跑 install script 即修)→ 從新 `app/` spawn 新 backend(detached)→ 舊 backend exit。**dev clone(`~/code/vibe-pipeline/` 等)永遠不被碰**,在 dev 按更新等同建/更新一份獨立 `~/.vibe-pipeline/app/` 安裝;要驗完整 enduser update flow 請另開一個 enduser-style 安裝測試,設計細節見 [`docs/refs/enduser-install-update-design.md`](docs/refs/enduser-install-update-design.md)
 4. 完成後新 frontend bundle 被 Workbox 偵測為新版,**`<SwUpdateBanner>` 浮現「套用更新」按鈕**,user 按下去 reload 套用新 UI(skipWaiting + `window.location.reload()`)
 5. 中途 backend 重啟期間 API 短暫 503;Settings poll 自動 retry,30 秒內回復
 
@@ -211,16 +247,21 @@ VP 內建一鍵更新,enduser 不必離開 PWA 進 terminal 跑 `git pull` + reb
 
 ### Maintainer 發 release
 
-GitHub release 是版本來源,**沒發 release = enduser 看不到新版**(就算 main 一直有新 commit)。發法:
+GitHub release 是版本來源,**沒發 release = enduser 看不到新版**(就算 main 一直有新 commit)。流程:
 
-```bash
-git tag v0.2.0
-git push --tags
-```
+1. **bump version**:`package.json` 改 `version` + commit
+2. **寫 release notes**(optional):`docs/release/v<version>.md`
+3. **打 tarball**:`bun run scripts/build-tarball.ts v<version>`
+   - 白名單:`dist/`(預 build 前端)+ `server/` + `cli/` + `shared/` + `package.json` + `bun.lock` + `tsconfig.json` + `vite.config.ts` + `README.md`(+ `LICENSE` 若存在)
+   - 不含:`node_modules` / `public/`(已 bake 進 dist)/ 根 `index.html` / `tests/` / `scripts/` / `docs/` / `.claude/` / `.git/` / `.env*` / `gateway/` / `design/` / `CLAUDE.md` / `AGENTS.md`
+   - 預設要求 working tree clean;dev 試跑加 `--allow-dirty`
+   - 產出 `vibe-pipeline-v<version>.tar.gz`(已 gitignore)
+4. **tag + push**:`git tag v<version> && git push --tags`
+5. **發 release**:`gh release create v<version> --title v<version> --notes-file docs/release/v<version>.md vibe-pipeline-v<version>.tar.gz`
 
-GitHub 偵測 tag 自動建 release entry(預設 release notes 是 commit list)。要客製 release notes 走 GitHub Releases UI 編輯該 entry,或用 `gh release create v0.2.0 --notes "..."`。tag 用 [semver](https://semver.org/) 慣例(`vMAJOR.MINOR.PATCH`)。
+tag 用 [semver](https://semver.org/) 慣例(`vMAJOR.MINOR.PATCH`)。未發 release → `/api/system/version` 回 `latestRelease: null` → enduser「套用更新」停用、顯「已是最新」。
 
-未發 release → `/api/system/version` 回 `latestRelease: null` → 「套用更新」永遠停用,enduser 看到「已是最新」。
+注:`scripts/` 不進 tarball,但 `install.sh` / `install.ps1` 從 `raw.githubusercontent.com` 抓,獨立於 tarball 發行物。
 
 ---
 

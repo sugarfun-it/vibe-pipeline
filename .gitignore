@@ -50,3 +50,7 @@ firebase-service-account*.json
 
 # /loop runtime lock
 .claude/scheduled_tasks.lock
+
+# release tarball artifacts (build-tarball.ts)
+release-tmp/
+vibe-pipeline-v*.tar.gz

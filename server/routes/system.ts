@@ -1,6 +1,6 @@
 import { ok, err } from "./_http";
 import { getVersionStatus } from "../lib/systemVersion";
-import { preflightCheck, writeUpdaterScript, spawnDetached } from "../lib/updater";
+import { preflightCheck, performUpdate, spawnNewBackend } from "../lib/updater";
 import * as notifs from "../lib/notifs/store";
 import * as projectStore from "../lib/projectStore";
 
@@ -14,12 +14,13 @@ export async function version(): Promise<Response> {
 }
 
 // POST /api/system/update
-// 流程:preflight → emit notif → 寫 updater script → spawn detached → 200 → ~500ms 後 self-exit。
-// preflight 失敗(git dirty / pipeline running / 已最新版)回 400 + reason,不啟動 updater。
+// tarball 模式:
+//   preflight → emit notif → 下載 + 解壓到 ~/.vibe-pipeline/app/ → spawn 新 backend → 200 → ~500ms 後 self-exit
+// preflight 失敗(pipeline running / 已最新版)回 400 + reason,不下載。
+// download / extract 失敗回 500;app/ 可能半套,user 重跑 install script 即修(spec 決議,純前進)。
 export async function update(): Promise<Response> {
   try {
-    const repoPath = process.cwd();
-    const pre = await preflightCheck(repoPath);
+    const pre = await preflightCheck();
     if (!pre.ok) {
       return err("invalid_path", pre.reason, 400);
     }
@@ -44,15 +45,15 @@ export async function update(): Promise<Response> {
       // ignore
     }
 
-    const scriptPath = writeUpdaterScript(repoPath);
-    spawnDetached(scriptPath);
+    const result = await performUpdate();
+    spawnNewBackend(result.appPath);
 
     // 排程 ~500ms 後自殺,讓 client 拿到 response 再斷
     setTimeout(() => {
       process.exit(0);
     }, 500);
 
-    return ok({ started: true });
+    return ok({ started: true, newVersion: result.tag });
   } catch (e) {
     return err("internal_error", String(e), 500);
   }

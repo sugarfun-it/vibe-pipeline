@@ -15,6 +15,7 @@ export type VersionStatus = {
 
 export type UpdateStarted = {
   started: true;
+  newVersion?: string;
 };
 
 export type HealthStatus = {
