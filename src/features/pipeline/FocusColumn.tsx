@@ -99,11 +99,13 @@ export function RunButton({
     case "merged": {
       // 沒「可跑」的 real ticket = 沒 ticket / 都 done / 只剩 merge ticket(retry 走 banner)。
       // merge / sync ticket 不認列(synthetic,各自有 banner / chip 觸發)。
+      // failed_transient 也算可跑 — backend `runPipeline` handler 會 auto-reset 成 paused 再續跑
+      // (server restart / OS crash 等情況留下,user 按繼續無痛接回)。
       const hasRunnableReal = pipeline.tickets.some(
         (t) =>
           t.mode !== "merge" &&
           t.mode !== "sync" &&
-          (t.status === "draft" || t.status === "ready" || t.status === "paused")
+          (t.status === "draft" || t.status === "ready" || t.status === "paused" || t.status === "failed_transient")
       );
       if (noTickets || !hasRunnableReal) {
         const title = noTickets
