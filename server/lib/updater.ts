@@ -1,17 +1,23 @@
-// /api/system/update 後端核心:
-// - preflightCheck:三條(git clean / 無 pipeline running / hasUpdate)任一失敗回 reason。
-// - writeUpdaterScript:寫一份 detached script 到 ~/.vibe-pipeline/update.{ps1,sh},
-//   內容做 git pull --ff-only / bun install / cli:build / cp vbpl exe / frontend build / restart backend。
-//   全程 stdout/stderr 都 redirect 到 ~/.vibe-pipeline/update.log(truncate 模式,只留本次)。
-// - spawnDetached:跨平台啟動該 script,跟 parent 解耦(detached + unref + stdio:ignore),
-//   parent 之後可以安全 process.exit。
+// /api/system/update 後端核心(tarball 模式):
+// - preflightCheck:兩條(無 pipeline running / hasUpdate)任一失敗回 reason。
+//   git clean 檢查已拔 — enduser 安裝走 `~/.vibe-pipeline/app/`,沒 .git/。
+// - performUpdate:
+//   1. fetch GitHub releases/latest 取 tarball URL(優先 release asset .tar.gz / .zip,
+//      fallback `tarball_url` 自動源 tarball)+ tag
+//   2. 下載到 `~/.vibe-pipeline/app.download.tmp/release.tar.gz`(或 .zip)
+//   3. 解壓到 staging dir,單一頂層 dir → 視為 root
+//   4. rm -rf `~/.vibe-pipeline/app/`,mv staging root → `~/.vibe-pipeline/app/`
+//   5. 失敗任一步直接拋,純前進不 rollback(spec C 決議)
+//   6. cleanup tmp / staging
+// - spawnNewBackend:Bun.spawn(["bun","run","server/index.ts"], { cwd: app dir, detached:true })
+// - 全程 log append 到 `~/.vibe-pipeline/update.log`(truncate 模式,只留本次)
 
-import { join } from "node:path";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { join, basename } from "node:path";
+import { mkdirSync, writeFileSync, appendFileSync, rmSync, renameSync, readdirSync, statSync, createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
 import { platform } from "node:os";
 import { vibeHome } from "./paths";
-import { runCapture } from "./spawn";
-import { getVersionStatus } from "./systemVersion";
+import { getVersionStatus, fetchLatestRelease } from "./systemVersion";
 import * as orchestrator from "./runner/orchestrator";
 
 export type PreflightResult = { ok: true } | { ok: false; reason: string };
@@ -24,34 +30,16 @@ export function updateLogPath(): string {
   return join(vpRoot(), "update.log");
 }
 
-export function updaterScriptPath(): string {
-  return join(vpRoot(), platform() === "win32" ? "update.ps1" : "update.sh");
+export function appDir(): string {
+  return join(vpRoot(), "app");
 }
 
-export function vbplBinDir(): string {
-  return join(vpRoot(), "bin");
+function downloadDir(): string {
+  return join(vpRoot(), "app.download.tmp");
 }
 
-export async function preflightCheck(repoPath: string): Promise<PreflightResult> {
-  // 1. git clean
-  const status = await runCapture(["git", "status", "--porcelain"], { cwd: repoPath });
-  if (!status.ok) {
-    return { ok: false, reason: `git status 失敗:${status.err.trim() || "unknown"}` };
-  }
-  if (status.out.trim().length > 0) {
-    return { ok: false, reason: "git working tree 有未提交變更,先 commit / stash 再更新" };
-  }
-  // 2. 沒 pipeline running(ticket / sync 都算)
-  const n = orchestrator.globalRunningCount();
-  if (n > 0) {
-    return { ok: false, reason: `還有 ${n} 條 pipeline 在跑,等跑完或暫停後再更新` };
-  }
-  // 3. 有 update
-  const ver = await getVersionStatus();
-  if (!ver.hasUpdate) {
-    return { ok: false, reason: "已是最新版,無需更新" };
-  }
-  return { ok: true };
+function stagingDir(): string {
+  return join(vpRoot(), "app.staging");
 }
 
 function ensureVpRoot(): void {
@@ -62,103 +50,242 @@ function ensureVpRoot(): void {
   }
 }
 
-// Windows 用 PowerShell;Mac/Linux 用 POSIX sh。
-// 兩邊都先 truncate update.log 再 append,所以同 redirect 一條 log。
-// build / restart backend 走背景方式;script 本身就是 detached,在背景跑就好。
-export function writeUpdaterScript(repoPath: string): string {
+function resetLog(): void {
   ensureVpRoot();
-  const root = vpRoot();
-  const log = updateLogPath();
-  const binDir = vbplBinDir();
-  const isWin = platform() === "win32";
-  const path = updaterScriptPath();
+  try {
+    writeFileSync(updateLogPath(), `[updater] start ${new Date().toISOString()}\n`, "utf8");
+  } catch {
+    // ignore
+  }
+}
 
-  if (isWin) {
-    // PowerShell script。所有命令 stdout/stderr 都 *>> $log(會 append,啟動時先清空 log)。
-    const content = [
-      `# vibe-pipeline auto-updater (generated)`,
-      `$ErrorActionPreference = "Continue"`,
-      `$log = ${JSON.stringify(log)}`,
-      `$repo = ${JSON.stringify(repoPath)}`,
-      `$binDir = ${JSON.stringify(binDir)}`,
-      `Set-Content -Path $log -Value "[updater] start $(Get-Date -Format o)" -Encoding utf8`,
-      `function Run([string]$desc, [scriptblock]$block) {`,
-      `  Add-Content -Path $log -Value "[updater] $desc" -Encoding utf8`,
-      `  try { & $block *>> $log } catch { Add-Content -Path $log -Value "[updater] $desc FAILED: $_" -Encoding utf8; exit 1 }`,
-      `}`,
-      `Set-Location -Path $repo`,
-      `Run "git pull --ff-only" { git pull --ff-only }`,
-      `Run "bun install" { bun install }`,
-      `Run "bun run cli:build" { bun run cli:build }`,
-      `if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Force -Path $binDir | Out-Null }`,
-      `Run "cp vbpl.exe -> bin" { Copy-Item -Force (Join-Path $repo "dist-cli/vbpl.exe") (Join-Path $binDir "vbpl.exe") }`,
-      `Run "bun run build" { bun run build }`,
-      `Add-Content -Path $log -Value "[updater] restart backend (bun run server)" -Encoding utf8`,
-      // 背景啟 backend,自己也不等;detached + windowsHide
-      `Start-Process -FilePath "bun" -ArgumentList "run","server" -WorkingDirectory $repo -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $log`,
-      `Add-Content -Path $log -Value "[updater] done $(Get-Date -Format o)" -Encoding utf8`,
-      ``,
-    ].join("\r\n");
-    writeFileSync(path, content, "utf8");
-  } else {
-    const content = [
-      `#!/usr/bin/env bash`,
-      `# vibe-pipeline auto-updater (generated)`,
-      `set -u`,
-      `LOG=${JSON.stringify(log)}`,
-      `REPO=${JSON.stringify(repoPath)}`,
-      `BIN_DIR=${JSON.stringify(binDir)}`,
-      `: > "$LOG"`,
-      `echo "[updater] start $(date -Iseconds)" >> "$LOG"`,
-      `run() { local desc="$1"; shift; echo "[updater] $desc" >> "$LOG"; "$@" >> "$LOG" 2>&1 || { echo "[updater] $desc FAILED ($?)" >> "$LOG"; exit 1; }; }`,
-      `cd "$REPO" || { echo "[updater] cd FAILED" >> "$LOG"; exit 1; }`,
-      `run "git pull --ff-only" git pull --ff-only`,
-      `run "bun install" bun install`,
-      `run "bun run cli:build" bun run cli:build`,
-      `mkdir -p "$BIN_DIR"`,
-      // mac / linux 都會 build 出非 .exe 的 binary;這裡保守 cp 整個 dist-cli/ 讓 user 自己挑
-      `if [ -f "$REPO/dist-cli/vbpl" ]; then cp -f "$REPO/dist-cli/vbpl" "$BIN_DIR/vbpl" >> "$LOG" 2>&1; fi`,
-      `if [ -f "$REPO/dist-cli/vbpl-mac" ]; then cp -f "$REPO/dist-cli/vbpl-mac" "$BIN_DIR/vbpl" >> "$LOG" 2>&1; fi`,
-      `if [ -f "$REPO/dist-cli/vbpl-linux" ]; then cp -f "$REPO/dist-cli/vbpl-linux" "$BIN_DIR/vbpl" >> "$LOG" 2>&1; fi`,
-      `if [ -f "$REPO/dist-cli/vbpl.exe" ]; then cp -f "$REPO/dist-cli/vbpl.exe" "$BIN_DIR/vbpl.exe" >> "$LOG" 2>&1; fi`,
-      `run "bun run build" bun run build`,
-      `echo "[updater] restart backend (bun run server)" >> "$LOG"`,
-      `( cd "$REPO" && nohup bun run server >> "$LOG" 2>&1 < /dev/null & )`,
-      `echo "[updater] done $(date -Iseconds)" >> "$LOG"`,
-      ``,
-    ].join("\n");
-    writeFileSync(path, content, "utf8");
+function log(msg: string): void {
+  try {
+    appendFileSync(updateLogPath(), `[updater] ${msg}\n`, "utf8");
+  } catch {
+    // ignore
+  }
+}
+
+export async function preflightCheck(): Promise<PreflightResult> {
+  // 1. 沒 pipeline running(ticket / sync 都算)
+  const n = orchestrator.globalRunningCount();
+  if (n > 0) {
+    return { ok: false, reason: `還有 ${n} 條 pipeline 在跑,等跑完或暫停後再更新` };
+  }
+  // 2. 有 update
+  const ver = await getVersionStatus();
+  if (!ver.hasUpdate) {
+    return { ok: false, reason: "已是最新版,無需更新" };
+  }
+  return { ok: true };
+}
+
+type ReleaseAsset = {
+  name: string;
+  browser_download_url: string;
+};
+
+type ReleaseInfo = {
+  tag: string;
+  downloadUrl: string;
+  filename: string;
+  needsStripTopLevel: boolean;
+};
+
+const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "eric14304/vibe-pipeline";
+
+// 取 release:優先 asset (.tar.gz / .zip),fallback `tarball_url`。
+// asset 視為已打平 layout(maintainer 自己組);tarball_url 是 GitHub 自動產的源 tarball,
+// 解壓會有 owner-repo-<sha>/ 一層,要 strip。
+async function fetchReleaseInfo(): Promise<ReleaseInfo> {
+  const latest = await fetchLatestRelease();
+  if (!latest) {
+    throw new Error("無法取得 GitHub latest release(沒發過 release / 網路 / rate limit)");
+  }
+  // fetchLatestRelease 沒回 assets / tarball_url,直接再打一次拿原 JSON
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "vibe-pipeline",
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`GitHub releases/latest HTTP ${res.status}`);
+  }
+  const json = (await res.json()) as {
+    tag_name?: string;
+    tarball_url?: string;
+    assets?: ReleaseAsset[];
+  };
+  const tag = typeof json.tag_name === "string" ? json.tag_name : latest.tag;
+  const assets = Array.isArray(json.assets) ? json.assets : [];
+  const asset =
+    assets.find((a) => typeof a.name === "string" && a.name.toLowerCase().endsWith(".tar.gz")) ??
+    assets.find((a) => typeof a.name === "string" && a.name.toLowerCase().endsWith(".tgz")) ??
+    assets.find((a) => typeof a.name === "string" && a.name.toLowerCase().endsWith(".zip"));
+  if (asset && typeof asset.browser_download_url === "string") {
+    return {
+      tag,
+      downloadUrl: asset.browser_download_url,
+      filename: asset.name,
+      needsStripTopLevel: false,
+    };
+  }
+  if (typeof json.tarball_url === "string" && json.tarball_url.length > 0) {
+    return {
+      tag,
+      downloadUrl: json.tarball_url,
+      filename: `${tag}.tar.gz`,
+      needsStripTopLevel: true,
+    };
+  }
+  throw new Error("release 沒 .tar.gz / .zip asset 也沒 tarball_url");
+}
+
+async function downloadToFile(url: string, dest: string): Promise<void> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "vibe-pipeline" },
+    redirect: "follow",
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`下載失敗 HTTP ${res.status} ${url}`);
+  }
+  await new Promise<void>((resolve, reject) => {
+    const sink = createWriteStream(dest);
+    const src = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
+    src.on("error", reject);
+    sink.on("error", reject);
+    sink.on("finish", resolve);
+    src.pipe(sink);
+  });
+}
+
+async function runTool(args: string[], cwd: string): Promise<void> {
+  const proc = Bun.spawn(args, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    windowsHide: true,
+  });
+  const [outBuf, errBuf, code] = await Promise.all([
+    new Response(proc.stdout as ReadableStream<Uint8Array>).text(),
+    new Response(proc.stderr as ReadableStream<Uint8Array>).text(),
+    proc.exited,
+  ]);
+  if (outBuf.trim()) log(`stdout: ${outBuf.trim()}`);
+  if (errBuf.trim()) log(`stderr: ${errBuf.trim()}`);
+  if (code !== 0) {
+    throw new Error(`${args.join(" ")} 失敗 exit=${code}`);
+  }
+}
+
+async function extractArchive(archivePath: string, outDir: string): Promise<void> {
+  mkdirSync(outDir, { recursive: true });
+  const lower = archivePath.toLowerCase();
+  if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz")) {
+    await runTool(["tar", "-xzf", archivePath, "-C", outDir], outDir);
+    return;
+  }
+  if (lower.endsWith(".zip")) {
+    if (platform() === "win32") {
+      await runTool(
+        [
+          "powershell.exe",
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          `Expand-Archive -LiteralPath ${JSON.stringify(archivePath)} -DestinationPath ${JSON.stringify(outDir)} -Force`,
+        ],
+        outDir
+      );
+    } else {
+      // unzip 不存在的話也試試 tar -xf(bsdtar 可以)
+      await runTool(["tar", "-xf", archivePath, "-C", outDir], outDir);
+    }
+    return;
+  }
+  throw new Error(`不支援的封存格式:${basename(archivePath)}`);
+}
+
+// 解壓後若 outDir 只有一個 top-level dir,把它當 root
+function resolveRoot(outDir: string, forceStrip: boolean): string {
+  const entries = readdirSync(outDir).filter((n) => n !== "." && n !== "..");
+  if (entries.length === 1) {
+    const inner = join(outDir, entries[0]);
     try {
-      // chmod +x;Windows 無效但無害
-      const { chmodSync } = require("node:fs") as typeof import("node:fs");
-      chmodSync(path, 0o755);
+      if (statSync(inner).isDirectory()) return inner;
     } catch {
       // ignore
     }
   }
-  return path;
+  if (forceStrip) {
+    throw new Error(`tarball 預期單一 top-level dir,實際 ${entries.length} 個 entries`);
+  }
+  return outDir;
 }
 
-// 完全 detach:parent process.exit 後 child 持續活著。
-// Windows:powershell.exe -NoProfile -ExecutionPolicy Bypass -File update.ps1
-// POSIX:bash update.sh
-export function spawnDetached(scriptPath: string): void {
-  const isWin = platform() === "win32";
-  const args = isWin
-    ? ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath]
-    : ["bash", scriptPath];
-
-  const proc = Bun.spawn(args, {
-    stdout: "ignore",
-    stderr: "ignore",
-    stdin: "ignore",
-    // Bun 支援 windowsHide;true 在 Windows 不開 console 視窗
-    windowsHide: true,
-  });
-  // 不 await,讓 parent 可以乾淨退出
+function rmrf(path: string): void {
   try {
-    proc.unref();
-  } catch {
-    // 舊 Bun 沒 unref 就算了,反正我們馬上 process.exit
+    rmSync(path, { recursive: true, force: true });
+  } catch (e) {
+    log(`rmSync ${path} 警告:${String(e)}`);
+  }
+}
+
+export async function performUpdate(): Promise<{ tag: string; appPath: string }> {
+  ensureVpRoot();
+  resetLog();
+  log(`repo=${GITHUB_REPO}`);
+  // 清理上次殘留
+  rmrf(downloadDir());
+  rmrf(stagingDir());
+  mkdirSync(downloadDir(), { recursive: true });
+
+  const rel = await fetchReleaseInfo();
+  log(`tag=${rel.tag} url=${rel.downloadUrl} stripTop=${rel.needsStripTopLevel}`);
+
+  const archivePath = join(downloadDir(), rel.filename);
+  log(`download → ${archivePath}`);
+  await downloadToFile(rel.downloadUrl, archivePath);
+
+  log(`extract → ${stagingDir()}`);
+  await extractArchive(archivePath, stagingDir());
+  const root = resolveRoot(stagingDir(), rel.needsStripTopLevel);
+  log(`root=${root}`);
+
+  // 純前進:rm app/ → mv root → app/
+  const target = appDir();
+  log(`rm ${target}`);
+  rmrf(target);
+  log(`mv ${root} → ${target}`);
+  renameSync(root, target);
+
+  // cleanup
+  rmrf(downloadDir());
+  rmrf(stagingDir());
+
+  log(`done tag=${rel.tag} appPath=${target}`);
+  return { tag: rel.tag, appPath: target };
+}
+
+// detached 起新 backend from 新 app dir。
+// 不接 stdio,讓新 process 自己活;Bun 在 detached:true 時不會跟 parent exit 聯動。
+export function spawnNewBackend(cwd: string): void {
+  log(`spawn new backend from ${cwd}`);
+  try {
+    Bun.spawn(["bun", "run", "server/index.ts"], {
+      cwd,
+      stdout: "ignore",
+      stderr: "ignore",
+      stdin: "ignore",
+      windowsHide: true,
+      // @ts-expect-error Bun 支援 detached 選項但 TS 型別未必載入
+      detached: true,
+    });
+  } catch (e) {
+    log(`spawn 失敗:${String(e)}`);
+    throw e;
   }
 }

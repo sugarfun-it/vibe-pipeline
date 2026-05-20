@@ -203,7 +203,7 @@ VP 內建一鍵更新,enduser 不必離開 PWA 進 terminal 跑 `git pull` + reb
 
 1. **Settings →「更新」tab** 看當前 commit / GitHub latest release / 是否落後
 2. 點「**檢查更新**」打 `/api/system/version` 拉 GitHub latest release(走 `GET /repos/<owner>/<repo>/releases/latest`,unauthenticated)
-3. 有新版時點「**套用更新**」一鍵觸發 backend:`git pull` → `bun install`(若 dep 有變)→ `bun run build` → 自我重啟(detach 新 process,舊 process exit)
+3. 有新版時點「**套用更新**」一鍵觸發 backend:下載 GitHub release tarball → 解壓蓋過 `~/.vibe-pipeline/app/`(純前進,不留 backup,失敗 user 重跑 install script 即修)→ 從新 `app/` spawn 新 backend(detached)→ 舊 backend exit。**dev clone(`~/code/vibe-pipeline/` 等)永遠不被碰**,在 dev 按更新等同建/更新一份獨立 `~/.vibe-pipeline/app/` 安裝;要驗完整 enduser update flow 請另開一個 enduser-style 安裝測試,設計細節見 [`docs/refs/enduser-install-update-design.md`](docs/refs/enduser-install-update-design.md)
 4. 完成後新 frontend bundle 被 Workbox 偵測為新版,**`<SwUpdateBanner>` 浮現「套用更新」按鈕**,user 按下去 reload 套用新 UI(skipWaiting + `window.location.reload()`)
 5. 中途 backend 重啟期間 API 短暫 503;Settings poll 自動 retry,30 秒內回復
 
