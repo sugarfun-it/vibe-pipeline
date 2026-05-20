@@ -22,6 +22,42 @@ User 把 repo URL 給你的話,標準流程:
 
 ---
 
+## 安裝 (enduser)
+
+一行裝完(需先有 [Bun](https://bun.sh) ≥ 1.1 + Git):
+
+**macOS / Linux**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh
+```
+
+**Windows PowerShell**
+
+```powershell
+irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
+```
+
+script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/app/` → 建 `vbpl` shim → 問要不要加 PATH → 自動 `vbpl server start`(backend on `http://localhost:3001`)。
+
+拔掉:
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.sh | sh
+```
+
+```powershell
+# Windows
+irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.ps1 | iex
+```
+
+uninstall 只移除 `~/.vibe-pipeline/app/` 跟 shim;state / auth / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
+
+Maintainer / 改 source code → 看下面 §快速開始 §Maintainer 段。
+
+---
+
 ## 快速開始
 
 需要 [Bun](https://bun.sh)(≥ 1.1)+ Git。
