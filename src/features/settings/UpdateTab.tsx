@@ -171,11 +171,11 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
             </button>
             <button
               type="button"
-              className={applyDisabled ? "btn" : "btn-primary"}
+              className={applyDisabled ? "btn" : "btn btn-primary"}
               onClick={() => void onApply()}
               disabled={applyDisabled}
             >
-              {isUpdating ? "更新中…" : "套用更新"}
+              {isUpdating ? "更新中…" : "更新"}
             </button>
           </div>
 

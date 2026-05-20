@@ -44,7 +44,12 @@ workbox-window 預設 `controlling` event 觸發 `window.location.reload()`,user
 
 要改回 `autoUpdate` 前先確認 user 體感 OK — 設計信條:**執行中操作信號才該立即冪等**,「自動 reload」由 backend 替 user 決定打斷時機,不對等。
 
-`SwUpdateBanner` 按鈕 label 是「**套用更新**」(不是「更新」),對齊 Settings →「更新」tab 一鍵更新 flow 的同名按鈕:Settings 那顆按下去走 backend `git pull` + build + 重啟(server 端動作),完成後新 bundle 由 Workbox 偵測 → `<SwUpdateBanner>` 出現,按下去 = `messageSkipWaiting + reload`(client 端套用)。兩顆共用「套用更新」名稱,user 認知是同一動作的兩階段,改名前考慮整條 flow。
+**Settings 「更新」tab 跟 `SwUpdateBanner` 按鈕分開語意**(改前考慮整條 flow):
+
+- Settings 更新 tab 按鈕 = 「**更新**」 — 走 backend `git pull` + `bun install` + `bun run build` + 重啟(server 端 fetch + apply 全流程)
+- `<SwUpdateBanner>` 按鈕 = 「**套用更新**」 — 走 `messageSkipWaiting + reload`(client 端 SW 換 bundle 那一步)
+
+Flow:user 在 Settings 按「更新」→ backend 跑完 build + 重啟 → 新 bundle 由 Workbox 偵測 → `<SwUpdateBanner>` 出現「套用更新」→ user 按它 reload 拿新 bundle。**兩按鈕是同一 update flow 的兩階段**,「更新」抓 + 「套用更新」應用,語意分開。
 
 ## mobile drawer / 全螢幕用 `100dvh` 不要 `100vh`
 
