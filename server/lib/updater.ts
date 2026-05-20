@@ -359,7 +359,7 @@ export function writeHelperScript(opts: {
       `L "spawn new backend from $App via cmd.exe (Start-Process -RedirectStandard* disallows same-path stdout+stderr)"`,
       `try {`,
       `  $env:VBPL_HOME = $App`,
-      `  $serverTs = Join-Path $App "server\index.ts"`,
+      `  $serverTs = Join-Path $App "server/index.ts"`,
       `  $bunQ = '"' + $BunPath + '"'`,
       `  $serverQ = '"' + $serverTs + '"'`,
       `  $logQ = '"' + $ServerLog + '"'`,
