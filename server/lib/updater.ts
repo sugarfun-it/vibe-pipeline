@@ -439,10 +439,18 @@ export function writeHelperScript(opts: {
 }
 
 // 跨平台 detach 啟動 helper。parent 隨後可 process.exit。
+//
+// Windows:Bun.spawn(["powershell.exe", ...], { detached:true }) 在 Windows 上
+// 不真 detach(實測 backend process.exit(0) 後 helper 也跟死,從沒寫 [helper] log)。
+// 改用 cmd.exe builtin `start "" /B`:start 是 cmd 內建的真 detach 工具,/B 不開新
+// console window,空字串 "" 是 start 必要的 title arg。pattern 跟 helper 內 spawn
+// 新 backend 用 cmd.exe wrapper 相同,實證可用。
+//
+// POSIX:Bun.spawn detached + bash 走 process group fork 正常 detach,沒問題。
 export function spawnHelperDetached(helperPath: string): void {
   const isWin = platform() === "win32";
   const args = isWin
-    ? ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helperPath]
+    ? ["cmd.exe", "/c", "start", "", "/B", "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helperPath]
     : ["bash", helperPath];
   log(`spawn helper: ${args.join(" ")}`);
   try {
