@@ -125,6 +125,15 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - `codexAdapter`:`-c model="..."` config override / `-s read-only|workspace-write` sandbox / JSONL parse
 - `getAdapter(taskClass, provider)` factory
 - 加新 provider → 實作 `CliAdapter`,接 `getAdapter` switch,prompt 維持 provider-agnostic
+- **prompt 永遠走 stdin,不走 positional arg**(Ruflo issue #1852):Windows cmd.exe 對長 prompt /
+  含引號 / 控制字元的 positional arg 會 re-tokenize 把參數錯位。claude / codex 兩邊 adapter 全 spawn
+  點都 `stdin: "pipe"` + `sink.write(prompt); sink.end()`,args 不夾 prompt 字串。codex 已 native 用
+  stdin(args 最後一個 "-");claude `-p` / `--resume` / `--system-prompt` 都允許 stdin 接管。
+- **claude spawn env 必清 nested-session 變數**(Ruflo issue #1395):claude CLI 看到
+  `CLAUDE_SESSION_ID` / `CLAUDE_PARENT_SESSION_ID` 會誤判為 nested Claude Code session 直接拒跑。
+  adapter 內 `workerEnv()` helper:`...process.env` → 設 `CLAUDE_ENTRYPOINT=worker` + delete 那兩個 var。
+  claudeAdapter 3 處 spawn 全套;codexAdapter 也同步套(codex 不認那些 env 但設了無害,統一 spawn
+  環境減心智負擔)。改 adapter 新 spawn 點要記得帶 `env: workerEnv()`。
 
 ### User config(`server/lib/userConfig.ts`)
 

@@ -120,9 +120,28 @@ export class CodexAdapter implements CliAdapter {
   }
 }
 
+// 跟 claudeAdapter 對齊:刪 nested-session env、標 entrypoint=worker。codex 不認這些 env 但
+// 設了無害;統一 spawn 環境減 caller 心智負擔(Ruflo issue #1395)。
+function workerEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === "string") env[k] = v;
+  }
+  env.CLAUDE_ENTRYPOINT = "worker";
+  delete env.CLAUDE_SESSION_ID;
+  delete env.CLAUDE_PARENT_SESSION_ID;
+  return env;
+}
+
 // 用 stdin 模式 spawn codex,把 prompt 寫進 stdin。args 最後一個必為 "-"。
 function spawnCodexWithStdinPrompt(args: string[], cwd: string, prompt: string): SpawnedProcess {
-  const proc = spawnStreaming<SpawnedProcess>(args, { cwd, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+  const proc = spawnStreaming<SpawnedProcess>(args, {
+    cwd,
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+    env: workerEnv(),
+  });
   // Bun.spawn stdin 是 FileSink,write + end。
   proc.stdin.write(prompt);
   proc.stdin.end();
