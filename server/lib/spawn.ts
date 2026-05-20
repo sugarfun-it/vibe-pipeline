@@ -47,6 +47,9 @@ export async function runCapture(
 
 // streaming spawn:caller 完全控制 lifecycle(.stdin / .exited / .kill / for-await stdout)。
 // windowsHide 預設 true(可被 opts override,實務上不需要)。
+// detached 預設 true:POSIX 上 child 進自己 process group,killProcessTree 的 `process.kill(-pid)`
+// 才能整棵殺到 sub-agent(macOS 雷 1)。Windows 無此語意,設了無害。注意:我們 await proc.exited,
+// 不呼 child.unref(),detached 純粹只為 process group。
 // 回傳型別 generic 化保留 caller 的具體型(e.g. PipedSubprocess);內部用 unknown 過 type narrowing。
 export function spawnStreaming<T extends Bun.Subprocess = Bun.PipedSubprocess>(
   args: string[],
@@ -54,6 +57,7 @@ export function spawnStreaming<T extends Bun.Subprocess = Bun.PipedSubprocess>(
 ): T {
   const merged = {
     windowsHide: true,
+    detached: true,
     ...(opts ?? {}),
   } as Parameters<typeof Bun.spawn>[1];
   return Bun.spawn(args, merged) as unknown as T;
