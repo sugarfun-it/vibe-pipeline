@@ -49,6 +49,13 @@ async function main(): Promise<void> {
   const sub = args.positional[1];
   const rest = { ...args, positional: args.positional.slice(2) };
 
+  if (args.flags["version"] === true || args.flags["v"] === true) {
+    const pkgUrl = new URL("../package.json", import.meta.url);
+    const pkg = await Bun.file(pkgUrl).json() as { version?: string };
+    print(`vbpl ${pkg.version ?? "unknown"}`);
+    process.exit(0);
+  }
+
   if (!noun || noun === "--help" || noun === "help" || noun === "-h") {
     print(USAGE);
     process.exit(0);

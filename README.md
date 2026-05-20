@@ -83,7 +83,7 @@ bun run start         # build + 同時起 backend 3001 + preview 4173
 
 `start` 一條指令搞定 production build + 後端 + 前端 preview(PWA SW 註冊正常)。日常改 VP source code 用 `bun run dev`(走 5173 vite HMR,SW 不註冊)。
 
-**Sub-agent 用 `sub:*` script + 100 port**(`sub:dev` / `sub:server` / `sub:preview`)避開 user backend。詳見 [package.json](package.json)。
+**並行 dev stack**(`sub:dev` / `sub:server` / `sub:preview`)用 +100 port(3101 / 5273 / 4273)避開 user backend(3001 / 5173 / 4173)。給「user backend 跑著、自己另開一份 dev stack 改 source」或 e2e fixture / CI 用;sub-agent 自己不會起 backend / vite,跟本套 script 無關。
 
 打包 CLI 成單檔 binary:
 
@@ -270,9 +270,9 @@ SKILL 文件分兩種,動非 trivial 改動前先讀:
 | `bun run dev` | maintainer 改 source:vite 5173 HMR + backend 3001(SW 不註冊) |
 | `bun run server` | maintainer 只起 backend(3001;前景 process) |
 | `bun run preview` | maintainer 只起 frontend preview(4173,需先 `bun run build`) |
-| `bun run sub:dev` | sub-agent 用:vite 5273 + backend 3101(避開 user 的 3001/5173) |
-| `bun run sub:server` | sub-agent 只 backend(3101) |
-| `bun run sub:preview` | sub-agent preview(4273 + proxy → 3101) |
+| `bun run sub:dev` | 並行 dev stack:vite 5273 + backend 3101(用於 user backend 還跑著時另開一份 / e2e fixture / CI) |
+| `bun run sub:server` | 並行 backend only(3101) |
+| `bun run sub:preview` | 並行 preview(4273 + proxy → 3101) |
 | `bun run build` | `tsc -b && vite build` → `dist/` |
 | `bun run lint` | Biome lint |
 | `bun run test:e2e` | Playwright mock 模式(CI 預設) |

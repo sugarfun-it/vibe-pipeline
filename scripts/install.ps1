@@ -4,6 +4,14 @@
 
 $ErrorActionPreference = "Stop"
 
+# console UTF-8 — script 用了大量中文 Info / Err,Big5 console 會亂碼
+try {
+  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+  $OutputEncoding = [System.Text.Encoding]::UTF8
+} catch {
+  # 沒救就算了,功能不受影響
+}
+
 $Repo    = "eric14304/vibe-pipeline"
 $VpHome  = Join-Path $HOME ".vibe-pipeline"
 $AppDir  = Join-Path $VpHome "app"
@@ -160,4 +168,4 @@ Info ""
 Info "OK Installed $Tag at $AppDir"
 Info "OK Backend: http://localhost:3001"
 Info ""
-Info "Done. 跑 ``vbpl --help`` 看指令。"
+Info 'Done. 跑 vbpl --help 看指令。'
