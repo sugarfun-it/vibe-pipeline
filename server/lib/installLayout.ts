@@ -20,7 +20,7 @@
 // Module 給 updater.ts(寫 .pending)+ cli/commands/server.ts(讀 + swap)+ install.ps1 (?
 // install scripts 是 PowerShell / bash 不能 import 本檔,自己實作但要對齊本檔語意)
 
-import { existsSync, lstatSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, renameSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { platform } from "node:os";
 import { vibeHome } from "./paths";
@@ -91,9 +91,36 @@ export function promoteStagingIfAny(tag: string): boolean {
   return true;
 }
 
+// 刪 link entry(symlink / Windows junction)— 不 follow target。
+// 跨平台雷:
+//   - Bun `rmSync(link, {recursive:true})` 對 Windows junction 噴 EFAULT(bun fs bug)
+//   - `unlinkSync(junction)` 在 Windows 噴 EPERM
+//   - 正解:Windows junction 用 `rmdirSync`(junction 是 directory reparse point,
+//     rmdir 移 link entry 不 recurse);POSIX symlink 用 `unlinkSync`
+function removeLinkEntry(link: string): void {
+  if (!existsSync(link)) return;
+  const st = lstatSync(link);
+  if (st.isSymbolicLink()) {
+    // POSIX symlink
+    unlinkSync(link);
+    return;
+  }
+  if (platform() === "win32" && st.isDirectory()) {
+    // Windows junction(lstat 報 Directory)
+    rmdirSync(link);
+    return;
+  }
+  if (st.isDirectory()) {
+    // 一般 dir(legacy / 誤建)— 也刪掉清理(rmrf 是 force,內容也清,因為這 link 位置不該住東西)
+    rmSync(link, { recursive: true, force: true });
+    return;
+  }
+  throw new Error(`current link 類型未知,無法刪除:${link}`);
+}
+
 // Swap `current` → `versions/<tag>/`。先確保 staging promoted。
 // Windows 用 `junction`(directory junction,不需 admin / dev mode);POSIX 用 `dir` symlink。
-// 既有 link 先 rmrf 掉(只刪 link 本身,不會跟到 target — junction / symlink 都 OK)。
+// 既有 link 先用 removeLinkEntry 拆掉(只刪 link 本身,不跟到 target)。
 // target 不存在(promote 也沒救)→ throw。
 export function swapCurrentTo(tag: string): void {
   promoteStagingIfAny(tag);
@@ -102,17 +129,6 @@ export function swapCurrentTo(tag: string): void {
     throw new Error(`version dir not found: ${target}`);
   }
   const link = currentLink();
-  if (existsSync(link)) {
-    // lstat 不 follow symlink,確認 link 本身存在類型
-    const st = lstatSync(link);
-    if (st.isSymbolicLink()) {
-      rmSync(link, { force: true });
-    } else if (st.isDirectory()) {
-      // Windows junction 在 lstat 報 Directory;rmSync recursive 對 junction 只移 link 不刪 target
-      rmSync(link, { recursive: true, force: true });
-    } else {
-      throw new Error(`current 不是 junction / symlink / dir,無法 swap:${link}`);
-    }
-  }
+  removeLinkEntry(link);
   symlinkSync(target, link, platform() === "win32" ? "junction" : "dir");
 }
