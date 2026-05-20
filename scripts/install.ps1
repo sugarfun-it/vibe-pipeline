@@ -81,10 +81,12 @@ try {
   if ($isZip) {
     Expand-Archive -Path $tarball -DestinationPath $stage -Force
   } else {
-    # tar is built-in on Win10+ (bsdtar at C:\Windows\System32\tar.exe);
-    # --force-local: if PATH resolves to git-for-Windows GNU tar, it would treat
-    # `C:\...` as `host:path` SSH spec. --force-local opts out (both bsdtar and GNU tar accept).
-    tar --force-local -xzf $tarball -C $stage
+    # Explicit System32 tar (native bsdtar, Win10 17063+). If PATH order resolves
+    # `tar` to git-for-Windows usr/bin/tar.exe (MSYS bsdtar), it mangles `C:\path`
+    # into `C\:\\path` (MSYS path translation) and fails. Using absolute System32
+    # path avoids that. --force-local is NOT supported by any bsdtar variant; do not add.
+    $winTar = Join-Path $env:WINDIR "System32\tar.exe"
+    & $winTar -xzf $tarball -C $stage
     if ($LASTEXITCODE -ne 0) { throw "tar failed (exit=$LASTEXITCODE)" }
   }
 

@@ -188,18 +188,29 @@ async function runTool(args: string[], cwd: string): Promise<void> {
   }
 }
 
+// Windows tar 解析:
+//   - System32 tar.exe = native bsdtar(Win10 17063+ 內建),正確處理 `C:\path`
+//   - git-for-Windows usr/bin/tar.exe = MSYS bsdtar,把 `C:\path` mangle 成 `C\:\\path`(MSYS path 轉譯)
+// PowerShell `tar` 走 cmdlet resolution 命中 System32(沒事);Bun.spawn 走 PATH 順序,常命中
+// git-for-Windows(因 git 安裝把 usr/bin 加在前面)。
+// 修法:Windows 顯式給 absolute path C:\Windows\System32\tar.exe(會 fail 在 < Win10 17063,
+// 但 VP 本來就要 Win10+;Bun 也是)。POSIX 仍用 PATH 上 tar(GNU tar 行為正常)。
+// --force-local 不能加(bsdtar 全部不認,加了直接 exit 1)。
+function winTarPath(): string {
+  return join(process.env.WINDIR ?? "C:\\Windows", "System32", "tar.exe");
+}
+
 async function extractArchive(archivePath: string, outDir: string): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   const lower = archivePath.toLowerCase();
-  // --force-local 必加:Windows Bun.spawn 可能抓到 git for Windows 的 GNU tar(usr/bin),
-  // GNU tar 把 `C:\path` 當 SSH `host:path` 解析直接拒。bsdtar(System32 / libarchive ≥ 3.5)
-  // 也接受 --force-local 不會壞,POSIX GNU tar 同樣接受。加了統一安全。
+  const isWin = platform() === "win32";
+  const tarBin = isWin ? winTarPath() : "tar";
   if (lower.endsWith(".tar.gz") || lower.endsWith(".tgz")) {
-    await runTool(["tar", "--force-local", "-xzf", archivePath, "-C", outDir], outDir);
+    await runTool([tarBin, "-xzf", archivePath, "-C", outDir], outDir);
     return;
   }
   if (lower.endsWith(".zip")) {
-    if (platform() === "win32") {
+    if (isWin) {
       await runTool(
         [
           "powershell.exe",
@@ -212,7 +223,7 @@ async function extractArchive(archivePath: string, outDir: string): Promise<void
         outDir
       );
     } else {
-      await runTool(["tar", "--force-local", "-xf", archivePath, "-C", outDir], outDir);
+      await runTool([tarBin, "-xf", archivePath, "-C", outDir], outDir);
     }
     return;
   }
