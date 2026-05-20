@@ -5,9 +5,10 @@
 ## Build binary
 
 ```bash
-bun run cli:build           # Windows x64 → dist-cli/vbpl.exe
-bun run cli:build:mac       # macOS arm64 → dist-cli/vbpl-mac
-bun run cli:build:linux     # Linux x64   → dist-cli/vbpl-linux
+bun run cli:build           # Windows x64           → dist-cli/vbpl.exe
+bun run cli:build:mac       # macOS arm64 (Apple)   → dist-cli/vbpl-mac
+bun run cli:build:mac-x64   # macOS x64 (Intel)     → dist-cli/vbpl-mac-x64
+bun run cli:build:linux     # Linux x64             → dist-cli/vbpl-linux
 ```
 
 binary ~121 MB(bundle 整個 Bun runtime)。
@@ -32,15 +33,40 @@ Maintainer 改 vibe-pipeline source code 才用 `bun run server` / `bun run dev`
 
 VP 所有 artifact 統一收 `~/.vibe-pipeline/`(binary / config / runtime data / worktrees 都在這 dir)。binary 進 `~/.vibe-pipeline/bin/`,對齊 pyenv / cargo / nvm 慣例。
 
-### macOS / Linux
+### macOS (Apple Silicon, arm64)
 
 ```bash
+bun run cli:build:mac
 mkdir -p ~/.vibe-pipeline/bin
-cp dist-cli/vbpl-mac ~/.vibe-pipeline/bin/vbpl       # 或 vbpl-linux
+cp dist-cli/vbpl-mac ~/.vibe-pipeline/bin/vbpl
 chmod +x ~/.vibe-pipeline/bin/vbpl
 echo 'export PATH="$HOME/.vibe-pipeline/bin:$PATH"' >> ~/.zshrc    # bash 用 .bashrc
 source ~/.zshrc
 vbpl --version                                        # 驗
+```
+
+### macOS (Intel, x64)
+
+```bash
+bun run cli:build:mac-x64
+mkdir -p ~/.vibe-pipeline/bin
+cp dist-cli/vbpl-mac-x64 ~/.vibe-pipeline/bin/vbpl
+chmod +x ~/.vibe-pipeline/bin/vbpl
+echo 'export PATH="$HOME/.vibe-pipeline/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+vbpl --version
+```
+
+### Linux (x64)
+
+```bash
+bun run cli:build:linux
+mkdir -p ~/.vibe-pipeline/bin
+cp dist-cli/vbpl-linux ~/.vibe-pipeline/bin/vbpl
+chmod +x ~/.vibe-pipeline/bin/vbpl
+echo 'export PATH="$HOME/.vibe-pipeline/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+vbpl --version
 ```
 
 ### Windows PowerShell

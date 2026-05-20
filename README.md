@@ -52,10 +52,11 @@ bun run start         # build + 同時起 backend 3001 + preview 4173
 打包 CLI 成單檔 binary:
 
 ```bash
-bun run cli:build           # Windows
-bun run cli:build:mac       # macOS arm64
+bun run cli:build           # Windows x64
+bun run cli:build:mac       # macOS arm64 (Apple Silicon)
+bun run cli:build:mac-x64   # macOS x64 (Intel)
 bun run cli:build:linux     # Linux x64
-# → dist-cli/vbpl[.exe]
+# → dist-cli/vbpl[.exe|-mac|-mac-x64|-linux]
 ```
 
 ---
@@ -133,9 +134,10 @@ flowchart TB
 
 打包:
 ```bash
-bun run cli:build           # Windows x64 → dist-cli/vbpl.exe
-bun run cli:build:mac       # macOS arm64 → dist-cli/vbpl-mac
-bun run cli:build:linux     # Linux x64   → dist-cli/vbpl-linux
+bun run cli:build           # Windows x64           → dist-cli/vbpl.exe
+bun run cli:build:mac       # macOS arm64 (Apple)   → dist-cli/vbpl-mac
+bun run cli:build:mac-x64   # macOS x64 (Intel)     → dist-cli/vbpl-mac-x64
+bun run cli:build:linux     # Linux x64             → dist-cli/vbpl-linux
 ```
 
 裝 PATH:`vbpl --version` 驗即可。**完整 install per-OS + trouble 看 [`docs/vibe-pipeline/install.md`](docs/vibe-pipeline/install.md)**。
