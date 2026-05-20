@@ -15,6 +15,21 @@ import type {
   SpawnedProcess,
 } from "./adapter";
 
+// Windows cmd.exe re-tokenize bug(Ruflo issue #1852):長 prompt 當 positional arg 經 cmd.exe
+// 再解析會被 re-tokenize → 引號 / 空白 / 控制字元錯位。永遠把 prompt 走 stdin 不走 positional。
+// Nested Claude Code session 偵測(Ruflo issue #1395):claude CLI 看到 CLAUDE_SESSION_ID /
+// CLAUDE_PARENT_SESSION_ID env 會誤判為 nested session 拒跑。spawn 前刪掉並標 entrypoint=worker。
+function workerEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === "string") env[k] = v;
+  }
+  env.CLAUDE_ENTRYPOINT = "worker";
+  delete env.CLAUDE_SESSION_ID;
+  delete env.CLAUDE_PARENT_SESSION_ID;
+  return env;
+}
+
 export class ClaudeAdapter implements CliAdapter {
   readonly name = "claude";
 
@@ -75,8 +90,18 @@ function spawnQA(opts: QASpawnOpts): SpawnedProcess {
       args.push("--append-system-prompt", appendSystemPrompt);
     }
   }
-  args.push(userMessage);
-  return spawnStreaming<SpawnedProcess>(args, { cwd, stdout: "pipe", stderr: "pipe" });
+  // prompt 走 stdin(雷區:Windows cmd.exe re-tokenize)
+  const proc = spawnStreaming<SpawnedProcess>(args, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "pipe",
+    env: workerEnv(),
+  });
+  const sink = proc.stdin as { write: (s: string) => unknown; end: () => unknown };
+  sink.write(userMessage);
+  sink.end();
+  return proc;
 }
 
 function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
@@ -107,8 +132,18 @@ function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
     args.push("--dangerously-skip-permissions");
   }
   args.push("--system-prompt", systemPrompt);
-  args.push(initialMessage);
-  return spawnStreaming<SpawnedProcess>(args, { cwd, stdout: "pipe", stderr: "pipe" });
+  // initialMessage 走 stdin(雷區:Windows cmd.exe re-tokenize)
+  const proc = spawnStreaming<SpawnedProcess>(args, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "pipe",
+    env: workerEnv(),
+  });
+  const sink = proc.stdin as { write: (s: string) => unknown; end: () => unknown };
+  sink.write(initialMessage);
+  sink.end();
+  return proc;
 }
 
 function spawnSplit(opts: SplitSpawnOpts): SpawnedProcess {
@@ -134,7 +169,13 @@ function spawnSplit(opts: SplitSpawnOpts): SpawnedProcess {
     "--disallowedTools",
     "Edit Write Task",
   ];
-  const proc = spawnStreaming<SpawnedProcess>(args, { cwd, stdout: "pipe", stderr: "pipe", stdin: "pipe" });
+  const proc = spawnStreaming<SpawnedProcess>(args, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "pipe",
+    env: workerEnv(),
+  });
   // userMessage 走 stdin(沿用既有行為);呼叫端不再自己寫 stdin
   proc.stdin.write(userMessage);
   proc.stdin.end();
