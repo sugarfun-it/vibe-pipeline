@@ -2,17 +2,25 @@
 # vibe-pipeline enduser installer (Windows PowerShell)
 # Usage: irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
 #
+# Layout (Scoop-style versioned + current junction):
+#   %USERPROFILE%\.vibe-pipeline\versions\v0.1.X\   actual version dir
+#   %USERPROFILE%\.vibe-pipeline\current            junction -> versions\v0.1.X\
+#   %LOCALAPPDATA%\vibe-pipeline\vbpl.cmd           shim, runs from %current%
+#
+# self-update only writes to versions\v<NEW>\ and a .pending file. `vbpl server start`
+# detects .pending and swaps current. No process self-replacement, no detach magic.
+#
 # Note: ASCII-only on purpose. Windows PowerShell 5.1 reads .ps1 as ANSI by default;
 # UTF-8 multi-byte chars (without BOM) can be misread as lead-bytes and break the parser.
 
 $ErrorActionPreference = "Stop"
 
-$Repo    = "eric14304/vibe-pipeline"
-$VpHome  = Join-Path $HOME ".vibe-pipeline"
-$AppDir  = Join-Path $VpHome "app"
-$AppBak  = Join-Path $VpHome "app.bak"
-$ShimDir = Join-Path $env:LOCALAPPDATA "vibe-pipeline"
-$Shim    = Join-Path $ShimDir "vbpl.cmd"
+$Repo        = "eric14304/vibe-pipeline"
+$VpHome      = Join-Path $HOME ".vibe-pipeline"
+$VersionsDir = Join-Path $VpHome "versions"
+$Current     = Join-Path $VpHome "current"
+$ShimDir     = Join-Path $env:LOCALAPPDATA "vibe-pipeline"
+$Shim        = Join-Path $ShimDir "vbpl.cmd"
 
 function Info($m) { Write-Host $m }
 function Err($m)  { Write-Host "ERROR: $m" -ForegroundColor Red }
@@ -38,7 +46,7 @@ $Tag = $api.tag_name
 if (-not $Tag) { Err "tag_name not found in release JSON"; exit 1 }
 Info "OK Latest tag: $Tag"
 
-# Prefer .tar.gz / .tgz (build-tarball.ts output), then .zip, then zipball_url fallback.
+# 3) Pick asset: prefer .tar.gz / .tgz (build-tarball.ts output), then .zip, then zipball_url fallback.
 $asset = $api.assets | Where-Object { $_.name -match '\.(tar\.gz|tgz)$' } | Select-Object -First 1
 if (-not $asset) {
   $asset = $api.assets | Where-Object { $_.name -match '\.zip$' } | Select-Object -First 1
@@ -54,7 +62,7 @@ if ($asset) {
 if (-not $assetUrl) { Err "No download URL found"; exit 1 }
 Info "OK Download URL: $assetUrl"
 
-# 3) Download
+# 4) Download
 $isZip = $assetName -match '\.zip$' -or $assetUrl -match 'zipball'
 $ext = if ($isZip) { "zip" } else { "tar.gz" }
 $tarball = Join-Path $env:TEMP "vibe-pipeline-$Tag.$ext"
@@ -65,11 +73,14 @@ try {
   Err "Download failed: $_"; exit 1
 }
 
-# 4) Extract (safety net: mv app -> app.bak before extract, restore on failure)
-New-Item -ItemType Directory -Force -Path $VpHome | Out-Null
-if (Test-Path $AppDir) {
-  if (Test-Path $AppBak) { Remove-Item -Recurse -Force $AppBak }
-  Move-Item $AppDir $AppBak
+# 5) Stage extract to versions\$Tag (independent dir, never touches running backend)
+New-Item -ItemType Directory -Force -Path $VersionsDir | Out-Null
+$VersionDir = Join-Path $VersionsDir $Tag
+
+# overwrite existing same-version dir (retry / re-install case)
+if (Test-Path $VersionDir) {
+  Info "Removing existing $VersionDir"
+  Remove-Item -Recurse -Force $VersionDir -ErrorAction Stop
 }
 
 $stage = Join-Path $env:TEMP "vibe-pipeline-stage-$Tag"
@@ -81,10 +92,8 @@ try {
   if ($isZip) {
     Expand-Archive -Path $tarball -DestinationPath $stage -Force
   } else {
-    # Explicit System32 tar (native bsdtar, Win10 17063+). If PATH order resolves
-    # `tar` to git-for-Windows usr/bin/tar.exe (MSYS bsdtar), it mangles `C:\path`
-    # into `C\:\\path` (MSYS path translation) and fails. Using absolute System32
-    # path avoids that. --force-local is NOT supported by any bsdtar variant; do not add.
+    # Explicit System32 tar (native bsdtar, Win10 17063+). git-for-Windows usr/bin/tar.exe
+    # is MSYS bsdtar which mangles `C:\path` -> `C\:\\path`. Absolute path avoids that.
     $winTar = Join-Path $env:WINDIR "System32\tar.exe"
     & $winTar -xzf $tarball -C $stage
     if ($LASTEXITCODE -ne 0) { throw "tar failed (exit=$LASTEXITCODE)" }
@@ -93,25 +102,24 @@ try {
   # tarball/zipball top-level is usually <repo>-<sha>/ (strip it)
   $entries = Get-ChildItem -Path $stage
   if ($entries.Count -eq 1 -and $entries[0].PSIsContainer) {
-    Move-Item $entries[0].FullName $AppDir
+    Move-Item $entries[0].FullName $VersionDir
   } else {
-    New-Item -ItemType Directory -Force -Path $AppDir | Out-Null
-    Move-Item (Join-Path $stage "*") $AppDir
+    New-Item -ItemType Directory -Force -Path $VersionDir | Out-Null
+    Move-Item (Join-Path $stage "*") $VersionDir
   }
   Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
-  if (Test-Path $AppBak) { Remove-Item -Recurse -Force $AppBak }
-  Info "OK Extracted -> $AppDir"
+  Info "OK Extracted -> $VersionDir"
 } catch {
-  Err "Extract failed, rolling back: $_"
-  if (Test-Path $AppDir) { Remove-Item -Recurse -Force $AppDir }
-  if (Test-Path $AppBak) { Move-Item $AppBak $AppDir }
+  Err "Extract failed: $_"
+  if (Test-Path $stage) { Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue }
+  if (Test-Path $VersionDir) { Remove-Item -Recurse -Force $VersionDir -ErrorAction SilentlyContinue }
   exit 1
 }
 Remove-Item -Force $tarball -ErrorAction SilentlyContinue
 
-# 4.5) Install deps
+# 6) Install deps inside versions\$Tag
 Info "Running bun install (30s ~ 2 min) ..."
-Push-Location $AppDir
+Push-Location $VersionDir
 try {
   & bun install --silent
   if ($LASTEXITCODE -ne 0) { throw "bun install exit=$LASTEXITCODE" }
@@ -122,17 +130,43 @@ try {
 }
 Pop-Location
 
-# 5) Shim
+# 7) Swap `current` junction to new version
+if (Test-Path $Current) {
+  # junction reports as Directory; Remove-Item recursive on a junction removes the link only
+  Info "Removing old current link"
+  Remove-Item -Recurse -Force $Current -ErrorAction Stop
+}
+Info "Creating junction $Current -> $VersionDir"
+New-Item -ItemType Junction -Path $Current -Target $VersionDir | Out-Null
+
+# 7.5) Legacy migration: old layout had `app/` directly under VpHome. If present, move
+# to `app.legacy.bak/` so user can clean up later. Avoid touching it if it's a junction.
+$LegacyApp = Join-Path $VpHome "app"
+if (Test-Path $LegacyApp) {
+  $legacyAttr = (Get-Item $LegacyApp -Force).Attributes
+  if (-not ($legacyAttr -band [System.IO.FileAttributes]::ReparsePoint)) {
+    $LegacyBak = Join-Path $VpHome "app.legacy.bak"
+    if (Test-Path $LegacyBak) { Remove-Item -Recurse -Force $LegacyBak -ErrorAction SilentlyContinue }
+    try {
+      Move-Item $LegacyApp $LegacyBak
+      Info "Legacy $LegacyApp moved to $LegacyBak (safe to delete)"
+    } catch {
+      Info "WARN: legacy $LegacyApp move failed (in use?): $_"
+    }
+  }
+}
+
+# 8) Shim points to current\
 New-Item -ItemType Directory -Force -Path $ShimDir | Out-Null
 $shimContent = @"
 @echo off
-set VBPL_HOME=%USERPROFILE%\.vibe-pipeline\app
+set VBPL_HOME=%USERPROFILE%\.vibe-pipeline\current
 bun run "%VBPL_HOME%\cli\vbpl.ts" %*
 "@
 Set-Content -Path $Shim -Value $shimContent -Encoding ASCII
 Info "OK Shim: $Shim"
 
-# 6) PATH check + prompt
+# 9) PATH check + prompt
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 $inPath = $false
 if ($userPath) {
@@ -153,18 +187,19 @@ if (-not $inPath) {
   }
 }
 
-# 7) Auto-start backend
+# 10) Auto-start backend (uses current\ via VBPL_HOME)
 Info ""
 Info "Starting backend ..."
-$env:VBPL_HOME = $AppDir
+$env:VBPL_HOME = $Current
 try {
-  & bun run "$AppDir\cli\vbpl.ts" server start
+  & bun run "$Current\cli\vbpl.ts" server start
 } catch {
   Err "server start failed. Try manually: vbpl server start"
 }
 
 Info ""
-Info "OK Installed $Tag at $AppDir"
+Info "OK Installed $Tag at $VersionDir"
+Info "OK current -> $VersionDir"
 Info "OK Backend: http://localhost:3001"
 Info ""
 Info "Done. Run 'vbpl --help' for commands."

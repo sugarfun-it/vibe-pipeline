@@ -123,22 +123,45 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - gateway service code 在 repo 內 `gateway/`(Bun + Firestore,~500 行,multi-tenant per-token registry,含 `/tokens/auto-issue` 無 auth 端點 + `/tokens/*` admin 端點);admin CLI `vp-gw-admin` 發 token / revoke / list
 - 設計 spec → [`docs/refs/archive/fcm-push-gateway-2026-05-17.md`](../../../docs/refs/archive/fcm-push-gateway-2026-05-17.md);maintainer ops note:Cloud Run max-instances=1 + $1/mo budget alert hard cap abuse,auto-issue IP rate-limit 5/day 防 token farm
 
-### Self-update(`server/lib/updater.ts` + `systemVersion.ts`)
+### Self-update(`server/lib/updater.ts` + `installLayout.ts` + `systemVersion.ts`)
 
-**2026-05-21 tarball + launcher-script pattern**(2 次改寫):enduser 安裝在 `~/.vibe-pipeline/app/` 沒 `.git/`,git pull 用不到。第一版直接在 backend process 內 `rmrf(app/)` + spawn,但 Windows 上 backend cwd 就是 `app/`,EBUSY 然後 rename EPERM,**`app/` 內容被刪光留空殼變 zombie**。改成 launcher pattern。
+**2026-05-21 第 3 版 — Scoop-style versioned + swap-on-start**。前 2 版踩過:
 
-- `systemVersion.ts`:`getVersionStatus()` 讀當前 commit / branch + `fetchLatestRelease()` 打 GitHub `releases/latest`(unauthenticated,有 cache 避 rate limit)
-- `updater.ts`:
-  - `preflightCheck()`:兩條(`globalRunningCount()===0` + `hasUpdate`),git clean 已拔
-  - `downloadAndStage()`:GitHub releases/latest 取 .tar.gz / .zip asset(優先)→ fallback `tarball_url`(needsStripTopLevel=true)→ 下載 `~/.vibe-pipeline/app.download.tmp/` → 解壓 `~/.vibe-pipeline/app.staging/` → resolveRoot → 回 `{ tag, stagingRoot, cleanupPaths }`。**不動 `app/`**
-  - `writeHelperScript({backendPid, stagingRoot, cleanupPaths})`:寫平台 helper 到 `~/.vibe-pipeline/update-helper.{ps1,sh}`(Win 強制 ASCII-only 避 5.1 ANSI 讀檔 mis-parse,POSIX `chmod 0755`)。Helper 邏輯:wait backend pid exit(max 30s,逾時 force kill)→ rmrf app/(retry 20× 應付 Windows fs 釋放延遲)→ rename stagingRoot → app/ → cleanup tmp → spawn 新 backend(stdout/stderr → `~/.vibe-pipeline/server.log` 對齊 `vbpl server start`)→ self-delete
-  - `spawnHelperDetached(helperPath)`:Windows `powershell.exe -NoProfile -ExecutionPolicy Bypass -File`;POSIX `bash`。Detached + `windowsHide` + ignore stdio
-  - update flow:route `system.ts:update` 跑 preflight → emit `system_updating` notif → `downloadAndStage` → `writeHelperScript` → `spawnHelperDetached` → response 200 → **setTimeout 1500ms** `process.exit(0)`(讓 helper 起來開始 watch backend pid + client 拿 response)
-  - log 全程 `~/.vibe-pipeline/update.log`(truncate per run;helper 也 append 同檔)
-- **bun path 走 `process.execPath` 寫進 helper**:helper 不依賴 PATH 找 bun,直接用 backend 自己的 bun 路徑
-- **dev clone 永遠不被碰** — 在 dev repo 按 Settings「更新」也只動 `~/.vibe-pipeline/app/`;要驗 enduser update flow 另開 enduser-style 安裝
-- `scripts/build-tarball.ts`(maintainer 端)走嚴格白名單組 tarball,whitelist 清單見 README §Maintainer 發 release;新 server 子目錄要進 tarball **必須改本檔白名單**,否則 enduser 收到的 tarball 缺檔
-- 設計 ref → [`docs/refs/enduser-install-update-design.md`](../../../docs/refs/enduser-install-update-design.md)
+- **v1 direct rmrf cwd**:backend `rmrf(app/)` + rename,Windows backend cwd 就是 `app/`,EBUSY 然後 rename EPERM,`app/` 內容被刪光留空殼變 zombie
+- **v2 launcher helper script**:寫 detached .ps1/.sh helper 接手 swap,撞 8 個 Windows-specific 雷(`Bun.spawn detached` 不真 detach / PowerShell ANSI 讀 UTF-8 mis-parse / `Start-Process` 同檔 redirect / `Remove-Item` non-terminating error / git-for-Windows tar path mangling / TS template literal `\X` escape / `cmd start /B` 才能真 detach / helper 缺 `bun install`)
+
+v3 改 Scoop / Squirrel / pnpm 普遍走的 versioned + indirection pattern。Layout(全 enduser-only,dev clone 不長這樣):
+
+```
+~/.vibe-pipeline/
+  versions/v0.1.X/       enduser 各版本獨立目錄
+  current -> versions/.. junction(Windows)/ symlink(POSIX)
+  .pending               純文字 tag,vbpl server start 偵測後 swap
+```
+
+Module 分工:
+
+- **`installLayout.ts`** SSOT:`versionsDir()` / `versionDir(tag)` / `currentLink()` / `pendingPath()` / `readPending()` / `writePending(tag)` / `clearPending()` / `swapCurrentTo(tag)`。給 updater(寫)+ cli/commands/server.ts(讀 + swap)共用
+- **`systemVersion.ts`**:`getCurrentVersion()` 優先序 `BUILD_VERSION env > package.json version(installed mode) > git describe(dev clone) > "dev-unknown"`。installed mode 偵測 = cwd 沒 `.git/`(避 dev clone 撞 `version` 欄被當 release)
+- **`updater.ts`**:
+  - `preflightCheck()`:`globalRunningCount()===0` + `hasUpdate`(git clean 已拔)
+  - `downloadAndStageVersion()`:fetch GitHub releases/latest → download .tar.gz / .zip asset(優先)→ tarball_url fallback → 解壓到 `versions/v<tag>/`(獨立目錄,**完全不碰 current/**)→ `bun install` 同步跑完 → 回 `{tag, versionDir}`。失敗只影響 `versions/v<tag>/` 半套,user 重 trigger 即覆蓋
+  - `writePending(tag)`:寫 `.pending` 純文字
+  - **拔光 v2 整個 helper 體系**(`writeHelperScript` / `spawnHelperDetached` / `performUpdate` / `spawnNewBackend` 全砍)
+- **Route `system.ts:update`**:preflight → emit `system_updating` notif(訊息改「請跑 vbpl server start 套用」)→ `downloadAndStageVersion` → `writePending` → setTimeout 500ms self-exit → response `{started, newVersion, action:"restart_required", message}`
+- **CLI `cli/commands/server.ts:serverStart`**:`applyPendingUpdateIfAny()` 在 spawn backend 前跑 — 讀 `.pending` → `swapCurrentTo(tag)` → `clearPending()`。swap 發生時 current/ 內**沒人在跑**,完全避開 Windows cwd lock。失敗(target dir 不存在 / 換 junction 撞權限)只 warn,不清 `.pending`(留著 user 下次再試)
+- **Windows tar 必走 `%WINDIR%\System32\tar.exe`**:避 git-for-Windows usr/bin/tar.exe(MSYS bsdtar)做 `C:\path` → `C\:\\path` mangling。已封裝在 `extractArchive`
+- **Bun.spawn 不 detach**:整 self-update flow 不再依賴跨平台 detach,只用 spawn + wait 同步 + parent process self-exit。問題消失
+
+對齊設計信條:
+- 雷 #15「server lifecycle = user-driven first class」— update 後 user 跑 `vbpl server start` 跟既有 stop/start flow 一致
+- 設計信條 6「ground truth 由 backend 驗」— `.pending` 是純文字單 tag,沒解析失敗;swap 失敗 throw + log,不寫死「ok」誤報
+
+dev clone:沒 `~/.vibe-pipeline/current/`,Settings 按「更新」仍會解壓到 `~/.vibe-pipeline/versions/v<tag>/` + 寫 `.pending`,但 dev backend cwd 在 `D:\sugarfungit\vibe-pipeline\` 不會被 vbpl server start 引到 current/(VBPL_HOME 設別處 / cwd 偵測勝)。dev 想驗完整 enduser update flow 一律另開 enduser-style 安裝。
+
+`scripts/build-tarball.ts`(maintainer 端)走嚴格白名單組 tarball,whitelist 清單見 README §Maintainer 發 release;新 server 子目錄要進 tarball **必須改本檔白名單**,否則 enduser 收到的 tarball 缺檔。
+
+設計 ref → [`docs/refs/enduser-install-update-design.md`](../../../docs/refs/enduser-install-update-design.md)(該檔內描述舊 v2 launcher pattern,待另外更新對齊 v3)
 
 ### CLI adapter(`server/lib/cli/`)
 

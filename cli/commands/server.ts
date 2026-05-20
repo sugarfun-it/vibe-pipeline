@@ -13,6 +13,7 @@ import {
   serverPidPath,
   serverStateDir,
 } from "../lib/serverPath";
+import { readPending, swapCurrentTo, clearPending } from "../../server/lib/installLayout";
 
 const START_TIMEOUT_MS = 5_000;
 const HEALTH_TIMEOUT_MS = 5_000;
@@ -227,7 +228,26 @@ async function killManagedServer(pid: number, options: { forced?: boolean } = {}
   return { stopped: true, pid, forced: options.forced === true };
 }
 
+// 偵測 `~/.vibe-pipeline/.pending`(updater 寫的目標版本 tag)→ swap `current` junction/symlink
+// → clearPending。enduser install 用 versioned dir + current 一層 indirection;dev clone 沒
+// .pending 不會觸發。失敗(target dir 不存在 / link 不能改)只 warn 繼續用 current 既有版本。
+async function applyPendingUpdateIfAny(quiet: boolean): Promise<void> {
+  const pending = readPending();
+  if (!pending) return;
+  if (!quiet) print(`套用待裝更新 ${pending}...`);
+  try {
+    swapCurrentTo(pending);
+    clearPending();
+    if (!quiet) print(`已套用 ${pending}`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!quiet) print(`WARN: 套用待裝更新 ${pending} 失敗:${msg}。將用既有版本啟動。`);
+    // 不 clearPending — 留著讓 user 看到、下次再試
+  }
+}
+
 export async function serverStart(options: StartOptions = {}): Promise<StartResult> {
+  await applyPendingUpdateIfAny(options.quiet === true || isJsonMode());
   const repoPath = await detectServerRepoPath();
   const initialHealth = await healthInfo(deadlineRemaining(options.deadlineAtMs, 500));
   if (initialHealth.ok) {

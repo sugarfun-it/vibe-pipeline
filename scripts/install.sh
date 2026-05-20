@@ -1,13 +1,21 @@
 #!/bin/sh
 # vibe-pipeline enduser installer (POSIX: macOS / Linux)
 # Usage: curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh
+#
+# Layout (Scoop-style versioned + current symlink):
+#   ~/.vibe-pipeline/versions/v0.1.X/   actual version dir
+#   ~/.vibe-pipeline/current            symlink -> versions/v0.1.X/
+#   ~/.local/bin/vbpl                   shim, runs from $current
+#
+# self-update only writes to versions/v<NEW>/ + a .pending file. `vbpl server start`
+# detects .pending, swaps current. No process self-replacement, no detach magic.
 
 set -e
 
 REPO="eric14304/vibe-pipeline"
 VP_HOME="$HOME/.vibe-pipeline"
-APP_DIR="$VP_HOME/app"
-APP_BAK="$VP_HOME/app.bak"
+VERSIONS_DIR="$VP_HOME/versions"
+CURRENT="$VP_HOME/current"
 SHIM_DIR="$HOME/.local/bin"
 SHIM="$SHIM_DIR/vbpl"
 
@@ -16,27 +24,27 @@ err() { printf 'ERROR: %s\n' "$*" >&2; }
 
 # 1) Bun check
 if ! command -v bun >/dev/null 2>&1; then
-  err "Bun 未安裝。請先跑:"
+  err "Bun is not installed. Install Bun first:"
   err "  curl -fsSL https://bun.sh/install | bash"
-  err "裝完重開 terminal 再跑 install.sh"
+  err "Then open a new terminal and re-run install.sh"
   exit 1
 fi
-msg "✓ Bun: $(bun --version)"
+msg "OK Bun: $(bun --version)"
 
 # 2) Latest release
-msg "查 latest release ..."
+msg "Fetching latest release ..."
 API_JSON=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest") || {
-  err "抓 release info 失敗"; exit 1;
+  err "Failed to fetch release info"; exit 1;
 }
 
 TAG=$(printf '%s' "$API_JSON" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
 if [ -z "$TAG" ]; then
-  err "無法解析 tag_name"
+  err "tag_name not found in release JSON"
   exit 1
 fi
-msg "✓ Latest tag: $TAG"
+msg "OK Latest tag: $TAG"
 
-# 找 .tar.gz / .tgz asset;沒有 → tarball_url fallback
+# 3) Pick asset: prefer .tar.gz; fall back to tarball_url
 ASSET_URL=$(printf '%s' "$API_JSON" \
   | tr ',' '\n' \
   | sed -n 's/.*"browser_download_url": *"\([^"]*\.\(tar\.gz\|tgz\)\)".*/\1/p' \
@@ -44,58 +52,78 @@ ASSET_URL=$(printf '%s' "$API_JSON" \
 
 if [ -z "$ASSET_URL" ]; then
   ASSET_URL=$(printf '%s' "$API_JSON" | sed -n 's/.*"tarball_url": *"\([^"]*\)".*/\1/p' | head -n1)
-  msg "  無 .tar.gz asset,改用 tarball_url"
+  msg "  No .tar.gz asset, using tarball_url fallback"
 fi
 
 if [ -z "$ASSET_URL" ]; then
-  err "找不到 tarball URL"
+  err "No download URL found"
   exit 1
 fi
-msg "✓ Download URL: $ASSET_URL"
+msg "OK Download URL: $ASSET_URL"
 
-# 3) Download
+# 4) Download
 TARBALL="/tmp/vibe-pipeline-$TAG.tar.gz"
-msg "下載到 $TARBALL ..."
-curl -fsSL -o "$TARBALL" "$ASSET_URL" || { err "下載失敗"; exit 1; }
+msg "Downloading to $TARBALL ..."
+curl -fsSL -o "$TARBALL" "$ASSET_URL" || { err "Download failed"; exit 1; }
 
-# 4) Extract (safety net: mv app → app.bak)
-mkdir -p "$VP_HOME"
-if [ -d "$APP_DIR" ]; then
-  rm -rf "$APP_BAK"
-  mv "$APP_DIR" "$APP_BAK"
+# 5) Stage extract to versions/$TAG (independent, never touches running backend)
+mkdir -p "$VERSIONS_DIR"
+VERSION_DIR="$VERSIONS_DIR/$TAG"
+
+# overwrite existing same-version dir (retry / re-install case)
+if [ -d "$VERSION_DIR" ]; then
+  msg "Removing existing $VERSION_DIR"
+  rm -rf "$VERSION_DIR"
 fi
-mkdir -p "$APP_DIR"
+mkdir -p "$VERSION_DIR"
 
-msg "解壓 ..."
-# tarball 第一層通常是 <repo>-<sha>/,strip 掉
-if tar -xzf "$TARBALL" -C "$APP_DIR" --strip-components=1 2>/dev/null; then
-  rm -rf "$APP_BAK"
-  msg "✓ 解壓 → $APP_DIR"
-else
-  err "解壓失敗,回滾"
-  rm -rf "$APP_DIR"
-  if [ -d "$APP_BAK" ]; then mv "$APP_BAK" "$APP_DIR"; fi
+msg "Extracting ..."
+# tarball/zipball top-level is usually <repo>-<sha>/ → strip
+if ! tar -xzf "$TARBALL" -C "$VERSION_DIR" --strip-components=1 2>/dev/null; then
+  err "Extract failed"
+  rm -rf "$VERSION_DIR"
   exit 1
 fi
+msg "OK Extracted -> $VERSION_DIR"
 rm -f "$TARBALL"
 
-# 4.5) Install deps
-msg "bun install (可能要 30s ~ 2 分鐘) ..."
-(cd "$APP_DIR" && bun install --silent) || {
-  err "bun install 失敗"; exit 1;
+# 6) Install deps in $VERSION_DIR
+msg "Running bun install (30s ~ 2 min) ..."
+(cd "$VERSION_DIR" && bun install --silent) || {
+  err "bun install failed"; exit 1;
 }
 
-# 5) Shim
+# 7) Swap `current` symlink
+if [ -L "$CURRENT" ] || [ -d "$CURRENT" ]; then
+  msg "Removing old current link"
+  rm -rf "$CURRENT"
+fi
+ln -s "$VERSION_DIR" "$CURRENT"
+msg "OK current -> $VERSION_DIR"
+
+# 7.5) Legacy migration: old layout had app/ directly. Move to app.legacy.bak/ if real dir.
+LEGACY_APP="$VP_HOME/app"
+if [ -d "$LEGACY_APP" ] && [ ! -L "$LEGACY_APP" ]; then
+  LEGACY_BAK="$VP_HOME/app.legacy.bak"
+  rm -rf "$LEGACY_BAK" 2>/dev/null || true
+  if mv "$LEGACY_APP" "$LEGACY_BAK" 2>/dev/null; then
+    msg "Legacy $LEGACY_APP moved to $LEGACY_BAK (safe to delete)"
+  else
+    msg "WARN: legacy $LEGACY_APP move failed (in use?)"
+  fi
+fi
+
+# 8) Shim points to current/
 mkdir -p "$SHIM_DIR"
 cat > "$SHIM" <<EOF
 #!/bin/sh
-export VBPL_HOME="\$HOME/.vibe-pipeline/app"
+export VBPL_HOME="\$HOME/.vibe-pipeline/current"
 exec bun run "\$VBPL_HOME/cli/vbpl.ts" "\$@"
 EOF
 chmod +x "$SHIM"
-msg "✓ Shim: $SHIM"
+msg "OK Shim: $SHIM"
 
-# 6) PATH check + prompt
+# 9) PATH check + prompt
 case ":$PATH:" in
   *":$SHIM_DIR:"*) IN_PATH=1 ;;
   *) IN_PATH=0 ;;
@@ -124,24 +152,25 @@ if [ "$IN_PATH" = "0" ]; then
       else
         printf '\n# vibe-pipeline\nexport PATH="%s:$PATH"\n' "$SHIM_DIR" >> "$RC"
       fi
-      msg "✓ 已加進 $RC — 開新 terminal 或 source $RC 生效"
+      msg "OK Added to $RC (open new terminal or source $RC to take effect)"
       ;;
     *)
-      msg "PATH 沒加。要手動跑:"
+      msg "PATH not modified. To add manually run:"
       msg "  export PATH=\"$SHIM_DIR:\$PATH\""
       ;;
   esac
 fi
 
-# 7) Auto-start backend
+# 10) Auto-start backend (via current/)
 msg ""
-msg "啟動 backend ..."
-VBPL_HOME="$APP_DIR" bun run "$APP_DIR/cli/vbpl.ts" server start || {
-  err "server start 失敗,可手動跑:vbpl server start"
+msg "Starting backend ..."
+VBPL_HOME="$CURRENT" bun run "$CURRENT/cli/vbpl.ts" server start || {
+  err "server start failed. Try manually: vbpl server start"
 }
 
 msg ""
-msg "✓ Installed v$TAG at $APP_DIR"
-msg "✓ Backend: http://localhost:3001"
+msg "OK Installed $TAG at $VERSION_DIR"
+msg "OK current -> $VERSION_DIR"
+msg "OK Backend: http://localhost:3001"
 msg ""
-msg "Done. 跑 \`vbpl --help\` 看指令。"
+msg "Done. Run 'vbpl --help' for commands."

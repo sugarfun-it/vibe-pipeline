@@ -1,27 +1,36 @@
-// /api/system/update 後端核心(tarball + launcher pattern,2026-05-21 重寫):
+// /api/system/update 後端核心(2026-05-21 第 3 版,Scoop-style versioned + swap-on-start):
 //
-// 動機:Windows 上 backend 不能 rmrf 自己 cwd(EBUSY 然後 rename EPERM,
-// app/ 內容被刪光留空殼變 zombie)。改用 launcher pattern:
+// 前 2 版踩過:
+//   v1 direct rmrf cwd → Windows EBUSY 自殺
+//   v2 launcher helper script → 8 個 Windows-specific 雷(detach 不靈 / PS encoding /
+//      tar mangling / Start-Process redirect / rmrf retry / TS escape...)
 //
-// flow:
+// v3 改 Scoop pattern:
 //   1. preflightCheck:無 pipeline running + hasUpdate
-//   2. downloadAndStage:fetch GitHub releases/latest → 下載到 `~/.vibe-pipeline/app.download.tmp/`
-//      → 解壓到 `~/.vibe-pipeline/app.staging/` → resolveRoot
-//   3. writeHelperScript:寫一份 detached helper(`.ps1` / `.sh`)到 `~/.vibe-pipeline/`
-//      內容做 wait-backend-die → rmrf app/ → rename staging root → app/ → spawn 新 backend
-//   4. spawnHelperDetached:跨平台啟動 helper,跟 parent 解耦
-//   5. route handler response 200 → setTimeout 1500ms self-exit(讓 helper 等到 backend cwd 釋放)
-//   6. helper 把新 backend stdout/stderr redirect 到 `~/.vibe-pipeline/server.log`(對齊 vbpl server start)
+//   2. downloadAndStageVersion:
+//      - download GitHub releases/latest tarball → 解壓到 `~/.vibe-pipeline/versions/v<tag>/`
+//      - bun install 在 versions/v<tag>/ 同步跑完
+//      - **完全不碰** current/ 跟 跑著的 backend cwd
+//   3. writePending(tag) — `~/.vibe-pipeline/.pending` 純文字寫目標版本
+//   4. backend setTimeout 500ms self-exit
+//   5. user 跑 `vbpl server start`:vbpl cli 偵測 .pending → swapCurrentTo(tag) → clearPending → spawn
+//   6. 新 backend 從 current/(= versions/v<tag>/)起,完全乾淨
 //
-// 失敗任一步直接拋,純前進不 rollback(spec C 決議,失敗 user 重跑 install script 即修)。
-// 全程 log append 到 `~/.vibe-pipeline/update.log`(truncate 模式,只留本次)+ helper 自己 append。
+// 為什麼把過去所有 Windows 雷砍光:
+// - swap 發生時 current/ 內**沒人在跑** → 0% cwd EBUSY 風險
+// - 不需要 helper script / detach / PowerShell — swap 是單一 fs.symlinkSync atomic call
+// - 不需要 spawn 新 backend from updater — user 自己 `vbpl server start`,跟既有 CLI flow 一致
+//
+// 代價:user 多按一次 `vbpl server start`。對齊 CLAUDE.md 雷 #15(server lifecycle = user-driven)。
+// PWA 端:UpdateTab 顯示「重啟以套用」訊息 + clipboard `vbpl server start` 指令。
 
 import { join, basename } from "node:path";
-import { mkdirSync, writeFileSync, appendFileSync, rmSync, readdirSync, statSync, createWriteStream, chmodSync } from "node:fs";
+import { mkdirSync, writeFileSync, appendFileSync, rmSync, renameSync, readdirSync, statSync, existsSync, createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
 import { platform } from "node:os";
 import { vibeHome } from "./paths";
 import { getVersionStatus, fetchLatestRelease } from "./systemVersion";
+import { versionStagingDir, versionsDir, writePending } from "./installLayout";
 import * as orchestrator from "./runner/orchestrator";
 
 export type PreflightResult = { ok: true } | { ok: false; reason: string };
@@ -34,24 +43,8 @@ export function updateLogPath(): string {
   return join(vpRoot(), "update.log");
 }
 
-export function appDir(): string {
-  return join(vpRoot(), "app");
-}
-
 function downloadDir(): string {
   return join(vpRoot(), "app.download.tmp");
-}
-
-function stagingDir(): string {
-  return join(vpRoot(), "app.staging");
-}
-
-function serverLogPath(): string {
-  return join(vpRoot(), "server.log");
-}
-
-function helperScriptPath(): string {
-  return join(vpRoot(), platform() === "win32" ? "update-helper.ps1" : "update-helper.sh");
 }
 
 function ensureVpRoot(): void {
@@ -188,14 +181,9 @@ async function runTool(args: string[], cwd: string): Promise<void> {
   }
 }
 
-// Windows tar 解析:
-//   - System32 tar.exe = native bsdtar(Win10 17063+ 內建),正確處理 `C:\path`
-//   - git-for-Windows usr/bin/tar.exe = MSYS bsdtar,把 `C:\path` mangle 成 `C\:\\path`(MSYS path 轉譯)
-// PowerShell `tar` 走 cmdlet resolution 命中 System32(沒事);Bun.spawn 走 PATH 順序,常命中
-// git-for-Windows(因 git 安裝把 usr/bin 加在前面)。
-// 修法:Windows 顯式給 absolute path C:\Windows\System32\tar.exe(會 fail 在 < Win10 17063,
-// 但 VP 本來就要 Win10+;Bun 也是)。POSIX 仍用 PATH 上 tar(GNU tar 行為正常)。
-// --force-local 不能加(bsdtar 全部不認,加了直接 exit 1)。
+// Windows tar 解析:用 System32 native bsdtar(Win10 17063+),
+// 避開 git-for-Windows usr/bin/tar.exe(MSYS bsdtar)做 path mangling 把 `C:\path`
+// 變 `C\:\\path`。Bun.spawn 走 PATH 命中順序常抓到 git-for-Windows,顯式絕對路徑解決。
 function winTarPath(): string {
   return join(process.env.WINDIR ?? "C:\\Windows", "System32", "tar.exe");
 }
@@ -254,20 +242,41 @@ function rmrf(path: string): void {
   }
 }
 
+async function runBunInstall(cwd: string): Promise<void> {
+  const proc = Bun.spawn(["bun", "install", "--silent"], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    windowsHide: true,
+  });
+  const [outBuf, errBuf, code] = await Promise.all([
+    new Response(proc.stdout as ReadableStream<Uint8Array>).text(),
+    new Response(proc.stderr as ReadableStream<Uint8Array>).text(),
+    proc.exited,
+  ]);
+  if (outBuf.trim()) log(`bun install stdout: ${outBuf.trim()}`);
+  if (errBuf.trim()) log(`bun install stderr: ${errBuf.trim()}`);
+  if (code !== 0) {
+    throw new Error(`bun install failed exit=${code}`);
+  }
+}
+
 export type StagedUpdate = {
   tag: string;
-  stagingRoot: string;
-  cleanupPaths: string[];
+  stagingDir: string;
 };
 
-// download + extract,不動 app/。回 staging root path 給 helper 用。
-export async function downloadAndStage(): Promise<StagedUpdate> {
+// Download + extract + bun install 到 `versions/<tag>.staging/`(不是直接 `versions/<tag>/`)。
+// 理由:`versions/<tag>/` 可能正是 current → backend cwd,rmrf 會撞 EBUSY 自殺。
+// staging 是獨立 dir,backend cwd 從不在裡面,可安全 rmrf + 寫。
+// swap-on-start(installLayout.ts swapCurrentTo)才把 staging rename 成 final + 換 junction。
+// 同 tag 重複 stage(retry / re-trigger)會 rmrf 既有 staging 重來。
+export async function downloadAndStageVersion(): Promise<StagedUpdate> {
   ensureVpRoot();
   resetLog();
   log(`repo=${GITHUB_REPO}`);
-  // 清理上次殘留
+  // 清上次殘留 download tmp(versions/ 保留)
   rmrf(downloadDir());
-  rmrf(stagingDir());
   mkdirSync(downloadDir(), { recursive: true });
 
   const rel = await fetchReleaseInfo();
@@ -277,193 +286,34 @@ export async function downloadAndStage(): Promise<StagedUpdate> {
   log(`download → ${archivePath}`);
   await downloadToFile(rel.downloadUrl, archivePath);
 
-  log(`extract → ${stagingDir()}`);
-  await extractArchive(archivePath, stagingDir());
-  const root = resolveRoot(stagingDir(), rel.needsStripTopLevel);
-  log(`stagingRoot=${root}`);
+  // 解壓到 vp root 下的 tmp staging,resolveRoot 後再 rename 到 versions/<tag>.staging/
+  // 兩階段是因為 tarball top-level dir 可能是 `<repo>-<sha>/` 要 strip
+  const safeTag = rel.tag.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const tmpStaging = join(vpRoot(), `app.staging.${safeTag}`);
+  rmrf(tmpStaging);
+  log(`extract → ${tmpStaging}`);
+  await extractArchive(archivePath, tmpStaging);
+  const root = resolveRoot(tmpStaging, rel.needsStripTopLevel);
+  log(`tmpRoot=${root}`);
 
-  return {
-    tag: rel.tag,
-    stagingRoot: root,
-    cleanupPaths: [downloadDir(), stagingDir()],
-  };
-}
-
-// 寫跨平台 helper script:wait backend exit → rmrf app → rename staging → spawn new backend → self-delete
-// 帶 backendPid 讓 helper 知道等誰;帶 bunPath 避免 PATH 解析(用當前 process.execPath,通常是 bun)
-export function writeHelperScript(opts: {
-  backendPid: number;
-  stagingRoot: string;
-  cleanupPaths: string[];
-}): string {
-  const isWin = platform() === "win32";
-  const bunPath = process.execPath;
-  const path = helperScriptPath();
-  const app = appDir();
-  const logP = updateLogPath();
-  const srvLog = serverLogPath();
-
-  if (isWin) {
-    const cleanupExpr =
-      opts.cleanupPaths.length > 0
-        ? "@(" + opts.cleanupPaths.map((p) => JSON.stringify(p)).join(", ") + ")"
-        : "@()";
-    const content = [
-      `# vibe-pipeline update helper (generated, ASCII-only for Win PS 5.1 safety)`,
-      `$ErrorActionPreference = "Continue"`,
-      `$log = ${JSON.stringify(logP)}`,
-      `$BackendPid = ${opts.backendPid}`,
-      `$Staging = ${JSON.stringify(opts.stagingRoot)}`,
-      `$App = ${JSON.stringify(app)}`,
-      `$BunPath = ${JSON.stringify(bunPath)}`,
-      `$ServerLog = ${JSON.stringify(srvLog)}`,
-      `$Cleanup = ${cleanupExpr}`,
-      `$Self = $MyInvocation.MyCommand.Path`,
-      ``,
-      `function L($m) { try { Add-Content -Path $log -Value ("[helper] " + (Get-Date -Format o) + " " + $m) -Encoding utf8 } catch {} }`,
-      ``,
-      `L "start, waiting backend pid $BackendPid (max 30s)"`,
-      `for ($i = 0; $i -lt 60; $i++) {`,
-      `  $p = Get-Process -Id $BackendPid -ErrorAction SilentlyContinue`,
-      `  if (-not $p) { L ("backend exited after " + ($i * 500) + "ms"); break }`,
-      `  Start-Sleep -Milliseconds 500`,
-      `}`,
-      `$p = Get-Process -Id $BackendPid -ErrorAction SilentlyContinue`,
-      `if ($p) {`,
-      `  L "WARN: backend still alive after 30s, force kill"`,
-      `  try { Stop-Process -Id $BackendPid -Force } catch { L ("force kill failed: " + $_) }`,
-      `  Start-Sleep -Seconds 2`,
-      `}`,
-      ``,
-      `L "rmrf $App (retry up to 20x)"`,
-      `for ($i = 0; $i -lt 20; $i++) {`,
-      `  if (-not (Test-Path $App)) { break }`,
-      `  try { Remove-Item -Recurse -Force $App; break } catch { L ("retry " + $i + ": " + $_); Start-Sleep -Milliseconds 500 }`,
-      `}`,
-      `if (Test-Path $App) { L "ERROR: cannot remove $App, abort"; exit 1 }`,
-      ``,
-      `L "rename $Staging -> $App"`,
-      `try { Move-Item $Staging $App } catch { L ("ERROR rename: " + $_); exit 1 }`,
-      ``,
-      `foreach ($c in $Cleanup) {`,
-      `  if (Test-Path $c) { try { Remove-Item -Recurse -Force $c -ErrorAction SilentlyContinue } catch {} }`,
-      `}`,
-      ``,
-      `L "bun install in $App (tarball lacks node_modules)"`,
-      `try {`,
-      `  $bunInstall = Start-Process -FilePath $BunPath -ArgumentList "install","--silent" -WorkingDirectory $App -NoNewWindow -Wait -PassThru`,
-      `  if ($bunInstall.ExitCode -ne 0) { L ("WARN bun install exit=" + $bunInstall.ExitCode + " — new backend may fail to start") }`,
-      `  else { L "bun install ok" }`,
-      `} catch { L ("bun install threw: " + $_) }`,
-      ``,
-      `L "spawn new backend from $App via cmd.exe (Start-Process -RedirectStandard* disallows same-path stdout+stderr)"`,
-      `try {`,
-      `  $env:VBPL_HOME = $App`,
-      `  $serverTs = Join-Path $App "server/index.ts"`,
-      `  $bunQ = '"' + $BunPath + '"'`,
-      `  $serverQ = '"' + $serverTs + '"'`,
-      `  $logQ = '"' + $ServerLog + '"'`,
-      `  $cmdLine = "/c " + $bunQ + " run " + $serverQ + " >> " + $logQ + " 2>&1"`,
-      `  Start-Process -FilePath "cmd.exe" -ArgumentList $cmdLine -WorkingDirectory $App -WindowStyle Hidden | Out-Null`,
-      `  L "spawn invoked (cmd.exe wrapped, can't confirm bun exit — check server.log)"`,
-      `} catch { L ("spawn cmd.exe failed: " + $_) }`,
-      ``,
-      `L "done"`,
-      `try { Remove-Item -Force $Self -ErrorAction SilentlyContinue } catch {}`,
-      ``,
-    ].join("\r\n");
-    writeFileSync(path, content, { encoding: "utf8" });
-  } else {
-    const cleanupQuoted = opts.cleanupPaths.map((p) => `"${p.replace(/"/g, '\\"')}"`).join(" ");
-    const content = [
-      `#!/bin/sh`,
-      `# vibe-pipeline update helper (generated)`,
-      `set -u`,
-      `LOG=${JSON.stringify(logP)}`,
-      `PID=${opts.backendPid}`,
-      `STAGING=${JSON.stringify(opts.stagingRoot)}`,
-      `APP=${JSON.stringify(app)}`,
-      `BUN=${JSON.stringify(bunPath)}`,
-      `SERVER_LOG=${JSON.stringify(srvLog)}`,
-      `CLEANUP="${cleanupQuoted}"`,
-      `SELF="$0"`,
-      ``,
-      `log() { echo "[helper] $(date -Iseconds 2>/dev/null || date) $*" >> "$LOG" 2>/dev/null || true; }`,
-      `log "start, waiting backend pid $PID (max 30s)"`,
-      ``,
-      `i=0`,
-      `while [ "$i" -lt 60 ] && kill -0 "$PID" 2>/dev/null; do`,
-      `  sleep 0.5`,
-      `  i=$((i+1))`,
-      `done`,
-      `if kill -0 "$PID" 2>/dev/null; then`,
-      `  log "WARN: backend still alive, force kill"`,
-      `  kill -9 "$PID" 2>/dev/null || true`,
-      `  sleep 2`,
-      `fi`,
-      ``,
-      `log "rmrf $APP"`,
-      `rm -rf "$APP" || { log "rmrf failed"; exit 1; }`,
-      ``,
-      `log "mv $STAGING -> $APP"`,
-      `mv "$STAGING" "$APP" || { log "mv failed"; exit 1; }`,
-      ``,
-      `for c in $CLEANUP; do`,
-      `  rm -rf "$c" 2>/dev/null || true`,
-      `done`,
-      ``,
-      `log "bun install in $APP (tarball lacks node_modules)"`,
-      `cd "$APP" || { log "cd failed"; exit 1; }`,
-      `if "$BUN" install --silent >> "$LOG" 2>&1; then`,
-      `  log "bun install ok"`,
-      `else`,
-      `  log "WARN bun install non-zero exit — new backend may fail to start"`,
-      `fi`,
-      ``,
-      `log "spawn new backend from $APP"`,
-      `export VBPL_HOME="$APP"`,
-      `nohup "$BUN" run "$APP/server/index.ts" >> "$SERVER_LOG" 2>&1 < /dev/null &`,
-      `disown 2>/dev/null || true`,
-      `log "done"`,
-      `rm -f "$SELF" 2>/dev/null || true`,
-      ``,
-    ].join("\n");
-    writeFileSync(path, content, { encoding: "utf8" });
-    try {
-      chmodSync(path, 0o755);
-    } catch {
-      // ignore
-    }
+  mkdirSync(versionsDir(), { recursive: true });
+  const finalStaging = versionStagingDir(rel.tag);
+  if (existsSync(finalStaging)) {
+    log(`overwrite existing staging ${finalStaging}`);
+    rmrf(finalStaging);
   }
-  return path;
+  log(`rename ${root} → ${finalStaging}`);
+  renameSync(root, finalStaging);
+  rmrf(tmpStaging);
+  rmrf(downloadDir());
+
+  log(`bun install in ${finalStaging}`);
+  await runBunInstall(finalStaging);
+  log(`bun install ok`);
+
+  log(`stage done tag=${rel.tag} stagingDir=${finalStaging}`);
+  return { tag: rel.tag, stagingDir: finalStaging };
 }
 
-// 跨平台 detach 啟動 helper。parent 隨後可 process.exit。
-//
-// Windows:Bun.spawn(["powershell.exe", ...], { detached:true }) 在 Windows 上
-// 不真 detach(實測 backend process.exit(0) 後 helper 也跟死,從沒寫 [helper] log)。
-// 改用 cmd.exe builtin `start "" /B`:start 是 cmd 內建的真 detach 工具,/B 不開新
-// console window,空字串 "" 是 start 必要的 title arg。pattern 跟 helper 內 spawn
-// 新 backend 用 cmd.exe wrapper 相同,實證可用。
-//
-// POSIX:Bun.spawn detached + bash 走 process group fork 正常 detach,沒問題。
-export function spawnHelperDetached(helperPath: string): void {
-  const isWin = platform() === "win32";
-  const args = isWin
-    ? ["cmd.exe", "/c", "start", "", "/B", "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helperPath]
-    : ["bash", helperPath];
-  log(`spawn helper: ${args.join(" ")}`);
-  try {
-    Bun.spawn(args, {
-      stdout: "ignore",
-      stderr: "ignore",
-      stdin: "ignore",
-      windowsHide: true,
-      // @ts-expect-error Bun 支援 detached 選項但 TS 型別未必載入
-      detached: true,
-    });
-  } catch (e) {
-    log(`spawn helper 失敗:${String(e)}`);
-    throw e;
-  }
-}
+// re-export 給 route 用
+export { writePending };

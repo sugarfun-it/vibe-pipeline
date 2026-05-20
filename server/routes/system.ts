@@ -1,6 +1,6 @@
 import { ok, err } from "./_http";
 import { getVersionStatus } from "../lib/systemVersion";
-import { preflightCheck, downloadAndStage, writeHelperScript, spawnHelperDetached } from "../lib/updater";
+import { preflightCheck, downloadAndStageVersion, writePending } from "../lib/updater";
 import * as notifs from "../lib/notifs/store";
 import * as projectStore from "../lib/projectStore";
 
@@ -14,12 +14,19 @@ export async function version(): Promise<Response> {
 }
 
 // POST /api/system/update
-// tarball + launcher pattern(避 Windows 自殺 cwd EBUSY):
-//   preflight → emit notif → downloadAndStage(下載 + 解壓到 staging,不動 app/)
-//   → writeHelperScript(寫 .ps1 / .sh helper,內含 wait-backend-die → rmrf app → mv staging → spawn 新 backend)
-//   → spawnHelperDetached → response 200 → setTimeout 1500ms self-exit
-// helper 等到 backend cwd lock 釋放才動 app/,避免「backend 刪自己 cwd」EBUSY。
-// preflight 失敗(pipeline running / 已最新版)回 400。stage 失敗回 500,app/ 沒被動,user 重 install 即修。
+// Versioned + swap-on-start pattern(Scoop-style,2026-05-21 v3):
+//   preflight → emit notif → downloadAndStageVersion(解到 versions/v<tag>/ + bun install)
+//   → writePending(tag) → backend setTimeout 500ms self-exit
+// User 跑 `vbpl server start`:vbpl CLI 偵測 .pending → swapCurrentTo(tag) → clearPending → spawn 新 backend
+// from current/(= versions/v<tag>/)。
+//
+// 為什麼不自動 spawn 新 backend:過去 v1/v2 在 backend process 內 spawn 新 backend / helper script
+// 整路炸 Windows(detach 不靈 / PowerShell encoding / cwd EBUSY...)。改成 user-driven restart
+// 對齊 CLAUDE.md 雷 #15「server lifecycle = user-driven first class」。代價:user 多按一次
+// `vbpl server start`,frontend (UpdateTab) 顯示提示。
+//
+// preflight 失敗(pipeline running / 已最新版)回 400。stage 失敗回 500;current/ 從未被動,
+// backend 仍跑著舊版,user 重試即可。
 export async function update(): Promise<Response> {
   try {
     const pre = await preflightCheck();
@@ -35,8 +42,8 @@ export async function update(): Promise<Response> {
         try {
           notifs.emit(p.path, {
             type: "system_updating",
-            title: "系統更新中",
-            sub: "backend 即將重啟,稍後重整頁面",
+            title: "系統更新已下載",
+            sub: "請跑 `vbpl server start` 套用更新",
             sev: "info",
           });
         } catch {
@@ -47,21 +54,21 @@ export async function update(): Promise<Response> {
       // ignore
     }
 
-    const staged = await downloadAndStage();
-    const helperPath = writeHelperScript({
-      backendPid: process.pid,
-      stagingRoot: staged.stagingRoot,
-      cleanupPaths: staged.cleanupPaths,
-    });
-    spawnHelperDetached(helperPath);
+    const staged = await downloadAndStageVersion();
+    writePending(staged.tag);
 
-    // 1500ms 讓 helper 起來開始 watch backend pid + 讓 client 拿 response
-    // helper 內最多等 30s backend exit,夠時間 client 收完 + browser 收 notif
+    // 500ms 後 self-exit,給 client 拿 response。User 之後跑 `vbpl server start`,
+    // vbpl CLI 偵測 .pending → swap → spawn from current/。
     setTimeout(() => {
       process.exit(0);
-    }, 1500);
+    }, 500);
 
-    return ok({ started: true, newVersion: staged.tag });
+    return ok({
+      started: true,
+      newVersion: staged.tag,
+      action: "restart_required",
+      message: `Update ${staged.tag} downloaded. Run 'vbpl server start' to apply.`,
+    });
   } catch (e) {
     return err("internal_error", String(e), 500);
   }

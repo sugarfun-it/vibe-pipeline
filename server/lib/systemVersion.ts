@@ -1,9 +1,11 @@
 // /api/system/version 後端邏輯:
-// - getCurrentVersion: build 注入的 BUILD_VERSION env 優先;dev fallback 跑 git short SHA。
+// - getCurrentVersion: 優先序 BUILD_VERSION env > package.json `version`(enduser install) > git describe(dev clone) > "dev-unknown"。
 // - fetchLatestRelease: 抓 GitHub releases/latest,5min in-memory cache 防 rate-limit;
 //   no network / no release / 404 → null。
 // - getVersionStatus: 包成 endpoint shape。
 
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { runCapture } from "./spawn";
 
 const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "eric14304/vibe-pipeline";
@@ -31,7 +33,24 @@ export async function getCurrentVersion(): Promise<string> {
     cachedCurrent = injected.trim();
     return cachedCurrent;
   }
-  // dev fallback:跑 git describe / short SHA
+  // installed mode 偵測:cwd 沒 .git/ → enduser tarball install → 讀 package.json
+  // dev clone(.git/ 存在)直接走 git describe,確保 dev-<sha> 不被當成 release
+  const isDevClone = existsSync(join(process.cwd(), ".git"));
+  if (!isDevClone) {
+    try {
+      const pkg = (await Bun.file(join(process.cwd(), "package.json")).json()) as { version?: unknown };
+      if (typeof pkg.version === "string") {
+        const v = pkg.version.trim();
+        if (v.length > 0 && v !== "0.0.0") {
+          cachedCurrent = v.startsWith("v") ? v : `v${v}`;
+          return cachedCurrent;
+        }
+      }
+    } catch {
+      // package.json 不存在 / parse 失敗,fallback 走 git(可能也失敗,回 dev-unknown)
+    }
+  }
+  // dev clone fallback:跑 git describe / short SHA
   const describe = await runCapture(["git", "describe", "--tags", "--always", "--dirty"], {
     cwd: process.cwd(),
   });
