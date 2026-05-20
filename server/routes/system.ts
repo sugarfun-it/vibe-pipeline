@@ -1,6 +1,6 @@
 import { ok, err } from "./_http";
 import { getVersionStatus } from "../lib/systemVersion";
-import { preflightCheck, performUpdate, spawnNewBackend } from "../lib/updater";
+import { preflightCheck, downloadAndStage, writeHelperScript, spawnHelperDetached } from "../lib/updater";
 import * as notifs from "../lib/notifs/store";
 import * as projectStore from "../lib/projectStore";
 
@@ -14,10 +14,12 @@ export async function version(): Promise<Response> {
 }
 
 // POST /api/system/update
-// tarball 模式:
-//   preflight → emit notif → 下載 + 解壓到 ~/.vibe-pipeline/app/ → spawn 新 backend → 200 → ~500ms 後 self-exit
-// preflight 失敗(pipeline running / 已最新版)回 400 + reason,不下載。
-// download / extract 失敗回 500;app/ 可能半套,user 重跑 install script 即修(spec 決議,純前進)。
+// tarball + launcher pattern(避 Windows 自殺 cwd EBUSY):
+//   preflight → emit notif → downloadAndStage(下載 + 解壓到 staging,不動 app/)
+//   → writeHelperScript(寫 .ps1 / .sh helper,內含 wait-backend-die → rmrf app → mv staging → spawn 新 backend)
+//   → spawnHelperDetached → response 200 → setTimeout 1500ms self-exit
+// helper 等到 backend cwd lock 釋放才動 app/,避免「backend 刪自己 cwd」EBUSY。
+// preflight 失敗(pipeline running / 已最新版)回 400。stage 失敗回 500,app/ 沒被動,user 重 install 即修。
 export async function update(): Promise<Response> {
   try {
     const pre = await preflightCheck();
@@ -45,15 +47,21 @@ export async function update(): Promise<Response> {
       // ignore
     }
 
-    const result = await performUpdate();
-    spawnNewBackend(result.appPath);
+    const staged = await downloadAndStage();
+    const helperPath = writeHelperScript({
+      backendPid: process.pid,
+      stagingRoot: staged.stagingRoot,
+      cleanupPaths: staged.cleanupPaths,
+    });
+    spawnHelperDetached(helperPath);
 
-    // 排程 ~500ms 後自殺,讓 client 拿到 response 再斷
+    // 1500ms 讓 helper 起來開始 watch backend pid + 讓 client 拿 response
+    // helper 內最多等 30s backend exit,夠時間 client 收完 + browser 收 notif
     setTimeout(() => {
       process.exit(0);
-    }, 500);
+    }, 1500);
 
-    return ok({ started: true, newVersion: result.tag });
+    return ok({ started: true, newVersion: staged.tag });
   } catch (e) {
     return err("internal_error", String(e), 500);
   }

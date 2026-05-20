@@ -1,19 +1,23 @@
-// /api/system/update 後端核心(tarball 模式):
-// - preflightCheck:兩條(無 pipeline running / hasUpdate)任一失敗回 reason。
-//   git clean 檢查已拔 — enduser 安裝走 `~/.vibe-pipeline/app/`,沒 .git/。
-// - performUpdate:
-//   1. fetch GitHub releases/latest 取 tarball URL(優先 release asset .tar.gz / .zip,
-//      fallback `tarball_url` 自動源 tarball)+ tag
-//   2. 下載到 `~/.vibe-pipeline/app.download.tmp/release.tar.gz`(或 .zip)
-//   3. 解壓到 staging dir,單一頂層 dir → 視為 root
-//   4. rm -rf `~/.vibe-pipeline/app/`,mv staging root → `~/.vibe-pipeline/app/`
-//   5. 失敗任一步直接拋,純前進不 rollback(spec C 決議)
-//   6. cleanup tmp / staging
-// - spawnNewBackend:Bun.spawn(["bun","run","server/index.ts"], { cwd: app dir, detached:true })
-// - 全程 log append 到 `~/.vibe-pipeline/update.log`(truncate 模式,只留本次)
+// /api/system/update 後端核心(tarball + launcher pattern,2026-05-21 重寫):
+//
+// 動機:Windows 上 backend 不能 rmrf 自己 cwd(EBUSY 然後 rename EPERM,
+// app/ 內容被刪光留空殼變 zombie)。改用 launcher pattern:
+//
+// flow:
+//   1. preflightCheck:無 pipeline running + hasUpdate
+//   2. downloadAndStage:fetch GitHub releases/latest → 下載到 `~/.vibe-pipeline/app.download.tmp/`
+//      → 解壓到 `~/.vibe-pipeline/app.staging/` → resolveRoot
+//   3. writeHelperScript:寫一份 detached helper(`.ps1` / `.sh`)到 `~/.vibe-pipeline/`
+//      內容做 wait-backend-die → rmrf app/ → rename staging root → app/ → spawn 新 backend
+//   4. spawnHelperDetached:跨平台啟動 helper,跟 parent 解耦
+//   5. route handler response 200 → setTimeout 1500ms self-exit(讓 helper 等到 backend cwd 釋放)
+//   6. helper 把新 backend stdout/stderr redirect 到 `~/.vibe-pipeline/server.log`(對齊 vbpl server start)
+//
+// 失敗任一步直接拋,純前進不 rollback(spec C 決議,失敗 user 重跑 install script 即修)。
+// 全程 log append 到 `~/.vibe-pipeline/update.log`(truncate 模式,只留本次)+ helper 自己 append。
 
 import { join, basename } from "node:path";
-import { mkdirSync, writeFileSync, appendFileSync, rmSync, renameSync, readdirSync, statSync, createWriteStream } from "node:fs";
+import { mkdirSync, writeFileSync, appendFileSync, rmSync, readdirSync, statSync, createWriteStream, chmodSync } from "node:fs";
 import { Readable } from "node:stream";
 import { platform } from "node:os";
 import { vibeHome } from "./paths";
@@ -40,6 +44,14 @@ function downloadDir(): string {
 
 function stagingDir(): string {
   return join(vpRoot(), "app.staging");
+}
+
+function serverLogPath(): string {
+  return join(vpRoot(), "server.log");
+}
+
+function helperScriptPath(): string {
+  return join(vpRoot(), platform() === "win32" ? "update-helper.ps1" : "update-helper.sh");
 }
 
 function ensureVpRoot(): void {
@@ -95,15 +107,11 @@ type ReleaseInfo = {
 
 const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "eric14304/vibe-pipeline";
 
-// 取 release:優先 asset (.tar.gz / .zip),fallback `tarball_url`。
-// asset 視為已打平 layout(maintainer 自己組);tarball_url 是 GitHub 自動產的源 tarball,
-// 解壓會有 owner-repo-<sha>/ 一層,要 strip。
 async function fetchReleaseInfo(): Promise<ReleaseInfo> {
   const latest = await fetchLatestRelease();
   if (!latest) {
     throw new Error("無法取得 GitHub latest release(沒發過 release / 網路 / rate limit)");
   }
-  // fetchLatestRelease 沒回 assets / tarball_url,直接再打一次拿原 JSON
   const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
     headers: {
       Accept: "application/vnd.github+json",
@@ -201,7 +209,6 @@ async function extractArchive(archivePath: string, outDir: string): Promise<void
         outDir
       );
     } else {
-      // unzip 不存在的話也試試 tar -xf(bsdtar 可以)
       await runTool(["tar", "-xf", archivePath, "-C", outDir], outDir);
     }
     return;
@@ -209,7 +216,6 @@ async function extractArchive(archivePath: string, outDir: string): Promise<void
   throw new Error(`不支援的封存格式:${basename(archivePath)}`);
 }
 
-// 解壓後若 outDir 只有一個 top-level dir,把它當 root
 function resolveRoot(outDir: string, forceStrip: boolean): string {
   const entries = readdirSync(outDir).filter((n) => n !== "." && n !== "..");
   if (entries.length === 1) {
@@ -234,7 +240,14 @@ function rmrf(path: string): void {
   }
 }
 
-export async function performUpdate(): Promise<{ tag: string; appPath: string }> {
+export type StagedUpdate = {
+  tag: string;
+  stagingRoot: string;
+  cleanupPaths: string[];
+};
+
+// download + extract,不動 app/。回 staging root path 給 helper 用。
+export async function downloadAndStage(): Promise<StagedUpdate> {
   ensureVpRoot();
   resetLog();
   log(`repo=${GITHUB_REPO}`);
@@ -253,30 +266,155 @@ export async function performUpdate(): Promise<{ tag: string; appPath: string }>
   log(`extract → ${stagingDir()}`);
   await extractArchive(archivePath, stagingDir());
   const root = resolveRoot(stagingDir(), rel.needsStripTopLevel);
-  log(`root=${root}`);
+  log(`stagingRoot=${root}`);
 
-  // 純前進:rm app/ → mv root → app/
-  const target = appDir();
-  log(`rm ${target}`);
-  rmrf(target);
-  log(`mv ${root} → ${target}`);
-  renameSync(root, target);
-
-  // cleanup
-  rmrf(downloadDir());
-  rmrf(stagingDir());
-
-  log(`done tag=${rel.tag} appPath=${target}`);
-  return { tag: rel.tag, appPath: target };
+  return {
+    tag: rel.tag,
+    stagingRoot: root,
+    cleanupPaths: [downloadDir(), stagingDir()],
+  };
 }
 
-// detached 起新 backend from 新 app dir。
-// 不接 stdio,讓新 process 自己活;Bun 在 detached:true 時不會跟 parent exit 聯動。
-export function spawnNewBackend(cwd: string): void {
-  log(`spawn new backend from ${cwd}`);
+// 寫跨平台 helper script:wait backend exit → rmrf app → rename staging → spawn new backend → self-delete
+// 帶 backendPid 讓 helper 知道等誰;帶 bunPath 避免 PATH 解析(用當前 process.execPath,通常是 bun)
+export function writeHelperScript(opts: {
+  backendPid: number;
+  stagingRoot: string;
+  cleanupPaths: string[];
+}): string {
+  const isWin = platform() === "win32";
+  const bunPath = process.execPath;
+  const path = helperScriptPath();
+  const app = appDir();
+  const logP = updateLogPath();
+  const srvLog = serverLogPath();
+
+  if (isWin) {
+    const cleanupExpr =
+      opts.cleanupPaths.length > 0
+        ? "@(" + opts.cleanupPaths.map((p) => JSON.stringify(p)).join(", ") + ")"
+        : "@()";
+    const content = [
+      `# vibe-pipeline update helper (generated, ASCII-only for Win PS 5.1 safety)`,
+      `$ErrorActionPreference = "Continue"`,
+      `$log = ${JSON.stringify(logP)}`,
+      `$BackendPid = ${opts.backendPid}`,
+      `$Staging = ${JSON.stringify(opts.stagingRoot)}`,
+      `$App = ${JSON.stringify(app)}`,
+      `$BunPath = ${JSON.stringify(bunPath)}`,
+      `$ServerLog = ${JSON.stringify(srvLog)}`,
+      `$Cleanup = ${cleanupExpr}`,
+      `$Self = $MyInvocation.MyCommand.Path`,
+      ``,
+      `function L($m) { try { Add-Content -Path $log -Value ("[helper] " + (Get-Date -Format o) + " " + $m) -Encoding utf8 } catch {} }`,
+      ``,
+      `L "start, waiting backend pid $BackendPid (max 30s)"`,
+      `for ($i = 0; $i -lt 60; $i++) {`,
+      `  $p = Get-Process -Id $BackendPid -ErrorAction SilentlyContinue`,
+      `  if (-not $p) { L ("backend exited after " + ($i * 500) + "ms"); break }`,
+      `  Start-Sleep -Milliseconds 500`,
+      `}`,
+      `$p = Get-Process -Id $BackendPid -ErrorAction SilentlyContinue`,
+      `if ($p) {`,
+      `  L "WARN: backend still alive after 30s, force kill"`,
+      `  try { Stop-Process -Id $BackendPid -Force } catch { L ("force kill failed: " + $_) }`,
+      `  Start-Sleep -Seconds 2`,
+      `}`,
+      ``,
+      `L "rmrf $App (retry up to 20x)"`,
+      `for ($i = 0; $i -lt 20; $i++) {`,
+      `  if (-not (Test-Path $App)) { break }`,
+      `  try { Remove-Item -Recurse -Force $App; break } catch { L ("retry " + $i + ": " + $_); Start-Sleep -Milliseconds 500 }`,
+      `}`,
+      `if (Test-Path $App) { L "ERROR: cannot remove $App, abort"; exit 1 }`,
+      ``,
+      `L "rename $Staging -> $App"`,
+      `try { Move-Item $Staging $App } catch { L ("ERROR rename: " + $_); exit 1 }`,
+      ``,
+      `foreach ($c in $Cleanup) {`,
+      `  if (Test-Path $c) { try { Remove-Item -Recurse -Force $c -ErrorAction SilentlyContinue } catch {} }`,
+      `}`,
+      ``,
+      `L "spawn new backend from $App"`,
+      `try {`,
+      `  $env:VBPL_HOME = $App`,
+      `  $serverTs = Join-Path $App "server/index.ts"`,
+      `  Start-Process -FilePath $BunPath -ArgumentList "run", $serverTs -WorkingDirectory $App -WindowStyle Hidden -RedirectStandardOutput $ServerLog -RedirectStandardError $ServerLog`,
+      `  L "spawn ok"`,
+      `} catch { L ("spawn backend failed: " + $_) }`,
+      ``,
+      `L "done"`,
+      `try { Remove-Item -Force $Self -ErrorAction SilentlyContinue } catch {}`,
+      ``,
+    ].join("\r\n");
+    writeFileSync(path, content, { encoding: "utf8" });
+  } else {
+    const cleanupQuoted = opts.cleanupPaths.map((p) => `"${p.replace(/"/g, '\\"')}"`).join(" ");
+    const content = [
+      `#!/bin/sh`,
+      `# vibe-pipeline update helper (generated)`,
+      `set -u`,
+      `LOG=${JSON.stringify(logP)}`,
+      `PID=${opts.backendPid}`,
+      `STAGING=${JSON.stringify(opts.stagingRoot)}`,
+      `APP=${JSON.stringify(app)}`,
+      `BUN=${JSON.stringify(bunPath)}`,
+      `SERVER_LOG=${JSON.stringify(srvLog)}`,
+      `CLEANUP="${cleanupQuoted}"`,
+      `SELF="$0"`,
+      ``,
+      `log() { echo "[helper] $(date -Iseconds 2>/dev/null || date) $*" >> "$LOG" 2>/dev/null || true; }`,
+      `log "start, waiting backend pid $PID (max 30s)"`,
+      ``,
+      `i=0`,
+      `while [ "$i" -lt 60 ] && kill -0 "$PID" 2>/dev/null; do`,
+      `  sleep 0.5`,
+      `  i=$((i+1))`,
+      `done`,
+      `if kill -0 "$PID" 2>/dev/null; then`,
+      `  log "WARN: backend still alive, force kill"`,
+      `  kill -9 "$PID" 2>/dev/null || true`,
+      `  sleep 2`,
+      `fi`,
+      ``,
+      `log "rmrf $APP"`,
+      `rm -rf "$APP" || { log "rmrf failed"; exit 1; }`,
+      ``,
+      `log "mv $STAGING -> $APP"`,
+      `mv "$STAGING" "$APP" || { log "mv failed"; exit 1; }`,
+      ``,
+      `for c in $CLEANUP; do`,
+      `  rm -rf "$c" 2>/dev/null || true`,
+      `done`,
+      ``,
+      `log "spawn new backend from $APP"`,
+      `cd "$APP" || { log "cd failed"; exit 1; }`,
+      `export VBPL_HOME="$APP"`,
+      `nohup "$BUN" run "$APP/server/index.ts" >> "$SERVER_LOG" 2>&1 < /dev/null &`,
+      `disown 2>/dev/null || true`,
+      `log "done"`,
+      `rm -f "$SELF" 2>/dev/null || true`,
+      ``,
+    ].join("\n");
+    writeFileSync(path, content, { encoding: "utf8" });
+    try {
+      chmodSync(path, 0o755);
+    } catch {
+      // ignore
+    }
+  }
+  return path;
+}
+
+// 跨平台 detach 啟動 helper。parent 隨後可 process.exit。
+export function spawnHelperDetached(helperPath: string): void {
+  const isWin = platform() === "win32";
+  const args = isWin
+    ? ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", helperPath]
+    : ["bash", helperPath];
+  log(`spawn helper: ${args.join(" ")}`);
   try {
-    Bun.spawn(["bun", "run", "server/index.ts"], {
-      cwd,
+    Bun.spawn(args, {
       stdout: "ignore",
       stderr: "ignore",
       stdin: "ignore",
@@ -285,7 +423,7 @@ export function spawnNewBackend(cwd: string): void {
       detached: true,
     });
   } catch (e) {
-    log(`spawn 失敗:${String(e)}`);
+    log(`spawn helper 失敗:${String(e)}`);
     throw e;
   }
 }

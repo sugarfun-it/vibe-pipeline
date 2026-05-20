@@ -1,16 +1,11 @@
 #Requires -Version 5.1
 # vibe-pipeline enduser installer (Windows PowerShell)
 # Usage: irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
+#
+# Note: ASCII-only on purpose. Windows PowerShell 5.1 reads .ps1 as ANSI by default;
+# UTF-8 multi-byte chars (without BOM) can be misread as lead-bytes and break the parser.
 
 $ErrorActionPreference = "Stop"
-
-# console UTF-8 — script 用了大量中文 Info / Err,Big5 console 會亂碼
-try {
-  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-  $OutputEncoding = [System.Text.Encoding]::UTF8
-} catch {
-  # 沒救就算了,功能不受影響
-}
 
 $Repo    = "eric14304/vibe-pipeline"
 $VpHome  = Join-Path $HOME ".vibe-pipeline"
@@ -24,29 +19,29 @@ function Err($m)  { Write-Host "ERROR: $m" -ForegroundColor Red }
 
 # 1) Bun check
 if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
-  Err "Bun 未安裝。請先跑:"
+  Err "Bun is not installed. Install Bun first:"
   Err "  powershell -c ""irm bun.sh/install.ps1 | iex"""
-  Err "裝完重開 terminal 再跑 install.ps1"
+  Err "Then open a new terminal and re-run install.ps1"
   exit 1
 }
 Info "OK Bun: $(bun --version)"
 
 # 2) Latest release
-Info "查 latest release ..."
+Info "Fetching latest release ..."
 try {
   $api = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$Repo/releases/latest"
 } catch {
-  Err "抓 release info 失敗: $_"
+  Err "Failed to fetch release info: $_"
   exit 1
 }
 $Tag = $api.tag_name
-if (-not $Tag) { Err "無法解析 tag_name"; exit 1 }
+if (-not $Tag) { Err "tag_name not found in release JSON"; exit 1 }
 Info "OK Latest tag: $Tag"
 
-# 找 .zip asset 優先,沒就 .tar.gz,再沒就 zipball_url fallback
-$asset = $api.assets | Where-Object { $_.name -match '\.zip$' } | Select-Object -First 1
+# Prefer .tar.gz / .tgz (build-tarball.ts output), then .zip, then zipball_url fallback.
+$asset = $api.assets | Where-Object { $_.name -match '\.(tar\.gz|tgz)$' } | Select-Object -First 1
 if (-not $asset) {
-  $asset = $api.assets | Where-Object { $_.name -match '\.(tar\.gz|tgz)$' } | Select-Object -First 1
+  $asset = $api.assets | Where-Object { $_.name -match '\.zip$' } | Select-Object -First 1
 }
 if ($asset) {
   $assetUrl = $asset.browser_download_url
@@ -54,23 +49,23 @@ if ($asset) {
 } else {
   $assetUrl = $api.zipball_url
   $assetName = "source.zip"
-  Info "  無 .zip asset,改用 zipball_url"
+  Info "  No .tar.gz/.zip asset, using zipball_url fallback"
 }
-if (-not $assetUrl) { Err "找不到下載 URL"; exit 1 }
+if (-not $assetUrl) { Err "No download URL found"; exit 1 }
 Info "OK Download URL: $assetUrl"
 
 # 3) Download
 $isZip = $assetName -match '\.zip$' -or $assetUrl -match 'zipball'
 $ext = if ($isZip) { "zip" } else { "tar.gz" }
 $tarball = Join-Path $env:TEMP "vibe-pipeline-$Tag.$ext"
-Info "下載到 $tarball ..."
+Info "Downloading to $tarball ..."
 try {
   Invoke-WebRequest -UseBasicParsing -Uri $assetUrl -OutFile $tarball
 } catch {
-  Err "下載失敗: $_"; exit 1
+  Err "Download failed: $_"; exit 1
 }
 
-# 4) Extract (safety net)
+# 4) Extract (safety net: mv app -> app.bak before extract, restore on failure)
 New-Item -ItemType Directory -Force -Path $VpHome | Out-Null
 if (Test-Path $AppDir) {
   if (Test-Path $AppBak) { Remove-Item -Recurse -Force $AppBak }
@@ -81,17 +76,17 @@ $stage = Join-Path $env:TEMP "vibe-pipeline-stage-$Tag"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
-Info "解壓 ..."
+Info "Extracting ..."
 try {
   if ($isZip) {
     Expand-Archive -Path $tarball -DestinationPath $stage -Force
   } else {
-    # tar 在 Win10+ 內建
+    # tar is built-in on Win10+
     tar -xzf $tarball -C $stage
-    if ($LASTEXITCODE -ne 0) { throw "tar 失敗 (exit=$LASTEXITCODE)" }
+    if ($LASTEXITCODE -ne 0) { throw "tar failed (exit=$LASTEXITCODE)" }
   }
 
-  # tarball / zipball 第一層通常是 <repo>-<sha>/,搬上來
+  # tarball/zipball top-level is usually <repo>-<sha>/ (strip it)
   $entries = Get-ChildItem -Path $stage
   if ($entries.Count -eq 1 -and $entries[0].PSIsContainer) {
     Move-Item $entries[0].FullName $AppDir
@@ -101,9 +96,9 @@ try {
   }
   Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
   if (Test-Path $AppBak) { Remove-Item -Recurse -Force $AppBak }
-  Info "OK 解壓 → $AppDir"
+  Info "OK Extracted -> $AppDir"
 } catch {
-  Err "解壓失敗,回滾: $_"
+  Err "Extract failed, rolling back: $_"
   if (Test-Path $AppDir) { Remove-Item -Recurse -Force $AppDir }
   if (Test-Path $AppBak) { Move-Item $AppBak $AppDir }
   exit 1
@@ -111,13 +106,13 @@ try {
 Remove-Item -Force $tarball -ErrorAction SilentlyContinue
 
 # 4.5) Install deps
-Info "bun install (可能要 30s ~ 2 分鐘) ..."
+Info "Running bun install (30s ~ 2 min) ..."
 Push-Location $AppDir
 try {
   & bun install --silent
   if ($LASTEXITCODE -ne 0) { throw "bun install exit=$LASTEXITCODE" }
 } catch {
-  Err "bun install 失敗: $_"
+  Err "bun install failed: $_"
   Pop-Location
   exit 1
 }
@@ -147,25 +142,25 @@ if (-not $inPath) {
     $newPath = if ([string]::IsNullOrEmpty($userPath)) { $ShimDir } else { "$userPath;$ShimDir" }
     [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
     $env:Path = "$env:Path;$ShimDir"
-    Info "OK 已加進 user PATH — 開新 terminal 生效"
+    Info "OK Added to user PATH (open new terminal to take effect)"
   } else {
-    Info "PATH 沒加。要手動跑:"
+    Info "PATH not modified. To add manually run:"
     Info "  [Environment]::SetEnvironmentVariable(""Path"", ""`$env:Path;$ShimDir"", ""User"")"
   }
 }
 
 # 7) Auto-start backend
 Info ""
-Info "啟動 backend ..."
+Info "Starting backend ..."
 $env:VBPL_HOME = $AppDir
 try {
   & bun run "$AppDir\cli\vbpl.ts" server start
 } catch {
-  Err "server start 失敗,可手動跑:vbpl server start"
+  Err "server start failed. Try manually: vbpl server start"
 }
 
 Info ""
 Info "OK Installed $Tag at $AppDir"
 Info "OK Backend: http://localhost:3001"
 Info ""
-Info 'Done. 跑 vbpl --help 看指令。'
+Info "Done. Run 'vbpl --help' for commands."

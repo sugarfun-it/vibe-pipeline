@@ -125,15 +125,17 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 
 ### Self-update(`server/lib/updater.ts` + `systemVersion.ts`)
 
-**2026-05-21 起 tarball 模式**(原 `git pull + bun install + bun run build` 改寫):enduser 安裝在 `~/.vibe-pipeline/app/` 沒 `.git/`,git pull 用不到。
+**2026-05-21 tarball + launcher-script pattern**(2 次改寫):enduser 安裝在 `~/.vibe-pipeline/app/` 沒 `.git/`,git pull 用不到。第一版直接在 backend process 內 `rmrf(app/)` + spawn,但 Windows 上 backend cwd 就是 `app/`,EBUSY 然後 rename EPERM,**`app/` 內容被刪光留空殼變 zombie**。改成 launcher pattern。
 
 - `systemVersion.ts`:`getVersionStatus()` 讀當前 commit / branch + `fetchLatestRelease()` 打 GitHub `releases/latest`(unauthenticated,有 cache 避 rate limit)
 - `updater.ts`:
   - `preflightCheck()`:兩條(`globalRunningCount()===0` + `hasUpdate`),git clean 已拔
-  - `performUpdate()`:GitHub releases/latest 取 .tar.gz / .zip asset(優先)→ fallback `tarball_url`(needsStripTopLevel=true)→ 下載 `~/.vibe-pipeline/app.download.tmp/` → 解壓 staging → resolve root(單一 top-level dir 視為 root)→ `rmrf(app/)` → `renameSync(root → app/)`;**純前進不 rollback**(spec C 決議,失敗 user 重跑 install script 即修)
-  - `spawnNewBackend(cwd)`:從新 `app/` `Bun.spawn(["bun","run","server/index.ts"], { cwd, detached:true, stdio:"ignore" })`
-  - update flow:route `system.ts:update` 跑 preflight → emit `system_update_started` notif → `performUpdate` → `spawnNewBackend(result.appPath)` → response 回 200 → setTimeout 500ms `process.exit(0)` 讓新 backend 接 3001
-  - log 全程 `~/.vibe-pipeline/update.log`(truncate 模式,只留本次)
+  - `downloadAndStage()`:GitHub releases/latest 取 .tar.gz / .zip asset(優先)→ fallback `tarball_url`(needsStripTopLevel=true)→ 下載 `~/.vibe-pipeline/app.download.tmp/` → 解壓 `~/.vibe-pipeline/app.staging/` → resolveRoot → 回 `{ tag, stagingRoot, cleanupPaths }`。**不動 `app/`**
+  - `writeHelperScript({backendPid, stagingRoot, cleanupPaths})`:寫平台 helper 到 `~/.vibe-pipeline/update-helper.{ps1,sh}`(Win 強制 ASCII-only 避 5.1 ANSI 讀檔 mis-parse,POSIX `chmod 0755`)。Helper 邏輯:wait backend pid exit(max 30s,逾時 force kill)→ rmrf app/(retry 20× 應付 Windows fs 釋放延遲)→ rename stagingRoot → app/ → cleanup tmp → spawn 新 backend(stdout/stderr → `~/.vibe-pipeline/server.log` 對齊 `vbpl server start`)→ self-delete
+  - `spawnHelperDetached(helperPath)`:Windows `powershell.exe -NoProfile -ExecutionPolicy Bypass -File`;POSIX `bash`。Detached + `windowsHide` + ignore stdio
+  - update flow:route `system.ts:update` 跑 preflight → emit `system_updating` notif → `downloadAndStage` → `writeHelperScript` → `spawnHelperDetached` → response 200 → **setTimeout 1500ms** `process.exit(0)`(讓 helper 起來開始 watch backend pid + client 拿 response)
+  - log 全程 `~/.vibe-pipeline/update.log`(truncate per run;helper 也 append 同檔)
+- **bun path 走 `process.execPath` 寫進 helper**:helper 不依賴 PATH 找 bun,直接用 backend 自己的 bun 路徑
 - **dev clone 永遠不被碰** — 在 dev repo 按 Settings「更新」也只動 `~/.vibe-pipeline/app/`;要驗 enduser update flow 另開 enduser-style 安裝
 - `scripts/build-tarball.ts`(maintainer 端)走嚴格白名單組 tarball,whitelist 清單見 README §Maintainer 發 release;新 server 子目錄要進 tarball **必須改本檔白名單**,否則 enduser 收到的 tarball 缺檔
 - 設計 ref → [`docs/refs/enduser-install-update-design.md`](../../../docs/refs/enduser-install-update-design.md)
