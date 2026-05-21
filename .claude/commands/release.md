@@ -13,12 +13,12 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 
 ## 執行
 
-`$1` 是 user 給的 version,以下 bash 統一從 `$1` 抓並正規化 `v` 前綴。
+`$ARGUMENTS` 是 user 給的 version,以下 bash 統一從 `$ARGUMENTS` 抓並正規化 `v` 前綴。
 
 1. **pre-flight 檢查**(任一不過直接 abort):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
-   RAW="$1"
+   RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
    echo "VERSION=$VERSION"
 
@@ -48,7 +48,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 3. **build tarball**(預期 ~800KB-1MB,失敗 abort):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
-   RAW="$1"
+   RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
    bun run scripts/build-tarball.ts $VERSION 2>&1 | tail -8
    ls -la vibe-pipeline-$VERSION.tar.gz 2>&1
@@ -58,7 +58,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 4. **move tag to HEAD + force push tag**(consolidate 模式:tag 永遠指 latest HEAD):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
-   RAW="$1"
+   RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
    git tag -d $VERSION 2>&1 || true
    git tag $VERSION HEAD
@@ -69,7 +69,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 5. **upload tarball + sync release notes**(自動偵測 release 是否已存在):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
-   RAW="$1"
+   RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
    if gh release view $VERSION >/dev/null 2>&1; then
      echo "=== release $VERSION 已存在 — clobber asset + update notes ==="
@@ -84,7 +84,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 6. **cleanup 本地 tarball**:
    ```bash
    cd "$(git rev-parse --show-toplevel)"
-   RAW="$1"
+   RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
    rm -f vibe-pipeline-$VERSION.tar.gz
    ls vibe-pipeline-$VERSION.tar.gz 2>&1 || echo "cleaned"
@@ -92,7 +92,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 
 7. **verify**(enduser 視角從 GitHub API 拉 latest release):
    ```bash
-   RAW="$1"
+   RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
    curl -s "https://api.github.com/repos/eric14304/vibe-pipeline/releases/latest" | python -c "
    import json,sys
