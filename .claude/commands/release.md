@@ -39,13 +39,37 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
    echo "✅ pre-flight 過"
    ```
 
-2. **push 任何未 push 的 commits 到 origin/main**(release 必須跟 main 對齊):
+2. **bump `package.json` version 對齊**(`build-tarball.ts` 有 arg vs package.json 一致檢查;不一致時自動 bump + commit):
+   ```bash
+   cd "$(git rev-parse --show-toplevel)"
+   RAW="$ARGUMENTS"
+   VERSION="v${RAW#v}"
+   TARGET="${RAW#v}"
+   CURRENT=$(python -c "import json;print(json.load(open('package.json'))['version'])")
+   if [ "$CURRENT" = "$TARGET" ]; then
+     echo "✅ package.json 已是 $TARGET,不必 bump"
+   else
+     echo "package.json $CURRENT → $TARGET,bump + commit"
+     python -c "
+import json
+p = json.load(open('package.json'))
+p['version'] = '$TARGET'
+with open('package.json','w',encoding='utf-8') as f:
+  json.dump(p, f, indent=2, ensure_ascii=False)
+  f.write('\n')
+"
+     git add package.json
+     git commit -m "chore(release): bump version $CURRENT → $TARGET" 2>&1
+   fi
+   ```
+
+3. **push 任何未 push 的 commits 到 origin/main**(release 必須跟 main 對齊;若上一步有 bump commit 也一起推):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
    git push origin main 2>&1
    ```
 
-3. **build tarball**(預期 ~800KB-1MB,失敗 abort):
+4. **build tarball**(預期 ~800KB-1MB,失敗 abort):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
    RAW="$ARGUMENTS"
@@ -55,7 +79,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
    ```
    沒看到 `Done. Tarball:` 或 tarball file → 排雷,別繼續。
 
-4. **move tag to HEAD + force push tag**(consolidate 模式:tag 永遠指 latest HEAD):
+5. **move tag to HEAD + force push tag**(consolidate 模式:tag 永遠指 latest HEAD):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
    RAW="$ARGUMENTS"
@@ -66,7 +90,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
    git push origin $VERSION --force 2>&1
    ```
 
-5. **upload tarball + sync release notes**(自動偵測 release 是否已存在):
+6. **upload tarball + sync release notes**(自動偵測 release 是否已存在):
    ```bash
    cd "$(git rev-parse --show-toplevel)"
    RAW="$ARGUMENTS"
@@ -81,7 +105,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
    fi
    ```
 
-6. **cleanup 本地 tarball**:
+7. **cleanup 本地 tarball**:
    ```bash
    cd "$(git rev-parse --show-toplevel)"
    RAW="$ARGUMENTS"
@@ -90,7 +114,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
    ls vibe-pipeline-$VERSION.tar.gz 2>&1 || echo "cleaned"
    ```
 
-7. **verify**(enduser 視角從 GitHub API 拉 latest release):
+8. **verify**(enduser 視角從 GitHub API 拉 latest release):
    ```bash
    RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
@@ -108,7 +132,8 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 
 ## 報告
 
-- pushed commits 數(從 step 2 output)
-- tarball size(step 3)
+- bump commit hash(若 step 2 真有 bump)
+- pushed commits 數(從 step 3 output)
+- tarball size(step 4)
 - release URL:`https://github.com/eric14304/vibe-pipeline/releases/tag/<VERSION>`
 - enduser 取新版:`vbpl update`(CLI)或 PWA Settings →「套用更新」
