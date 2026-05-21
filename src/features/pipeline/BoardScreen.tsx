@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AppShell } from "../../shell/AppShell";
 import { Rail } from "../../shell/Rail";
+import type { RailMenuItem } from "../../shell/Rail";
+import { useConfirm } from "../../ui/ConfirmDialog";
+import { TrashIcon } from "../../ui/icons";
 import { TopBar } from "../../shell/TopBar";
 import { FocusColumn } from "./FocusColumn";
 import { TicketDrawer } from "./TicketDrawer";
@@ -96,6 +99,50 @@ export function BoardScreen({
   }
   function notifyInfo(msg: string, _opts?: { sub?: string; pipelineId?: string }) {
     setActionError(msg);
+  }
+
+  const confirmDialog = useConfirm();
+
+  async function handleCleanupWorktree(pid: string) {
+    if (!project) return;
+    const target = pipelines.find((p) => p.id === pid);
+    const name = target?.name ?? pid;
+    const okay = await confirmDialog({
+      title: `清除已合併的 worktree:${name}?`,
+      description:
+        "只清掉磁碟上的 worktree 資料夾(~/.vibe-pipeline/worktrees/...),\n" +
+        "pipeline 紀錄 / branch / state 都不會動。\n" +
+        "下次 Run 會從 base 重建 worktree。",
+      confirmLabel: "清除",
+    });
+    if (!okay) return;
+    try {
+      const r = await api.cleanupWorktree(project.hash, pid);
+      if (r.removed) {
+        notifyInfo(`✓ 已清除 worktree(${name})`, { pipelineId: pid });
+      } else {
+        notifyInfo(`worktree 已不在(${name})— 已清過或從未建立`, { pipelineId: pid });
+      }
+    } catch (e) {
+      notifyError(`清除 worktree 失敗: ${e instanceof Error ? e.message : String(e)}`, {
+        pipelineId: pid,
+      });
+    }
+  }
+
+  function buildRailRowMenu(p: Pipeline): RailMenuItem[] {
+    const isMerged = p.state === "merged";
+    return [
+      {
+        key: "cleanup-worktree",
+        label: "清除已合併的 worktree",
+        icon: <TrashIcon />,
+        disabledReason: isMerged ? undefined : "pipeline 還沒 merge",
+        onClick: () => {
+          void handleCleanupWorktree(p.id);
+        },
+      },
+    ];
   }
 
   function markRead(id: string) {
@@ -669,6 +716,7 @@ export function BoardScreen({
           }
           addLabel={isUninit ? "開始初始化" : "新 pipeline"}
           draftPipelineIds={new Set(qa.drafts.map((d) => d.pipelineId))}
+          buildRowMenu={buildRailRowMenu}
           createSlot={
             <CreateCard
               onCancel={() => setCreating(false)}

@@ -208,6 +208,8 @@ async function handle(req: Request): Promise<Response> {
     const hash = projectMatch[1];
     const rest = projectMatch[2] ?? "";
 
+    // DELETE /api/projects/:hash — 從最近專案 list 移除(SSOT state.json),不刪 project fs
+    if (rest === "" && method === "DELETE") return projects.removeRecent(hash);
     if (rest === "/status" && method === "GET") return projects.status(hash);
     if (rest === "/init" && method === "POST") return projects.init(hash);
     if (rest === "/git-init" && method === "POST") return projects.gitInit(hash);
@@ -259,6 +261,13 @@ async function handle(req: Request): Promise<Response> {
     );
     if (worktreeRevealMatch && method === "POST") {
       return projects.revealWorktree(hash, worktreeRevealMatch[1]);
+    }
+
+    const worktreeCleanupMatch = rest.match(
+      /^\/pipelines\/([a-z0-9_-]+)\/worktree\/cleanup$/
+    );
+    if (worktreeCleanupMatch && method === "POST") {
+      return projects.cleanupWorktree(hash, worktreeCleanupMatch[1]);
     }
 
     // 「重置 pipeline」— 取代舊 worktree/prune + ticket reset 兩個 button

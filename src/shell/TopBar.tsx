@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import { Logo } from "../ui/Logo";
-import { CheckIconSm, ChevronIcon, FolderIcon, MoonIcon, PlusIcon, SunIcon } from "../ui/icons";
+import { CheckIconSm, ChevronIcon, CloseIcon, FolderIcon, MoonIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
+import { useConfirm } from "../ui/ConfirmDialog";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import type { Project } from "../../shared/types";
 import "./topbar.css";
@@ -20,6 +21,7 @@ export function TopBar({
   settingsSlot?: ReactNode;
 } = {}) {
   const { hash, setHash } = useActiveProjectHash();
+  const confirm = useConfirm();
   const [recents, setRecents] = useState<Project[]>([]);
   const [open, setOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -139,6 +141,28 @@ export function TopBar({
     }
   }
 
+  async function removeRecentEntry(p: Project) {
+    if (p.hash === hash) return; // active 不能刪(UI 上 X disabled,雙保險)
+    const ok = await confirm({
+      title: `從最近專案移除「${p.name}」?`,
+      description: `路徑:${p.path}\n\n只移除清單紀錄,不刪除任何專案檔案 / git / .vibe-pipeline/ 內容。下次可重新從「選擇其他資料夾…」加回來。`,
+      confirmLabel: "移除",
+      danger: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.removeRecent(p.hash);
+      const list = await api.listRecent();
+      setRecents(list);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function openByPath(path: string) {
     const trimmed = path.trim();
     if (!trimmed) {
@@ -190,28 +214,42 @@ export function TopBar({
                   (還沒開過任何專案)
                 </div>
               )}
-              {recents.map((p) => (
-                <button type="button"
-                  key={p.hash}
-                  className={"proj-menu-item" + (p.hash === hash ? " is-active" : "")}
-                  onClick={() => selectExisting(p)}
-                  disabled={busy}
-                >
-                  <FolderIcon />
-                  <div className="proj-menu-item-text">
-                    <div className="proj-menu-item-name">{p.name}</div>
-                    <div className="proj-menu-item-path mono">{p.path}</div>
+              {recents.map((p) => {
+                const isActive = p.hash === hash;
+                return (
+                  <div key={p.hash} className="proj-menu-row">
+                    <button type="button"
+                      className={"proj-menu-item" + (isActive ? " is-active" : "")}
+                      onClick={() => selectExisting(p)}
+                      disabled={busy}
+                    >
+                      <FolderIcon />
+                      <div className="proj-menu-item-text">
+                        <div className="proj-menu-item-name">{p.name}</div>
+                        <div className="proj-menu-item-path mono">{p.path}</div>
+                      </div>
+                      <span className="proj-menu-item-meta mono">
+                        {p.hasInit ? "已初始化" : "未初始化"}
+                      </span>
+                      {isActive && (
+                        <span className="proj-menu-check">
+                          <CheckIconSm />
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="proj-menu-remove"
+                      onClick={() => removeRecentEntry(p)}
+                      disabled={busy || isActive}
+                      title={isActive ? "目前使用中的專案不能從清單移除" : "從最近專案清單移除(不刪檔)"}
+                      aria-label={isActive ? "目前使用中,不能移除" : `從最近專案移除 ${p.name}`}
+                    >
+                      <CloseIcon />
+                    </button>
                   </div>
-                  <span className="proj-menu-item-meta mono">
-                    {p.hasInit ? "已初始化" : "未初始化"}
-                  </span>
-                  {p.hash === hash && (
-                    <span className="proj-menu-check">
-                      <CheckIconSm />
-                    </span>
-                  )}
-                </button>
-              ))}
+                );
+              })}
               <div className="proj-menu-divider" />
               <button
                 type="button"

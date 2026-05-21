@@ -1,6 +1,18 @@
-import { PlusIcon } from "../ui/icons";
+import { useEffect, useRef, useState } from "react";
+import { PlusIcon, TrashIcon } from "../ui/icons";
 import { STATE_COLOR } from "../data/pipelines";
 import type { Pipeline } from "../types/pipeline";
+
+// Rail 級 row ⋯ menu item。array-driven 結構,未來 actions 直接 push 進去。
+// disabled + tooltip 用 disabledReason 表達(非 undefined → disabled,值就是 tooltip)。
+export type RailMenuItem = {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  danger?: boolean;
+  disabledReason?: string;
+  onClick: () => void;
+};
 
 export function Rail({
   pipelines,
@@ -11,6 +23,7 @@ export function Rail({
   createSlot,
   addLabel = "新 pipeline",
   draftPipelineIds,
+  buildRowMenu,
 }: {
   pipelines: Pipeline[];
   activeId: string;
@@ -20,6 +33,7 @@ export function Rail({
   createSlot?: React.ReactNode;
   addLabel?: string;
   draftPipelineIds?: Set<string>;
+  buildRowMenu?: (p: Pipeline) => RailMenuItem[];
 }) {
   return (
     <aside className={"rail" + (creating ? " is-creating" : "")}>
@@ -41,6 +55,7 @@ export function Rail({
             onClick={() => onSelect(p.id)}
             muted={creating}
             hasDraft={draftPipelineIds?.has(p.id) ?? false}
+            menuItems={buildRowMenu ? buildRowMenu(p) : null}
           />
         ))}
       </div>
@@ -50,46 +65,127 @@ export function Rail({
   );
 }
 
-function RailItem({ p, active, onClick, muted, hasDraft }: { p: Pipeline; active: boolean; onClick: () => void; muted?: boolean; hasDraft?: boolean }) {
+function RailItem({
+  p,
+  active,
+  onClick,
+  muted,
+  hasDraft,
+  menuItems,
+}: {
+  p: Pipeline;
+  active: boolean;
+  onClick: () => void;
+  muted?: boolean;
+  hasDraft?: boolean;
+  menuItems: RailMenuItem[] | null;
+}) {
   const done = p.tickets.filter((t) => t.status === "done").length;
   const total = p.tickets.length;
   return (
-    <button type="button" className={"rail-item" + (active ? " is-active" : "") + (muted ? " is-muted" : "")} onClick={onClick}>
-      <div className="rail-item-row">
-        <span className="rail-state-dot" style={{ background: STATE_COLOR[p.state] }} />
-        <span className="rail-item-name">{p.name}</span>
-        {hasDraft && (
-          <span className="mono rail-qa-badge" title="進行中 QA">
-            QA
+    <div className={"rail-item-wrap" + (active ? " is-active" : "")}>
+      <button type="button" className={"rail-item" + (active ? " is-active" : "") + (muted ? " is-muted" : "")} onClick={onClick}>
+        <div className="rail-item-row">
+          <span className="rail-state-dot" style={{ background: STATE_COLOR[p.state] }} />
+          <span className="rail-item-name">{p.name}</span>
+          {hasDraft && (
+            <span className="mono rail-qa-badge" title="進行中 QA">
+              QA
+            </span>
+          )}
+          <span className="rail-item-count mono">
+            {done}/{total}
           </span>
-        )}
-        <span className="rail-item-count mono">
-          {done}/{total}
-        </span>
-      </div>
-      <div className="rail-mini">
-        {p.tickets.map((t) => {
-          const fill =
-            t.status === "done"
-              ? "var(--done)"
-              : t.status === "running"
-              ? "var(--running)"
-              : t.status === "paused"
-              ? "var(--paused)"
-              : t.status === "failed" ||
-                t.status === "failed_iter_limit" ||
-                t.status === "failed_transient"
-              ? "var(--failed)"
-              : t.status === "ready"
-              ? "var(--running-soft)"
-              : "var(--line-2)";
-          return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
-        })}
-      </div>
-      <div className="rail-item-meta">
-        <span className="mono">{railSecondary(p)}</span>
-      </div>
-    </button>
+        </div>
+        <div className="rail-mini">
+          {p.tickets.map((t) => {
+            const fill =
+              t.status === "done"
+                ? "var(--done)"
+                : t.status === "running"
+                ? "var(--running)"
+                : t.status === "paused"
+                ? "var(--paused)"
+                : t.status === "failed" ||
+                  t.status === "failed_iter_limit" ||
+                  t.status === "failed_transient"
+                ? "var(--failed)"
+                : t.status === "ready"
+                ? "var(--running-soft)"
+                : "var(--line-2)";
+            return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
+          })}
+        </div>
+        <div className="rail-item-meta">
+          <span className="mono">{railSecondary(p)}</span>
+        </div>
+      </button>
+      {menuItems && menuItems.length > 0 && (
+        <RailRowMenu items={menuItems} />
+      )}
+    </div>
+  );
+}
+
+function RailRowMenu({ items }: { items: RailMenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={wrapRef} className={"rail-row-overflow" + (open ? " is-open" : "")}>
+      <button
+        type="button"
+        className="rail-row-overflow-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        title="更多操作"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div role="menu" className="focus-overflow-menu rail-row-overflow-menu">
+          {items.map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              role="menuitem"
+              className={"focus-overflow-item" + (it.danger ? " is-danger" : "")}
+              disabled={!!it.disabledReason}
+              title={it.disabledReason ?? undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                it.onClick();
+              }}
+            >
+              <span className="focus-overflow-item-icon">{it.icon ?? <TrashIcon />}</span>
+              <span className="focus-overflow-item-label">{it.label}</span>
+              {it.disabledReason && (
+                <span className="mono focus-overflow-item-hint">{it.disabledReason}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
