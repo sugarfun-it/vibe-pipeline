@@ -16,6 +16,12 @@ export function listRecent(): Promise<Project[]> {
   return call<Project[]>("/api/projects");
 }
 
+// 從最近專案 list 移除(SSOT state.json)。冪等:hash 不存在仍回 removed:false。
+// 不刪 project 本身 fs,只清 recent 紀錄。
+export function removeRecent(hash: string): Promise<{ removed: boolean }> {
+  return call<{ removed: boolean }>(`/api/projects/${hash}`, { method: "DELETE" });
+}
+
 export function selectFolder(): Promise<{ path: string }> {
   return call<{ path: string }>("/api/projects/select", { method: "POST" });
 }

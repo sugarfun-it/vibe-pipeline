@@ -79,6 +79,21 @@ export async function findByHash(hash: string): Promise<Project | null> {
   return null;
 }
 
+// 從 recent list 移掉 hash 對應 entry。冪等:不存在回 removed:false,存在回 removed:true。
+// 只動 state.json,不碰 project 本身 fs(不 rm worktree、不刪 .vibe-pipeline/)。
+// lastProject 指到該 entry 的話一併清(避免 dangling reference)。
+export async function removeRecent(hash: string): Promise<{ removed: boolean }> {
+  const state = await readState();
+  const idx = state.recentProjects.findIndex((r) => projectHash(r.path) === hash);
+  if (idx === -1) return { removed: false };
+  const [removedEntry] = state.recentProjects.splice(idx, 1);
+  if (removedEntry && state.lastProject === removedEntry.path) {
+    state.lastProject = null;
+  }
+  await writeState(state);
+  return { removed: true };
+}
+
 export async function open(path: string): Promise<Project> {
   const absolute = resolve(path);
   const now = Date.now();

@@ -79,6 +79,14 @@ export async function listRecent(): Promise<Response> {
   return ok(items);
 }
 
+// DELETE /api/projects/:hash — 從 recent list 移除一筆 entry(SSOT 在 state.json)。
+// 冪等:hash 不存在仍回 200 + removed:false。只動 state.json,不刪 project fs。
+// active project 的「不准刪」由前端把 X disabled 處理,backend 不擋 — 後端只負責 state 操作。
+export async function removeRecent(hash: string): Promise<Response> {
+  const r = await projectStore.removeRecent(hash);
+  return ok({ removed: r.removed });
+}
+
 export async function selectFolder(): Promise<Response> {
   let path: string | null;
   try {
