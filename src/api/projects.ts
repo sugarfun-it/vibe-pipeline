@@ -141,6 +141,20 @@ export function cleanupWorktree(
   );
 }
 
+// Bulk:清 project 內所有 state===merged 的 worktree(磁碟,不動 pipeline.json / branch)
+export type CleanupMergedResult = {
+  cleaned: Array<{ pipelineId: string; path: string }>;
+  skipped_not_merged: string[];
+  failed: Array<{ pipelineId: string; error: string }>;
+};
+
+export function cleanupMergedWorktrees(hash: string): Promise<CleanupMergedResult> {
+  return call<CleanupMergedResult>(
+    `/api/projects/${hash}/worktrees/cleanup-merged`,
+    { method: "POST" }
+  );
+}
+
 export function resetPipeline(hash: string, id: string): Promise<{ ok: true }> {
   return call<{ ok: true }>(
     `/api/projects/${hash}/pipelines/${id}/reset`,
