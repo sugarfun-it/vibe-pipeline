@@ -77,13 +77,13 @@ vbpl server status
 
 ```bash
 bun install
-bun run start         # build + 同時起 backend 3001 + preview 4173
-# 開 http://127.0.0.1:4173/board
+bun run start         # build + 起 backend 3001(單 process 同時 serve API + PWA)
+# 開 http://127.0.0.1:3001/board
 ```
 
-`start` 一條指令搞定 production build + 後端 + 前端 preview(PWA SW 註冊正常)。日常改 VP source code 用 `bun run dev`(走 5173 vite HMR,SW 不註冊)。
+`start` 一條指令搞定 production build + backend(static route 自己 serve `dist/`,不必另起 preview)。日常改 VP source code 用 `bun run dev`(走 5173 vite HMR,SW 不註冊)。
 
-**並行 dev stack**(`sub:dev` / `sub:server` / `sub:preview`)用 +100 port(3101 / 5273 / 4273)避開 user backend(3001 / 5173 / 4173)。給「user backend 跑著、自己另開一份 dev stack 改 source」或 e2e fixture / CI 用;sub-agent 自己不會起 backend / vite,跟本套 script 無關。
+**並行 backend**(`bun run sub:server`)起在 PORT=3101,跟 user backend(3001)隔離。給「user backend 跑著、自己另開一份 backend 測試」或 e2e fixture / CI 用。backend collapse 後同一 process serve API + dist/,單條 script 就夠,不必再分 vite preview / API 兩條。
 
 ---
 
@@ -248,13 +248,11 @@ SKILL 文件分兩種,動非 trivial 改動前先讀:
 | `vbpl server logs [-f]` | 看 backend log;`-f` 即時 tail |
 | `vbpl server restart` | 重啟 backend(PID 會換新) |
 | `vbpl server stop` | 停掉 `vbpl server start` 管理的 backend |
-| `bun run start` | maintainer 驗 production bundle:build + backend 3001 + preview 4173 |
+| `bun run start` | maintainer 驗 production bundle:build + backend(3001 單 process 同 serve API + dist/) |
 | `bun run dev` | maintainer 改 source:vite 5173 HMR + backend 3001(SW 不註冊) |
 | `bun run server` | maintainer 只起 backend(3001;前景 process) |
-| `bun run preview` | maintainer 只起 frontend preview(4173,需先 `bun run build`) |
-| `bun run sub:dev` | 並行 dev stack:vite 5273 + backend 3101(用於 user backend 還跑著時另開一份 / e2e fixture / CI) |
-| `bun run sub:server` | 並行 backend only(3101) |
-| `bun run sub:preview` | 並行 preview(4273 + proxy → 3101) |
+| `bun run preview` | maintainer 只起 frontend preview(4173,需先 `bun run build`;collapse 後通常不必,backend 自己 serve dist/) |
+| `bun run sub:server` | 並行 backend on 3101(隔離測試 / e2e fixture / CI;static route 自動同時 serve API + dist/) |
 | `bun run build` | `tsc -b && vite build` → `dist/` |
 | `bun run lint` | Biome lint |
 | `bun run test:e2e` | Playwright mock 模式(CI 預設) |
