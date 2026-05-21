@@ -3,6 +3,11 @@
 // runCapture     — 純捕 stdout/stderr,await exited;最常見的「跑完拿輸出」型。
 // spawnStreaming — 拿 handle(runner main agent 用,要 .stdin / .exited / .kill / 長跑 stream)。
 // spawnFireForget — dialog open / explorer reveal,不關心結果。
+//
+// Windows 雷:`detached: true` 跟 `windowsHide: true` 並用時,Win32 API silently ignore
+// CREATE_NO_WINDOW(rprichard/win32-console-docs)→ child 可能 AllocConsole 起新 console
+// → console window 閃。Windows 端 detached 沒實際好處(沒 process group 語意,killProcessTree
+// 走 taskkill /T 不靠 detached)。所以 Windows 一律拿掉 detached,讓 windowsHide 真生效。
 
 export type RunCaptureResult = {
   ok: boolean;
@@ -47,17 +52,21 @@ export async function runCapture(
 
 // streaming spawn:caller 完全控制 lifecycle(.stdin / .exited / .kill / for-await stdout)。
 // windowsHide 預設 true(可被 opts override,實務上不需要)。
-// detached 預設 true:POSIX 上 child 進自己 process group,killProcessTree 的 `process.kill(-pid)`
-// 才能整棵殺到 sub-agent(macOS 雷 1)。Windows 無此語意,設了無害。注意:我們 await proc.exited,
-// 不呼 child.unref(),detached 純粹只為 process group。
+// detached 預設:POSIX = true(child 進自己 process group,killProcessTree `process.kill(-pid)`
+// 才能整棵殺到 sub-agent,macOS 雷 1);Windows = false(detached 會 silently 廢掉 windowsHide
+// → 跑 pipeline 時 console window 閃,實測撞到。Windows 沒 process group 語意,killProcessTree
+// 走 taskkill /T 不靠 detached)。注意:我們 await proc.exited,不呼 child.unref(),detached
+// 純粹只為 POSIX process group。
 // 回傳型別 generic 化保留 caller 的具體型(e.g. PipedSubprocess);內部用 unknown 過 type narrowing。
+const IS_WIN = process.platform === "win32";
+
 export function spawnStreaming<T extends Bun.Subprocess = Bun.PipedSubprocess>(
   args: string[],
   opts?: Partial<Parameters<typeof Bun.spawn>[1]>
 ): T {
   const merged = {
     windowsHide: true,
-    detached: true,
+    ...(IS_WIN ? {} : { detached: true }),
     ...(opts ?? {}),
   } as Parameters<typeof Bun.spawn>[1];
   return Bun.spawn(args, merged) as unknown as T;
