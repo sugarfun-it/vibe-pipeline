@@ -22,7 +22,7 @@
 //   6. PWA polls /api/health 直到新 backend up
 
 import { join } from "node:path";
-import { existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, writeFileSync, unlinkSync } from "node:fs";
 import { platform } from "node:os";
 import { vibeHome } from "./paths";
 import { getVersionStatus } from "./systemVersion";
@@ -105,15 +105,20 @@ async function downloadInstallScript(): Promise<string> {
 
 // Spawn install script — 真 detach,backend 自殺後 install 還活。
 //
-// Windows:`Bun.spawn(install.ps1, { stdio: fd, detached: true })` 實測 install
-// process 沒被起來(update.log 只有 backend 寫的 start 行,powershell 沒 spawn)。
-// 可能 Bun.spawn 把 file fd 傳給 child 的方式在 Windows 上有 bug。
-// 改用 cmd /c start "" /B 寫 launcher .cmd + PS internal redirect:
-//   - 寫 ~/.vibe-pipeline/update-launcher.cmd:內含 `powershell -File install.ps1 -AutoStart >> update.log 2>&1`
-//   - Bun.spawn(["cmd", "/c", "start", "", "/B", launcher.cmd]) — start /B 是 cmd 內建真 detach
-//   - cmd /c start 一啟動 launcher.cmd 就 exit,Bun.spawn 立刻 return
-//   - launcher.cmd 由 cmd.exe 持續跑(start /B 給的新 console),PS 開始,redirect 自己
-//   - backend 之後自殺,跟整鏈無關
+// Windows:不能用 `Bun.spawn(powershell, { detached: true })` — Win32 限制 +
+// Node #51018 已記錄:DETACHED_PROCESS 會 silently ignore CREATE_NO_WINDOW
+// 且 PowerShell child 無 console attached → silently 不執行。實測證實。
+//
+// 改用 mediator pattern:
+//   Bun.spawn(powershell hidden, NO detached)        ← windowsHide 在無 detached 下生效
+//     └─ mediator 跑 `Start-Process powershell -WindowStyle Hidden ...
+//        -RedirectStandardOutput log -RedirectStandardError log.err`
+//        Start-Process 內建 ShellExecute 路徑 — spawned process 自然 detached + hidden,
+//        survives mediator + backend 死。
+//     └─ mediator ~500ms 就退,Bun.spawn 收尾,backend 接著自殺。
+//
+// argv path 用 forward slash:Bun.spawn 在 Windows argv 處理 `\U \E \s` 當 escape
+// 會吃掉 backslash。`scriptPath`/`logPath` 全轉成 / 後傳。
 //
 // POSIX:`Bun.spawn(install.sh, { stdio: fd, detached: true })` 走新 process group 正常 detach。
 export async function spawnInstallScript(): Promise<void> {
@@ -129,34 +134,27 @@ export async function spawnInstallScript(): Promise<void> {
   }
 
   if (isWin) {
-    // VBScript launcher for TRUE invisible window:
-    //   - cmd /c start /B 仍可能跳 console window(Bun.spawn detached 給 cmd new console group)
-    //   - powershell -WindowStyle Hidden 也只 hide PS 自己,parent cmd 仍見
-    //   - 唯一真 invisible = WScript.Shell.Run(cmd, 0, False),windowStyle=0 = SW_HIDE
-    //
-    // VBScript escapes: 雙引號路徑用 "" (兩個雙引號) escape。VBS 字串 concat 用 &。
-    const launcherPath = join(vpRoot(), "update-launcher.vbs");
-    const psCmd = `powershell -NoProfile -ExecutionPolicy Bypass -File ""${scriptPath}"" -AutoStart >> ""${logPath}"" 2>&1`;
-    const launcherContent = [
-      `' vibe-pipeline update launcher (invisible)`,
-      `Set sh = CreateObject("WScript.Shell")`,
-      `sh.Run "cmd /c ${psCmd}", 0, False`,
-      "",
-    ].join("\r\n");
-    writeFileSync(launcherPath, launcherContent, "utf8");
+    // Cleanup 殘留 launcher 檔(從舊版 vbs / cmd 路徑遷移過來的 enduser 才會有)
+    for (const stale of ["update-launcher.vbs", "update-launcher.cmd"]) {
+      try { unlinkSync(join(vpRoot(), stale)); } catch {}
+    }
 
-    // wscript.exe 跑 vbs 本身就 invisible(無 console)。vbs 內 Shell.Run windowStyle=0
-    // 起的 cmd → powershell 也是 SW_HIDE。整鏈 0 window。
-    // cwd: vpRoot() 必設,避 install.ps1 step 7 移 current junction 撞自己 cwd。
-    Bun.spawn(["wscript.exe", launcherPath], {
-      cwd: vpRoot(),
-      stdout: "ignore",
-      stderr: "ignore",
-      stdin: "ignore",
-      windowsHide: true,
-      // @ts-expect-error Bun 支援 detached 但 TS 型別未必載入
-      detached: true,
-    });
+    const fwdScript = scriptPath.replace(/\\/g, "/");
+    const fwdLog = logPath.replace(/\\/g, "/");
+    const cmd =
+      `Start-Process powershell -WindowStyle Hidden ` +
+      `-ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','${fwdScript}','-AutoStart' ` +
+      `-RedirectStandardOutput '${fwdLog}' -RedirectStandardError '${fwdLog}.err'`;
+    Bun.spawn(
+      ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", cmd],
+      {
+        cwd: vpRoot(),
+        stdout: "ignore",
+        stderr: "ignore",
+        stdin: "ignore",
+        windowsHide: true,
+      },
+    );
   } else {
     // POSIX:走 Bun.spawn detached + stdio:fd,process group fork 正常 detach
     const stdoutFd = openSync(logPath, "a");
