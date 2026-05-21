@@ -78,8 +78,9 @@ async function handle(req: Request): Promise<Response> {
   if (pathname === "/api/system/version" && method === "GET") {
     return system.version();
   }
-  // /api/system/update 已拔(v0.3.0):update 改 install-script-only,
-  // user 跑 `vbpl update` 或 PWA 顯示更新指令 copy/paste,後端不再 cross-process orchestrate update。
+  if (pathname === "/api/system/update" && method === "POST") {
+    return system.update();
+  }
 
   if (pathname.startsWith("/api/auth/")) {
     if (pathname === "/api/auth/setup-init" && method === "POST") return auth.setupInit();
@@ -294,7 +295,9 @@ async function handle(req: Request): Promise<Response> {
   return notFound();
 }
 
-const server = Bun.serve({
+// Export server 給 routes/system.ts:update handler 用,做 graceful shutdown
+// 避免 process.exit 留 zombie socket(Windows port 3001 卡 TIME_WAIT,新 backend 起不來)
+export const server = Bun.serve({
   port: PORT,
   hostname: "0.0.0.0",
   // 預設 10s 太短 — QA / split / merge 都會 spawn claude CLI,單次跑 10-60s 常見;

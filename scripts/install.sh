@@ -12,10 +12,26 @@
 
 set -e
 
+# Optional flag: --auto-start to start backend at end. Same semantics as Windows
+# install.ps1 -AutoStart: only safe from non-pipe context (e.g. backend POST
+# /api/system/update). POSIX detach is more reliable than Windows so even pipe
+# context tends to work, but we keep the flag symmetric for consistency.
+AUTO_START=0
+for arg in "$@"; do
+  case "$arg" in
+    --auto-start) AUTO_START=1 ;;
+  esac
+done
+
 REPO="eric14304/vibe-pipeline"
 VP_HOME="$HOME/.vibe-pipeline"
 VERSIONS_DIR="$VP_HOME/versions"
 CURRENT="$VP_HOME/current"
+
+# cd to $VP_HOME so we are never inside $CURRENT (symmetric with install.ps1).
+# Caller may invoke from anywhere; we don't trust cwd.
+mkdir -p "$VP_HOME"
+cd "$VP_HOME"
 # Shim under ~/.vibe-pipeline/bin/ aligned with pyenv/cargo/nvm convention,
 # same dir as legacy vbpl, uninstall just rm ~/.vibe-pipeline/.
 # Legacy shim at ~/.local/bin/vbpl auto-cleaned below.
@@ -205,16 +221,24 @@ if [ "$IN_PATH" = "0" ]; then
   esac
 fi
 
-# 10) Auto-start backend (via current/)
-msg ""
-msg "Starting backend ..."
-VBPL_HOME="$CURRENT" bun run "$CURRENT/cli/vbpl.ts" server start || {
-  err "server start failed. Try manually: vbpl server start"
-}
+# 10) Optionally auto-start backend
+if [ "$AUTO_START" = "1" ]; then
+  msg ""
+  msg "Starting backend (--auto-start) ..."
+  VBPL_HOME="$CURRENT" bun run "$CURRENT/cli/vbpl.ts" server start || {
+    err "server start failed. Try manually: vbpl server start"
+  }
+fi
 
 msg ""
 msg "OK Installed $TAG at $VERSION_DIR"
 msg "OK current -> $VERSION_DIR"
-msg "OK Backend: http://localhost:3001"
+if [ "$AUTO_START" = "1" ]; then
+  msg "OK Backend: http://localhost:3001"
+fi
 msg ""
-msg "Done. Run 'vbpl --help' for commands."
+if [ "$AUTO_START" = "1" ]; then
+  msg "Done. Run 'vbpl --help' for commands."
+else
+  msg "Done. Run 'vbpl server start' to launch backend, then 'vbpl --help'."
+fi

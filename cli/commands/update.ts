@@ -171,5 +171,6 @@ export async function runUpdate(_sub: string | undefined, args: ParsedArgs): Pro
     return;
   }
   print("");
-  print(`Updated. Open PWA and accept the 'Apply update' banner to reload UI.`);
+  print(`Update staged. Run 'vbpl server start' to launch new backend.`);
+  print(`Then open PWA and accept the 'Apply update' banner to reload UI.`);
 }

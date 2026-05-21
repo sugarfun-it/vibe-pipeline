@@ -85,16 +85,6 @@ bun run start         # build + 同時起 backend 3001 + preview 4173
 
 **並行 dev stack**(`sub:dev` / `sub:server` / `sub:preview`)用 +100 port(3101 / 5273 / 4273)避開 user backend(3001 / 5173 / 4173)。給「user backend 跑著、自己另開一份 dev stack 改 source」或 e2e fixture / CI 用;sub-agent 自己不會起 backend / vite,跟本套 script 無關。
 
-打包 CLI 成單檔 binary:
-
-```bash
-bun run cli:build           # Windows x64
-bun run cli:build:mac       # macOS arm64 (Apple Silicon)
-bun run cli:build:mac-x64   # macOS x64 (Intel)
-bun run cli:build:linux     # Linux x64
-# → dist-cli/vbpl[.exe|-mac|-mac-x64|-linux]
-```
-
 ---
 
 ## 給 AI 安裝(讓你家的 AI 學會用 vbpl)
@@ -168,15 +158,7 @@ flowchart TB
 
 ## CLI
 
-打包:
-```bash
-bun run cli:build           # Windows x64           → dist-cli/vbpl.exe
-bun run cli:build:mac       # macOS arm64 (Apple)   → dist-cli/vbpl-mac
-bun run cli:build:mac-x64   # macOS x64 (Intel)     → dist-cli/vbpl-mac-x64
-bun run cli:build:linux     # Linux x64             → dist-cli/vbpl-linux
-```
-
-裝 PATH:`vbpl --version` 驗即可。**完整 install per-OS + trouble 看 [`docs/vibe-pipeline/install.md`](docs/vibe-pipeline/install.md)**。
+走 install script:`vbpl` 是 shim(`~/.vibe-pipeline/bin/vbpl[.cmd]`),內含 `bun run current/cli/vbpl.ts %*`。一行裝法見 §安裝 (enduser)。**完整 install + trouble 看 [`docs/vibe-pipeline/install.md`](docs/vibe-pipeline/install.md)**。
 
 ### 常用指令
 
@@ -278,7 +260,6 @@ SKILL 文件分兩種,動非 trivial 改動前先讀:
 | `bun run test:e2e` | Playwright mock 模式(CI 預設) |
 | `bun run test:e2e:real` | Playwright real 模式(燒 token,opt-in) |
 | `bun run vbpl <noun> <verb>` | CLI 開發模式(不用每次 rebuild) |
-| `bun run cli:build` | 把 CLI 編成單檔 binary |
 | `bun run icons` | 從 `public/icon.svg` 重產 PWA icons(需 ImageMagick) |
 
 ---

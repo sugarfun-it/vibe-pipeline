@@ -135,19 +135,21 @@ cli/
 - 預期 `--json` 行為 → 跑 `bun run vbpl <noun> <verb> --json | jq .` 驗
 - 跨平台:Windows / macOS / Linux 都該過,path / spawn 都要小心(`node:path` + Bun.spawn array form)
 
-## 打包成 binary
+## 散發給 enduser
 
-`bun build --compile --minify` 把 CLI + Bun runtime + 全 deps 打成單檔 executable。三個 script 在 package.json:
+不打包 binary。Enduser 走 install script(`scripts/install.{ps1,sh}`),寫個 99-byte shim `~/.vibe-pipeline/bin/vbpl[.cmd]` 內含:
 
+```cmd
+@echo off
+set VBPL_HOME=%USERPROFILE%\.vibe-pipeline\current
+bun run "%VBPL_HOME%\cli\vbpl.ts" %*
 ```
-bun run cli:build         # Windows x64    → dist-cli/vbpl.exe(~121 MB)
-bun run cli:build:mac     # macOS arm64    → dist-cli/vbpl-mac
-bun run cli:build:linux   # Linux x64      → dist-cli/vbpl-linux
-```
 
-`dist-cli/` 已 gitignore。完整 install per-OS + trouble + 散發流程看 [`docs/install.md`](../../../docs/install.md)(single source of truth)。
+(POSIX `vbpl` 對等 `bun run`。)
 
-注意:binary 大(~121 MB)因為 bundle 整個 Bun runtime。若要更小看 `--target=bun-windows-x64-baseline` 等 baseline target。
+Shim 跨版本穩定不被 update 動;`current` junction 指當前 `versions/v0.X.Y/`,update 換 junction → 下次 invoke `vbpl` 自動跑新 source。完整 install + update 流程看 [`docs/vibe-pipeline/install.md`](../../../docs/vibe-pipeline/install.md)。
+
+歷史上有 `bun build --compile` 出 `vbpl.exe`(~121 MB),v0.2 拔了 — shim 模型更簡單、無 stale binary 問題、self-update 走 install script 就同步整個 cli + server source。
 
 ## 還沒做
 

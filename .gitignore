@@ -1,6 +1,5 @@
 node_modules/
 dist/
-dist-cli/
 .vite/
 .DS_Store
 
@@ -54,3 +53,5 @@ firebase-service-account*.json
 # release tarball artifacts (build-tarball.ts)
 release-tmp/
 vibe-pipeline-v*.tar.gz
+release-tmp/
+update-flow.*

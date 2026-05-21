@@ -20,8 +20,17 @@ export type HealthStatus = {
   repo_path?: string;
 };
 
+export type UpdateStarted = {
+  started: true;
+  message?: string;
+};
+
 export function getSystemVersion(signal?: AbortSignal): Promise<VersionStatus> {
   return call<VersionStatus>("/api/system/version", { signal });
+}
+
+export function triggerSystemUpdate(signal?: AbortSignal): Promise<UpdateStarted> {
+  return call<UpdateStarted>("/api/system/update", { method: "POST", signal });
 }
 
 export function getHealth(signal?: AbortSignal): Promise<HealthStatus> {

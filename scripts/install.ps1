@@ -2,16 +2,22 @@
 # vibe-pipeline enduser installer (Windows PowerShell)
 # Usage: irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
 #
+# Optional flag: pass -AutoStart to start backend at end (only safe when invoked
+# from a non-pipe context - e.g. backend /api/system/update). Default off because
+# auto-starting via terminal pipe leaks backend stdio handles up the chain and
+# hangs caller on Windows.
+#
 # Layout (Scoop-style versioned + current junction):
 #   %USERPROFILE%\.vibe-pipeline\versions\v0.1.X\   actual version dir
 #   %USERPROFILE%\.vibe-pipeline\current            junction -> versions\v0.1.X\
-#   %LOCALAPPDATA%\vibe-pipeline\vbpl.cmd           shim, runs from %current%
-#
-# self-update only writes to versions\v<NEW>\ and a .pending file. `vbpl server start`
-# detects .pending and swaps current. No process self-replacement, no detach magic.
+#   %USERPROFILE%\.vibe-pipeline\bin\vbpl.cmd       shim, runs from %current%
 #
 # Note: ASCII-only on purpose. Windows PowerShell 5.1 reads .ps1 as ANSI by default;
 # UTF-8 multi-byte chars (without BOM) can be misread as lead-bytes and break the parser.
+
+param(
+  [switch]$AutoStart
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -19,6 +25,12 @@ $Repo        = "eric14304/vibe-pipeline"
 $VpHome      = Join-Path $HOME ".vibe-pipeline"
 $VersionsDir = Join-Path $VpHome "versions"
 $Current     = Join-Path $VpHome "current"
+
+# cd to $VpHome so we are NEVER inside $Current/. Otherwise step 7 (remove current
+# junction) fails when current is the script's own cwd (Windows "directory in use").
+# Caller may invoke install.ps1 from anywhere; we don't trust cwd.
+New-Item -ItemType Directory -Force -Path $VpHome | Out-Null
+Set-Location -LiteralPath $VpHome
 # Shim under ~/.vibe-pipeline/bin/ - aligned with pyenv/cargo/nvm convention,
 # same dir as legacy vbpl.exe, uninstall just rm ~/.vibe-pipeline/.
 # Pre-v0.2.1 shim at %LOCALAPPDATA%\vibe-pipeline\ is auto-cleaned below.
@@ -102,10 +114,34 @@ try {
 New-Item -ItemType Directory -Force -Path $VersionsDir | Out-Null
 $VersionDir = Join-Path $VersionsDir $Tag
 
-# overwrite existing same-version dir (retry / re-install case)
+# Move existing $VersionDir aside (rename usually works on Windows even when contents
+# are file-locked; Remove-Item -Recurse can hang minutes when prev backend's memory-mapped
+# image hasn't been released). Cleanup of bak dir happens in background, best-effort.
+# Same-version re-install (test / debug case) is the only path that hits this - real
+# enduser update has different version tag, $VersionDir won't exist.
 if (Test-Path $VersionDir) {
-  Info "Removing existing $VersionDir"
-  Remove-Item -Recurse -Force $VersionDir -ErrorAction Stop
+  $bak = "$VersionDir.bak-$(Get-Random -Maximum 99999)"
+  $moved = $false
+  for ($i = 0; $i -lt 20; $i++) {
+    try {
+      Move-Item -Path $VersionDir -Destination $bak -ErrorAction Stop
+      $moved = $true
+      break
+    } catch {
+      Start-Sleep -Milliseconds 500
+    }
+  }
+  if (-not $moved) {
+    Err "Cannot move existing $VersionDir aside after 10s (parent dir locked)"
+    exit 1
+  }
+  Info "Moved existing $VersionDir aside to $bak (background cleanup)"
+  # Background cleanup of .bak (waits 30s for locks to release, then nukes)
+  Start-Job -ScriptBlock {
+    param($p)
+    Start-Sleep 30
+    Remove-Item -Recurse -Force $p -ErrorAction SilentlyContinue
+  } -ArgumentList $bak | Out-Null
 }
 
 $stage = Join-Path $env:TEMP "vibe-pipeline-stage-$Tag"
@@ -247,19 +283,50 @@ if (-not $inPath) {
   }
 }
 
-# 10) Auto-start backend (uses current\ via VBPL_HOME)
-Info ""
-Info "Starting backend ..."
-$env:VBPL_HOME = $Current
-try {
-  & bun run "$Current\cli\vbpl.ts" server start
-} catch {
-  Err "server start failed. Try manually: vbpl server start"
+# 10) Optionally auto-start backend
+#
+# Default off: starting backend from this script via terminal-pipe caller leaks
+# backend stdio handles up the chain and hangs caller on Windows. -AutoStart is
+# safe ONLY when invoked from a non-pipe context (e.g. backend /api/system/update
+# spawns this script with stdio: file - backend exits 500ms later, no stdio chain
+# back to PWA HTTP request).
+if ($AutoStart) {
+  Info ""
+  Info "Starting backend (AutoStart) ..."
+  $env:VBPL_HOME = $Current
+  try {
+    Start-Process -FilePath "bun" `
+      -ArgumentList "run", "$Current\cli\vbpl.ts", "server", "start" `
+      -WorkingDirectory $Current `
+      -WindowStyle Hidden
+  } catch {
+    Err "server start failed to launch: $_"
+  }
+  # poll /api/health up to ~30s (Bun cold start on Windows ~10-15s)
+  $healthy = $false
+  for ($i = 0; $i -lt 60; $i++) {
+    try {
+      $null = Invoke-RestMethod -UseBasicParsing -Uri "http://localhost:3001/api/health" -TimeoutSec 1
+      $healthy = $true; break
+    } catch {
+      Start-Sleep -Milliseconds 500
+    }
+  }
+  if (-not $healthy) {
+    Err "Backend did not respond on /api/health within ~30s"
+    Err "Check $VpHome\server.log; retry: vbpl server start"
+  } else {
+    Info "OK Backend up on http://localhost:3001"
+  }
+} else {
+  Info ""
+  Info "Install complete. To start backend, run:"
+  Info ""
+  Info "  vbpl server start"
+  Info ""
 }
 
-Info ""
 Info "OK Installed $Tag at $VersionDir"
 Info "OK current -> $VersionDir"
-Info "OK Backend: http://localhost:3001"
 Info ""
-Info "Done. Run 'vbpl --help' for commands."
+Info "Done. Run 'vbpl server start' to launch backend, then 'vbpl --help'."

@@ -1,17 +1,25 @@
-import { useCallback, useEffect, useState } from "react";
-import { getSystemVersion, type VersionStatus } from "../../api/system";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getSystemVersion, triggerSystemUpdate, getHealth, type VersionStatus } from "../../api/system";
+import { ApiError } from "../../api/_client";
 
-const POSIX_CMD = "curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh";
-const WIN_CMD = "irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex";
-const CLI_CMD = "vbpl update";
+type UpdatingPhase =
+  | { kind: "idle" }
+  | { kind: "starting" }
+  | { kind: "polling"; afterDown: boolean }
+  | { kind: "done"; newTag: string | null }
+  | { kind: "error"; reason: string };
 
-type CmdKey = "posix" | "windows" | "cli";
+const HEALTH_POLL_INTERVAL_MS = 2000;
+const HEALTH_POLL_TIMEOUT_MS = 180_000;
 
-export function UpdateTab({ onActionError: _onActionError }: { onActionError?: (m: string) => void }) {
+export function UpdateTab({ onActionError }: { onActionError?: (m: string) => void }) {
   const [version, setVersion] = useState<VersionStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState<CmdKey | null>(null);
+  const [phase, setPhase] = useState<UpdatingPhase>({ kind: "idle" });
+  const pollAbortRef = useRef<AbortController | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   const fetchVersion = useCallback(async () => {
     setLoading(true);
@@ -31,15 +39,80 @@ export function UpdateTab({ onActionError: _onActionError }: { onActionError?: (
     void fetchVersion();
   }, [fetchVersion]);
 
-  const copyCmd = useCallback(async (key: CmdKey, cmd: string) => {
-    try {
-      await navigator.clipboard.writeText(cmd);
-      setCopied(key);
-      setTimeout(() => setCopied((curr) => (curr === key ? null : curr)), 2000);
-    } catch {
-      // clipboard 失敗(權限 / http) → 不擋,user 自己選 + copy
-    }
+  useEffect(() => {
+    return () => {
+      pollAbortRef.current?.abort();
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    };
   }, []);
+
+  const startHealthPoll = useCallback(() => {
+    startTimeRef.current = Date.now();
+    setPhase({ kind: "polling", afterDown: false });
+
+    const tick = async () => {
+      if (Date.now() - startTimeRef.current > HEALTH_POLL_TIMEOUT_MS) {
+        setPhase({ kind: "error", reason: "等待 backend 回來逾時(3 min)。請手動 reload 頁面。" });
+        return;
+      }
+      const ctrl = new AbortController();
+      pollAbortRef.current = ctrl;
+      let okThisTick = false;
+      try {
+        await getHealth(ctrl.signal);
+        okThisTick = true;
+      } catch {
+        okThisTick = false;
+      }
+      let shouldFinalize = false;
+      setPhase((prev) => {
+        if (prev.kind !== "polling") return prev;
+        if (!okThisTick) {
+          // backend 還沒回來 → 進 afterDown 狀態(預期會發生:backend exit + install 跑)
+          return { ...prev, afterDown: true };
+        }
+        // backend 回來了
+        if (prev.afterDown) {
+          shouldFinalize = true;
+        }
+        return prev;
+      });
+      if (shouldFinalize) {
+        try {
+          const v = await getSystemVersion();
+          setVersion(v);
+          setPhase({ kind: "done", newTag: v.current });
+        } catch {
+          setPhase({ kind: "done", newTag: null });
+        }
+        return;
+      }
+      pollTimerRef.current = setTimeout(() => {
+        void tick();
+      }, HEALTH_POLL_INTERVAL_MS);
+    };
+
+    void tick();
+  }, []);
+
+  const onApply = useCallback(async () => {
+    setPhase({ kind: "starting" });
+    try {
+      await triggerSystemUpdate();
+      startHealthPoll();
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error && e.message
+            ? e.message
+            : "觸發更新失敗";
+      setPhase({ kind: "error", reason: msg });
+      onActionError?.(msg);
+    }
+  }, [onActionError, startHealthPoll]);
+
+  const isUpdating = phase.kind === "starting" || phase.kind === "polling";
 
   return (
     <div className="task-group task-group--primary">
@@ -83,68 +156,37 @@ export function UpdateTab({ onActionError: _onActionError }: { onActionError?: (
               type="button"
               className="btn"
               onClick={() => void fetchVersion()}
-              disabled={loading}
+              disabled={loading || isUpdating}
             >
               {loading ? "檢查中…" : "檢查更新"}
             </button>
+            {version.hasUpdate && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void onApply()}
+                disabled={isUpdating}
+              >
+                {isUpdating ? "更新中…" : "套用更新"}
+              </button>
+            )}
           </div>
 
-          {version.hasUpdate && version.latest && (
-            <div className="update-tab-body">
-              <div className="settings-subhint">
-                在 terminal 跑以下任一指令套用更新(會停 backend → 解壓 → 重啟):
-              </div>
-
-              <UpdateCmdRow
-                label="vbpl CLI(任一平台)"
-                cmd={CLI_CMD}
-                copied={copied === "cli"}
-                onCopy={() => void copyCmd("cli", CLI_CMD)}
-              />
-              <UpdateCmdRow
-                label="macOS / Linux"
-                cmd={POSIX_CMD}
-                copied={copied === "posix"}
-                onCopy={() => void copyCmd("posix", POSIX_CMD)}
-              />
-              <UpdateCmdRow
-                label="Windows PowerShell"
-                cmd={WIN_CMD}
-                copied={copied === "windows"}
-                onCopy={() => void copyCmd("windows", WIN_CMD)}
-              />
-
-              <div className="settings-subhint">
-                跑完後切回本頁,新 UI bundle 偵測到會跳「套用更新」banner 提示 reload。
-              </div>
+          {phase.kind === "polling" && (
+            <div className="update-progress-hint">
+              backend 重啟中,預期 30-60 秒。{phase.afterDown ? "已重新連線,確認版本…" : "等待 backend 下線…"}
             </div>
           )}
+
+          {phase.kind === "done" && (
+            <div className="mono update-success">
+              ✓ 已更新{phase.newTag ? `到 ${phase.newTag}` : ""}
+            </div>
+          )}
+
+          {phase.kind === "error" && <div className="mono settings-error">{phase.reason}</div>}
         </div>
       )}
-    </div>
-  );
-}
-
-function UpdateCmdRow({
-  label,
-  cmd,
-  copied,
-  onCopy,
-}: {
-  label: string;
-  cmd: string;
-  copied: boolean;
-  onCopy: () => void;
-}) {
-  return (
-    <div className="update-cmd-row">
-      <div className="settings-subhint">{label}</div>
-      <div className="update-cmd-line">
-        <code className="mono update-cmd-code">{cmd}</code>
-        <button type="button" className="btn" onClick={onCopy}>
-          {copied ? "已複製" : "複製"}
-        </button>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "vibe-pipeline",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,11 +17,7 @@
     "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
     "test:e2e:real": "playwright test --config=tests/e2e/playwright.real.config.ts",
     "icons": "bun run scripts/gen-icons.ts",
-    "vbpl": "bun run cli/vbpl.ts",
-    "cli:build": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-windows-x64 cli/vbpl.ts --outfile dist-cli/vbpl.exe",
-    "cli:build:mac": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-darwin-arm64 cli/vbpl.ts --outfile dist-cli/vbpl-mac",
-    "cli:build:mac-x64": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-darwin-x64 cli/vbpl.ts --outfile dist-cli/vbpl-mac-x64",
-    "cli:build:linux": "bun run scripts/with-build-version.ts -- bun build --compile --minify --define process.env.BUILD_VERSION=\"\\\"{BUILD_VERSION}\\\"\" --target=bun-linux-x64 cli/vbpl.ts --outfile dist-cli/vbpl-linux"
+    "vbpl": "bun run cli/vbpl.ts"
   },
   "dependencies": {
     "firebase": "^12.13.0",
