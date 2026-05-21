@@ -83,7 +83,7 @@ bun run start         # build + 起 backend 3001(單 process 同時 serve API + 
 
 `start` 一條指令搞定 production build + backend(static route 自己 serve `dist/`,不必另起 preview)。日常改 VP source code 直接重 build → `bun run server`(改 server code 更省事,不必重 build frontend);要 vite HMR 偶爾 ad-hoc 用 `bunx vite`。
 
-**並行 backend**(`bun run sub:server`)起在 PORT=3101,跟 user backend(3001)隔離。給「user backend 跑著、自己另開一份 backend 測試」或 e2e fixture / CI 用。backend collapse 後同一 process serve API + dist/,單條 script 就夠,不必再分 vite preview / API 兩條。
+**並行 backend**(`bun run server:e2e`)起在 PORT=3101,跟 user backend(3001)隔離。給「user backend 跑著、自己另開一份 backend 測試」或 e2e fixture / CI 用。backend collapse 後同一 process serve API + dist/,單條 script 就夠,不必再分 vite preview / API 兩條。
 
 ---
 
@@ -250,7 +250,7 @@ SKILL 文件分兩種,動非 trivial 改動前先讀:
 | `vbpl server stop` | 停掉 `vbpl server start` 管理的 backend |
 | `bun run start` | maintainer 驗 production bundle:build + backend(3001 單 process 同 serve API + dist/) |
 | `bun run server` | maintainer 只起 backend(3001;前景 process,不重 build frontend) |
-| `bun run sub:server` | 並行 backend on 3101(隔離測試 / e2e fixture / CI;static route 自動同時 serve API + dist/) |
+| `bun run server:e2e` | 並行 backend on 3101(隔離測試 / e2e fixture / CI;static route 自動同時 serve API + dist/) |
 | `bun run build` | `tsc -b && vite build` → `dist/` |
 | `bun run lint` | Biome lint |
 | `bun run test:e2e` | Playwright mock 模式(CI 預設) |

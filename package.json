@@ -6,7 +6,7 @@
   "scripts": {
     "start": "bun run build && bun run server/index.ts",
     "server": "bun run server/index.ts",
-    "sub:server": "cross-env PORT=3101 bun run server/index.ts",
+    "server:e2e": "cross-env PORT=3101 bun run server/index.ts",
     "build": "bun run scripts/with-build-version.ts -- tsc -b && bun run scripts/with-build-version.ts -- vite build",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
