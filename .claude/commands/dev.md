@@ -1,44 +1,41 @@
 ---
-description: 切到 dev clone stack(backend 從 D:\sugarfungit\vibe-pipeline 起,改 source 隨 build 隨生效)
+description: 切到 dev clone stack — backend 從 D:\sugarfungit\vibe-pipeline 起,單 process serve API + dist/(port 3001)
 ---
 
 # /dev — switch to dev clone stack
 
-切到「改 VP source code」的環境。Backend 從 `D:\sugarfungit\vibe-pipeline` 起,單一 process 同時 serve API + dist/ PWA(port 3001)。改 src/ 後 rebuild dist/ 即生效。
+backend cwd = `D:\sugarfungit\vibe-pipeline`,改 server / cli source restart 即生效;改 src/ rebuild dist/ + reload PWA 即生效。跟 `/prod` 共享 global `~/.vibe-pipeline/server.json`(只能一個 backend 跑 :3001,切 stack = 殺舊起新)。
 
-## 步驟
+## 執行
 
-1. **停現役 backend**(任何 pid on 3001):
+1. **停現役 backend + 清 :3001**(graceful 走 dev clone cli,沒 PATH 依賴;force-kill 兜底):
    ```bash
-   vbpl server stop 2>&1
-   ```
-   force kill 備援:
-   ```bash
-   python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 3001 -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
+   cd D:/sugarfungit/vibe-pipeline && bun run cli/vbpl.ts server stop 2>&1
+   python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 3001 -State Listen -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
    ```
 
-2. **rebuild dev clone dist/**(backend serve 的是 dist/,改 src/ 要 rebuild):
+2. **rebuild dist/**(失敗 abort,別進 step 3):
    ```bash
-   cd D:/sugarfungit/vibe-pipeline && bun run build 2>&1 | tail -3
+   cd D:/sugarfungit/vibe-pipeline && bun run build 2>&1 | tail -6
    ```
+   沒看到 vite `built in` 完成訊息 → 排雷,別繼續。
 
-3. **起 dev clone backend**(cwd = dev clone,server.json 寫指 dev clone path):
+3. **起 dev clone backend**(顯式 cli 不走 shim → server.json `repo_path` 寫 dev clone):
    ```bash
    cd D:/sugarfungit/vibe-pipeline && bun run cli/vbpl.ts server start 2>&1
    sleep 2
    ```
 
-4. **verify**:
+4. **verify**(任一 fail 就排雷,不報「成功」):
    ```bash
-   curl -s http://localhost:3001/api/system/version
-   curl -s -o /dev/null -w "html=%{http_code}\n" http://localhost:3001/
-   curl -s http://localhost:3001/api/health
+   curl -fsS http://localhost:3001/api/health
+   curl -fsS -o /tmp/r.html -w "GET /                status=%{http_code} ct=%{content_type} size=%{size_download}\n" http://localhost:3001/
+   curl -fsS http://localhost:3001/api/system/version
+   python -c "import json,pathlib,sys; from pathlib import PurePath; d=json.loads(pathlib.Path.home().joinpath('.vibe-pipeline','server.json').read_text()); p=PurePath(d['repo_path']).as_posix().lower(); print('repo_path:',d['repo_path']); sys.exit(0 if p.endswith('sugarfungit/vibe-pipeline') else 1)"
    ```
-   預期:`/` 回 200 + HTML、`/api/health` ok=true、`/api/system/version` 回 JSON、server.json `repo_path` 指 dev clone。
 
 ## 報告
 
-回給 user:
-- dev backend pid + version(`dev-vX.Y.Z`)
-- server.json repo_path
-- 改 source 後:server / cli 改完 `vbpl server restart`;src/ 改完 `bun run build` 再 reload PWA。
+- backend pid + `current` version(API 實際回傳值;dev clone 會自帶 `dev-` prefix,如 `dev-v0.2.0-5-g3d67a9a-dirty`,base tag + ahead 數 + 短 hash + dirty 標記)
+- server.json `repo_path` 確認 = `D:\sugarfungit\vibe-pipeline`
+- 後續工作流:server / cli 改 → `bun run cli/vbpl.ts server restart`;src/ 改 → `bun run build` + browser hard reload

@@ -1,39 +1,37 @@
 ---
-description: 切到 enduser install stack(backend 從 ~/.vibe-pipeline/current 起,單一 process serve API + dist/,模擬 user 看到的 release artifact)
+description: 切到 enduser install stack — backend 從 ~/.vibe-pipeline/current 起,單 process serve API + dist/(port 3001)
 ---
 
 # /prod — switch to enduser install stack
 
-切到「跑 release artifact」的環境(模擬 user 看到的版本)。Backend 從 `~/.vibe-pipeline/current/` 起,單一 process 同時 serve API + dist/ PWA(port 3001)。
+backend cwd = `~/.vibe-pipeline/current`,模擬 enduser 拿到 GitHub release tarball 的狀態(`vbpl update` 拉新版進這 dir)。跟 `/dev` 共享 global `~/.vibe-pipeline/server.json`(只能一個 backend 跑 :3001,切 stack = 殺舊起新)。
 
-## 步驟
+**本 command 不做更新**,只切 stack;要拉最新 release 用 `vbpl update`。
 
-1. **停現役 backend**(任何 pid on 3001):
+## 執行
+
+1. **停現役 backend + 清 :3001**(graceful 走 enduser shim 全路徑;force-kill 兜底):
    ```bash
-   vbpl server stop 2>&1
-   ```
-   若 stop 沒成功,force kill:
-   ```bash
-   python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 3001 -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
+   ~/.vibe-pipeline/bin/vbpl.cmd server stop 2>&1
+   python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 3001 -State Listen -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
    ```
 
-2. **起 enduser backend**(via shim,讀 `~/.vibe-pipeline/current/`):
+2. **起 enduser backend**(shim → server.json `repo_path` 寫 `~/.vibe-pipeline/current`):
    ```bash
    ~/.vibe-pipeline/bin/vbpl.cmd server start 2>&1
    sleep 2
    ```
 
-3. **verify**:
+3. **verify**(任一 fail 就排雷):
    ```bash
-   curl -s http://localhost:3001/api/system/version
-   curl -s -o /dev/null -w "html=%{http_code}\n" http://localhost:3001/
-   curl -s http://localhost:3001/api/health
+   curl -fsS http://localhost:3001/api/health
+   curl -fsS -o /tmp/r.html -w "GET /                status=%{http_code} ct=%{content_type} size=%{size_download}\n" http://localhost:3001/
+   curl -fsS http://localhost:3001/api/system/version
+   python -c "import json,pathlib,sys; from pathlib import PurePath; d=json.loads(pathlib.Path.home().joinpath('.vibe-pipeline','server.json').read_text()); p=PurePath(d['repo_path']).as_posix().lower(); print('repo_path:',d['repo_path']); sys.exit(0 if p.endswith('.vibe-pipeline/current') else 1)"
    ```
-   預期:`/` 回 200 + HTML(從 `~/.vibe-pipeline/current/dist/index.html`)、`/api/health` ok=true。
 
 ## 報告
 
-回給 user:
-- enduser backend pid + current version
-- server.json repo_path(應指 `~/.vibe-pipeline/current`)
-- Tailscale URL 應仍 work(https://nb-24-001.tail67b6ba.ts.net/)
+- backend pid + `current` version(= enduser 安裝的 release tag)
+- server.json `repo_path` 確認 = `~/.vibe-pipeline/current`
+- Tailscale 仍 work:https://nb-24-001.tail67b6ba.ts.net/
