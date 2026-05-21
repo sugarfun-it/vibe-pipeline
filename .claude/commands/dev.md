@@ -18,7 +18,7 @@ backend cwd = 本 git repo(`git rev-parse --show-toplevel`),改 server / cli sou
    ```bash
    cd "$(git rev-parse --show-toplevel)" && bun run build 2>&1 | tail -6
    ```
-   沒看到 vite `built in` 完成訊息 → 排雷,別繼續。
+   沒看到 `files generated` + `dist/firebase-messaging-sw.js`(PWA 段尾)→ 排雷,別繼續。
 
 3. **起 dev clone backend**(顯式 cli 不走 shim → server.json `repo_path` 寫 dev clone):
    ```bash
