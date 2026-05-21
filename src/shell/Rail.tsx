@@ -3,7 +3,7 @@ import { PlusIcon, TrashIcon } from "../ui/icons";
 import { STATE_COLOR } from "../data/pipelines";
 import type { Pipeline } from "../types/pipeline";
 
-// Rail 級 row ⋯ menu item。array-driven 結構,未來 actions 直接 push 進去。
+// Rail section header 的 ⋯ menu item。array-driven 結構,未來 actions 直接 push 進去。
 // disabled + tooltip 用 disabledReason 表達(非 undefined → disabled,值就是 tooltip)。
 export type RailMenuItem = {
   key: string;
@@ -23,7 +23,6 @@ export function Rail({
   createSlot,
   addLabel = "新 pipeline",
   draftPipelineIds,
-  buildRowMenu,
   sectionMenuItems,
 }: {
   pipelines: Pipeline[];
@@ -34,7 +33,6 @@ export function Rail({
   createSlot?: React.ReactNode;
   addLabel?: string;
   draftPipelineIds?: Set<string>;
-  buildRowMenu?: (p: Pipeline) => RailMenuItem[];
   sectionMenuItems?: RailMenuItem[];
 }) {
   return (
@@ -62,7 +60,6 @@ export function Rail({
             onClick={() => onSelect(p.id)}
             muted={creating}
             hasDraft={draftPipelineIds?.has(p.id) ?? false}
-            menuItems={buildRowMenu ? buildRowMenu(p) : null}
           />
         ))}
       </div>
@@ -78,64 +75,56 @@ function RailItem({
   onClick,
   muted,
   hasDraft,
-  menuItems,
 }: {
   p: Pipeline;
   active: boolean;
   onClick: () => void;
   muted?: boolean;
   hasDraft?: boolean;
-  menuItems: RailMenuItem[] | null;
 }) {
   const done = p.tickets.filter((t) => t.status === "done").length;
   const total = p.tickets.length;
   return (
-    <div className={"rail-item-wrap" + (active ? " is-active" : "")}>
-      <button type="button" className={"rail-item" + (active ? " is-active" : "") + (muted ? " is-muted" : "")} onClick={onClick}>
-        <div className="rail-item-row">
-          <span className="rail-state-dot" style={{ background: STATE_COLOR[p.state] }} />
-          <span className="rail-item-name">{p.name}</span>
-          {hasDraft && (
-            <span className="mono rail-qa-badge" title="進行中 QA">
-              QA
-            </span>
-          )}
-          <span className="rail-item-count mono">
-            {done}/{total}
+    <button type="button" className={"rail-item" + (active ? " is-active" : "") + (muted ? " is-muted" : "")} onClick={onClick}>
+      <div className="rail-item-row">
+        <span className="rail-state-dot" style={{ background: STATE_COLOR[p.state] }} />
+        <span className="rail-item-name">{p.name}</span>
+        {hasDraft && (
+          <span className="mono rail-qa-badge" title="進行中 QA">
+            QA
           </span>
-        </div>
-        <div className="rail-mini">
-          {p.tickets.map((t) => {
-            const fill =
-              t.status === "done"
-                ? "var(--done)"
-                : t.status === "running"
-                ? "var(--running)"
-                : t.status === "paused"
-                ? "var(--paused)"
-                : t.status === "failed" ||
-                  t.status === "failed_iter_limit" ||
-                  t.status === "failed_transient"
-                ? "var(--failed)"
-                : t.status === "ready"
-                ? "var(--running-soft)"
-                : "var(--line-2)";
-            return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
-          })}
-        </div>
-        <div className="rail-item-meta">
-          <span className="mono">{railSecondary(p)}</span>
-        </div>
-      </button>
-      {menuItems && menuItems.length > 0 && (
-        <RailRowMenu items={menuItems} />
-      )}
-    </div>
+        )}
+        <span className="rail-item-count mono">
+          {done}/{total}
+        </span>
+      </div>
+      <div className="rail-mini">
+        {p.tickets.map((t) => {
+          const fill =
+            t.status === "done"
+              ? "var(--done)"
+              : t.status === "running"
+              ? "var(--running)"
+              : t.status === "paused"
+              ? "var(--paused)"
+              : t.status === "failed" ||
+                t.status === "failed_iter_limit" ||
+                t.status === "failed_transient"
+              ? "var(--failed)"
+              : t.status === "ready"
+              ? "var(--running-soft)"
+              : "var(--line-2)";
+          return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
+        })}
+      </div>
+      <div className="rail-item-meta">
+        <span className="mono">{railSecondary(p)}</span>
+      </div>
+    </button>
   );
 }
 
-// PIPELINES section header 的 ⋯ menu。同 RailRowMenu 行為(click-outside / Esc / disabled+tooltip),
-// 差別:位置在 section header 內、不靠 hover 顯示(永遠顯示)、menu 對齊按鈕右側。
+// PIPELINES section header 的 ⋯ menu。click-outside / Esc 關閉、disabled+tooltip 支援。
 function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -171,68 +160,6 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
       </button>
       {open && (
         <div role="menu" className="focus-overflow-menu rail-section-overflow-menu">
-          {items.map((it) => (
-            <button
-              key={it.key}
-              type="button"
-              role="menuitem"
-              className={"focus-overflow-item" + (it.danger ? " is-danger" : "")}
-              disabled={!!it.disabledReason}
-              title={it.disabledReason ?? undefined}
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpen(false);
-                it.onClick();
-              }}
-            >
-              <span className="focus-overflow-item-icon">{it.icon ?? <TrashIcon />}</span>
-              <span className="focus-overflow-item-label">{it.label}</span>
-              {it.disabledReason && (
-                <span className="mono focus-overflow-item-hint">{it.disabledReason}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RailRowMenu({ items }: { items: RailMenuItem[] }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-  return (
-    <div ref={wrapRef} className={"rail-row-overflow" + (open ? " is-open" : "")}>
-      <button
-        type="button"
-        className="rail-row-overflow-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
-        }}
-        title="更多操作"
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        ⋯
-      </button>
-      {open && (
-        <div role="menu" className="focus-overflow-menu rail-row-overflow-menu">
           {items.map((it) => (
             <button
               key={it.key}
