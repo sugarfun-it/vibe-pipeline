@@ -249,7 +249,7 @@ backend 一律回 `{ ok: true, data }` 或 `{ ok: false, error: { code, message 
 
 - **來源**:`public/firebase-messaging-sw.js`(repo 內,手寫)
 - **build 後**:`dist/firebase-messaging-sw.js`(plugin 把 `self.__WB_MANIFEST` inline,SW 路徑跟檔名都不變)
-- **dev mode 不發 SW**(見 [`.claude/rules/pwa-sw.md`](../../../.claude/rules/pwa-sw.md))— `bun run dev` 5173 上 SW 不註冊,改邏輯後一律 `bun run build && bun run preview`(4173)驗
+- **dev mode 不發 SW**(見 [`.claude/rules/pwa-sw.md`](../../../.claude/rules/pwa-sw.md))— `bunx vite` 5173 dev server 上 SW 不註冊,改邏輯後一律 `bun run build && bun run server`(backend 同 serve dist/ on 3001,SW 在 dist/ 內生效)驗
 
 ### vite.config.ts plugin 設定要點
 
@@ -279,10 +279,10 @@ VitePWA({
 
 [`.claude/rules/pwa-sw.md`](../../../.claude/rules/pwa-sw.md) 已寫 SW 只 production 註冊。配合 prompt mode 完整驗證流程:
 
-1. `bun run build && bun run preview` → 開 `http://localhost:4173/`
+1. `bun run build && bun run server` → 開 `http://localhost:3001/`
 2. 第一次進 PWA(可加進主畫面 / 用瀏覽器分頁均可)— SW install + activate,Application → Service Workers 看 `activated and is running`
 3. 改 `public/firebase-messaging-sw.js` 任一行(加 comment 即可觸發 hash 變更)
-4. 再 `bun run build`(preview 仍跑著)→ 切回瀏覽器分頁 → reload 該頁
+4. 再 `bun run build`(backend 仍跑著,serve 新 dist/)→ 切回瀏覽器分頁 → reload 該頁
 5. 預期:SW 新版進 `waiting` 狀態(Application → Service Workers 看到「waiting to activate」),`<SwUpdateBanner>` 顯「有新版可更新」
 6. 點「更新」→ controller 切換 → 頁面 reload → 新版 SW 接管
 
@@ -318,8 +318,8 @@ VitePWA({
 ### Lighthouse 驗收
 
 ```
-bun run build && bun run preview
-# 開 http://localhost:4173 → DevTools → Lighthouse → PWA category → Analyze
+bun run build && bun run server
+# 開 http://localhost:3001 → DevTools → Lighthouse → PWA category → Analyze
 ```
 
 目標 ≥ 90。Installable / SW / manifest 三條 check 都要過。改 manifest / SW / icon 後固定跑一次。

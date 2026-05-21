@@ -192,7 +192,7 @@ vbpl pipeline merge <id>                                        # 合併回 base
 ## 遠端存取(Tailscale)
 
 1. 桌機 + 手機都裝 Tailscale,登入同 tailnet
-2. 桌機跑 `tailscale serve --https=443 http://localhost:4173`(走 preview port,SW 才註冊)
+2. 桌機跑 `tailscale serve --https=443 http://localhost:3001`(backend 同 serve API + dist/ PWA 單一 port,SW 在 `bun run build` 後的 dist/ 內生效)
 3. 手機開 `https://<machine>.<tailnet>.ts.net`,安裝成 PWA
 4. 首次非 loopback 連線 → TOTP 設定(掃 QR 加進 Authenticator,之後每個 session 輸入 6 碼登入)
 5. Settings →「通知」開啟推播,ticket 事件會到手機(需先填 push gateway,見下)

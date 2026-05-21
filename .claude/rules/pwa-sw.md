@@ -14,7 +14,7 @@ description: PWA / Service Worker / Workbox / vite-plugin-pwa 改動時的雷區
 
 ## vite-plugin-pwa 只在 production build 註冊 SW
 
-dev mode `bun run dev`(5173)SW 不註冊(plugin 預設行為),改 SW 邏輯要 `bun run build && bun run preview` 才看得到效果。改完用 4173 preview port 測,別在 5173 dev 找不到 SW 就懷疑 plugin 壞了。Lighthouse PWA / 安裝提示 / precache 行為也只在 4173 才驗得到。
+dev mode(`bunx vite` 5173)SW 不註冊(plugin 預設行為),改 SW 邏輯要 `bun run build && bun run server` 才看得到效果(backend 同 serve dist/ on 3001,SW 在 build 後的 dist/ 內生效)。改完用 :3001 測,別在 5173 dev 找不到 SW 就懷疑 plugin 壞了。Lighthouse PWA / 安裝提示 / precache 行為也只在 :3001(serve dist/)才驗得到。
 
 ## firebase-messaging-sw.js 合併 Workbox 後改 SW 要兩段都驗
 

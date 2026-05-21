@@ -34,11 +34,11 @@ vbpl server logs -f        # 需要看 backend log 才開
 
 ```bash
 bun install                # 第一次或 dep 更新後跑
-bun run start              # build + backend 3001 + preview 4173
-# 開 http://127.0.0.1:4173/board
+bun run start              # build + backend 3001(單 process 同 serve API + dist/ PWA)
+# 開 http://127.0.0.1:3001/board
 ```
 
-> `bun run server` / `bun run dev` 是 **maintainer 改 VP 自己 source code** 才用;enduser AI 流程以 `vbpl server start` 為主。
+> `bun run server`(只起 backend,不重 build)是 **maintainer 改 VP 自己 server / cli source 後** 用;enduser AI 流程以 `vbpl server start` 為主。要 vite HMR ad-hoc 工作流直接 `bunx vite`(不再有 `bun run dev` script)。
 
 ## 心智模型
 

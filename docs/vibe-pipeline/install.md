@@ -134,16 +134,15 @@ Tarball 白名單見 `scripts/build-tarball.ts`(`WHITELIST` 常數)。新 server
 git clone https://github.com/eric14304/vibe-pipeline
 cd vibe-pipeline
 bun install
-bun run dev        # vite HMR 5173 + backend 3001(SW 不註冊,純 dev workflow)
-# 或
 bun run start      # production build + backend(同 serve API + dist/ PWA 在 3001)
+# 或要 vite HMR ad-hoc 改 src/ 即時 reload:
+bunx vite          # vite dev 5173(SW 不註冊,純 dev workflow)+ 另起 bun run server backend on 3001
 ```
 
-CLI 從 dev clone:
+CLI 從 dev clone(沒 `bun run vbpl` script,直接打全路徑):
+
 ```bash
-bun run cli/vbpl.ts <noun> <verb>     # 直接從 source
-# 或
-bun run vbpl <noun> <verb>            # 同 script alias
+bun run cli/vbpl.ts <noun> <verb>
 ```
 
 Dev 不必裝 enduser shim — 從 dev clone source 直接跑就行。

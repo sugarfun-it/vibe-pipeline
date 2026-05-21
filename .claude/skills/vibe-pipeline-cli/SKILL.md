@@ -28,7 +28,7 @@ cli/
     └── serverPath.ts   auto-detect VP repo:cwd git root → VBPL_HOME → ~/.vibe-pipeline/server.json
 ```
 
-`package.json` 對應 `bun run vbpl` → `bun run cli/vbpl.ts`。打包 binary 後 `vbpl` 直接在 `~/.vibe-pipeline/bin/`(install.md 指定統一位置,對齊 pyenv / cargo / nvm 慣例)。
+dev clone 從 source 跑 CLI 直接 `bun run cli/vbpl.ts <noun> <verb>`(沒 `bun run vbpl` package script,memory 已記比 PATH shim 慢 10×,留著反而誤導)。enduser shim 在 `~/.vibe-pipeline/bin/vbpl[.cmd]`(install.md 指定統一位置,對齊 pyenv / cargo / nvm 慣例,直接 `vbpl <cmd>` 就好)。
 
 ## 設計信條
 
@@ -132,7 +132,7 @@ cli/
 ## 開工前
 
 - 改 `server/lib/projectStore` / `pipelineDir` / `runner/orchestrator` 等 → CLI 同樣會吃到,grep `from "../../server/lib"` 看影響面
-- 預期 `--json` 行為 → 跑 `bun run vbpl <noun> <verb> --json | jq .` 驗
+- 預期 `--json` 行為 → 跑 `bun run cli/vbpl.ts <noun> <verb> --json | jq .` 驗
 - 跨平台:Windows / macOS / Linux 都該過,path / spawn 都要小心(`node:path` + Bun.spawn array form)
 
 ## 散發給 enduser

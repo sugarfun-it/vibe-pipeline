@@ -18,7 +18,7 @@ vibe-pipeline/
 │   ├── manifest.json          PWA manifest(name / icons / display:standalone / theme_color)
 │   ├── firebase-messaging-sw.js  Service Worker(push event 自處理 + showNotification)
 │   ├── icon.svg               SVG 主 icon(對齊 TopBar Logo)
-│   └── icon-{192,512}.png     ImageMagick 從 SVG 產(`bun run icons`)
+│   └── icon-{192,512}.png     ImageMagick 從 SVG 產(`bun run scripts/gen-icons.ts`)
 ├── scripts/
 │   ├── gen-icons.ts           SVG → PNG 工具腳本(需 ImageMagick)
 │   ├── build-tarball.ts       maintainer 打 release tarball(嚴格白名單)
@@ -30,7 +30,7 @@ vibe-pipeline/
 │   ├── vbpl.ts                entry — parseArgs + dispatch noun → commands/*
 │   ├── commands/{project,pipeline,ticket,config}.ts   noun × verb 實作
 │   └── lib/{args,output,project}.ts                   參數解析 / 統一輸出 / project 解析
-│   (透過 import server/lib/* 直接讀寫 fs,不發 HTTP;bun run vbpl 入口)
+│   (透過 import server/lib/* 直接讀寫 fs,不發 HTTP;dev clone 入口:`bun run cli/vbpl.ts`;enduser 入口:`~/.vibe-pipeline/bin/vbpl[.cmd]` shim)
 │
 ├── src/                       前端。約定見 vibe-pipeline-frontend SKILL
 │   ├── App.tsx                router (BrowserRouter + Routes)
