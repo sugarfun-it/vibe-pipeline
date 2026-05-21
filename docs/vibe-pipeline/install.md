@@ -93,9 +93,18 @@ source ~/.bashrc
 
 ### 升級
 
-**Backend / Web UI**(走 install script 裝的 enduser):開 PWA → **Settings →「更新」tab** 看當前版本 vs GitHub latest release,點「更新」一鍵下載 release tarball → 解到 `~/.vibe-pipeline/versions/v0.X.Y.staging/`(獨立 dir,不碰當前 backend)→ 寫 `.pending` 標目標版本 → backend self-exit。然後跑 `vbpl server start`,CLI 偵測 `.pending` → promote staging → swap `current` junction → spawn 新 backend。新前端 bundle 由 Workbox 偵測,`<SwUpdateBanner>` 跳「套用更新」按下去 reload 套新 UI。詳見 [`../../README.md`](../../README.md) §自動更新。
+**Backend / Web UI**(走 install script 裝的 enduser):兩種方式都可,任一條都跑 install script(內含 stop backend → download → swap → restart):
 
-**dev clone(`~/code/vibe-pipeline/` 等 git clone 來的)**:Settings 按「更新」也只動 `~/.vibe-pipeline/versions/`,dev clone 永遠不被碰。要驗完整 enduser update flow → 另開一個 enduser-style 安裝測試。Dev 自己抓最新 source 仍走 `git pull` 手動。
+```bash
+vbpl update                                  # 從 CLI 觸發(任一平台)
+# 或
+irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex   # Windows
+curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh   # macOS / Linux
+```
+
+PWA Settings →「更新」tab 顯版本 + 「複製指令」按鈕(沒「一鍵更新」按鈕)— 因為 update 需要 terminal,UI 純資訊。跑完切回 PWA,新 bundle 偵測到 `<SwUpdateBanner>` 跳「套用更新」按下 reload 套新 UI。
+
+**dev clone(`~/code/vibe-pipeline/` 等)**:`vbpl update` 仍會跑 install script,**會把 enduser install 起來覆蓋現有 ~/.vibe-pipeline/current/**(dev clone source 本身 `D:\...` 不被碰)。Dev 自己拉 source 走 `git pull`。
 
 **`vbpl` CLI binary**:單檔 binary 自動更新不在 scope(backend 重啟不會替換 PATH 上的 `vbpl.exe`),要新 CLI feature 仍用:
 

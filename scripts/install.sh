@@ -16,14 +16,34 @@ REPO="eric14304/vibe-pipeline"
 VP_HOME="$HOME/.vibe-pipeline"
 VERSIONS_DIR="$VP_HOME/versions"
 CURRENT="$VP_HOME/current"
-# Shim 統一放 ~/.vibe-pipeline/bin/ 對齊 pyenv/cargo/nvm 慣例 + 跟舊 vbpl 同位置 +
-# uninstall 一鍵 rm ~/.vibe-pipeline/ 全清。舊版誤放 ~/.local/bin/vbpl 自動 cleanup。
+# Shim under ~/.vibe-pipeline/bin/ aligned with pyenv/cargo/nvm convention,
+# same dir as legacy vbpl, uninstall just rm ~/.vibe-pipeline/.
+# Legacy shim at ~/.local/bin/vbpl auto-cleaned below.
 SHIM_DIR="$VP_HOME/bin"
 SHIM="$SHIM_DIR/vbpl"
 OLD_SHIM="$HOME/.local/bin/vbpl"
 
+# Keep N most recent versions for rollback after update (older ones cleaned)
+KEEP_VERSIONS=2
+
 msg() { printf '%s\n' "$*"; }
 err() { printf 'ERROR: %s\n' "$*" >&2; }
+
+# 0) Stop running backend (free port 3001 + remove cwd lock on current/ for swap)
+#    Try existing shim first; if no shim, try via cwd current/. Errors ignored.
+if [ -x "$SHIM" ]; then
+  msg "Stopping any running backend ..."
+  "$SHIM" server stop 2>/dev/null || true
+  sleep 0.5
+elif [ -x "$OLD_SHIM" ]; then
+  msg "Stopping any running backend ..."
+  "$OLD_SHIM" server stop 2>/dev/null || true
+  sleep 0.5
+elif command -v bun >/dev/null 2>&1 && [ -f "$CURRENT/cli/vbpl.ts" ]; then
+  msg "Stopping any running backend (via current/) ..."
+  VBPL_HOME="$CURRENT" bun run "$CURRENT/cli/vbpl.ts" server stop 2>/dev/null || true
+  sleep 0.5
+fi
 
 # 1) Bun check
 if ! command -v bun >/dev/null 2>&1; then
@@ -81,7 +101,7 @@ fi
 mkdir -p "$VERSION_DIR"
 
 msg "Extracting ..."
-# tarball/zipball top-level is usually <repo>-<sha>/ → strip
+# tarball/zipball top-level is usually <repo>-<sha>/ -> strip
 if ! tar -xzf "$TARBALL" -C "$VERSION_DIR" --strip-components=1 2>/dev/null; then
   err "Extract failed"
   rm -rf "$VERSION_DIR"
@@ -103,6 +123,22 @@ if [ -L "$CURRENT" ] || [ -d "$CURRENT" ]; then
 fi
 ln -s "$VERSION_DIR" "$CURRENT"
 msg "OK current -> $VERSION_DIR"
+
+# 7.2) Cleanup old versions: keep $KEEP_VERSIONS most recent, remove the rest.
+#      "Most recent" = mtime sort. Skip *.staging dirs.
+if [ -d "$VERSIONS_DIR" ]; then
+  # list dirs sorted by mtime desc, skip *.staging
+  set +e
+  OLD=$(ls -1t "$VERSIONS_DIR" 2>/dev/null | grep -v '\.staging$' | tail -n +$((KEEP_VERSIONS + 1)))
+  set -e
+  if [ -n "$OLD" ]; then
+    for d in $OLD; do
+      if [ -d "$VERSIONS_DIR/$d" ]; then
+        rm -rf "$VERSIONS_DIR/$d" && msg "Cleaned up old version $d"
+      fi
+    done
+  fi
+fi
 
 # 7.5) Legacy migration: old layout had app/ directly. Move to app.legacy.bak/ if real dir.
 LEGACY_APP="$VP_HOME/app"

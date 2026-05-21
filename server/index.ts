@@ -78,9 +78,8 @@ async function handle(req: Request): Promise<Response> {
   if (pathname === "/api/system/version" && method === "GET") {
     return system.version();
   }
-  if (pathname === "/api/system/update" && method === "POST") {
-    return system.update();
-  }
+  // /api/system/update 已拔(v0.3.0):update 改 install-script-only,
+  // user 跑 `vbpl update` 或 PWA 顯示更新指令 copy/paste,後端不再 cross-process orchestrate update。
 
   if (pathname.startsWith("/api/auth/")) {
     if (pathname === "/api/auth/setup-init" && method === "POST") return auth.setupInit();

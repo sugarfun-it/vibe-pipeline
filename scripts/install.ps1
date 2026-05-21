@@ -27,8 +27,28 @@ $Shim        = Join-Path $ShimDir "vbpl.cmd"
 $OldShimDir  = Join-Path $env:LOCALAPPDATA "vibe-pipeline"
 $OldShim     = Join-Path $OldShimDir "vbpl.cmd"
 
+# Keep N most recent versions for rollback after update (older ones cleaned)
+$KeepVersions = 2
+
 function Info($m) { Write-Host $m }
 function Err($m)  { Write-Host "ERROR: $m" -ForegroundColor Red }
+
+# 0) Stop running backend (so port 3001 is free + current/ has no cwd lock for swap)
+#    Try existing shim first; if no shim, try via cwd current/. Errors are ignored
+#    (no backend running -> nothing to stop).
+$ExistingShim = $null
+if (Test-Path $Shim) { $ExistingShim = $Shim }
+elseif (Test-Path $OldShim) { $ExistingShim = $OldShim }
+if ($ExistingShim) {
+  Info "Stopping any running backend ..."
+  try { & $ExistingShim server stop 2>$null } catch {}
+  Start-Sleep -Milliseconds 500
+} elseif ((Get-Command bun -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $Current "cli\vbpl.ts"))) {
+  Info "Stopping any running backend (via current/) ..."
+  $env:VBPL_HOME = $Current
+  try { & bun run "$Current\cli\vbpl.ts" server stop 2>$null } catch {}
+  Start-Sleep -Milliseconds 500
+}
 
 # 1) Bun check
 if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
@@ -143,6 +163,28 @@ if (Test-Path $Current) {
 }
 Info "Creating junction $Current -> $VersionDir"
 New-Item -ItemType Junction -Path $Current -Target $VersionDir | Out-Null
+
+# 7.2) Cleanup old versions: keep $KeepVersions most recent (including current $Tag),
+#      remove the rest. Identifies "version dirs" as any subdirectory of versions/ except
+#      *.staging (in case future code uses staging dirs). Uses LastWriteTime as proxy for "recent".
+try {
+  $allVersionDirs = Get-ChildItem -Path $VersionsDir -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notmatch '\.staging$' } |
+    Sort-Object LastWriteTime -Descending
+  if ($allVersionDirs.Count -gt $KeepVersions) {
+    $toRemove = $allVersionDirs | Select-Object -Skip $KeepVersions
+    foreach ($d in $toRemove) {
+      try {
+        Remove-Item -Recurse -Force $d.FullName -ErrorAction Stop
+        Info "Cleaned up old version $($d.Name)"
+      } catch {
+        Info "WARN: cleanup old version $($d.Name) failed: $_"
+      }
+    }
+  }
+} catch {
+  Info "WARN: old-version cleanup scan failed: $_"
+}
 
 # 7.5) Legacy migration: old layout had `app/` directly under VpHome. If present, move
 # to `app.legacy.bak/` so user can clean up later. Avoid touching it if it's a junction.

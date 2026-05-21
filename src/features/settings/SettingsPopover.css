@@ -286,6 +286,30 @@
   line-height: 1.5;
 }
 
+.update-cmd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.update-cmd-line {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.update-cmd-code {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+  user-select: all;
+}
+
 /* ─── Tab content wrapper(統一各 tab 垂直節奏)──────────────────── */
 
 .settings-tab-content {

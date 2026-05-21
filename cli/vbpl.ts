@@ -9,6 +9,7 @@ import { runPipeline } from "./commands/pipeline";
 import { runTicket } from "./commands/ticket";
 import { runConfig } from "./commands/config";
 import { runServer } from "./commands/server";
+import { runUpdate } from "./commands/update";
 
 const USAGE = `vbpl — vibe-pipeline CLI
 
@@ -21,6 +22,7 @@ Usage:
   vbpl ticket   list|show|add|update|remove   --pipeline <id>    [--project <hash>]
   vbpl config   list|get|set                  [key] [value]
   vbpl server   start|stop|status|restart|logs [-f]
+  vbpl update                                 [--check]            fetch + apply latest release
 
 Global flags:
   --json               Output strict JSON (stdout only). Exit 0=ok, 1=error.
@@ -67,6 +69,7 @@ async function main(): Promise<void> {
     case "ticket":   await runTicket(sub, rest); break;
     case "config":   await runConfig(sub, rest); break;
     case "server":   await runServer(sub, rest); break;
+    case "update":   await runUpdate(sub, rest); break;
     default:
       fail("INVALID_ARGS", `Unknown command: ${noun}. Run vbpl --help for usage.`);
   }
