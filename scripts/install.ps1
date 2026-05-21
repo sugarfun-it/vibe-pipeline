@@ -19,8 +19,13 @@ $Repo        = "eric14304/vibe-pipeline"
 $VpHome      = Join-Path $HOME ".vibe-pipeline"
 $VersionsDir = Join-Path $VpHome "versions"
 $Current     = Join-Path $VpHome "current"
-$ShimDir     = Join-Path $env:LOCALAPPDATA "vibe-pipeline"
+# Shim under ~/.vibe-pipeline/bin/ - aligned with pyenv/cargo/nvm convention,
+# same dir as legacy vbpl.exe, uninstall just rm ~/.vibe-pipeline/.
+# Pre-v0.2.1 shim at %LOCALAPPDATA%\vibe-pipeline\ is auto-cleaned below.
+$ShimDir     = Join-Path $VpHome "bin"
 $Shim        = Join-Path $ShimDir "vbpl.cmd"
+$OldShimDir  = Join-Path $env:LOCALAPPDATA "vibe-pipeline"
+$OldShim     = Join-Path $OldShimDir "vbpl.cmd"
 
 function Info($m) { Write-Host $m }
 function Err($m)  { Write-Host "ERROR: $m" -ForegroundColor Red }
@@ -165,6 +170,19 @@ bun run "%VBPL_HOME%\cli\vbpl.ts" %*
 "@
 Set-Content -Path $Shim -Value $shimContent -Encoding ASCII
 Info "OK Shim: $Shim"
+
+# 8.5) Cleanup legacy shim at %LOCALAPPDATA%\vibe-pipeline\ (pre-v0.2.1)
+if (Test-Path $OldShim) {
+  try {
+    Remove-Item -Force $OldShim -ErrorAction Stop
+    Info "Cleaned up legacy shim $OldShim"
+  } catch {
+    Info "WARN: cleanup legacy $OldShim failed: $_"
+  }
+}
+if ((Test-Path $OldShimDir) -and -not (Get-ChildItem $OldShimDir -Force)) {
+  Remove-Item -Force $OldShimDir -ErrorAction SilentlyContinue
+}
 
 # 9) PATH check + prompt
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")

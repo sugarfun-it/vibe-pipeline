@@ -16,8 +16,11 @@ REPO="eric14304/vibe-pipeline"
 VP_HOME="$HOME/.vibe-pipeline"
 VERSIONS_DIR="$VP_HOME/versions"
 CURRENT="$VP_HOME/current"
-SHIM_DIR="$HOME/.local/bin"
+# Shim 統一放 ~/.vibe-pipeline/bin/ 對齊 pyenv/cargo/nvm 慣例 + 跟舊 vbpl 同位置 +
+# uninstall 一鍵 rm ~/.vibe-pipeline/ 全清。舊版誤放 ~/.local/bin/vbpl 自動 cleanup。
+SHIM_DIR="$VP_HOME/bin"
 SHIM="$SHIM_DIR/vbpl"
+OLD_SHIM="$HOME/.local/bin/vbpl"
 
 msg() { printf '%s\n' "$*"; }
 err() { printf 'ERROR: %s\n' "$*" >&2; }
@@ -122,6 +125,11 @@ exec bun run "\$VBPL_HOME/cli/vbpl.ts" "\$@"
 EOF
 chmod +x "$SHIM"
 msg "OK Shim: $SHIM"
+
+# 8.5) Cleanup legacy shim at ~/.local/bin/vbpl (pre-v0.2.1)
+if [ -e "$OLD_SHIM" ] || [ -L "$OLD_SHIM" ]; then
+  rm -f "$OLD_SHIM" && msg "Cleaned up legacy shim $OLD_SHIM"
+fi
 
 # 9) PATH check + prompt
 case ":$PATH:" in

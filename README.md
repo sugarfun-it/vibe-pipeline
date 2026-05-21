@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/script
 irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
 ```
 
-script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/app/` → 建 `vbpl` shim → 問要不要加 PATH → 自動 `vbpl server start`(backend on `http://localhost:3001`)。
+script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/versions/v0.X.Y/` → 建 `current` junction/symlink → 寫 shim `~/.vibe-pipeline/bin/vbpl[.cmd]` → 問要不要加 PATH → 自動 `vbpl server start`(backend on `http://localhost:3001`)。
 
 拔掉:
 
@@ -52,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/script
 irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.ps1 | iex
 ```
 
-uninstall 只移除 `~/.vibe-pipeline/app/` 跟 shim;state / auth / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
+uninstall 只移除 `~/.vibe-pipeline/{versions,current,bin}/`;state / auth / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
 
 Maintainer / 改 source code → 看下面 §快速開始 §Maintainer 段。
 
