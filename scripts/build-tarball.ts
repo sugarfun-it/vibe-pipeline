@@ -24,7 +24,6 @@ const WHITELIST = [
   "package.json",
   "bun.lock",
   "tsconfig.json",
-  "vite.config.ts",
   "LICENSE",
   "README.md",
 ];

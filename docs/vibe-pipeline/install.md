@@ -35,8 +35,10 @@ Script 流程:
 裝完開新 terminal:
 ```
 vbpl --version    # vbpl 0.X.Y
-vbpl server start # 起 backend on 3001
+vbpl server start # 起 backend on 3001(同 serve API + PWA)
 ```
+
+然後打開 <http://localhost:3001/>(或 Tailscale URL)看 PWA。
 
 ## Layout
 
@@ -134,7 +136,7 @@ cd vibe-pipeline
 bun install
 bun run dev        # vite HMR 5173 + backend 3001(SW 不註冊,純 dev workflow)
 # 或
-bun run start      # production build + backend + vite preview
+bun run start      # production build + backend(同 serve API + dist/ PWA 在 3001)
 ```
 
 CLI 從 dev clone:

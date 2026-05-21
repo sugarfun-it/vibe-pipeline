@@ -1,10 +1,10 @@
 ---
-description: 切到 dev clone stack(backend + vite 從 D:\sugarfungit\vibe-pipeline,改 source 隨改隨生效)
+description: 切到 dev clone stack(backend 從 D:\sugarfungit\vibe-pipeline 起,改 source 隨 build 隨生效)
 ---
 
 # /dev — switch to dev clone stack
 
-切到「改 VP source code」的環境。Backend 跟 vite preview 都從 `D:\sugarfungit\vibe-pipeline` 起 — 改 server/ / cli/ / src/ 後直接 restart 就生效(不必走 release / install)。
+切到「改 VP source code」的環境。Backend 從 `D:\sugarfungit\vibe-pipeline` 起,單一 process 同時 serve API + dist/ PWA(port 3001)。改 src/ 後 rebuild dist/ 即生效。
 
 ## 步驟
 
@@ -17,37 +17,28 @@ description: 切到 dev clone stack(backend + vite 從 D:\sugarfungit\vibe-pipel
    python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 3001 -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
    ```
 
-2. **停現役 vite preview**(任何 pid on 4173):
-   ```bash
-   python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 4173 -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
-   ```
-
-3. **rebuild dev clone dist/**(改 src/ 後 vite preview 才會 serve 新 bundle):
+2. **rebuild dev clone dist/**(backend serve 的是 dist/,改 src/ 要 rebuild):
    ```bash
    cd D:/sugarfungit/vibe-pipeline && bun run build 2>&1 | tail -3
    ```
 
-4. **起 dev clone backend**(cwd = dev clone,server.json 寫指 dev clone path):
+3. **起 dev clone backend**(cwd = dev clone,server.json 寫指 dev clone path):
    ```bash
-   cd D:/sugarfungit/vibe-pipeline && vbpl server start 2>&1
+   cd D:/sugarfungit/vibe-pipeline && bun run cli/vbpl.ts server start 2>&1
    sleep 2
    ```
 
-5. **起 vite preview**(serve dev clone dist/):
-   ```bash
-   cd D:/sugarfungit/vibe-pipeline && bun run preview > /tmp/vite-dev.log 2>&1 &
-   sleep 2
-   ```
-
-6. **verify**:
+4. **verify**:
    ```bash
    curl -s http://localhost:3001/api/system/version
-   curl -ks -o /dev/null -w "vite=%{http_code}\n" http://localhost:4173/
+   curl -s -o /dev/null -w "html=%{http_code}\n" http://localhost:3001/
+   curl -s http://localhost:3001/api/health
    ```
+   預期:`/` 回 200 + HTML、`/api/health` ok=true、`/api/system/version` 回 JSON、server.json `repo_path` 指 dev clone。
 
 ## 報告
 
 回給 user:
 - dev backend pid + version(`dev-vX.Y.Z`)
-- vite preview pid + serving path
-- 改 source 後:server 端 `vbpl server restart` / frontend 端 `bun run build` + reload PWA
+- server.json repo_path
+- 改 source 後:server / cli 改完 `vbpl server restart`;src/ 改完 `bun run build` 再 reload PWA。

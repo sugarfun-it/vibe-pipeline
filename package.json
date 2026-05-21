@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun run build && concurrently -n bun,vite -c yellow,green \"bun run server/index.ts\" \"vite preview --port 4173\"",
+    "start": "bun run build && bun run server/index.ts",
     "dev": "concurrently -n vite,bun -c blue,yellow \"vite\" \"bun run server/index.ts\"",
     "server": "bun run server/index.ts",
     "preview": "vite preview --port 4173",

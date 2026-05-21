@@ -19,13 +19,13 @@ description: 手機遠端 setup(Tailscale + TOTP + FCM)相關雷區
 
 ## Tailscale HTTPS 不可省
 
-FCM service worker 要 secure context,`http://100.x.x.x:5173` 不算 secure → push 訂閱不會註冊。手機必須走:
+FCM service worker 要 secure context,`http://100.x.x.x:3001` 不算 secure → push 訂閱不會註冊。手機必須走:
 
 ```
-tailscale serve --https=443 http://localhost:4173
+tailscale serve --https=443 http://localhost:3001
 ```
 
-走 preview port(4173),不是 dev port(5173),因為 SW 只在 production build 註冊(見 `rules/pwa-sw.md`)。
+backend 同 serve API + dist/ PWA,單一 port 3001;SW 只在 build 後的 `dist/index.html` 跟 `firebase-messaging-sw.js` 內生效,確保 `bun run build` 後再走 Tailscale(見 `rules/pwa-sw.md`)。
 
 ## `server/index.ts` 必須 `0.0.0.0` 監聽
 
