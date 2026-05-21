@@ -390,6 +390,14 @@
   position: absolute;
   top: calc(100% + 2px);
   right: 0;
+  /* override .focus-overflow-menu 的 min-width:260px — rail 容器窄,260px menu 向左展開會
+     超出 rail 邊界被 overflow 切掉,且視覺上蓋住第一張 card。縮成 220px 剛好放下「清除已合併
+     worktree」標籤又不爆框。 */
+  min-width: 220px;
+}
+.rail-row-overflow-menu {
+  /* 同 rail-section,row-level menu 也避免 260px 撐爆 */
+  min-width: 220px;
 }
 .rail-list { display: flex; flex-direction: column; gap: 4px; }
 

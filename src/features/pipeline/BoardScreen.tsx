@@ -146,7 +146,7 @@ export function BoardScreen({
     return [
       {
         key: "cleanup-all-merged-worktrees",
-        label: "清除所有已合併的 worktree",
+        label: "清除已合併 worktree",
         icon: <TrashIcon />,
         onClick: () => {
           void handleCleanupAllMergedWorktrees();
