@@ -108,7 +108,7 @@ export function RunButton({
         );
       }
       const titleBase =
-        s === "paused" ? "繼續" : s === "failed" ? "重試" : s === "merged" ? "再跑一輪" : "開始運行";
+        s === "paused" ? "繼續" : s === "failed" ? "重試" : "開始運行";
       const title = lastDur ? `${titleBase}(上次 ${lastDur})` : titleBase;
       return (
         <button type="button"
