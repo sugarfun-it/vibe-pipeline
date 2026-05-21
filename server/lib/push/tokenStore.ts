@@ -9,6 +9,9 @@
 
 import { ensureToken, getToken } from "./gatewayToken";
 
+// 對齊 gatewayToken.ts / fcm/index.ts 的 DEFAULT_GATEWAY_URL — forker 自架才走 env override
+const DEFAULT_GATEWAY_URL = "https://vp-gateway-799841449136.asia-east1.run.app";
+
 export type DeviceTokenRecord = {
   id: string;
   token: string;
@@ -17,9 +20,10 @@ export type DeviceTokenRecord = {
   last_seen_at: string;
 };
 
-function gatewayUrl(): string | null {
+function gatewayUrl(): string {
   const v = process.env.PUSH_GATEWAY_URL?.trim();
-  return v && v.length > 0 ? v.replace(/\/+$/, "") : null;
+  const raw = v && v.length > 0 ? v : DEFAULT_GATEWAY_URL;
+  return raw.replace(/\/+$/, "");
 }
 
 async function postGatewayWithToken(
@@ -28,10 +32,6 @@ async function postGatewayWithToken(
   bearerToken: string
 ): Promise<Response | null> {
   const url = gatewayUrl();
-  if (!url) {
-    console.warn(`[push] PUSH_GATEWAY_URL 未設定,跳過 ${path}`);
-    return null;
-  }
   try {
     return await fetch(`${url}${path}`, {
       method: "POST",
@@ -111,10 +111,8 @@ export async function unregisterToken(token: string): Promise<void> {
 // 回 1 個假 record 讓 ticketWatcher / orchestrator 的 `records.length > 0` 判斷成立,
 // 真正的 fanout 在 gateway 端做。
 //
-// gateway 設定齊備 = PUSH_GATEWAY_URL 有 + token 已存在(不主動 issue;listTokens 是被動查)。
+// gateway 設定齊備 = gateway URL 有(已 DEFAULT_GATEWAY_URL fallback)+ token 已存在(不主動 issue;listTokens 是被動查)。
 export async function listTokens(): Promise<DeviceTokenRecord[]> {
-  const url = gatewayUrl();
-  if (!url) return [];
   const tok = await getToken();
   if (!tok) return [];
   const now = new Date().toISOString();
