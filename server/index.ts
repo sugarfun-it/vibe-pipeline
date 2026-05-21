@@ -1,3 +1,4 @@
+import { join, normalize, resolve as pathResolve, sep } from "node:path";
 import * as projects from "./routes/projects";
 import * as qa from "./routes/qa";
 import * as push from "./routes/push";
@@ -63,10 +64,59 @@ function notFound(): Response {
   );
 }
 
+// dist/ 在 build artifact tree 內位於 server/ 同層上一級
+const DIST_ROOT = pathResolve(import.meta.dir, "..", "dist");
+const INDEX_HTML_PATH = join(DIST_ROOT, "index.html");
+
+async function serveIndexHtml(): Promise<Response> {
+  const file = Bun.file(INDEX_HTML_PATH);
+  if (!(await file.exists())) {
+    return notFound();
+  }
+  return new Response(file, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      // PWA SW 自己管 HTML cache,backend 不加 cache header 避免 stale UI
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    },
+  });
+}
+
+async function serveStatic(pathname: string): Promise<Response | null> {
+  // path traversal 過濾:reject 任何含 .. segment
+  const decoded = decodeURIComponent(pathname);
+  if (decoded.split("/").some((seg) => seg === "..")) return null;
+  const rel = decoded.replace(/^\/+/, "");
+  if (rel === "" || rel.endsWith("/")) {
+    // root 或目錄 → SPA fallback
+    return serveIndexHtml();
+  }
+  const candidate = pathResolve(DIST_ROOT, rel);
+  // 二次防線:resolve 後路徑必須仍在 DIST_ROOT 內
+  const distNorm = normalize(DIST_ROOT + sep);
+  if (!candidate.startsWith(distNorm) && candidate !== DIST_ROOT) {
+    return null;
+  }
+  const file = Bun.file(candidate);
+  if (await file.exists()) {
+    return new Response(file, { status: 200 });
+  }
+  // 找不到 → SPA fallback(client-side router 處理)
+  return serveIndexHtml();
+}
+
 async function handle(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const { pathname } = url;
   const method = req.method;
+
+  // 非 /api/* GET/HEAD → serve dist/ static + SPA fallback
+  // (擺在 /api/health 之前不影響 /api/* — pathname.startsWith("/api/") 直接 skip)
+  if (!pathname.startsWith("/api/") && (method === "GET" || method === "HEAD")) {
+    const res = await serveStatic(pathname);
+    if (res) return res;
+  }
 
   if (pathname === "/api/health" && method === "GET") {
     return Response.json({
