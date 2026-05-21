@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import { Logo } from "../ui/Logo";
 import { CheckIconSm, ChevronIcon, CloseIcon, FolderIcon, MoonIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
-import { useConfirm } from "../ui/ConfirmDialog";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import type { Project } from "../../shared/types";
 import "./topbar.css";
@@ -21,7 +20,6 @@ export function TopBar({
   settingsSlot?: ReactNode;
 } = {}) {
   const { hash, setHash } = useActiveProjectHash();
-  const confirm = useConfirm();
   const [recents, setRecents] = useState<Project[]>([]);
   const [open, setOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -143,13 +141,7 @@ export function TopBar({
 
   async function removeRecentEntry(p: Project) {
     if (p.hash === hash) return; // active 不能刪(UI 上 X disabled,雙保險)
-    const ok = await confirm({
-      title: `從最近專案移除「${p.name}」?`,
-      description: `路徑:${p.path}\n\n只移除清單紀錄,不刪除任何專案檔案 / git / .vibe-pipeline/ 內容。下次可重新從「選擇其他資料夾…」加回來。`,
-      confirmLabel: "移除",
-      danger: true,
-    });
-    if (!ok) return;
+    // 不 confirm — 只是移清單紀錄(不刪檔 / git / .vibe-pipeline/),重點下次可從「選擇其他資料夾…」加回來,無資料損失。confirm 純摩擦
     setBusy(true);
     setError(null);
     try {
