@@ -21,7 +21,6 @@ export type UseFocusPipelineResult = {
   // derived display state
   behind: number | null;
   totalCost: number;
-  lastRun: RunSummary | null;
   stateColor: string;
   stateLabel: string;
   done: number;
@@ -116,7 +115,6 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
 
   const behind = syncStatus?.behind ?? null;
   const totalCost = runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
-  const lastRun = runs[0] ?? null;
   const stateColor = STATE_COLOR[pipeline.state];
   const stateLabel = STATE_LABEL[pipeline.state];
   // mode=sync 是舊 synthetic ticket(已換 pipeline.syncJob),不計入 done/total
@@ -160,7 +158,6 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
     onStart,
     behind,
     totalCost,
-    lastRun,
     stateColor,
     stateLabel,
     done,

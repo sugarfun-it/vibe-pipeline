@@ -24,7 +24,6 @@ export function FocusHeader({
   spawning,
   behind,
   totalCost,
-  lastRun,
   stateColor,
   stateLabel,
   done,
@@ -58,7 +57,6 @@ export function FocusHeader({
   spawning: boolean;
   behind: number | null;
   totalCost: number;
-  lastRun: RunSummary | null;
   stateColor: string;
   stateLabel: string;
   done: number;
@@ -170,7 +168,6 @@ export function FocusHeader({
             pipeline={pipeline}
             onRun={onStart}
             onStop={onStop}
-            lastRun={lastRun}
             spawning={spawning}
             queuePosition={queuePosition}
             syncActive={syncActive}

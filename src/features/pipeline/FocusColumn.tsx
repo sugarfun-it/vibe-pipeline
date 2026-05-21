@@ -63,7 +63,6 @@ export function FocusColumn({
     onStart,
     behind,
     totalCost,
-    lastRun,
     stateColor,
     stateLabel,
     done,
@@ -87,7 +86,6 @@ export function FocusColumn({
         spawning={spawning}
         behind={behind}
         totalCost={totalCost}
-        lastRun={lastRun}
         stateColor={stateColor}
         stateLabel={stateLabel}
         done={done}

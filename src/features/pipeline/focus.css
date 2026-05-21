@@ -186,13 +186,6 @@
   color: var(--fg-mute);
 }
 
-/* RunButton 旁邊的「~時間」副文字(上次跑多久,給 user 參考) */
-.focus-run-duration {
-  opacity: 0.7;
-  margin-left: 6px;
-  font-size: 11px;
-}
-
 /* running 狀態停止按鈕 */
 .run-btn-stop-now {
   background: transparent;
