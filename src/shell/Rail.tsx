@@ -24,6 +24,7 @@ export function Rail({
   addLabel = "新 pipeline",
   draftPipelineIds,
   buildRowMenu,
+  sectionMenuItems,
 }: {
   pipelines: Pipeline[];
   activeId: string;
@@ -34,10 +35,16 @@ export function Rail({
   addLabel?: string;
   draftPipelineIds?: Set<string>;
   buildRowMenu?: (p: Pipeline) => RailMenuItem[];
+  sectionMenuItems?: RailMenuItem[];
 }) {
   return (
     <aside className={"rail" + (creating ? " is-creating" : "")}>
-      <div className="rail-section-label mono">PIPELINES</div>
+      <div className="rail-section-header">
+        <span className="rail-section-label mono">PIPELINES</span>
+        {sectionMenuItems && sectionMenuItems.length > 0 && (
+          <RailSectionMenu items={sectionMenuItems} />
+        )}
+      </div>
       <div className="rail-list">
         {creating ? (
           createSlot
@@ -122,6 +129,70 @@ function RailItem({
       </button>
       {menuItems && menuItems.length > 0 && (
         <RailRowMenu items={menuItems} />
+      )}
+    </div>
+  );
+}
+
+// PIPELINES section header 的 ⋯ menu。同 RailRowMenu 行為(click-outside / Esc / disabled+tooltip),
+// 差別:位置在 section header 內、不靠 hover 顯示(永遠顯示)、menu 對齊按鈕右側。
+function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={wrapRef} className={"rail-section-overflow" + (open ? " is-open" : "")}>
+      <button
+        type="button"
+        className="rail-section-overflow-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        title="更多操作"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div role="menu" className="focus-overflow-menu rail-section-overflow-menu">
+          {items.map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              role="menuitem"
+              className={"focus-overflow-item" + (it.danger ? " is-danger" : "")}
+              disabled={!!it.disabledReason}
+              title={it.disabledReason ?? undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                it.onClick();
+              }}
+            >
+              <span className="focus-overflow-item-icon">{it.icon ?? <TrashIcon />}</span>
+              <span className="focus-overflow-item-label">{it.label}</span>
+              {it.disabledReason && (
+                <span className="mono focus-overflow-item-hint">{it.disabledReason}</span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

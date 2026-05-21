@@ -339,11 +339,49 @@
   overflow-y: auto;
   min-height: 0;
 }
+.rail-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 6px 8px;
+  gap: 8px;
+}
 .rail-section-label {
   font-size: 10px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--fg-faint);
-  padding: 0 6px 8px;
+}
+.rail-section-overflow {
+  position: relative;
+  display: inline-block;
+}
+.rail-section-overflow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.rail-section-overflow-btn:hover {
+  color: var(--fg);
+  background: var(--hover);
+  border-color: var(--line-2);
+}
+.rail-section-overflow.is-open .rail-section-overflow-btn {
+  color: var(--fg);
+  background: var(--hover);
+  border-color: var(--line-2);
+}
+.rail-section-overflow-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
 }
 .rail-list { display: flex; flex-direction: column; gap: 4px; }
 

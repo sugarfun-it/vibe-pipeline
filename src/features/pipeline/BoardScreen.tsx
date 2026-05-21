@@ -103,43 +103,53 @@ export function BoardScreen({
 
   const confirmDialog = useConfirm();
 
-  async function handleCleanupWorktree(pid: string) {
+  // Section-level bulk:掃 project 內所有 state===merged 的 pipeline,一次清 worktree。
+  // pipeline 紀錄 / branch 不動。confirm dialog 顯示影響範圍(N 個 pipeline)。
+  async function handleCleanupAllMergedWorktrees() {
     if (!project) return;
-    const target = pipelines.find((p) => p.id === pid);
-    const name = target?.name ?? pid;
+    const mergedPipelines = pipelines.filter((p) => p.state === "merged");
+    const n = mergedPipelines.length;
+    if (n === 0) {
+      notifyInfo("目前沒有已合併的 pipeline,無需清除");
+      return;
+    }
     const okay = await confirmDialog({
-      title: `清除已合併的 worktree:${name}?`,
+      title: `清除所有已合併的 worktree?`,
       description:
-        "只清掉磁碟上的 worktree 資料夾(~/.vibe-pipeline/worktrees/...),\n" +
-        "pipeline 紀錄 / branch / state 都不會動。\n" +
-        "下次 Run 會從 base 重建 worktree。",
-      confirmLabel: "清除",
+        `將清除目前 project 內所有 state=merged 的 pipeline worktree(共 ${n} 個):\n` +
+        mergedPipelines.map((p) => `  · ${p.name}`).join("\n") +
+        "\n\n只清磁碟,pipeline 紀錄 / branch 不動。",
+      confirmLabel: `清除 ${n} 個`,
     });
     if (!okay) return;
     try {
-      const r = await api.cleanupWorktree(project.hash, pid);
-      if (r.removed) {
-        notifyInfo(`✓ 已清除 worktree(${name})`, { pipelineId: pid });
+      const r = await api.cleanupMergedWorktrees(project.hash);
+      const cleanedN = r.cleaned.length;
+      const skippedN = r.skipped_not_merged.length;
+      const failedN = r.failed.length;
+      const parts: string[] = [];
+      parts.push(`清除 ${cleanedN} 個 worktree`);
+      if (skippedN > 0) parts.push(`跳過 ${skippedN} 個(未合併)`);
+      if (failedN > 0) parts.push(`失敗 ${failedN} 個`);
+      const msg = parts.join(",");
+      if (failedN > 0) {
+        notifyError(`⚠ ${msg}`);
       } else {
-        notifyInfo(`worktree 已不在(${name})— 已清過或從未建立`, { pipelineId: pid });
+        notifyInfo(`✓ ${msg}`);
       }
     } catch (e) {
-      notifyError(`清除 worktree 失敗: ${e instanceof Error ? e.message : String(e)}`, {
-        pipelineId: pid,
-      });
+      notifyError(`清除 worktree 失敗: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  function buildRailRowMenu(p: Pipeline): RailMenuItem[] {
-    const isMerged = p.state === "merged";
+  function buildRailSectionMenu(): RailMenuItem[] {
     return [
       {
-        key: "cleanup-worktree",
-        label: "清除已合併的 worktree",
+        key: "cleanup-all-merged-worktrees",
+        label: "清除所有已合併的 worktree",
         icon: <TrashIcon />,
-        disabledReason: isMerged ? undefined : "pipeline 還沒 merge",
         onClick: () => {
-          void handleCleanupWorktree(p.id);
+          void handleCleanupAllMergedWorktrees();
         },
       },
     ];
@@ -716,7 +726,7 @@ export function BoardScreen({
           }
           addLabel={isUninit ? "開始初始化" : "新 pipeline"}
           draftPipelineIds={new Set(qa.drafts.map((d) => d.pipelineId))}
-          buildRowMenu={buildRailRowMenu}
+          sectionMenuItems={buildRailSectionMenu()}
           createSlot={
             <CreateCard
               onCancel={() => setCreating(false)}
