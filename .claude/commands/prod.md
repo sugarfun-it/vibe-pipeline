@@ -10,15 +10,19 @@ backend cwd = `~/.vibe-pipeline/current`,模擬 enduser 拿到 GitHub release ta
 
 ## 執行
 
-1. **停現役 backend + 清 :3001**(graceful 走 enduser shim 全路徑;force-kill 兜底):
+shim path 自動判平台(Windows = `.cmd`,POSIX = bare):
+
+1. **停現役 backend + 清 :3001**(graceful 走 enduser shim;force-kill 兜底):
    ```bash
-   ~/.vibe-pipeline/bin/vbpl.cmd server stop 2>&1
+   SHIM=$HOME/.vibe-pipeline/bin/vbpl; [ -f "$SHIM.cmd" ] && SHIM=$SHIM.cmd
+   "$SHIM" server stop 2>&1
    python -c "import subprocess;subprocess.run(['powershell.exe','-Command','Get-NetTCPConnection -LocalPort 3001 -State Listen -EA SilentlyContinue | ForEach-Object { Stop-Process -Id \$_.OwningProcess -Force -EA SilentlyContinue }'],capture_output=True)"
    ```
 
 2. **起 enduser backend**(shim → server.json `repo_path` 寫 `~/.vibe-pipeline/current`):
    ```bash
-   ~/.vibe-pipeline/bin/vbpl.cmd server start 2>&1
+   SHIM=$HOME/.vibe-pipeline/bin/vbpl; [ -f "$SHIM.cmd" ] && SHIM=$SHIM.cmd
+   "$SHIM" server start 2>&1
    sleep 2
    ```
 
@@ -34,4 +38,3 @@ backend cwd = `~/.vibe-pipeline/current`,模擬 enduser 拿到 GitHub release ta
 
 - backend pid + `current` version(= enduser 安裝的 release tag)
 - server.json `repo_path` 確認 = `~/.vibe-pipeline/current`
-- Tailscale 仍 work:https://nb-24-001.tail67b6ba.ts.net/
