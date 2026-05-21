@@ -263,6 +263,13 @@ async function handle(req: Request): Promise<Response> {
       return projects.revealWorktree(hash, worktreeRevealMatch[1]);
     }
 
+    const worktreeCleanupMatch = rest.match(
+      /^\/pipelines\/([a-z0-9_-]+)\/worktree\/cleanup$/
+    );
+    if (worktreeCleanupMatch && method === "POST") {
+      return projects.cleanupWorktree(hash, worktreeCleanupMatch[1]);
+    }
+
     // 「重置 pipeline」— 取代舊 worktree/prune + ticket reset 兩個 button
     // 一步:worktree 刪 + branch 刪(讓下次 fresh from base)+ tickets done/failed→draft
     const resetMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/reset$/);

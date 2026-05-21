@@ -411,6 +411,7 @@ export type ApiErrorCode =
   | "not_initialized"
   | "already_initialized"
   | "budget_exceeded"
+  | "not_merged"
   | "internal_error";
 
 // ─── Notification taxonomy ─────────────────────────────────────────

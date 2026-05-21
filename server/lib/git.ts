@@ -74,6 +74,24 @@ export async function deleteBranchForce(
   return { ok: true };
 }
 
+// 判 commit/branch A 是否為 B 的 ancestor(A 已合進 B)。
+// 用於 worktree cleanup 二次防呆:pipeline.state 不是 merged 時仍允許「branch tip 已是 base 祖先」放行
+// (例:user 已手動 merge 但 vibe-pipeline 還沒同步 state)。
+export async function isAncestor(
+  projectPath: string,
+  branchA: string,
+  branchB: string
+): Promise<{ ok: boolean; isAncestor: boolean; error?: string }> {
+  if (!hasGit(projectPath)) return { ok: false, isAncestor: false, error: "not a git repo" };
+  const r = await runCapture([
+    "git", "-C", projectPath, "merge-base", "--is-ancestor", branchA, branchB,
+  ]);
+  // exit 0 = ancestor;exit 1 = not ancestor;>=2 = error
+  if (r.exitCode === 0) return { ok: true, isAncestor: true };
+  if (r.exitCode === 1) return { ok: true, isAncestor: false };
+  return { ok: false, isAncestor: false, error: r.err.trim() || `git merge-base exit ${r.exitCode}` };
+}
+
 // list local branches (for CreateCard base branch picker)
 // 過濾掉 pipeline/* (vibe-pipeline 自家建的 worktree branch)避免 base 撞自己
 export async function listBranches(projectPath: string): Promise<string[]> {

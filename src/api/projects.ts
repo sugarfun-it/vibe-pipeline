@@ -131,6 +131,16 @@ export function revealWorktree(hash: string, id: string): Promise<{ ok: true; pa
   );
 }
 
+export function cleanupWorktree(
+  hash: string,
+  id: string
+): Promise<{ removed: boolean; path: string }> {
+  return call<{ removed: boolean; path: string }>(
+    `/api/projects/${hash}/pipelines/${id}/worktree/cleanup`,
+    { method: "POST" }
+  );
+}
+
 export function resetPipeline(hash: string, id: string): Promise<{ ok: true }> {
   return call<{ ok: true }>(
     `/api/projects/${hash}/pipelines/${id}/reset`,

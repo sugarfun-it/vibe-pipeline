@@ -347,6 +347,46 @@
 }
 .rail-list { display: flex; flex-direction: column; gap: 4px; }
 
+/* row wrapper:把 rail-item 跟 ⋯ overlay 在同一 stacking context;
+   hover 才把 ⋯ 透出來(menu 開啟 → .is-open 永久顯示),跟 ProjectPicker hover-X 同 pattern */
+.rail-item-wrap {
+  position: relative;
+}
+.rail-row-overflow {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.rail-item-wrap:hover .rail-row-overflow,
+.rail-row-overflow.is-open,
+.rail-row-overflow:focus-within {
+  opacity: 1;
+}
+.rail-row-overflow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  color: var(--fg-mute);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.rail-row-overflow-btn:hover {
+  color: var(--fg);
+  border-color: var(--line-2);
+}
+.rail-row-overflow-menu {
+  top: calc(100% + 2px);
+}
+
 .rail-item {
   display: flex; flex-direction: column; gap: 6px;
   text-align: left;
