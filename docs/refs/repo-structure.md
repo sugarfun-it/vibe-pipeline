@@ -121,7 +121,7 @@ vibe-pipeline/
 │   ├── refs/                  設計文件 / 競品對照 / 歷史 spec(maintainer 用)
 │   │   ├── README.md          refs 目錄索引(active / archive)
 │   │   ├── repo-structure.md  本檔
-│   │   └── enduser-install-update-design.md   tarball install + update 設計
+│   │   └── enduser-install-update-design.md   tarball install + update 設計(v3,obsolete;檔頂有 banner 指向 backend SKILL §Self-update)
 │   └── vibe-pipeline/         enduser AI bundle(distributable)
 │       ├── SKILL.md
 │       ├── install.md

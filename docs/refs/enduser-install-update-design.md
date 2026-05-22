@@ -1,5 +1,15 @@
 # Enduser install + update 設計
 
+> **狀態:obsolete(2026-05-21 v4 install-script-only 取代)**
+>
+> 本檔為 v3 tarball-direct 設計(`updater.ts` 內含 `performUpdate` / `fetchReleaseInfo` / `spawnNewBackend` 等步驟)。已被 install-script-only 路線取代:
+> - 後端 `server/lib/updater.ts` 改為**純 spawn install.{ps1,sh} detached** + 自我退出,不再處理 download / extract / swap。
+> - install script `scripts/install.{ps1,sh}` 為 install + update 共用 single source of truth(stop → download → swap → start)。
+> - `/api/system/update` endpoint 仍存在(PWA UX 一鍵入口),但邏輯極簡。
+>
+> 真實 update flow 看 [`.claude/skills/vibe-pipeline-backend/SKILL.md`](../../.claude/skills/vibe-pipeline-backend/SKILL.md) §Self-update(v4 install-script-only)。
+> 本檔保留作為歷史脈絡 / changelog 引用對象,不再追隨 prod code。
+
 ## 動機
 
 VP 要支援 enduser(非 maintainer)裝法:install script 解 tarball 到 `~/.vibe-pipeline/app/`,**不 clone repo,沒 `.git/`**。原 backend update flow 走 `git pull + bun install + bun run build`,enduser 環境用不到。
