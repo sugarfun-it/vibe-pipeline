@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary, RunDetail } from "../../api/projects";
 import { fmtDuration } from "../../data/pipelines";
+
+// stdout raw 預設只顯前 N 行,避免 10-50KB JSONL 整段渲染拖慢 drawer 滾動。
+// user 點「展開全部」才完整顯示。
+const STDOUT_PREVIEW_LINES = 80;
 
 export function RunHistory({
   projectHash,
@@ -12,11 +16,11 @@ export function RunHistory({
 }) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openFile, setOpenFile] = useState<string | null>(null);
-  const [detail, setDetail] = useState<RunDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
+    // 切 pipeline 立即清舊 state — 否則「上次 error」會卡在 UI、上次 runs 殘留到新 fetch 完才換
+    setRuns(null);
+    setError(null);
     let cancelled = false;
     api
       .listPipelineRuns(projectHash, pipelineId)
@@ -33,30 +37,29 @@ export function RunHistory({
     };
   }, [projectHash, pipelineId]);
 
-  useEffect(() => {
-    if (!openFile) {
-      setDetail(null);
-      return;
+  // pipeline 級總計:整條 pipeline 跑下來累積 cost / 時間 / 次數
+  const summary = useMemo(() => {
+    if (!runs || runs.length === 0) return null;
+    let totalCost = 0;
+    let totalDuration = 0;
+    let costCount = 0;
+    let durCount = 0;
+    for (const r of runs) {
+      if (r.costUsd != null) {
+        totalCost += r.costUsd;
+        costCount++;
+      }
+      if (r.durationMs != null) {
+        totalDuration += r.durationMs;
+        durCount++;
+      }
     }
-    let cancelled = false;
-    setDetailLoading(true);
-    api
-      .getPipelineRun(projectHash, pipelineId, openFile)
-      .then((d) => {
-        if (cancelled) return;
-        setDetail(d);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDetail(null);
-      })
-      .finally(() => {
-        if (!cancelled) setDetailLoading(false);
-      });
-    return () => {
-      cancelled = true;
+    return {
+      count: runs.length,
+      totalCost: costCount > 0 ? totalCost : null,
+      totalDuration: durCount > 0 ? totalDuration : null,
     };
-  }, [openFile, projectHash, pipelineId]);
+  }, [runs]);
 
   if (error) {
     return <div className="tdrw-empty">讀取執行紀錄失敗: {error}</div>;
@@ -70,35 +73,72 @@ export function RunHistory({
 
   return (
     <div className="tdrw-runs">
+      {summary && (
+        <div className="tdrw-runs-summary">
+          <span className="tdrw-run-meta-item">
+            <span className="tdrw-run-meta-label">執行次數</span>
+            <strong>{summary.count}</strong>
+          </span>
+          <span className="tdrw-run-meta-item">
+            <span className="tdrw-run-meta-label">總時間</span>
+            <strong>
+              {summary.totalDuration != null ? fmtDuration(summary.totalDuration) : "—"}
+            </strong>
+          </span>
+          <span className="tdrw-run-meta-item">
+            <span className="tdrw-run-meta-label">總成本</span>
+            <strong>
+              {summary.totalCost != null ? `$${summary.totalCost.toFixed(2)}` : "—"}
+            </strong>
+          </span>
+        </div>
+      )}
       {runs.map((r) => (
         <RunCard
-          key={r.filename}
+          // key 含 projectHash/pipelineId — 切 pipeline 時 RunCard 重 mount,內部 open/detail cache 不會被同 filename 的其他 pipeline run 錯誤複用
+          key={`${projectHash}/${pipelineId}/${r.filename}`}
           run={r}
-          open={openFile === r.filename}
-          detail={openFile === r.filename ? detail : null}
-          detailLoading={openFile === r.filename && detailLoading}
-          onToggle={() =>
-            setOpenFile((cur) => (cur === r.filename ? null : r.filename))
-          }
+          projectHash={projectHash}
+          pipelineId={pipelineId}
         />
       ))}
     </div>
   );
 }
 
+// 每張 RunCard 自管 open / detail / loading state。多張可同時展開,user 想 compare 兩輪(e.g.「第 3 輪 fail 第 4 輪 pass 差在哪」)直接開兩張看;
+// detail close 後仍留在 state,re-open 不重 fetch。
 function RunCard({
   run,
-  open,
-  detail,
-  detailLoading,
-  onToggle,
+  projectHash,
+  pipelineId,
 }: {
   run: RunSummary;
-  open: boolean;
-  detail: RunDetail | null;
-  detailLoading: boolean;
-  onToggle: () => void;
+  projectHash: string;
+  pipelineId: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<RunDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  // unmount 後遲到的 detail 回應不可 setState(切 pipeline / drawer close 時 RunCard 會 unmount,但 fetch 仍在飛)
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
+  const handleToggle = (): void => {
+    const next = !open;
+    setOpen(next);
+    if (next && !detail && !detailLoading) {
+      setDetailLoading(true);
+      api
+        .getPipelineRun(projectHash, pipelineId, run.filename)
+        .then((d) => { if (mountedRef.current) setDetail(d); })
+        .catch(() => {
+          // detail 載入失敗就停在 null;close+open 再試
+        })
+        .finally(() => { if (mountedRef.current) setDetailLoading(false); });
+    }
+  };
+
   const ok = run.exitCode === 0;
   const cost = run.costUsd != null ? `$${run.costUsd.toFixed(2)}` : "—";
   const dur = run.durationMs != null ? fmtDuration(run.durationMs) : "—";
@@ -119,11 +159,11 @@ function RunCard({
     <div className="tdrw-run-card">
       <button type="button"
         className="tdrw-run-head"
-        onClick={onToggle}
+        onClick={handleToggle}
         aria-expanded={open}
         title={open ? "收合" : "展開"}
       >
-        <span className="tdrw-run-head-chev">{open ? "▾" : "▸"}</span>
+        <span className="tdrw-run-head-chev" aria-hidden="true">{open ? "▾" : "▸"}</span>
         <div className="tdrw-run-head-title">
           <span className="mono">{fmtTime(run.startedAt)}</span>
           <span className={"tdrw-run-status " + (ok ? "is-ok" : "is-fail")}>
@@ -202,7 +242,7 @@ function RunCard({
                 </>
               )}
               <div className="tdrw-run-detail-label">stdout (raw)</div>
-              <pre className="tdrw-run-pre">{detail.stdout || "(empty)"}</pre>
+              <StdoutBlock text={detail.stdout || ""} />
               {detail.stderr && (
                 <>
                   <div className="tdrw-run-detail-label">stderr</div>
@@ -214,6 +254,34 @@ function RunCard({
         </div>
       )}
     </div>
+  );
+}
+
+// 長 stdout 預設只顯前 N 行 + 行數 hint;點按鈕展開 / 收合。
+// 不嘗試 parse JSONL — stdout 結構不穩(claude / codex / mixed plain text),先解「太長卡頓」問題。
+function StdoutBlock({ text }: { text: string }): JSX.Element {
+  const [expanded, setExpanded] = useState(false);
+  const lines = useMemo(() => text.split(/\r?\n/), [text]);
+  const overLimit = lines.length > STDOUT_PREVIEW_LINES;
+  const showFull = expanded || !overLimit;
+  const previewText = showFull
+    ? text
+    : lines.slice(0, STDOUT_PREVIEW_LINES).join("\n");
+  return (
+    <>
+      <pre className="tdrw-run-pre">{previewText || "(empty)"}</pre>
+      {overLimit && (
+        <button
+          type="button"
+          className="btn tdrw-run-pre-toggle"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded
+            ? `收合(全 ${lines.length} 行)`
+            : `展開全部(+${lines.length - STDOUT_PREVIEW_LINES} 行 / 全 ${lines.length} 行)`}
+        </button>
+      )}
+    </>
   );
 }
 
