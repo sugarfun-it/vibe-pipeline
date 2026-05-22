@@ -986,18 +986,12 @@ const SEV_BY_EVENT: Record<string, "block" | "info" | "muted"> = {
   runner_crash: "block",
 };
 
-function iconFor(sev: "block" | "info" | "muted"): { icon: string; iconKind: "alert" | "warn" | "check" | "iter" | "skill" | "dot" } {
-  if (sev === "block") return { icon: "🚨", iconKind: "alert" };
-  if (sev === "info") return { icon: "✓", iconKind: "check" };
-  return { icon: "·", iconKind: "dot" };
-}
-
-function fmtTs(ms: number): { ts: string; since: number } {
+function fmtTs(ms: number): string {
   const since = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-  if (since < 60) return { ts: "just now", since };
-  if (since < 3600) return { ts: `${Math.floor(since / 60)} min`, since };
-  if (since < 86400) return { ts: `${Math.floor(since / 3600)} h`, since };
-  return { ts: `${Math.floor(since / 86400)} d`, since };
+  if (since < 60) return "just now";
+  if (since < 3600) return `${Math.floor(since / 60)} min`;
+  if (since < 86400) return `${Math.floor(since / 3600)} h`;
+  return `${Math.floor(since / 86400)} d`;
 }
 
 // Gear button + Settings popover。原本在 shell/TopBar 內,因為 SettingsPopover 屬 features/
@@ -1046,18 +1040,13 @@ function SettingsButton({
 function toNotifItem(r: api.NotifRecord): NotifItem {
   // record.sev override 優先(frontend_action_* 用 caller 帶的 sev);否則查字典
   const sev = (r.sev ?? SEV_BY_EVENT[r.type] ?? "muted") as "block" | "info" | "muted";
-  const { icon, iconKind } = iconFor(sev);
-  const { ts, since } = fmtTs(r.ts);
   return {
     id: r.id,
     type: r.type,
     sev,
-    icon,
-    iconKind,
     title: r.title,
     sub: r.sub ?? "",
-    ts,
-    since,
+    ts: fmtTs(r.ts),
     unread: r.unread,
     pipelineId: r.pipelineId,
   };

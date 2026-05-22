@@ -3,7 +3,7 @@ import * as api from "../../api/projects";
 import { AITab } from "./AITab";
 import { NotificationsTab } from "./NotificationsTab";
 import { ProjectTab } from "./ProjectTab";
-import { SecurityTab } from "./SecurityTab";
+import { SecurityTab } from "../auth/SecurityTab";
 import { UpdateTab } from "./UpdateTab";
 import { useAuthStatus } from "../auth/useAuthStatus";
 import { useUserConfig } from "./useUserConfig";
