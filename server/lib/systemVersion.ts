@@ -136,9 +136,3 @@ export async function getVersionStatus(): Promise<VersionStatus> {
   return { current, latest, isLatest, hasUpdate };
 }
 
-// test hook
-export function __resetCacheForTest(): void {
-  cachedCurrent = null;
-  releaseCache = null;
-  inflight = null;
-}

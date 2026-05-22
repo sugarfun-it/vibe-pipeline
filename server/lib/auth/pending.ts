@@ -25,12 +25,3 @@ export function consumeSetupToken(token: string): string | null {
   return entry.secret;
 }
 
-export function peekSetupToken(token: string): string | null {
-  const entry = pending.get(token);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    pending.delete(token);
-    return null;
-  }
-  return entry.secret;
-}
