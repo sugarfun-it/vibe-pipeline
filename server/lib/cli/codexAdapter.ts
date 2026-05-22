@@ -33,7 +33,6 @@ import { tmpdir } from "node:os";
 import { runCapture, spawnStreaming } from "../spawn";
 import type {
   CliAdapter,
-  CliCapabilities,
   QASpawnOpts,
   RunnerSpawnOpts,
   SplitSpawnOpts,
@@ -59,13 +58,6 @@ import type {
 export class CodexAdapter implements CliAdapter {
   readonly name = "codex";
 
-  readonly capabilities: CliCapabilities = {
-    supportsSessionResume: false,
-    supportsTaskDispatch: false,
-    supportsStreamJson: false,
-    supportsToolWhitelist: false,
-  };
-
   async checkAvailable(): Promise<boolean> {
     const r = await runCapture(["codex", "--version"]);
     return r.ok;
@@ -75,7 +67,7 @@ export class CodexAdapter implements CliAdapter {
     if (opts.kind === "qa") return spawnQA(opts);
     if (opts.kind === "runner") return spawnRunner(opts);
     if (opts.kind === "split") return spawnSplit(opts);
-    throw new Error("CodexAdapter: 'merge' task class 不獨立 spawn,呼叫端應走 orchestrator.start");
+    throw new Error(`CodexAdapter: unknown spawn kind ${(opts as { kind?: string }).kind}`);
   }
 
   parseResult(_kind: "qa" | "split" | "runner", stdout: string): string {

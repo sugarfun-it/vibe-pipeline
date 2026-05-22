@@ -10,13 +10,6 @@ export function isJsonMode(): boolean {
   return jsonMode;
 }
 
-export function ok<T>(data: T): void {
-  if (jsonMode) {
-    process.stdout.write(JSON.stringify({ ok: true, data }) + "\n");
-  }
-  // human-readable: caller prints its own text before calling ok()
-}
-
 export function okJson<T>(data: T): void {
   process.stdout.write(JSON.stringify({ ok: true, data }) + "\n");
 }

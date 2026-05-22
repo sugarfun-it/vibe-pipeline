@@ -7,7 +7,6 @@
 import { runCapture, spawnStreaming } from "../spawn";
 import type {
   CliAdapter,
-  CliCapabilities,
   QASpawnOpts,
   RunnerSpawnOpts,
   SplitSpawnOpts,
@@ -33,13 +32,6 @@ function workerEnv(): Record<string, string> {
 export class ClaudeAdapter implements CliAdapter {
   readonly name = "claude";
 
-  readonly capabilities: CliCapabilities = {
-    supportsSessionResume: true,
-    supportsTaskDispatch: true,
-    supportsStreamJson: true,
-    supportsToolWhitelist: true,
-  };
-
   async checkAvailable(): Promise<boolean> {
     const r = await runCapture(["claude", "--version"]);
     return r.ok;
@@ -49,9 +41,7 @@ export class ClaudeAdapter implements CliAdapter {
     if (opts.kind === "qa") return spawnQA(opts);
     if (opts.kind === "runner") return spawnRunner(opts);
     if (opts.kind === "split") return spawnSplit(opts);
-    // "merge" 目前不獨立 spawn — merge ticket 走 runner 主 agent + Task tool 路徑;
-    // 保留 placeholder 給未來其他 CLI(例如 codex)若改成獨立 spawn 模式時填。
-    throw new Error("ClaudeAdapter: 'merge' task class 不獨立 spawn,呼叫端應走 orchestrator.start");
+    throw new Error(`ClaudeAdapter: unknown spawn kind ${(opts as { kind?: string }).kind}`);
   }
 
   parseResult(_kind: "qa" | "split" | "runner", stdout: string): string {

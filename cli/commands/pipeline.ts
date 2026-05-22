@@ -208,7 +208,7 @@ async function pipelineDelete(args: ParsedArgs): Promise<void> {
     message?: string;
   };
   // 走 fetch DELETE — cli/lib/api.ts 只有 post(),這邊 inline 一個 DELETE
-  await requireBackendForDelete();
+  // (ensureBackend 已在上面跑過)
   const res = await fetchDelete<DeleteResp>(`/api/projects/${proj.hash}/pipelines/${id}`);
 
   if (isJsonMode()) {
@@ -232,10 +232,6 @@ function stepLine(s: { ok: boolean; error?: string; skipped?: boolean }): string
   if (s.skipped) return "skipped" + (s.error ? ` (${s.error})` : "");
   if (s.ok) return "ok";
   return `FAIL — ${s.error ?? "(no message)"}`;
-}
-
-async function requireBackendForDelete(): Promise<void> {
-  // ensureBackend 已在 caller 跑過,這層僅為語意對稱。
 }
 
 async function fetchDelete<T = unknown>(path: string): Promise<T> {
