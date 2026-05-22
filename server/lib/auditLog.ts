@@ -110,7 +110,7 @@ function truncate(s: string, n: number): string {
   return s.slice(0, n - 1) + "…";
 }
 
-export function appendUserAction(opts: {
+function appendUserAction(opts: {
   projectPath: string;
   action: string;
   pipelineId?: string;
