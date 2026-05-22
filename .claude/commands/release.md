@@ -118,7 +118,7 @@ with open('package.json','w',encoding='utf-8') as f:
    ```bash
    RAW="$ARGUMENTS"
    VERSION="v${RAW#v}"
-   curl -s "https://api.github.com/repos/eric14304/vibe-pipeline/releases/latest" | python -c "
+   curl -s "https://api.github.com/repos/sugarfun-it/vibe-pipeline/releases/latest" | python -c "
    import json,sys
    d = json.load(sys.stdin)
    print(f\"latest tag:  {d['tag_name']}\")
@@ -135,5 +135,5 @@ with open('package.json','w',encoding='utf-8') as f:
 - bump commit hash(若 step 2 真有 bump)
 - pushed commits 數(從 step 3 output)
 - tarball size(step 4)
-- release URL:`https://github.com/eric14304/vibe-pipeline/releases/tag/<VERSION>`
+- release URL:`https://github.com/sugarfun-it/vibe-pipeline/releases/tag/<VERSION>`
 - enduser 取新版:`vbpl update`(CLI)或 PWA Settings →「套用更新」

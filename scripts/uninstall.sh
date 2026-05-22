@@ -1,6 +1,6 @@
 #!/bin/sh
 # vibe-pipeline enduser uninstaller (POSIX: macOS / Linux)
-# Usage: curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.sh | sh
 #
 # Removes versioned install + shim. State / auth / worktrees under
 # ~/.vibe-pipeline/ (other than versions/ current/ bin/) are preserved.

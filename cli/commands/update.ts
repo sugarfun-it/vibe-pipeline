@@ -44,7 +44,7 @@ const USAGE = `vbpl update — fetch + apply latest VP release
 Underlying install script: scripts/install.{ps1,sh} — same script used by README one-liner.
 `;
 
-const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "eric14304/vibe-pipeline";
+const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "sugarfun-it/vibe-pipeline";
 const GITHUB_RAW_INSTALL_PS1 = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/scripts/install.ps1`;
 const GITHUB_RAW_INSTALL_SH = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/scripts/install.sh`;
 

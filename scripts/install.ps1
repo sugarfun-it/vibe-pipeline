@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 # vibe-pipeline enduser installer (Windows PowerShell)
-# Usage: irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.ps1 | iex
 #
 # Optional flag: pass -AutoStart to start backend at end (only safe when invoked
 # from a non-pipe context - e.g. backend /api/system/update). Default off because
@@ -21,7 +21,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Repo        = "eric14304/vibe-pipeline"
+$Repo        = "sugarfun-it/vibe-pipeline"
 $VpHome      = Join-Path $HOME ".vibe-pipeline"
 $VersionsDir = Join-Path $VpHome "versions"
 $Current     = Join-Path $VpHome "current"

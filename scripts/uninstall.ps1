@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 # vibe-pipeline enduser uninstaller (Windows PowerShell)
-# Usage: irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.ps1 | iex
 #
 # Removes versioned install + shim. State / auth / worktrees under
 # ~/.vibe-pipeline/ (other than versions/ current/ bin/) are preserved.

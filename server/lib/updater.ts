@@ -85,9 +85,9 @@ function localScriptPath(): string | null {
 }
 
 const GITHUB_RAW_INSTALL_PS1 =
-  "https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1";
+  "https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.ps1";
 const GITHUB_RAW_INSTALL_SH =
-  "https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh";
+  "https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.sh";
 
 // Fallback:從 GitHub raw 抓 install script 到 temp,回 path 給 spawn 用。
 // 不用 `irm | iex` 因為 iex 不接 args(script 內 param block 永遠拿不到 -AutoStart)。

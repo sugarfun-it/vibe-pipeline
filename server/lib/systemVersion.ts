@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { runCapture } from "./spawn";
 
-const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "eric14304/vibe-pipeline";
+const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "sugarfun-it/vibe-pipeline";
 const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export type LatestRelease = {

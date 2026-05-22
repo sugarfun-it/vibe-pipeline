@@ -13,13 +13,13 @@ Enduser 安裝手冊。README 的 §安裝 (enduser) 是 landing 簡介,本檔�
 **macOS / Linux**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.sh | sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.ps1 | iex
 ```
 
 Script 流程:
@@ -78,10 +78,10 @@ PWA 端 `<SwUpdateBanner>` 偵測新 UI bundle hash → 跳「套用更新」按
 
 ```sh
 # POSIX
-curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.sh | sh
+curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.sh | sh
 
 # Windows
-irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.ps1 | iex
 ```
 
 只移除 `~/.vibe-pipeline/{versions,current,bin}/`;state / auth / worktrees / config 保留。完全清:
@@ -131,7 +131,7 @@ Tarball 白名單見 `scripts/build-tarball.ts`(`WHITELIST` 常數)。新 server
 不必走 install script。直接:
 
 ```bash
-git clone https://github.com/eric14304/vibe-pipeline
+git clone https://github.com/sugarfun-it/vibe-pipeline
 cd vibe-pipeline
 bun install
 bun run start      # production build + backend(同 serve API + dist/ PWA 在 3001)

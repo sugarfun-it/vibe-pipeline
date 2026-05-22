@@ -1,6 +1,6 @@
 #!/bin/sh
 # vibe-pipeline enduser installer (POSIX: macOS / Linux)
-# Usage: curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.sh | sh
 #
 # Layout (Scoop-style versioned + current symlink):
 #   ~/.vibe-pipeline/versions/v0.1.X/   actual version dir
@@ -23,7 +23,7 @@ for arg in "$@"; do
   esac
 done
 
-REPO="eric14304/vibe-pipeline"
+REPO="sugarfun-it/vibe-pipeline"
 VP_HOME="$HOME/.vibe-pipeline"
 VERSIONS_DIR="$VP_HOME/versions"
 CURRENT="$VP_HOME/current"

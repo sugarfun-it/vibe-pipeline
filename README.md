@@ -29,13 +29,13 @@ User 把 repo URL 給你的話,標準流程:
 **macOS / Linux**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.sh | sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
-irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.ps1 | iex
 ```
 
 script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/versions/v0.X.Y/` → 建 `current` junction/symlink → 寫 shim `~/.vibe-pipeline/bin/vbpl[.cmd]` → 問要不要加 PATH → 自動 `vbpl server start`(backend on `http://localhost:3001`)。
@@ -44,12 +44,12 @@ script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/versions/v0.X.
 
 ```sh
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.sh | sh
+curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.sh | sh
 ```
 
 ```powershell
 # Windows
-irm https://raw.githubusercontent.com/eric14304/vibe-pipeline/main/scripts/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.ps1 | iex
 ```
 
 uninstall 只移除 `~/.vibe-pipeline/{versions,current,bin}/`;state / auth / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
