@@ -54,15 +54,7 @@ export type SplitSpawnOpts = {
   effort: string;
 };
 
-// Merge dispatch opts:目前 merge 是把 synthetic ticket append 進 pipeline,
-// 由 runner 主 agent 透過 Task tool 派出 sub-agent 跑 — 不是獨立 spawn。
-// 保留型別以供 future codex 走獨立 spawn 路徑。
-export type MergeSpawnOpts = {
-  kind: "merge";
-  // placeholder — 現階段不直接 spawn,呼叫端走 orchestrator.start 路徑
-};
-
-export type SpawnOpts = QASpawnOpts | RunnerSpawnOpts | SplitSpawnOpts | MergeSpawnOpts;
+export type SpawnOpts = QASpawnOpts | RunnerSpawnOpts | SplitSpawnOpts;
 
 // adapter spawn 結果:stdout/stderr 一律 pipe(ReadableStream),caller 直接 new Response(proc.stdout).text()
 export type SpawnedProcess = Bun.PipedSubprocess;
@@ -70,16 +62,8 @@ export type SpawnedProcess = Bun.PipedSubprocess;
 export type ParseQA = (rawStdout: string) => QAReply;
 export type ParseSplit = (rawStdout: string) => TicketSpec[] | null;
 
-export type CliCapabilities = {
-  supportsSessionResume: boolean;
-  supportsTaskDispatch: boolean;
-  supportsStreamJson: boolean;
-  supportsToolWhitelist: boolean;
-};
-
 export interface CliAdapter {
   readonly name: string;
-  readonly capabilities: CliCapabilities;
 
   // 檢查 CLI 是否在 PATH 可呼叫(--version 試 spawn)
   checkAvailable(): Promise<boolean>;

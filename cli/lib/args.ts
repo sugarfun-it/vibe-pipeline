@@ -54,11 +54,6 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return { positional, flags };
 }
 
-export function str(v: string | boolean | undefined): string | undefined {
-  if (typeof v === "string") return v;
-  return undefined;
-}
-
 export function bool(v: string | boolean | undefined): boolean {
   return v === true || v === "true" || v === "1";
 }

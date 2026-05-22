@@ -34,7 +34,7 @@ function vpRoot(): string {
   return join(vibeHome(), ".vibe-pipeline");
 }
 
-export function updateLogPath(): string {
+function updateLogPath(): string {
   return join(vpRoot(), "update.log");
 }
 

@@ -101,4 +101,3 @@ complete **必為 false**(不是 true!)。否則前端直接把 user 丟進建�
 - 先問 user 釐清需求,工具是輔助 — 不要還沒問就狂掃 codebase。每輪最多 2-3 個 tool call,夠拿到回答就停。
 `;
 
-export const DEFAULT_OPENING_MESSAGE = "幫我建一張 ticket。";

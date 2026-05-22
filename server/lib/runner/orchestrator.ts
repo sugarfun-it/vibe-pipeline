@@ -224,11 +224,6 @@ export function startWatchdog(): void {
   }, WATCHDOG_INTERVAL_MS);
 }
 
-export function stopWatchdog(): void {
-  if (watchdogTimer) clearInterval(watchdogTimer);
-  watchdogTimer = null;
-}
-
 // FIFO queue per project:enqueue 順序 = 排隊順位。dispatcher 從隊頭撈、轉 spawn。
 // 不存 process,只存「下一次 spawn 該帶的 opts」。
 type QueuedItem = {
@@ -872,7 +867,7 @@ async function maybeAutoMerge(opts: {
           const cfg = await loadUserConfig();
           if (!cfg.pushEvents.auto_merge_conflict) return;
           const tokenStore = await import("../push/tokenStore");
-          const { fanoutPush } = await import("../fcm");
+          const { fanoutPush } = await import("../fcm/index");
           const records = await tokenStore.listTokens();
           if (records.length === 0) return;
           const dead = await fanoutPush(

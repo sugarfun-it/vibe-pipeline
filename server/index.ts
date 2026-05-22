@@ -11,7 +11,7 @@ import * as orchestrator from "./lib/runner/orchestrator";
 import * as syncJob from "./lib/runner/syncJob";
 import * as testMode from "./lib/testMode";
 import { authGuard, guardResponse } from "./lib/auth/middleware";
-import { initFCM } from "./lib/fcm";
+import { initFCM } from "./lib/fcm/index";
 
 const PORT = Number(process.env.PORT ?? 3001);
 const ALLOWED_ORIGINS = new Set(

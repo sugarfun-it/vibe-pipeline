@@ -27,13 +27,9 @@
 //   claude --disable-slash-commands    → 無對應(codex exec 本就 non-interactive)
 //   claude --no-session-persistence    → codex --ephemeral
 
-import { mkdtempSync, readFileSync, existsSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { runCapture, spawnStreaming } from "../spawn";
 import type {
   CliAdapter,
-  CliCapabilities,
   QASpawnOpts,
   RunnerSpawnOpts,
   SplitSpawnOpts,
@@ -59,13 +55,6 @@ import type {
 export class CodexAdapter implements CliAdapter {
   readonly name = "codex";
 
-  readonly capabilities: CliCapabilities = {
-    supportsSessionResume: false,
-    supportsTaskDispatch: false,
-    supportsStreamJson: false,
-    supportsToolWhitelist: false,
-  };
-
   async checkAvailable(): Promise<boolean> {
     const r = await runCapture(["codex", "--version"]);
     return r.ok;
@@ -75,7 +64,7 @@ export class CodexAdapter implements CliAdapter {
     if (opts.kind === "qa") return spawnQA(opts);
     if (opts.kind === "runner") return spawnRunner(opts);
     if (opts.kind === "split") return spawnSplit(opts);
-    throw new Error("CodexAdapter: 'merge' task class 不獨立 spawn,呼叫端應走 orchestrator.start");
+    throw new Error(`CodexAdapter: unknown spawn kind ${(opts as { kind?: string }).kind}`);
   }
 
   parseResult(_kind: "qa" | "split" | "runner", stdout: string): string {
@@ -278,21 +267,3 @@ function spawnSplit(opts: SplitSpawnOpts): SpawnedProcess {
   return spawnCodexWithStdinPrompt(args, cwd, prompt);
 }
 
-// last-message tmp file helper(留作 future 用,當前用 JSONL parseResult 不需要)。
-// 保留 export 供 codex feature 演進使用;避免 TS unused 警告就 void 一下。
-export function _makeTmpLastMessage(): string {
-  const dir = mkdtempSync(join(tmpdir(), "vp-codex-"));
-  const f = join(dir, "last.txt");
-  return f;
-}
-export function _readAndCleanTmp(f: string): string {
-  if (!existsSync(f)) return "";
-  const text = readFileSync(f, "utf8");
-  try {
-    rmSync(f, { force: true });
-    rmSync(join(f, ".."), { recursive: true, force: true });
-  } catch {
-    // 忽略清理失敗
-  }
-  return text;
-}

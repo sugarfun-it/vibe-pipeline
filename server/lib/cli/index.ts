@@ -13,8 +13,6 @@ export type {
   QASpawnOpts,
   RunnerSpawnOpts,
   SplitSpawnOpts,
-  MergeSpawnOpts,
-  CliCapabilities,
   SpawnedProcess,
 } from "./adapter";
 export { ClaudeAdapter } from "./claudeAdapter";
