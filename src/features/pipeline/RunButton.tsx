@@ -65,7 +65,7 @@ export function RunButton({
         aria-label="停止 pipeline"
         title={syncActive ? "同步進行中,但 runner 仍可停止" : undefined}
       >
-        <span aria-hidden="true"><StopIcon /></span> 停止
+        <StopIcon aria-hidden="true" /> 停止
       </button>
     );
   }
@@ -86,7 +86,7 @@ export function RunButton({
         aria-label={ariaLabel}
         style={{ color: "var(--queued)", borderColor: "var(--queued)" }}
       >
-        <span aria-hidden="true"><HourglassIcon /></span> {posLabel} · 取消
+        <HourglassIcon aria-hidden="true" /> {posLabel} · 取消
       </button>
     );
   }
@@ -168,7 +168,10 @@ export function RunButton({
         return (
           <button
             type="button"
-            className="btn run-btn-empty"
+            className={
+              "btn run-btn-empty" +
+              (s === "merged" ? " run-btn-empty-merged" : "")
+            }
             aria-disabled="true"
             aria-describedby={helpId}
             title={reason}
@@ -192,7 +195,7 @@ export function RunButton({
           onClick={() => onRun?.(pipeline.id)}
           aria-label={ariaLabel}
         >
-          <span aria-hidden="true"><PlayIcon /></span> {label}
+          <PlayIcon aria-hidden="true" /> {label}
         </button>
       );
     }

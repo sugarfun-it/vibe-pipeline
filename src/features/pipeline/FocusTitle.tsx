@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { PencilIcon } from "../../ui/icons";
+import { CheckIconSm, CloseIcon, PencilIcon } from "../../ui/icons";
 import type { Pipeline } from "../../types/pipeline";
 
 // 可編輯的 pipeline title — 點 ✎ 進編輯模式,Enter 存,Esc 取消。
@@ -26,6 +26,18 @@ export function FocusTitle({
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  // mobile-focus-001 / 004:rename 期間在 <body> 標 data-renaming,讓 board.css
+  // 在窄寬度下隱藏 overflow ⋯ 跟 branch chip 那條 row,避免擠不下 / 重複資訊。
+  useEffect(() => {
+    if (editing) {
+      document.body.setAttribute("data-renaming", "true");
+      return () => {
+        document.body.removeAttribute("data-renaming");
+      };
+    }
+    return undefined;
   }, [editing]);
 
   const trimmed = draft.trim();
@@ -93,7 +105,7 @@ export function FocusTitle({
           </span>
         )}
         <button type="button"
-          className="btn btn-primary"
+          className="btn btn-primary focus-title-edit-confirm"
           onClick={commit}
           disabled={!valid || trimmed === pipeline.name}
           title={
@@ -101,14 +113,14 @@ export function FocusTitle({
               ? "名稱已存在"
               : !formatOk
               ? "只能 a-z / 0-9 / - / _,首字英數"
-              : "存"
+              : "儲存 pipeline 名稱"
           }
-          aria-label="儲存新名稱"
+          aria-label="儲存 pipeline 名稱"
         >
-          <span aria-hidden>↵</span>
+          <CheckIconSm aria-hidden="true" />
         </button>
         <button type="button"
-          className="btn"
+          className="btn focus-title-edit-cancel"
           onClick={() => {
             setEditing(false);
             setDraft(pipeline.name);
@@ -116,7 +128,7 @@ export function FocusTitle({
           title="取消 (Esc)"
           aria-label="取消重新命名"
         >
-          <span aria-hidden>✕</span>
+          <CloseIcon aria-hidden="true" />
         </button>
       </span>
     );

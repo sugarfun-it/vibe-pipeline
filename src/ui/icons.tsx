@@ -178,9 +178,10 @@ export const PencilIcon = (p: IconProps) => (
 // alias
 export const EditIcon = PencilIcon;
 
-// 取代 raw glyph `▶`(play / run)
+// 取代 raw glyph `▶`(play / run)— size 12 對齊 zh-TW 12.5px font 視覺高度,
+// 避免三角形 13px 比 「執行」字高,被 .btn flex 置中後上下凸 1px
 export const PlayIcon = (p: IconProps) => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M7 5v14l12-7L7 5Z" fill="currentColor" />
   </svg>
 );

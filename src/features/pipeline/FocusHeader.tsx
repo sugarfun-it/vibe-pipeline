@@ -125,7 +125,7 @@ export function FocusHeader({
             />{" "}{stateLabel}
           </span>
           <span className="focus-count mono" title={`完成 ${done} / 全部 ${total}`}>
-            {done} / {total} 完成
+            {done}/{total} 完成
           </span>
           {runs.length > 0 && (
             <span

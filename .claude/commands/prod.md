@@ -26,11 +26,25 @@ shim path 自動判平台(Windows = `.cmd`,POSIX = bare):
    sleep 2
    ```
 
-3. **verify**(任一 fail 就排雷):
+3. **同步 Tailscale forwarding**(v0.2.4+ EADDRINUSE fallback 後 backend port 不一定是 3001;
+   每次切 stack 都從 server.json 抓實際 port 重新 `tailscale serve`,免得手機 PWA 撞 stale port):
    ```bash
-   curl -fsS http://localhost:3001/api/health
-   curl -fsS -o /tmp/r.html -w "GET /                status=%{http_code} ct=%{content_type} size=%{size_download}\n" http://localhost:3001/
-   curl -fsS http://localhost:3001/api/system/version
+   if command -v tailscale >/dev/null 2>&1; then
+     PORT=$(python -c "import json,pathlib;print(json.loads(pathlib.Path.home().joinpath('.vibe-pipeline','server.json').read_text())['port'])")
+     echo "tailscale → http://localhost:$PORT"
+     tailscale serve --bg --https=443 "http://localhost:$PORT" 2>&1 | tail -5
+   else
+     echo "(tailscale CLI 沒裝,跳過 forward 同步)"
+   fi
+   ```
+
+4. **verify**(任一 fail 就排雷;port 從 server.json 抓,不寫死 3001):
+   ```bash
+   PORT=$(python -c "import json,pathlib;print(json.loads(pathlib.Path.home().joinpath('.vibe-pipeline','server.json').read_text())['port'])")
+   echo "actual port: $PORT"
+   curl -fsS http://localhost:$PORT/api/health
+   curl -fsS -o /tmp/r.html -w "GET /                status=%{http_code} ct=%{content_type} size=%{size_download}\n" http://localhost:$PORT/
+   curl -fsS http://localhost:$PORT/api/system/version
    python -c "import json,pathlib,sys; from pathlib import PurePath; d=json.loads(pathlib.Path.home().joinpath('.vibe-pipeline','server.json').read_text()); p=PurePath(d['repo_path']).as_posix().lower(); print('repo_path:',d['repo_path']); sys.exit(0 if p.endswith('.vibe-pipeline/current') else 1)"
    ```
 
@@ -38,3 +52,5 @@ shim path 自動判平台(Windows = `.cmd`,POSIX = bare):
 
 - backend pid + `current` version(= enduser 安裝的 release tag)
 - server.json `repo_path` 確認 = `~/.vibe-pipeline/current`
+- backend 實際 port(若非 3001,代表 fallback 啟動)
+- Tailscale serve target(若有跑)= 同 backend port

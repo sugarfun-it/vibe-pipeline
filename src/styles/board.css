@@ -1571,6 +1571,10 @@ html.light .focus-create-empty {
   .focus-head-meta-row {
     gap: 6px !important;
   }
+  /* view ↔ edit 切換用同樣 control-h(32px)按鈕,不再需要強制 44px lock */
+  .focus-head-title-row {
+    align-items: center;
+  }
   .focus-actions {
     gap: 6px;
   }
@@ -1585,13 +1589,44 @@ html.light .focus-create-empty {
   .run-btn-empty-label-full { display: none; }
   .run-btn-empty-label-short { display: inline; }
 
-  /* v2-board-003:mobile tap target 拉到 44px。pencil + focus 區的 overflow ⋯
-     原本套 .btn min-height: 32px,觸控不夠;icon 視覺保持 16px。 */
+  /* v2-board-003:mobile pencil / focus 區的 overflow ⋯ padding 收一點;
+     tap target 走 .btn 的 min-height(canonical control-h),不再強制 44px */
   .focus-title-edit-btn,
   .focus-overflow > .btn {
-    min-width: 44px;
-    min-height: 44px;
     padding-inline: 8px;
+  }
+
+  /* rename confirm / cancel 跟 .btn / ⋯ overflow 同高(--control-h ≈ 32px),icon-only 收 padding。
+     較小尺寸讓 title row 一直容得下 input + ✓ + × + ⋯,不必在 edit mode 隱藏 overflow,
+     view ↔ edit 切換也不會造成行高跳動。 */
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
+    padding: 0;
+    border-radius: var(--radius-control, 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
+  }
+
+  /* mobile-focus-006:merged pipeline 的 disabled 「無可執行」button 在 mobile 隱藏 —
+     主動作只剩「+ 新增 ticket」,不要再讓 disabled 跟它競爭視覺權重 */
+  .run-btn-empty.run-btn-empty-merged {
+    display: none !important;
+  }
+
+  /* mobile-focus-004:ReadyBanner merged 變體在 mobile 把 branch desc(branch → base · N commit)
+     截成單行 ellipsis,避免長 branch name 換行撐高 banner */
+  .banner.banner-merged .banner-desc {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .banner.banner-merged .banner-body {
+    min-width: 0;
   }
 
   /* v2-board-002:ReadyBanner merged 變體在 mobile 壓緊,別搶過已完成的 ticket。 */

@@ -4,8 +4,12 @@ import "./qa.css";
 import type { Draft, TicketSpec } from "../../api/qa";
 import { ArrowRightIcon, CheckIconSm } from "../../ui/icons";
 
-const FIRST_AI_MESSAGE = "描述要做什麼、完成標準、限制條件\n我會整理成可送出的需求單規格";
-const FIRST_AI_OPTIONS = ["幫我盤點可建立的需求單"];
+const FIRST_AI_MESSAGE = "描述需求、完成標準與限制條件，我會整理成 ticket 規格。";
+const FIRST_AI_OPTIONS = [
+  "建立功能需求",
+  "整理 bug ticket",
+  "盤點可建立的需求單",
+];
 
 export function QADrawer({
   pipelineName,
@@ -161,27 +165,18 @@ export function QADrawer({
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <div className="drawer-head">
-          <div className="drawer-crumb">
-            <span className="mono">{pipelineName}</span>
-            <span className="sep">/</span>
-            <span>新需求單</span>
-            <span className="drawer-crumb-spacer" />
-            <span
-              className="mono"
-              style={{
-                fontSize: 11,
-                opacity: 0.6,
-                marginRight: 8,
-                whiteSpace: "nowrap",
-              }}
-              aria-hidden="true"
-            >
-              {hasAnyTurn ? "關閉保留草稿" : "關閉取消空白草稿"}
+        <div className="drawer-head qadr-head">
+          <div className="drawer-crumb qadr-crumb">
+            <span className="qadr-crumb-text">
+              <span className="mono qadr-crumb-project" title={pipelineName}>
+                {pipelineName}
+              </span>
+              <span className="sep qadr-crumb-current-sep">/</span>
+              <span className="qadr-crumb-current">新需求單</span>
             </span>
             <button type="button"
               ref={closeBtnRef}
-              className="create-x"
+              className="drawer-close create-x"
               onClick={requestClose}
               title={hasAnyTurn ? "關閉並保留草稿（下次可接續）" : "關閉並取消空白草稿"}
               aria-label={hasAnyTurn ? "關閉並保留草稿" : "關閉並取消空白草稿"}
@@ -301,12 +296,12 @@ export function QADrawer({
                   <>
                     <Bubble kind="ai" message={FIRST_AI_MESSAGE} />
                     {emptyTurns && (
-                      <div className="qadr-bubble-quickreply" aria-label="建議的開場回覆">
+                      <div className="qadr-suggestions" aria-label="建議的開場回覆">
                         {FIRST_AI_OPTIONS.map((o) => (
                           <button
                             type="button"
                             key={o}
-                            className="btn btn-accent qadr-option qadr-quickreply-btn"
+                            className="vp-chip vp-chip--action qadr-suggestion"
                             onClick={() => onSendTurn(o)}
                             disabled={busy}
                           >
@@ -665,18 +660,20 @@ function Composer({
           </svg>
         </button>
       </div>
-      <div className="qadr-composer-hint mono">
-        Enter 送出 · Shift+Enter 換行
+      <div className="qadr-composer-footer">
+        <button
+          className="qadr-cancel-link"
+          onClick={onCancel}
+          disabled={busy}
+          type="button"
+          title="放棄當前草稿，本次對話不會保留"
+        >
+          取消草稿
+        </button>
+        <div className="qadr-composer-hint mono" aria-hidden="true">
+          Enter 送出 · Shift+Enter 換行
+        </div>
       </div>
-      <button
-        className="qadr-cancel-link"
-        onClick={onCancel}
-        disabled={busy}
-        type="button"
-        title="放棄當前草稿，本次對話不會保留"
-      >
-        取消草稿
-      </button>
     </div>
   );
 }
