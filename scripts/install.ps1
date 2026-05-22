@@ -340,9 +340,12 @@ Info "OK current -> $VersionDir"
 # Self-cleanup: PWA-triggered update via backend creates a "VibePipelineUpdate" Task Scheduler
 # task to escape Bun job-object KILL_ON_CLOSE on Windows (see server/lib/updater.ts).
 # Delete it after install completes. Failures are ignored (manual installs skip schtasks).
+# Manual install 走這條時 task 不存在,schtasks 會 exit 1 + 寫 stderr 但 *>$null 不清 $LASTEXITCODE,
+# 之後 caller 看 $LASTEXITCODE=1 會誤判 install 失敗 — 手動 reset。
 try {
   schtasks /delete /tn "VibePipelineUpdate" /f *> $null
 } catch { }
+$global:LASTEXITCODE = 0
 
 Info ""
 Info "Done. Run 'vbpl server start' to launch backend, then 'vbpl --help'."

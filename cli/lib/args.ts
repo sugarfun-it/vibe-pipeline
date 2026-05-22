@@ -36,7 +36,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
       } else {
         const key = a.slice(2);
         const next = argv[i + 1];
-        if (next !== undefined && !next.startsWith("-")) {
+        // bare "-" 是 Unix stdin 慣例,允許當 value(--prompt-file -);其餘以 "-" 開頭視為下個 flag
+        if (next !== undefined && (next === "-" || !next.startsWith("-"))) {
           flags[key] = next;
           i += 2;
         } else {

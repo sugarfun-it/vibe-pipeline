@@ -8,11 +8,18 @@ const TICKET_USAGE = `vbpl ticket — manage tickets within a pipeline
 
   vbpl ticket list   --pipeline <id>
   vbpl ticket show   --pipeline <id> --ticket <n|id>
-  vbpl ticket add    --pipeline <id> --title <t> --goal ... --prompt ... --acceptance "a;b" [--mode step|iter] [--iter-limit <n>]
-  vbpl ticket update --pipeline <id> --ticket <n|id> [--title ...] [--goal ...] [--prompt ...] [--acceptance "a;b"] [--mode step|iter] [--status ...] [--iter-limit <n>]
+  vbpl ticket add    --pipeline <id> --title <t> --goal <g> --prompt <p> --acceptance <a> [--mode step|iter] [--iter-limit <n>]
+  vbpl ticket update --pipeline <id> --ticket <n|id> [--title ...] [--goal ...] [--prompt ...] [--acceptance ...] [--mode step|iter] [--status ...] [--iter-limit <n>]
   vbpl ticket remove --pipeline <id> --ticket <n|id>
 
-  --pipeline / --ticket also accept first / second positional arg.`;
+  --pipeline / --ticket also accept first / second positional arg.
+
+  Long / multi-line fields (Windows cmd shim mangles newlines in args):
+    --goal-file <path>        從檔讀;值為 "-" 走 stdin
+    --prompt-file <path>      從檔讀;值為 "-" 走 stdin
+    --acceptance-file <path>  從檔讀;值為 "-" 走 stdin
+  --acceptance items: 用 ; 或換行分隔;單條免分隔。
+  注意:同一條指令只能有一個 *-file 用 "-" 讀 stdin(stream 只能消費一次)。`;
 
 export async function runTicket(sub: string | undefined, args: ParsedArgs): Promise<void> {
   if (sub === "help" || args.flags["help"] === true) {
@@ -28,6 +35,35 @@ export async function runTicket(sub: string | undefined, args: ParsedArgs): Prom
     default:
       fail("INVALID_ARGS", `Unknown ticket subcommand: ${sub ?? "(none)"}. Use list|show|add|update|remove (or 'vbpl ticket help')`);
   }
+}
+
+// 讀 multi-line 文字 arg:優先 --<name>-file(path 或 "-"=stdin),fallback --<name> inline。
+// stdinClaim 共享計數,保證一條指令只一個 *-file 吃 stdin(stream 只能消費一次)。
+async function readTextArg(
+  args: ParsedArgs,
+  name: string,
+  stdinClaim: { v: boolean },
+): Promise<string | undefined> {
+  const fileFlag = args.flags[`${name}-file`];
+  if (typeof fileFlag === "string" && fileFlag.length > 0) {
+    if (fileFlag === "-") {
+      if (stdinClaim.v) fail("INVALID_ARGS", `--${name}-file: 同指令已有別的 *-file 占用 stdin,只能擇一`);
+      stdinClaim.v = true;
+      return await Bun.stdin.text();
+    }
+    try {
+      return await Bun.file(fileFlag).text();
+    } catch (e) {
+      fail("IO_ERROR", `--${name}-file: 讀檔失敗 ${fileFlag}: ${(e as Error).message}`);
+    }
+  }
+  const inline = args.flags[name];
+  return typeof inline === "string" ? inline : undefined;
+}
+
+// acceptance 拆 N 條:支援 ; 或換行(file 模式常見一行一條)+ trim + 過濾空字串
+function splitAcceptance(raw: string): string[] {
+  return raw.split(/[;\r\n]+/).map((s) => s.trim()).filter(Boolean);
 }
 
 function getPipelineId(args: ParsedArgs): string {
@@ -108,17 +144,19 @@ async function ticketAdd(args: ParsedArgs): Promise<void> {
   const pipelineId = typeof args.flags["pipeline"] === "string" ? args.flags["pipeline"] : args.positional[0];
   if (!pipelineId) fail("INVALID_ARGS", "Usage: vbpl ticket add --pipeline <id> --title <title> --goal <goal> --prompt <prompt> --acceptance \"a;b\" [--mode step|iter]");
 
-  const title = typeof args.flags["title"] === "string" ? args.flags["title"] : undefined;
+  const stdinClaim = { v: false };
+  const title = (await readTextArg(args, "title", stdinClaim))?.trim();
   if (!title) fail("INVALID_ARGS", "--title is required");
 
-  const goal = typeof args.flags["goal"] === "string" ? args.flags["goal"] : "";
-  if (!goal.trim()) fail("INVALID_ARGS", "--goal is required (一句話描述這 ticket 做什麼;runner 不用但給人 review)");
+  const goal = ((await readTextArg(args, "goal", stdinClaim)) ?? "").trim();
+  if (!goal) fail("INVALID_ARGS", "--goal is required (一句話描述這 ticket 做什麼;runner 不用但給人 review)。多行可用 --goal-file <path> 或 --goal-file -");
 
-  const prompt = typeof args.flags["prompt"] === "string" ? args.flags["prompt"] : "";
-  if (!prompt.trim()) fail("INVALID_ARGS", "--prompt is required (給 executor 的完整任務指示)");
+  const prompt = ((await readTextArg(args, "prompt", stdinClaim)) ?? "").trim();
+  if (!prompt) fail("INVALID_ARGS", "--prompt is required (給 executor 的完整任務指示)。多行可用 --prompt-file <path> 或 --prompt-file -");
 
-  const acceptance = typeof args.flags["acceptance"] === "string" ? args.flags["acceptance"].split(";").map((s) => s.trim()).filter(Boolean) : [];
-  if (acceptance.length === 0) fail("INVALID_ARGS", "--acceptance is required (用分號分隔 N 條驗收標準;critic 拿來判 PASS/FAIL)");
+  const acceptanceRaw = await readTextArg(args, "acceptance", stdinClaim);
+  const acceptance = acceptanceRaw ? splitAcceptance(acceptanceRaw) : [];
+  if (acceptance.length === 0) fail("INVALID_ARGS", "--acceptance is required (critic 拿來判 PASS/FAIL)。單條免分隔,多條用 ; 或換行分隔;或用 --acceptance-file <path>");
   const rawMode = typeof args.flags["mode"] === "string" ? args.flags["mode"] : "step";
   const mode: TicketMode = (rawMode === "iter" ? "iter" : "step");
   const iterLimit = typeof args.flags["iter-limit"] === "string" ? Number(args.flags["iter-limit"]) : undefined;
@@ -173,11 +211,16 @@ async function ticketUpdate(args: ParsedArgs): Promise<void> {
   const orig = tickets[idx];
   const updated: Ticket = { ...orig };
 
-  if (typeof args.flags["title"] === "string") updated.title = args.flags["title"];
-  if (typeof args.flags["goal"] === "string") updated.goal = args.flags["goal"];
-  if (typeof args.flags["prompt"] === "string") updated.prompt = args.flags["prompt"];
-  if (typeof args.flags["acceptance"] === "string") {
-    updated.acceptance = args.flags["acceptance"].split(";").map((s) => s.trim()).filter(Boolean);
+  const stdinClaim = { v: false };
+  const newTitle = await readTextArg(args, "title", stdinClaim);
+  if (newTitle !== undefined) updated.title = newTitle;
+  const newGoal = await readTextArg(args, "goal", stdinClaim);
+  if (newGoal !== undefined) updated.goal = newGoal;
+  const newPrompt = await readTextArg(args, "prompt", stdinClaim);
+  if (newPrompt !== undefined) updated.prompt = newPrompt;
+  const newAcceptance = await readTextArg(args, "acceptance", stdinClaim);
+  if (newAcceptance !== undefined) {
+    updated.acceptance = splitAcceptance(newAcceptance);
   }
   if (typeof args.flags["mode"] === "string") {
     const m = args.flags["mode"];

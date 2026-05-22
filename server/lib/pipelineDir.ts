@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   existsSync,
   mkdirSync,
@@ -91,9 +91,11 @@ export async function readConfig(projectPath: string): Promise<ProjectConfig> {
 }
 
 export async function writeConfig(projectPath: string, cfg: ProjectConfig): Promise<void> {
-  const root = rootPath(projectPath);
-  if (!existsSync(root)) mkdirSync(root, { recursive: true });
-  await atomicWriteJson(join(root, "config.json"), cfg);
+  // 不只 mkdir root — 走 init() 一次補齊 pipelines/、.runtime/、gitignore、worktreeinclude。
+  // 否則 PWA 改 config 會留下「只有 root + config.json,沒 pipelines/」的半 init 狀態,
+  // 隨後 pipeline create 撞 ENOENT (.vibe-pipeline/pipelines/)。init 全 idempotent。
+  await init(projectPath);
+  await atomicWriteJson(join(rootPath(projectPath), "config.json"), cfg);
 }
 
 // max_parallel:讀 config + clamp [1,8],壞值 / 缺值 → DEFAULT_MAX_PARALLEL
@@ -252,7 +254,11 @@ export async function writePipeline(
       prevState = undefined;
     }
   }
-  await atomicWriteJson(pipelineFile(projectPath, id), data);
+  const file = pipelineFile(projectPath, id);
+  // defensive: 若 caller 跳過 init / writeConfig 走野生路徑(理論上不該,但歷史踩過),
+  // 確保 pipelines/ 存在再寫,避免 writeFile ENOENT。
+  mkdirSync(dirname(file), { recursive: true });
+  await atomicWriteJson(file, data);
   const nextStateRaw = (data as { state?: unknown } | null)?.state;
   const nextState = typeof nextStateRaw === "string" ? nextStateRaw : undefined;
   if (prevState !== nextState && (prevState !== undefined || nextState !== undefined)) {

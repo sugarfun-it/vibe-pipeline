@@ -105,6 +105,13 @@ async function projectAdd(args: ParsedArgs): Promise<void> {
     return;
   }
   print(`Added project: ${proj.name} (${proj.hash})`);
+  // add 只寫 state.json,不 init — 對 fresh repo 提示下一步,避免 user 以為 add 完就能 create pipeline
+  if (!proj.hasInit) {
+    print("");
+    print("  ⚠ 此 project 尚未 init (.vibe-pipeline/ 不存在)");
+    print(`  下一步: vbpl project init --project-path "${proj.path}"`);
+    print("  或 cd 進去後跑: vbpl project init --here");
+  }
 }
 
 async function projectInit(args: ParsedArgs): Promise<void> {
