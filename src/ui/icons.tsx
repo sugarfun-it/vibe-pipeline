@@ -156,14 +156,15 @@ export const DotsHorizontalIcon = (p: IconProps) => (
 // alias used by codex spec
 export const MoreHorizontalIcon = DotsHorizontalIcon;
 
-// 取代 raw glyph `⎇`(branch / worktree)
+// 取代 raw glyph `⎇`(branch / worktree)— Lucide `git-branch` 官方路徑:
+// 主幹上端線(無 dot)、右上分支點、左下主 commit 點、分支弧線回主幹。
+// 比 3-dot 版視覺更乾淨,12×12 對齊 CJK 高度。
 export const BranchIcon = (p: IconProps) => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <circle cx="6" cy="5" r="2" />
-    <circle cx="6" cy="19" r="2" />
-    <circle cx="18" cy="7" r="2" />
-    <path d="M6 7v10" />
-    <path d="M18 9c0 4-6 4-6 8" />
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <line x1="6" y1="3" x2="6" y2="15" />
+    <circle cx="18" cy="6" r="3" />
+    <circle cx="6" cy="18" r="3" />
+    <path d="M18 9a9 9 0 0 1-9 9" />
   </svg>
 );
 

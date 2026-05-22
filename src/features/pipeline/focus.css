@@ -176,9 +176,6 @@
 
 /* ─── Misc 小元素 ──────────────────────────────────────────── */
 
-.focus-branch-icon {
-  color: var(--fg-mute);
-}
 
 .focus-runs-chip {
   /* 已存在 board.css;這邊保 inline 補的 fontSize:11 + color:fg-mute */

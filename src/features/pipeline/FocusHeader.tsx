@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BranchIcon, PlusIcon } from "../../ui/icons";
+import { PlusIcon } from "../../ui/icons";
 import { PipelineHistoryDrawer } from "./PipelineHistoryDrawer";
 import { FocusTitle } from "./FocusTitle";
 import { OverflowMenu } from "./OverflowMenu";
@@ -135,14 +135,7 @@ export function FocusHeader({
               {runs.length} 次執行 · ${totalCost.toFixed(2)}
             </span>
           )}
-          <span
-            className="chip mono focus-branch-chip"
-            title={`git branch: ${pipeline.branch}`}
-            aria-label={`git branch ${pipeline.branch}`}
-          >
-            <span aria-hidden className="focus-branch-icon"><BranchIcon /></span> {pipeline.branch}
-          </span>
-          {diffStat && (diffStat.files > 0 || diffStat.added > 0 || diffStat.deleted > 0) && projectHash && (
+{diffStat && (diffStat.files > 0 || diffStat.added > 0 || diffStat.deleted > 0) && projectHash && (
             <FocusDiffChip
               pipeline={pipeline}
               projectHash={projectHash}

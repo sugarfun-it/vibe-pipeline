@@ -1578,14 +1578,7 @@ html.light .focus-create-empty {
   .focus-actions {
     gap: 6px;
   }
-  /* mobile:branch chip 弱化為 secondary text(去 chip 殼)*/
-  .focus-branch-chip {
-    background: transparent;
-    border: 0;
-    padding-inline: 0;
-    color: var(--fg-mute);
-  }
-  /* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
+/* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
   .run-btn-empty-label-full { display: none; }
   .run-btn-empty-label-short { display: inline; }
 
