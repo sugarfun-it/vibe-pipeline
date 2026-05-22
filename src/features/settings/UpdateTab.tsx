@@ -167,7 +167,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
                 onClick={() => void onApply()}
                 disabled={isUpdating}
               >
-                {isUpdating ? "更新中…" : "套用更新"}
+                {isUpdating ? "更新中…" : "立即更新"}
               </button>
             )}
           </div>
