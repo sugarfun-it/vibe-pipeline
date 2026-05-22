@@ -91,7 +91,7 @@ export function QADrawer({
     const affected: HTMLElement[] = [];
     let node: HTMLElement | null = stage;
     while (node && node.parentElement && node !== document.body) {
-      const parent = node.parentElement;
+      const parent: HTMLElement = node.parentElement;
       Array.from(parent.children).forEach((sib) => {
         const el = sib as HTMLElement;
         if (el === node) return;
