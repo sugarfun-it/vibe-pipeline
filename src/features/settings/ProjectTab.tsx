@@ -348,7 +348,10 @@ export function ProjectTab({
             {fieldErrors.cost_limit_usd}
           </div>
         ) : (
-          <div className="settings-subhint">每條 pipeline 個別累積上限，超過時只擋該 pipeline 的下次 /run，不影響其他 pipeline。</div>
+          <>
+            <div className="settings-subhint settings-subhint-desktop">每條 pipeline 個別累積上限，超過時只擋該 pipeline 的下次 /run，不影響其他 pipeline。</div>
+            <div className="settings-subhint settings-subhint-mobile">超過上限時，只擋該 pipeline 的下次 /run。</div>
+          </>
         )}
 
         <div className="settings-field-row settings-field-row--tight">

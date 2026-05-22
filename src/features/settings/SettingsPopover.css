@@ -133,6 +133,10 @@
   margin-bottom: 10px;
 }
 
+/* 同一條 hint 提供桌面 / 手機兩種長度;靠 media query 切顯示。
+   桌面預設顯示長版,手機 @media block 內反轉。 */
+.settings-subhint-mobile { display: none; }
+
 .settings-subhint--error {
   color: var(--failed);
 }
@@ -603,6 +607,73 @@
     background: var(--hover);
     color: var(--fg);
     outline: none;
+  }
+
+  /* ─── Project tab field rows — mobile single-column ──────────────
+     sp-project-mobile-001/002/004/005/007:
+     桌面 2-col grid 在 <400px 會壓死 label / unit / toggle。改 mobile 全 row stack,
+     label 全寬在上,control 全寬在下,hint 接在 control 下方並對齊左邊 (margin-left:0)。 */
+  .settings-field-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2, 6px);
+    margin-bottom: var(--space-2, 6px);
+  }
+
+  .settings-field-label {
+    margin-bottom: 0;
+    font-size: 13px;
+  }
+
+  .settings-field-controls {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .settings-field-controls > .settings-input,
+  .settings-field-controls > .picker-select {
+    /* tap-friendly 高度 — 不動桌面 --control-h */
+    min-height: 40px;
+  }
+
+  .settings-input--w-narrow,
+  .settings-input--w-mid {
+    /* 數字 input 限制在合理寬度,不被 flex 撐到全 row;但保留 min-height 大 */
+    width: 96px;
+    min-width: 0;
+  }
+
+  .settings-inline-unit {
+    /* 單位 / 解釋 text 換下一行貼齊 input 左,不再 inline 壓寬度 */
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .settings-subhint {
+    margin-left: 0;
+    margin-top: var(--space-2, 6px);
+    margin-bottom: var(--space-3, 10px);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  /* sp-project-mobile-006:hint 桌面 / 手機切兩版,手機顯示精簡版 */
+  .settings-subhint-desktop { display: none; }
+  .settings-subhint-mobile { display: block; }
+
+  /* sp-project-mobile-002:auto-merge toggle 在 mobile 改成全寬 row,
+     pill 內 label 文字允許換行,pill 自身不再被 1fr column 強壓寬度 */
+  .settings-field-row--tight .toggle-pill {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+    padding: 8px 12px;
   }
 
 }
