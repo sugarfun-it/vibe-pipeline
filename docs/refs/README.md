@@ -9,13 +9,13 @@
 | 檔 | 用途 |
 |---|---|
 | [`repo-structure.md`](repo-structure.md) | Repo 物理檔案 / 目錄結構 single source of truth |
-| [`enduser-install-update-design.md`](enduser-install-update-design.md) | enduser tarball install + Settings 一鍵 update 設計(install.sh/ps1 + updater.ts) |
 
 ## Postmortem / 引用中
 
 | 檔 | 用途 |
 |---|---|
 | [`pause-simplify-run-postmortem-2026-05-17.md`](pause-simplify-run-postmortem-2026-05-17.md) | pause 簡化的 8 bug postmortem(已全 ship,TODO 已落地段引用) |
+| [`enduser-install-update-design.md`](enduser-install-update-design.md) | enduser tarball install + update 設計(v3 tarball-direct,已被 2026-05-21 v4 install-script-only 取代;檔頂有 obsolete banner,保留作 CHANGELOG 引用對象) |
 
 ## Archive
 

@@ -150,7 +150,7 @@ Module 分工:
 
 - **`scripts/install.ps1` / `install.sh`** Single source of truth:install + update 同一 script。Windows ASCII-only(PS 5.1 ANSI 雷)。Layout:`~/.vibe-pipeline/{versions/v<tag>/, current, bin/vbpl[.cmd]}`。`KeepVersions` 控制保留舊版數。
 - **`cli/commands/update.ts`**(`vbpl update`):thin wrapper,直接 spawn install script(local `scripts/install.{ps1,sh}` 優先 → fallback GitHub raw)。`--check` 只查不裝;`--json` 印 structured。
-- **`server/routes/system.ts:version`**:只回 `/api/system/version`(current / latest / hasUpdate)。**`/api/system/update` 已拔**,後端不再 orchestrate update。
+- **`server/routes/system.ts`**:`version` 回 `/api/system/version`(current / latest / hasUpdate);`update` 是 v0.2.4 加回的 PWA UX 入口(`/api/system/update`)— **邏輯極簡**:`preflightCheck` → `spawnInstallScript` detached + `-AutoStart` → response 200 → 500ms 後 `process.exit` → install script 接手(stop → download → swap → start 新 backend)。後端不做 download / extract / swap,純 spawn。CLI(`vbpl update`)走 install script 不走本 endpoint(避 bash 端 stdio chain bug)。
 - **`server/lib/systemVersion.ts`**:`getCurrentVersion()` 優先序 `BUILD_VERSION > cwd/package.json(installed mode = 沒 .git/)> git describe(dev clone)> "dev-unknown"`。
 
 Windows tar 必走 `%WINDIR%\System32\tar.exe`(install.ps1 內)避 git-for-Windows MSYS bsdtar 把 `C:\path` mangle 成 `C\:\\path`。
