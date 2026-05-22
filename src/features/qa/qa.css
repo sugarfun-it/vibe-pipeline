@@ -473,3 +473,45 @@
     gap: 8px !important;
   }
 }
+
+/* split-proposal block(QADrawer 內 AI 拆分提案區)。原本散在 src/styles/qa.css,
+ * 但該檔早就沒被任何地方 import → 規則從沒生效。合進本檔讓 split-proposal 真有樣式。 */
+.qadr-split-proposal {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.qadr-split-title {
+  font-size: 12.5px;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+.qadr-split-list {
+  list-style: none;
+  margin: 0 0 10px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.qadr-split-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.qadr-split-num {
+  color: var(--fg-mute);
+  font-size: 11px;
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.qadr-split-toggle {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+.qadr-iter-limit-input { width: 5rem; }
