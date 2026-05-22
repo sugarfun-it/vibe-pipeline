@@ -150,47 +150,13 @@ async function projectRemove(args: ParsedArgs): Promise<void> {
   }
   if (!proj) fail("NO_PROJECT", `No project found for: ${hashOrPath}`);
 
-  // Remove from state.json by re-writing without this entry
-  // projectStore doesn't expose a remove function, so we do it via the internal state
-  // We need to call a remove-compatible path — open a shim via direct state manipulation
-  // Since projectStore doesn't export remove, we implement inline via its exported functions.
-  // We'll use a workaround: the state file is at vibeHome()/.vibe-pipeline/state.json
-  // Rather than re-implementing, we expose removal via a helper below.
-  await removeProject(proj!.path);
+  // 走 projectStore.removeRecent SSOT(atomicWriteJson + lastProject 清為 null,
+  // 不像舊 inline 版自作主張 fallback 到 recentProjects[0])
+  await projectStore.removeRecent(proj!.hash);
 
   if (isJsonMode()) {
     okJson({ removed: true, hash: proj!.hash, path: proj!.path });
     return;
   }
   print(`Removed project: ${proj!.name} (${proj!.hash})`);
-}
-
-// Inline project removal — rewrite state.json without the given path.
-async function removeProject(projectPath: string): Promise<void> {
-  const { join } = await import("node:path");
-  const { existsSync, mkdirSync } = await import("node:fs");
-  const { vibeHome } = await import("../../server/lib/paths");
-
-  const home = vibeHome();
-  const dir = join(home, ".vibe-pipeline");
-  const file = join(dir, "state.json");
-
-  type State = { lastProject: string | null; recentProjects: Array<{ path: string; lastOpenedAt: number }> };
-  let state: State = { lastProject: null, recentProjects: [] };
-  if (existsSync(file)) {
-    try {
-      state = JSON.parse(await Bun.file(file).text());
-    } catch { /* ignore */ }
-  }
-
-  state.recentProjects = (state.recentProjects ?? []).filter((r) => r.path !== projectPath);
-  if (state.lastProject === projectPath) {
-    state.lastProject = state.recentProjects[0]?.path ?? null;
-  }
-
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const tmp = file + ".tmp";
-  await Bun.write(tmp, JSON.stringify(state, null, 2));
-  const { renameSync } = await import("node:fs");
-  renameSync(tmp, file);
 }

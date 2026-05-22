@@ -93,7 +93,7 @@ export async function readConfig(projectPath: string): Promise<ProjectConfig> {
 export async function writeConfig(projectPath: string, cfg: ProjectConfig): Promise<void> {
   const root = rootPath(projectPath);
   if (!existsSync(root)) mkdirSync(root, { recursive: true });
-  await writeJson(join(root, "config.json"), cfg);
+  await atomicWriteJson(join(root, "config.json"), cfg);
 }
 
 // max_parallel:讀 config + clamp [1,8],壞值 / 缺值 → DEFAULT_MAX_PARALLEL
@@ -137,12 +137,6 @@ export async function getResolvedDefaults(projectPath: string): Promise<Resolved
   };
 }
 
-// Atomic write 走 server/lib/atomicWrite.ts:tmp → rename(Windows retry)→ 失敗清 tmp,
-// 中途任何失敗(序列化炸 / 磁碟滿 / parse 不過)→ 原檔不動。
-async function writeJson(path: string, data: unknown): Promise<void> {
-  await atomicWriteJson(path, data);
-}
-
 // idempotent:`.vibe-pipeline/` 已存在但內容缺(早期 partial init 失敗留的殘骸)→ 補齊;
 // 全齊 → 也視為成功(no-op),不再 throw 'already_initialized'。
 // 只在 path 存在但不是 dir(被檔案佔住等)時 throw
@@ -157,7 +151,7 @@ export async function init(projectPath: string): Promise<void> {
 
   const cfg = join(root, "config.json");
   if (!existsSync(cfg)) {
-    await writeJson(cfg, DEFAULT_CONFIG);
+    await atomicWriteJson(cfg, DEFAULT_CONFIG);
   }
   for (const entry of GITIGNORE_ENTRIES) {
     await ensureGitignoreEntry(projectPath, entry);
@@ -258,7 +252,7 @@ export async function writePipeline(
       prevState = undefined;
     }
   }
-  await writeJson(pipelineFile(projectPath, id), data);
+  await atomicWriteJson(pipelineFile(projectPath, id), data);
   const nextStateRaw = (data as { state?: unknown } | null)?.state;
   const nextState = typeof nextStateRaw === "string" ? nextStateRaw : undefined;
   if (prevState !== nextState && (prevState !== undefined || nextState !== undefined)) {

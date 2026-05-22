@@ -1,6 +1,6 @@
 import { err, readJson } from "./_http";
 import * as tokenStore from "../lib/push/tokenStore";
-import { fanoutPush, isFCMReady } from "../lib/fcm";
+import { fanoutPush, isFCMReady } from "../lib/fcm/index";
 
 function readToken(body: Record<string, unknown>): string | null {
   const token = body.token;

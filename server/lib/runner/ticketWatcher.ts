@@ -5,7 +5,7 @@
 import { watch, type FSWatcher } from "node:fs";
 import * as pipelineDir from "../pipelineDir";
 import * as notifs from "../notifs/store";
-import { fanoutPush } from "../fcm";
+import { fanoutPush } from "../fcm/index";
 import * as tokenStore from "../push/tokenStore";
 import * as testMode from "../testMode";
 import { loadUserConfig } from "../userConfig";

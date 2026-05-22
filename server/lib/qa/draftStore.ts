@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { ensureRuntime } from "../pipelineDir";
-import { writeJson } from "../jsonFile";
+import { atomicWriteJson } from "../atomicWrite";
 import type { QAReply, Draft, PartialSpec } from "../../../shared/types";
 
 // 高水位 merge:新值有實質內容才覆蓋,否則保留 prev。
@@ -96,7 +96,7 @@ export async function createDraft(
     spec: null,
     pipelineContext,
   };
-  await writeJson(file(projectPath, draftId), draft);
+  await atomicWriteJson(file(projectPath, draftId), draft);
   return draft;
 }
 
@@ -112,7 +112,7 @@ export async function appendUserMessage(
   const now = Date.now();
   d.turns.push({ role: "user", message: userMessage, ts: now });
   d.updatedAt = now;
-  await writeJson(file(projectPath, draftId), d);
+  await atomicWriteJson(file(projectPath, draftId), d);
   return d;
 }
 
@@ -151,7 +151,7 @@ export async function appendTurn(
     d.splitInto = reply.splitInto;
   }
   d.updatedAt = now;
-  await writeJson(file(projectPath, draftId), d);
+  await atomicWriteJson(file(projectPath, draftId), d);
   return d;
 }
 
@@ -160,7 +160,7 @@ export async function markStarted(projectPath: string, draftId: string): Promise
   if (!d) return;
   d.sessionStarted = true;
   d.updatedAt = Date.now();
-  await writeJson(file(projectPath, draftId), d);
+  await atomicWriteJson(file(projectPath, draftId), d);
 }
 
 export async function deleteDraft(projectPath: string, draftId: string): Promise<void> {

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import * as projectStore from "../lib/projectStore";
 import * as testMode from "../lib/testMode";
 import { readAuth, writeAuth } from "../lib/auth/storage";
-import { fakeFcmCalls, resetFakeFcmCalls } from "../lib/fcm";
+import { fakeFcmCalls, resetFakeFcmCalls } from "../lib/fcm/index";
 import { vibeHome } from "../lib/paths";
 import type { QAReply } from "../lib/qa/schema";
 import type { RunnerScript } from "../lib/testMode";

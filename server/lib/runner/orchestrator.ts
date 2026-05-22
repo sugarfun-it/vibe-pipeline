@@ -867,7 +867,7 @@ async function maybeAutoMerge(opts: {
           const cfg = await loadUserConfig();
           if (!cfg.pushEvents.auto_merge_conflict) return;
           const tokenStore = await import("../push/tokenStore");
-          const { fanoutPush } = await import("../fcm");
+          const { fanoutPush } = await import("../fcm/index");
           const records = await tokenStore.listTokens();
           if (records.length === 0) return;
           const dead = await fanoutPush(
