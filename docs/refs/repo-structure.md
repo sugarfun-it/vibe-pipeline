@@ -159,10 +159,10 @@ vibe-pipeline/
 
 舊 `device_tokens.json` 已不寫(2026-05-19 push gateway 接管,device token 全在 gateway Firestore)。
 
-<target-repo>/.vibe-pipeline/  每個 user target repo 內,由 init 建
-├── config.json                (git tracked) project-level 設定
-├── pipelines/*.json           (gitignored) 一檔一條,內含 tickets 陣列
-└── .runtime/                  (gitignored)
+<target-repo>/.vibe-pipeline/  每個 user target repo 內,由 init 建(整 dir gitignored)
+├── config.json                project-local 設定(不隨 repo 共享,team 各自 init)
+├── pipelines/*.json           一檔一條,內含 tickets 陣列
+└── .runtime/
     ├── qa-drafts/<id>.json    QA 對話 draft (含 session_id)
     ├── notifs.jsonl           backend emit 事件流(append-only)
     └── logs/<pipelineId>-<ts>.log  runner 主 agent stdout/stderr

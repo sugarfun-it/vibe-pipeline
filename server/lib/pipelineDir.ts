@@ -12,8 +12,11 @@ import { atomicWriteJson } from "./atomicWrite";
 import type { Pipeline } from "../../shared/types";
 
 const DIR = ".vibe-pipeline";
-// pipelines/*.json + .runtime/ 都是 runtime data,不該 commit;config.json 才 git tracked
-const GITIGNORE_ENTRIES = [`${DIR}/.runtime/`, `${DIR}/pipelines/`];
+// 整個 .vibe-pipeline/ 都 ignore — config.json 改 project-local 不再隨 repo 共享。
+// 原本只 ignore pipelines/ + .runtime/ 留下 config.json git-tracked 的設計棄掉,因為
+// init 完 config.json untracked 會讓 backend dirty check 把 workspace 視為髒,merge
+// 路徑會卡;team 各 clone 自己 init 拿 default config 比共享 config 麻煩值得。
+const GITIGNORE_ENTRIES = [`${DIR}/`];
 
 export function rootPath(projectPath: string): string {
   return join(projectPath, DIR);
