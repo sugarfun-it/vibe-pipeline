@@ -13,9 +13,6 @@ playwright/.cache/
 
 .vibe-pipeline
 
-# perf bench output(benchmark 跑出來的 results,當時量測用,不該 track)
-.perf-bench/
-
 # tsc emit (build via Vite, no separate emit needed)
 *.tsbuildinfo
 src/**/*.js
