@@ -105,22 +105,21 @@ async function downloadInstallScript(): Promise<string> {
 
 // Spawn install script — 真 detach,backend 自殺後 install 還活。
 //
-// Windows:不能用 `Bun.spawn(powershell, { detached: true })` — Win32 限制 +
-// Node #51018 已記錄:DETACHED_PROCESS 會 silently ignore CREATE_NO_WINDOW
-// 且 PowerShell child 無 console attached → silently 不執行。實測證實。
+// Windows:用 `schtasks`(Task Scheduler)真 detach。
+//   - backend Bun.spawn schtasks.exe → schtasks 50ms RPC 給 Task Scheduler service → Task Scheduler 創 install.ps1
+//   - install.ps1 由 Task Scheduler service owns,**完全在 backend Bun job 外**,真 detach
+//   - install.ps1 末段自呼 `schtasks /delete /tn VibePipelineUpdate /f` 把 task 清掉,user 不會在 Task Scheduler GUI 看到 leftover
 //
-// 改用 mediator pattern:
-//   Bun.spawn(powershell hidden, NO detached)        ← windowsHide 在無 detached 下生效
-//     └─ mediator 跑 `Start-Process powershell -WindowStyle Hidden ...
-//        -RedirectStandardOutput log -RedirectStandardError log.err`
-//        Start-Process 內建 ShellExecute 路徑 — spawned process 自然 detached + hidden,
-//        survives mediator + backend 死。
-//     └─ mediator ~500ms 就退,Bun.spawn 收尾,backend 接著自殺。
+// 為何不用 cmd start / WMI / mediator-Start-Process:
+//   都需要先 spawn powershell / cmd / wscript,**這些 process 在 backend Bun job 內,backend 500ms 後 exit → job close → mediator 連坐死**(Bun 1.3.13 在 Windows 把 detached parent 的 child 丟 KILL_ON_JOB_CLOSE job)
+//   schtasks 之所以 work,是它太輕:50ms 完成 RPC 後 task 已交給 Task Scheduler service(在 backend job 外),mediator schtasks.exe 死掉也無所謂
 //
-// argv path 用 forward slash:Bun.spawn 在 Windows argv 處理 `\U \E \s` 當 escape
-// 會吃掉 backslash。`scriptPath`/`logPath` 全轉成 / 後傳。
+//   業界 precedent:Chrome / Edge / Visual Studio / Adobe 自更新都用 Task Scheduler,不是巧合
+//
+// argv path 用 forward slash:Bun.spawn 在 Windows argv 處理 `\U \E \s` 當 escape 會吃掉 backslash。
 //
 // POSIX:`Bun.spawn(install.sh, { stdio: fd, detached: true })` 走新 process group 正常 detach。
+const WIN_TASK_NAME = "VibePipelineUpdate";
 export async function spawnInstallScript(): Promise<void> {
   ensureVpRoot();
   resetLog();
@@ -134,27 +133,38 @@ export async function spawnInstallScript(): Promise<void> {
   }
 
   if (isWin) {
-    // Cleanup 殘留 launcher 檔(從舊版 vbs / cmd 路徑遷移過來的 enduser 才會有)
+    // Cleanup 殘留(舊版 vbs / cmd launcher 檔 + 舊命名 schtasks task)
     for (const stale of ["update-launcher.vbs", "update-launcher.cmd"]) {
       try { unlinkSync(join(vpRoot(), stale)); } catch {}
     }
+    for (const oldName of ["vp-update", "vp-update-test"]) {
+      try {
+        Bun.spawn(
+          ["schtasks", "/delete", "/tn", oldName, "/f"],
+          { stdout: "ignore", stderr: "ignore", stdin: "ignore", windowsHide: true },
+        );
+      } catch {}
+    }
 
     const fwdScript = scriptPath.replace(/\\/g, "/");
-    const fwdLog = logPath.replace(/\\/g, "/");
-    const cmd =
-      `Start-Process powershell -WindowStyle Hidden ` +
-      `-ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','${fwdScript}','-AutoStart' ` +
-      `-RedirectStandardOutput '${fwdLog}' -RedirectStandardError '${fwdLog}.err'`;
-    Bun.spawn(
-      ["powershell.exe", "-NoProfile", "-WindowStyle", "Hidden", "-Command", cmd],
-      {
-        cwd: vpRoot(),
-        stdout: "ignore",
-        stderr: "ignore",
-        stdin: "ignore",
-        windowsHide: true,
-      },
+    // schtasks 路線:輕 RPC client(50ms 內完成),完整解釋見上方註解。
+    // /tr 用 powershell -WindowStyle Hidden -File 直接跑 — 不繞 cmd(避免 cmd console window 整個 install 期間都看到),
+    // 也不用 -Command(避免 nested quoting 雷)。install.ps1 自己 Start-Transcript 寫 update.log,不靠 shell redirect。
+    const trCmd =
+      `powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden ` +
+      `-File "${fwdScript}" -AutoStart`;
+    // /st 23:59 是占位(/sc once 必填一個時間,實際靠 /run 立即觸發),/f 強制覆蓋既有 task
+    const create = Bun.spawn(
+      ["schtasks", "/create", "/tn", WIN_TASK_NAME, "/tr", trCmd, "/sc", "once", "/st", "23:59", "/f"],
+      { stdout: "pipe", stderr: "pipe", stdin: "ignore", windowsHide: true },
     );
+    await create.exited;
+    const run = Bun.spawn(
+      ["schtasks", "/run", "/tn", WIN_TASK_NAME],
+      { stdout: "pipe", stderr: "pipe", stdin: "ignore", windowsHide: true },
+    );
+    await run.exited;
+    // install.ps1 末段會自呼 `schtasks /delete /tn VibePipelineUpdate /f` 自清(對齊 WIN_TASK_NAME)
   } else {
     // POSIX:走 Bun.spawn detached + stdio:fd,process group fork 正常 detach
     const stdoutFd = openSync(logPath, "a");

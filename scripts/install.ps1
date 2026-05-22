@@ -26,6 +26,14 @@ $VpHome      = Join-Path $HOME ".vibe-pipeline"
 $VersionsDir = Join-Path $VpHome "versions"
 $Current     = Join-Path $VpHome "current"
 
+# Always log to update.log so PWA-triggered hidden installs are debuggable.
+# -Force overrides "transcript already in progress" if user runs multiple installs.
+# Append=$true so previous install logs preserved (resetLog in backend truncates first).
+New-Item -ItemType Directory -Force -Path $VpHome | Out-Null
+try {
+  Start-Transcript -Path (Join-Path $VpHome "update.log") -Append -Force | Out-Null
+} catch { }
+
 # cd to $VpHome so we are NEVER inside $Current/. Otherwise step 7 (remove current
 # junction) fails when current is the script's own cwd (Windows "directory in use").
 # Caller may invoke install.ps1 from anywhere; we don't trust cwd.
@@ -328,5 +336,15 @@ if ($AutoStart) {
 
 Info "OK Installed $Tag at $VersionDir"
 Info "OK current -> $VersionDir"
+
+# Self-cleanup: PWA-triggered update via backend creates a "VibePipelineUpdate" Task Scheduler
+# task to escape Bun job-object KILL_ON_CLOSE on Windows (see server/lib/updater.ts).
+# Delete it after install completes. Failures are ignored (manual installs skip schtasks).
+try {
+  schtasks /delete /tn "VibePipelineUpdate" /f *> $null
+} catch { }
+
 Info ""
 Info "Done. Run 'vbpl server start' to launch backend, then 'vbpl --help'."
+
+try { Stop-Transcript | Out-Null } catch { }
