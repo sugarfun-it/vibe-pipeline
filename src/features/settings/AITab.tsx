@@ -11,6 +11,7 @@ import {
   type TaskClass,
   type UserConfig,
 } from "../../../shared/types";
+import { ArrowUpIcon } from "../../ui/icons";
 import "./SettingsPopover.css";
 
 type TaskModelPatch = { provider?: Provider; model?: ModelName; effort?: Effort };
@@ -117,8 +118,9 @@ export function AITab({
             </div>
           </div>
           <div className="task-group task-group--secondary">
+            <div className="settings-section-title">執行階段 Agent</div>
             <div className="task-group-hint">
-              ↑ 為了加快速度和節省 Token,預設跟隨 Main Agent 設定
+              <ArrowUpIcon aria-hidden /> 為了加快速度和節省 Token，預設跟隨上方 Main Agent 設定。
             </div>
             <div className="settings-popover-task-grid">
               {(["executor", "critic", "merge"] as const).map((tc) => (

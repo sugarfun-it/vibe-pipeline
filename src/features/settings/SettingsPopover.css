@@ -11,15 +11,39 @@
   background: var(--bg-elevated);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: var(--shadow-lg);
+  /* 比 --shadow-lg 柔一些,讓 popover 不會看起來像浮起的 modal sheet */
+  box-shadow: var(--shadow-popover,
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.12));
   padding: 14px 16px 12px;
-  z-index: 1500;
+  z-index: var(--z-settings, 1500);
   font-size: 13px;
 }
 
-/* Desktop:右上關閉 icon 隱藏(點外面 / Esc 已夠);mobile 才顯示 */
+/* 右上關閉 icon — 桌面也顯示(降低尺寸,跟 popover header padding 對齊),
+   提供可發現的關閉控制給滑鼠 / 鍵盤使用者。mobile 在 @media block 內加大。 */
 .settings-popover-close {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  z-index: 2;
+}
+.settings-popover-close:hover,
+.settings-popover-close:focus-visible {
+  background: var(--hover);
+  color: var(--fg);
+  outline: none;
 }
 
 /* ─── Tab bar ──────────────────────────────────────────────────── */
@@ -50,6 +74,12 @@
   font-weight: 600;
 }
 
+.settings-popover-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
 .settings-popover-tabs-spacer {
   flex: 1;
 }
@@ -70,7 +100,7 @@
 
 .settings-field-row {
   display: grid;
-  grid-template-columns: 112px 1fr;
+  grid-template-columns: 148px 1fr;
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
@@ -96,11 +126,22 @@
 .settings-input--w-full { width: 100%; box-sizing: border-box; }
 
 .settings-subhint {
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+  margin-left: 158px;
+  margin-bottom: 10px;
+}
+
+.settings-subhint--error {
+  color: var(--failed);
+}
+
+.settings-field-status {
   font-size: 10.5px;
   color: var(--fg-faint);
-  line-height: 1.5;
-  margin-left: 122px;
-  margin-bottom: 10px;
+  font-style: italic;
+  white-space: nowrap;
 }
 
 /* tab 內區塊標題(e.g. AI 任務 tab 的「全域 provider / model 設定」)*/
@@ -120,6 +161,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+/* 含 input--w-full 的 controls(如基礎分支)讓 input 撐滿剩餘空間,
+   saving status 走 row 內 inline,不再被擠出 grid 欄 */
+.settings-field-controls > .settings-input--w-full {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .settings-error {
@@ -151,10 +200,54 @@
 }
 
 .push-hint {
-  font-size: 11px;
-  color: var(--fg-faint);
+  font-size: 12px;
+  color: var(--fg-mute);
   line-height: 1.5;
   margin-bottom: 8px;
+}
+
+/* 醒目「已封鎖 / 不支援」狀態徽章 — 與 disabled toggle 一同呈現,
+   讓 control 自身的 blocked 狀態不需讀 hint 也能識別 */
+.push-blocked-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--failed) 12%, transparent);
+  color: var(--failed);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.push-hint--inline {
+  margin: 0;
+}
+
+.push-hint-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.push-events-grid {
+  margin-top: 14px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  width: fit-content;
+  align-items: stretch;
+}
+
+/* toggle-pill 主開關 disabled 視覺(input 已 disabled,這層 wrapper 跟著淡掉)
+   用 aria-disabled + class 取代原本的 inline style,讓 SR / 鍵盤語意可被 attribute 抓到 */
+.settings-popover .toggle-pill.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .push-error {
@@ -174,9 +267,9 @@
    Mobile breakpoint 改 flex column,selects 用 1fr 2fr 1fr 撐滿。 */
 
 :root {
-  --task-w-provider: 86px;
-  --task-w-model: 150px;
-  --task-w-effort: 95px;
+  --task-w-provider: 80px;
+  --task-w-model: 138px;
+  --task-w-effort: 84px;
 }
 
 .task-row {
@@ -196,9 +289,11 @@
   font-size: 12px;
   color: var(--fg);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 允許角色名(如 "Merge Agent")在 480px popover 內自然顯示;不再截字 */
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .task-row-selects {
@@ -219,9 +314,9 @@
 }
 
 .task-row-hint {
-  font-size: 10.5px;
-  color: var(--fg-faint);
-  line-height: 1.4;
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.45;
 }
 
 .task-row-placeholder {
@@ -241,12 +336,36 @@
   line-height: 1.4;
 }
 
-.update-version-current {
+/* definition-style layout:每列「label + value」,長 hash 不會跟最新 tag 擠破版 */
+.update-version-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.update-version-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.update-version-label {
   color: var(--fg-mute);
+  min-width: 84px;
+  font-size: 11.5px;
+}
+
+.update-version-current {
+  color: var(--fg);
+  word-break: break-all;
+  font-size: 12px;
 }
 
 .update-version-arrow {
-  color: var(--fg-faint);
+  color: var(--fg-mute);
   margin: 0 6px;
 }
 
@@ -256,18 +375,35 @@
 }
 
 .update-version-status {
-  color: var(--fg-faint);
-  margin-left: 8px;
+  color: var(--fg-mute);
+}
+
+.update-dev-hint {
+  font-size: 12px;
+  color: var(--fg);
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 4px;
 }
 
 .update-release-link {
   margin-left: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
   color: var(--accent);
   font-size: 12px;
   text-decoration: none;
 }
 
 .update-release-link:hover {
+  text-decoration: underline;
+}
+
+.update-release-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
   text-decoration: underline;
 }
 
@@ -326,17 +462,26 @@
   border-radius: 8px;
 }
 
+.task-group + .task-group {
+  margin-top: 10px;
+}
+
 .task-group--primary {
   background: var(--panel);
 }
 
 .task-group--secondary {
-  background: var(--panel-2);
+  /* 2026-05-23: 二級 group 改 outline 對比降階(不再 tint 整塊),
+     減少 AI tab 視覺壓力 — 跟 task-group-hint 一起把「跟主 Agent 同設定」的意義講清楚 */
+  background: transparent;
+  border: 1px dashed var(--line);
 }
 
 .task-group-hint {
-  font-size: 11px;
-  color: var(--fg-faint);
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .settings-popover-task-grid {

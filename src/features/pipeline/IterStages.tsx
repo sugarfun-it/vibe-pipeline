@@ -1,4 +1,5 @@
 import { normalizeVerdict } from "../../data/pipelines";
+import { ArrowRightIcon } from "../../ui/icons";
 import type { IterStage, TicketStatus } from "../../types/pipeline";
 
 export const STAGE_LABEL: Record<IterStage, string> = {
@@ -43,8 +44,20 @@ export function IterStages({
   // stages 可能不含 critic(merge / sync 走 ["doer", "✓"]);如果 stage 落不到 stages 裡,fallback 到 doer 避免全顯 ?
   let idx = stages.indexOf(normalized === "done" ? "✓" : normalized);
   if (idx === -1) idx = 0;
+  // a11y:整段給 SR 一個簡短描述。
+  const currentName = STAGE_LABEL[stages[idx] ?? "doer"];
+  const isResultStage = stages[idx] === "✓";
+  const statusText = status === "running"
+    ? "執行中"
+    : status === "paused"
+    ? "已暫停"
+    : status === "done"
+    ? "已完成"
+    : "";
+  const resultText = isResultStage ? `,結果:${fmtVerdict(lastVerdict)}` : "";
+  const ariaSummary = `目前階段:${currentName}${statusText ? `,狀態:${statusText}` : ""}${resultText}`;
   return (
-    <div className="iter-stages">
+    <div className="iter-stages" role="group" aria-label={ariaSummary}>
       {stages.map((s, i) => {
         const isPast = i < idx;
         const isCurrent = i === idx;
@@ -84,7 +97,7 @@ export function IterStages({
                 </span>
               )}
             </span>
-            {i < stages.length - 1 && <span className="iter-stage-arrow">→</span>}
+            {i < stages.length - 1 && <span aria-hidden className="iter-stage-arrow"><ArrowRightIcon /></span>}
           </span>
         );
       })}

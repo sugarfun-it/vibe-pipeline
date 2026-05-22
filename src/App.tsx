@@ -4,6 +4,7 @@ import { BoardScreen } from "./features/pipeline/BoardScreen";
 import { SetupScreen } from "./features/auth/SetupScreen";
 import { LoginScreen } from "./features/auth/LoginScreen";
 import { ConfirmProvider } from "./ui/ConfirmDialog";
+import { ToastProvider, ToastStage } from "./ui/Toast";
 import { OnlineStatusBadge } from "./shell/OnlineStatusBadge";
 import { initFCM, setupForegroundHandler } from "./lib/fcm";
 
@@ -73,13 +74,16 @@ export default function App() {
   return (
     <BrowserRouter>
       <ConfirmProvider>
-        <OnlineStatusBadge />
-        <Routes>
-          <Route path="/" element={<Navigate to="/board" replace />} />
-          <Route path="/board" element={<BoardRoute />} />
-          <Route path="/setup" element={<SetupScreen />} />
-          <Route path="/login" element={<LoginScreen />} />
-        </Routes>
+        <ToastProvider>
+          <OnlineStatusBadge />
+          <Routes>
+            <Route path="/" element={<Navigate to="/board" replace />} />
+            <Route path="/board" element={<BoardRoute />} />
+            <Route path="/setup" element={<SetupScreen />} />
+            <Route path="/login" element={<LoginScreen />} />
+          </Routes>
+          <ToastStage />
+        </ToastProvider>
       </ConfirmProvider>
     </BrowserRouter>
   );

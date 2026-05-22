@@ -56,7 +56,7 @@
   color: var(--fg-faint); margin-bottom: 8px;
 }
 
-html.light .init-cmd { background: #1c1916; color: #fbf8f1; }
+html.light .init-cmd { background: var(--inverse-fg, #1c1916); color: #fbf8f1; }
 html.light .init-cmd .init-cmd-prompt { color: #d8a25a; }
 html.light .init-cmd-text { color: #fbf8f1; }
 
@@ -78,7 +78,7 @@ html.light .init-cmd-text { color: #fbf8f1; }
 .init-tree-cmt { color: var(--fg-faint); font-size: 11px; }
 
 .init-foot {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: var(--space-3, 12px);
   padding: 14px 22px 14px 28px;
   border-top: 1px solid var(--line);
   background: var(--panel-2);
@@ -88,9 +88,9 @@ html.light .init-cmd-text { color: #fbf8f1; }
 
 .init-popup-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: var(--scrim-modal, rgba(0,0,0,0.55));
   display: flex; align-items: center; justify-content: center;
-  z-index: 100;
+  z-index: var(--z-popover, 100);
   backdrop-filter: blur(2px);
 }
 .init-popup-overlay .init-card {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PencilIcon } from "../../ui/icons";
 import type { Pipeline } from "../../types/pipeline";
 
 // 可編輯的 pipeline title — 點 ✎ 進編輯模式,Enter 存,Esc 取消。
@@ -46,9 +47,17 @@ export function FocusTitle({
     setEditing(false);
   }
 
+  // a11y:invalid 時提供具體訊息給 SR / 顯式 hint
+  const errorMsg = taken
+    ? "名稱已存在"
+    : !formatOk
+    ? "只能 a-z / 0-9 / - / _,首字英數"
+    : "";
+  const errorId = "focus-title-error";
+
   if (editing) {
     return (
-      <span className="focus-title-edit">
+      <span className="focus-title-edit" role="group" aria-label="重新命名 pipeline">
         <input
           ref={inputRef}
           className={"mono focus-title-input" + (valid ? "" : " is-invalid")}
@@ -63,7 +72,26 @@ export function FocusTitle({
           }}
           spellCheck={false}
           autoComplete="off"
+          aria-label="pipeline 名稱"
+          aria-invalid={!valid}
+          aria-describedby={errorMsg ? errorId : undefined}
         />
+        {errorMsg && (
+          <span
+            id={errorId}
+            role="status"
+            aria-live="polite"
+            style={{
+              // 視覺可見的 inline 錯誤訊息 — sighted user 跟 SR 都看得到
+              fontSize: 11,
+              color: "var(--failed)",
+              marginLeft: 4,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {errorMsg}
+          </span>
+        )}
         <button type="button"
           className="btn btn-primary"
           onClick={commit}
@@ -75,8 +103,9 @@ export function FocusTitle({
               ? "只能 a-z / 0-9 / - / _,首字英數"
               : "存"
           }
+          aria-label="儲存新名稱"
         >
-          ↵
+          <span aria-hidden>↵</span>
         </button>
         <button type="button"
           className="btn"
@@ -85,8 +114,9 @@ export function FocusTitle({
             setDraft(pipeline.name);
           }}
           title="取消 (Esc)"
+          aria-label="取消重新命名"
         >
-          ✕
+          <span aria-hidden>✕</span>
         </button>
       </span>
     );
@@ -101,8 +131,9 @@ export function FocusTitle({
           onClick={() => setEditing(true)}
           disabled={lockedByState}
           title={lockedByState ? "running 中不能改名" : "改名"}
+          aria-label={lockedByState ? "running 中無法重新命名" : "重新命名 pipeline"}
         >
-          ✎
+          <PencilIcon />
         </button>
       )}
     </h2>

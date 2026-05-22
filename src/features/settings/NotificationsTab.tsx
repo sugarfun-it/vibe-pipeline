@@ -86,22 +86,33 @@ function PushNotificationsSection({
   const hint = supported === false
     ? "此瀏覽器不支援 Web Push。"
     : permission === "denied"
-      ? "已被瀏覽器封鎖,請至網址列設定重新允許後再回此頁啟用。"
+      ? "已被瀏覽器封鎖，請至網址列設定重新允許後再回此頁啟用。"
       : loading
         ? "處理中…"
         : null;
+  const blockedBadge = supported === false
+    ? "不支援"
+    : permission === "denied"
+      ? "已封鎖"
+      : null;
 
+  const hintId = "push-toggle-hint";
   return (
     <div>
       <div className="push-toggle-row">
         <label
-          className={"toggle-pill mono" + (enabled ? " is-on" : "")}
-          style={{ opacity: disabled ? 0.55 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+          className={
+            "toggle-pill mono" +
+            (enabled ? " is-on" : "") +
+            (disabled ? " is-disabled" : "")
+          }
+          aria-disabled={disabled || undefined}
         >
           <input
             type="checkbox"
             checked={enabled}
             disabled={disabled}
+            aria-describedby={hint ? hintId : undefined}
             onChange={(e) => {
               if (e.target.checked) void enable();
               else void disable();
@@ -112,10 +123,19 @@ function PushNotificationsSection({
           </span>
           {enabled ? "推播通知" : "啟用推播通知"}
         </label>
-        {hint && <span className="push-hint" style={{ margin: 0 }}>{hint}</span>}
+        {blockedBadge && (
+          <span className="push-blocked-badge" aria-hidden>
+            {blockedBadge}
+          </span>
+        )}
+        {hint && (
+          <span id={hintId} className="push-hint push-hint--inline">
+            {hint}
+          </span>
+        )}
       </div>
       {enabled && (
-        <div className="settings-popover-task-grid" aria-label="推播事件" style={{ marginTop: 14, marginLeft: 12, paddingLeft: 12, borderLeft: "2px solid var(--line)", width: "fit-content", alignItems: "stretch" }}>
+        <div className="settings-popover-task-grid push-events-grid" aria-label="推播事件">
           {PUSH_EVENT_LABELS.map((item) => {
             const checked = userCfg?.pushEvents[item.key] ?? true;
             return (
@@ -174,12 +194,20 @@ function InstallAppSection({ onActionError }: { onActionError?: (message: string
           </button>
         </div>
       )}
-      <div className="push-hint" style={{ margin: 0 }}>
-        {installed
-          ? "已安裝,直接從 App 圖示開啟即可。"
-          : canInstall
-            ? "安裝後可全螢幕、推播更穩。"
-            : "沒安裝鈕?可能已裝、或瀏覽器不支援。Chrome / Edge 用網址列「⊕」;iOS Safari 走「分享 → 加入主畫面」。"}
+      <div className="push-hint push-hint--inline">
+        {installed ? (
+          "已安裝，直接從 App 圖示開啟即可。"
+        ) : canInstall ? (
+          "安裝後可全螢幕、推播更穩。"
+        ) : (
+          <>
+            此瀏覽器未提供安裝按鈕。可能已安裝過，或需從瀏覽器手動安裝：
+            <ul className="push-hint-list">
+              <li>Chrome / Edge：點網址列右側的安裝圖示（⊕）。</li>
+              <li>iOS Safari：點下方「分享」→「加入主畫面」。</li>
+            </ul>
+          </>
+        )}
       </div>
     </>
   );

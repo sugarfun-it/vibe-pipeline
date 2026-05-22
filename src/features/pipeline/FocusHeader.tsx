@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlusIcon } from "../../ui/icons";
+import { BranchIcon, PlusIcon } from "../../ui/icons";
 import { PipelineHistoryDrawer } from "./PipelineHistoryDrawer";
 import { FocusTitle } from "./FocusTitle";
 import { OverflowMenu } from "./OverflowMenu";
@@ -84,94 +84,15 @@ export function FocusHeader({
   return (
     <div className="focus-head fade-up">
       <div className="focus-head-top">
-        <FocusTitle
-          pipeline={pipeline}
-          onRename={onRename}
-          existingNames={existingNames}
-        />
-        <span className="chip mono focus-branch-chip">
-          <span className="focus-branch-icon">⎇</span> {pipeline.branch}
-        </span>
-        <span
-          className="chip chip-state"
-          style={{
-            color: stateColor,
-            borderColor: "transparent",
-            background: "color-mix(in srgb, " + stateColor + " 14%, transparent)",
-          }}
-        >
-          <span
-            className={
-              "dot" +
-              (pipeline.state === "running" ? " pulse" : "")
-            }
-            style={{ background: stateColor }}
-          />{" "}{stateLabel}
-        </span>
-        <span className="focus-count mono">
-          {done} / {total} done
-        </span>
-        {runs.length > 0 && (
-          <span
-            className="chip mono focus-runs-chip"
-            title={`累計 ${runs.length} 次執行,共 $${totalCost.toFixed(2)}`}
-          >
-            {runs.length} run{runs.length === 1 ? "" : "s"} · $
-            {totalCost.toFixed(2)}
-          </span>
-        )}
-        {diffStat && (diffStat.files > 0 || diffStat.added > 0 || diffStat.deleted > 0) && projectHash && (
-          <FocusDiffChip
+        {/* Row 1 — title + rename + overflow.RunButton / branch chip / CTA 都不在這列。
+            Row 1 永遠保持單行,不會被 RunButton 撐爆。 */}
+        <div className="focus-head-title-row">
+          <FocusTitle
             pipeline={pipeline}
-            projectHash={projectHash}
-            diffStat={diffStat}
+            onRename={onRename}
+            existingNames={existingNames}
           />
-        )}
-        <SyncStatusBar
-          pipeline={pipeline}
-          behindFallback={behind}
-          pipelineBusy={
-            pipeline.state === "running" ||
-            pipeline.state === "queued"
-          }
-          tick={tick}
-          onStart={() => onSync?.(pipeline.id)}
-          onConfirmAi={() => onSyncConfirmAi?.(pipeline.id)}
-          onCancel={() => onSyncCancel?.(pipeline.id)}
-          onDismiss={() => onSyncDismiss?.(pipeline.id)}
-        />
-        {pipeline.syncJob?.state === "conflict_await" && (
-          <SyncConflictModal
-            pipeline={pipeline}
-            onConfirmAi={() => onSyncConfirmAi?.(pipeline.id)}
-            onCancel={() => onSyncCancel?.(pipeline.id)}
-          />
-        )}
-
-        {/* + ticket 視覺強度三檔:
-            - 0 ticket / 接續 QA → btn-primary(橘底白字,當下唯一主動作)
-            - 有 ticket → btn-accent(橘邊橘字 soft bg,次要 CTA 但仍顯眼)
-            RunButton 永遠保留 btn-primary 給「開始運行/繼續」等主動作 */}
-        <button
-          type="button"
-          className={
-            "btn focus-add-ticket " +
-            (pipeline.tickets.length === 0 || hasActiveDraft ? "btn-primary" : "btn-accent")
-          }
-          onClick={() => onAddTicket?.(pipeline.id)}
-        >
-          <PlusIcon /> {hasActiveDraft ? "接續 QA" : "ticket"}
-        </button>
-
-        <div className="focus-actions">
-          <RunButton
-            pipeline={pipeline}
-            onRun={onStart}
-            onStop={onStop}
-            spawning={spawning}
-            queuePosition={queuePosition}
-            syncActive={syncActive}
-          />
+          <div className="focus-head-title-spacer" />
           <OverflowMenu
             pipeline={pipeline}
             lockedByState={lockedByState}
@@ -181,6 +102,97 @@ export function FocusHeader({
             onToggleAutoMerge={onToggleAutoMerge}
             onShowHistory={projectHash ? () => setHistoryOpen(true) : undefined}
           />
+        </div>
+        {/* Row 2 — meta chips + branch + sync + spacer + primary CTAs(+ticket / Run)。
+            Mobile 透過 CSS 把 branch chip / disabled RunButton 弱化(text-only)。 */}
+        <div className="focus-head-meta-row">
+          <span
+            className="chip chip-state"
+            style={{
+              color: "var(--fg)",
+              borderColor: "transparent",
+              background: "color-mix(in srgb, " + stateColor + " 14%, transparent)",
+            }}
+            aria-label={`pipeline 狀態:${stateLabel}`}
+          >
+            <span
+              aria-hidden
+              className={
+                "dot" +
+                (pipeline.state === "running" ? " pulse" : "")
+              }
+              style={{ background: stateColor }}
+            />{" "}{stateLabel}
+          </span>
+          <span className="focus-count mono" title={`完成 ${done} / 全部 ${total}`}>
+            {done} / {total} 完成
+          </span>
+          {runs.length > 0 && (
+            <span
+              className="chip mono focus-runs-chip"
+              title={`累計 ${runs.length} 次執行,共 $${totalCost.toFixed(2)}`}
+            >
+              {runs.length} 次執行 · ${totalCost.toFixed(2)}
+            </span>
+          )}
+          <span
+            className="chip mono focus-branch-chip"
+            title={`git branch: ${pipeline.branch}`}
+            aria-label={`git branch ${pipeline.branch}`}
+          >
+            <span aria-hidden className="focus-branch-icon"><BranchIcon /></span> {pipeline.branch}
+          </span>
+          {diffStat && (diffStat.files > 0 || diffStat.added > 0 || diffStat.deleted > 0) && projectHash && (
+            <FocusDiffChip
+              pipeline={pipeline}
+              projectHash={projectHash}
+              diffStat={diffStat}
+            />
+          )}
+          <SyncStatusBar
+            pipeline={pipeline}
+            behindFallback={behind}
+            pipelineBusy={
+              pipeline.state === "running" ||
+              pipeline.state === "queued"
+            }
+            tick={tick}
+            onStart={() => onSync?.(pipeline.id)}
+            onConfirmAi={() => onSyncConfirmAi?.(pipeline.id)}
+            onCancel={() => onSyncCancel?.(pipeline.id)}
+            onDismiss={() => onSyncDismiss?.(pipeline.id)}
+          />
+          {pipeline.syncJob?.state === "conflict_await" && (
+            <SyncConflictModal
+              pipeline={pipeline}
+              onConfirmAi={() => onSyncConfirmAi?.(pipeline.id)}
+              onCancel={() => onSyncCancel?.(pipeline.id)}
+            />
+          )}
+          <div className="focus-head-meta-spacer" />
+          <div className="focus-actions">
+            <RunButton
+              pipeline={pipeline}
+              onRun={onStart}
+              onStop={onStop}
+              spawning={spawning}
+              queuePosition={queuePosition}
+              syncActive={syncActive}
+            />
+            {/* + ticket 視覺強度三檔:
+                - 0 ticket / 接續 QA → btn-primary(橘底白字,當下唯一主動作)
+                - 有 ticket → btn-accent(橘邊橘字 soft bg,次要 CTA 但仍顯眼) */}
+            <button
+              type="button"
+              className={
+                "btn focus-add-ticket " +
+                (pipeline.tickets.length === 0 || hasActiveDraft ? "btn-primary" : "btn-accent")
+              }
+              onClick={() => onAddTicket?.(pipeline.id)}
+            >
+              <PlusIcon /> {hasActiveDraft ? "接續 QA" : "新增 ticket"}
+            </button>
+          </div>
         </div>
       </div>
       {historyOpen && projectHash && (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSystemVersion, triggerSystemUpdate, getHealth, type VersionStatus } from "../../api/system";
 import { ApiError } from "../../api/_client";
+import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon } from "../../ui/icons";
 
 type UpdatingPhase =
   | { kind: "idle" }
@@ -113,6 +114,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
   }, [onActionError, startHealthPoll]);
 
   const isUpdating = phase.kind === "starting" || phase.kind === "polling";
+  const isDevBuild = !!version && /^dev-|-dirty$/.test(version.current);
 
   return (
     <div className="task-group task-group--primary">
@@ -123,33 +125,42 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
 
       {version && (
         <div className="update-tab-body">
-          <div className="mono update-version-line">
-            {version.hasUpdate && version.latest ? (
-              <>
-                <span className="update-version-current">{version.current}</span>
-                <span className="update-version-arrow">→</span>
-                <span className="update-version-latest">{version.latest.tag}</span>
+          <div className="update-version-block">
+            <div className="update-version-row">
+              <span className="update-version-label">目前版本</span>
+              <span
+                className="mono update-version-current"
+                title={version.current}
+              >
+                {version.current}
+              </span>
+            </div>
+            {version.latest ? (
+              <div className="update-version-row">
+                <span className="update-version-label">最新 release</span>
+                <span className="mono update-version-latest">{version.latest.tag}</span>
                 <a
                   href={version.latest.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="update-release-link"
+                  aria-label={`查看 ${version.latest.tag} release notes（新分頁開啟）`}
                 >
-                  release notes ↗
+                  release notes <ExternalLinkIcon aria-hidden />
                 </a>
-              </>
-            ) : version.latest ? (
-              <>
-                <span>{version.current}</span>
-                <span className="update-version-status">(已是最新)</span>
-              </>
+              </div>
             ) : (
-              <>
-                <span>{version.current}</span>
-                <span className="update-version-status">(無法取得 release 資訊)</span>
-              </>
+              <div className="update-version-row">
+                <span className="update-version-status">無法取得 release 資訊</span>
+              </div>
             )}
           </div>
+
+          {isDevBuild && (
+            <div className="update-dev-hint" role="note">
+              偵測到開發版（dev / dirty build），通常已含未發佈變更。「立即更新」會切回最新正式 release。
+            </div>
+          )}
 
           <div className="push-action-row">
             <button
@@ -160,7 +171,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
             >
               {loading ? "檢查中…" : "檢查更新"}
             </button>
-            {version.hasUpdate && (
+            {version.hasUpdate && !isDevBuild && (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -169,6 +180,20 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
               >
                 {isUpdating ? "更新中…" : "立即更新"}
               </button>
+            )}
+            {isDevBuild && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void onApply()}
+                disabled={isUpdating}
+                title="切回最新正式 release（會覆蓋目前 dev / dirty build）"
+              >
+                {isUpdating ? "更新中…" : "切回正式 release"}
+              </button>
+            )}
+            {!version.hasUpdate && !isDevBuild && version.latest && (
+              <span className="update-version-status">已是最新</span>
             )}
           </div>
 
@@ -180,7 +205,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
 
           {phase.kind === "done" && (
             <div className="mono update-success">
-              ✓ 已更新{phase.newTag ? `到 ${phase.newTag}` : ""}
+              <CheckIconSm aria-hidden /> 已更新{phase.newTag ? `到 ${phase.newTag}` : ""}
             </div>
           )}
 

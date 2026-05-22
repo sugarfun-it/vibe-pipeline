@@ -42,6 +42,9 @@
 
 .audit-states {
   color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 6px);
 }
 
 .audit-from {
@@ -49,7 +52,8 @@
 }
 
 .audit-arrow {
-  margin: 0 var(--space-2, 6px);
+  display: inline-flex;
+  align-items: center;
   color: var(--fg-faint);
 }
 

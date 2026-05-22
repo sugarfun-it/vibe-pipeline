@@ -1,32 +1,67 @@
-/* Ticket Drawer — slides over board from right */
+/* ─────────────────────────────────────────────────────────────
+   Canonical overlay contract — shared by 6 overlay components:
+   TicketDrawer / PipelineHistoryDrawer / QADrawer (drawer variant)
+   DiffModal / ConfirmDialog / SyncConflictModal (modal variant)
 
+   Class hierarchy:
+     .drawer-stage              outer scrim container (fixed full-screen)
+       .drawer-stage--drawer    right-side panel (default for drawer variant)
+       .drawer-stage--modal     centered modal variant
+     .drawer-scrim              click target dimming layer
+     .drawer                    surface (drawer panel or modal card)
+       .drawer--modal           centered card max-width 540px
+     .drawer-head / -body / -foot  structural slots
+     .drawer-close              top-right close button (40x40 desktop / 44x44 mobile)
+     .drawer-crumb / -title / -status-row  header rows
+     .drawer-actions           sticky footer action area (grid)
+   Single mobile breakpoint: (max-width: 767.98px)
+   ───────────────────────────────────────────────────────────── */
+
+/* ── Stage ───────────────────────────────────────────────────── */
 .drawer-stage {
   position: absolute; inset: 0;
   overflow: hidden;
+  z-index: var(--z-drawer, 200);
+}
+/* Modals always overlay the whole viewport, not just the board area. */
+.drawer-stage--modal {
+  position: fixed; inset: 0;
+  z-index: var(--z-modal, 1000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6, 24px);
+  overflow: hidden;
 }
 
+/* ── Scrim ───────────────────────────────────────────────────── */
 .drawer-scrim {
   position: absolute; inset: 0;
-  background: rgba(0,0,0,0.42);
+  background: var(--scrim-drawer);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   z-index: 1;
+  width: 100%; height: 100%;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
 }
-html.light .drawer-scrim { background: rgba(28,25,22,0.18); }
+.drawer-stage--modal > .drawer-scrim {
+  background: var(--scrim-modal);
+}
 
-/* drawer panel */
+/* ── Surface: drawer (right-side) ────────────────────────────── */
 .drawer {
   position: absolute; top: 0; right: 0; bottom: 0;
-  width: 640px; max-width: 92vw;
+  width: 600px; max-width: calc(100vw - 80px);
   background: var(--bg-elevated);
   border-left: 1px solid var(--line-2);
-  box-shadow: -32px 0 80px rgba(0,0,0,0.55), -2px 0 6px rgba(0,0,0,0.25);
+  border-top-left-radius: var(--radius-panel);
+  border-bottom-left-radius: var(--radius-panel);
+  box-shadow: var(--shadow-overlay);
   display: flex; flex-direction: column;
   z-index: 2;
-  animation: drawerSlide 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-html.light .drawer {
-  box-shadow: -32px 0 80px rgba(28,25,22,0.18), -2px 0 6px rgba(28,25,22,0.06);
+  animation: drawerSlide 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes drawerSlide {
@@ -34,15 +69,39 @@ html.light .drawer {
   to   { transform: translateX(0);    opacity: 1; }
 }
 
-/* ─── header ─── */
+/* ── Surface: modal (centered card) ──────────────────────────── */
+.drawer--modal {
+  position: relative;
+  top: auto; right: auto; bottom: auto;
+  width: 100%;
+  max-width: 540px;
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel, 10px);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-overlay);
+  animation: drawerModalIn 180ms ease-out both;
+  overflow: hidden;
+}
+@keyframes drawerModalIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
 .drawer-head {
   flex-shrink: 0;
-  padding: 14px 20px 14px;
+  position: relative;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--line);
 }
 .drawer-crumb {
   display: flex; align-items: center; gap: 8px;
   font-size: 11px; color: var(--fg-mute);
+  min-height: 28px;
   margin-bottom: 8px;
 }
 .drawer-crumb .sep { color: var(--fg-faint); }
@@ -53,49 +112,92 @@ html.light .drawer {
 }
 .drawer-title {
   margin: 0;
-  font-size: 19px; font-weight: 600;
+  font-size: 18px; font-weight: 600;
   letter-spacing: -0.015em;
   flex: 1; min-width: 0;
 }
-.drawer-meta {
-  margin-top: 8px;
+.drawer-meta,
+.drawer-status-row {
+  margin-top: 4px;
   font-size: 11px; color: var(--fg-mute);
   display: flex; gap: 8px; flex-wrap: wrap;
   align-items: center;
 }
 .drawer-meta .sep { color: var(--fg-faint); }
 
+/* ── Close button (canonical) ────────────────────────────────── */
+/* Canonical sizing + visual treatment. Positioning is left to the component:
+   - Drawers (Ticket / PipelineHistory / QA): inline at end of .drawer-crumb,
+     pushed right by .drawer-crumb-spacer.
+   - Modals (Diff / Confirm / SyncConflict): inline within their head row.
+   - Mobile: components may switch to absolute positioning (see TicketDrawer
+     mobile rule). Sizing bumps to 44x44 touch target. */
+.drawer-close,
+.drawer-head .create-x {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  padding: 0;
+  border-radius: var(--radius-control, 6px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.drawer-close:hover,
+.drawer-head .create-x:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+.drawer-close:focus-visible,
+.drawer-head .create-x:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* status chip variants */
 
 .statechip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-/* paused stall banner */
-
-/* branch mismatch banner */
-
-/* ─── body (scroll) ─── */
+/* ── Body ───────────────────────────────────────────────────── */
 .drawer-body {
   flex: 1; min-height: 0;
   overflow-y: auto;
-  padding: 4px 20px;
+  padding: 16px 20px;
 }
 
-/* section header */
+/* ── Footer (sticky) ────────────────────────────────────────── */
+.drawer-foot {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--panel-2);
+  display: flex; align-items: center; gap: 10px;
+}
+
+/* Sticky footer action area — two-column grid (primary left / danger right). */
+.drawer-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2, 8px);
+  align-items: center;
+  width: 100%;
+}
+.drawer-actions--single {
+  grid-template-columns: 1fr;
+}
 
 .dsec.is-open .dsec-head .caret { transform: rotate(0deg); }
-
-/* field */
-
-/* AC list */
 
 .ac-check.is-pending { background: var(--panel-2); border: 1px solid var(--line-2); color: transparent; }
 .ac-check.is-fail { background: var(--failed); color: #fff; }
 
-/* KV row */
-
 .kv-val.mono { font-family: var(--font-mono); font-size: 11px; }
-
-/* code box */
 
 .codebox.is-fade {
   max-height: 92px; overflow: hidden;
@@ -128,8 +230,6 @@ html.light .drawer {
 }
 .file-row .open { color: var(--fg-faint); flex-shrink: 0; }
 
-/* step-info bar */
-
 .step-info .icon { color: var(--fg-faint); }
 .step-info .switch {
   margin-left: auto;
@@ -137,8 +237,6 @@ html.light .drawer {
   color: var(--accent);
   cursor: pointer;
 }
-
-/* iteration history */
 
 .iter-row {
   display: flex; align-items: stretch; gap: 0;
@@ -204,10 +302,6 @@ html.light .drawer {
 .tswitch.is-on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 .tswitch.is-on::after { transform: translateX(12px); background: var(--accent); }
 
-/* intervention grid */
-
-/* prompt edit box */
-
 .prompt-edit-toolbar .label {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
   color: var(--fg-mute); letter-spacing: 0.08em; text-transform: uppercase;
@@ -227,39 +321,28 @@ html.light .drawer {
   color: var(--fg-mute);
 }
 
-/* footer */
-.drawer-foot {
-  flex-shrink: 0;
-  padding: 12px 20px;
-  border-top: 1px solid var(--line);
-  background: var(--panel-2);
-  display: flex; align-items: center; gap: 10px;
-}
-
-/* output / step actions */
-
-/* small icon button (header) */
-
-/* state switcher floating chip (for prototype) */
-
 .state-switcher-pill button.is-on {
   background: var(--accent-soft);
   color: var(--accent);
 }
 
-@media (max-width: 767px) {
+/* ── Mobile (unified single breakpoint) ──────────────────────── */
+@media (max-width: 767.98px) {
+  /* Drawer variant: full-screen take-over above board-mobile-tabs (z-banner 300) */
   .drawer-stage {
     position: fixed;
     inset: 0;
     width: 100vw;
-    height: 100vh; /* fallback */
-    height: 100dvh; /* 動態 viewport,Android nav bar 顯示時自動扣除 */
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
-    /* 要高於 .board-mobile-tabs (z-index:40),不然 QA / Ticket drawer 底部
-       輸入框被 Pipeline / Ticket 切換條蓋住 */
-    z-index: 50;
+    z-index: var(--z-modal, 1000);
   }
-
+  .drawer-stage--modal {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
   .drawer {
     position: fixed;
     inset: 0;
@@ -268,18 +351,34 @@ html.light .drawer {
     height: 100vh;
     height: 100dvh;
     border-left: 0;
+    border-radius: 0;
     box-shadow: none;
+    animation: none;
   }
-
+  .drawer--modal {
+    position: relative;
+    inset: auto;
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    height: auto;
+    max-height: calc(100dvh - 64px);
+    border-left: 1px solid var(--line);
+    border-radius: var(--radius-panel, 10px);
+    box-shadow: var(--shadow-overlay);
+  }
   .drawer-head {
     padding: 12px 16px;
   }
-
   .drawer-body {
-    padding: 4px 16px;
+    padding: 12px 16px;
   }
-
   .drawer-foot {
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  /* 44x44 mobile touch target. Positioning stays component-defined. */
+  .drawer-close,
+  .drawer-head .create-x {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

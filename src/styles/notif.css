@@ -120,7 +120,7 @@
   border-left: 3px solid var(--preview-color, var(--accent));
   border-radius: 8px;
   box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.3));
-  z-index: 1000;
+  z-index: var(--z-popover, 1000);
   animation: fadeUp 120ms ease-out both;
   pointer-events: none; /* hover preview 期間不擋滑鼠回到 strip 上 */
 }
@@ -366,12 +366,12 @@
 .inbox-item-action:hover { background: var(--panel-2); border-color: var(--fg-mute); }
 .inbox-item-action.is-primary {
   background: var(--paused);
-  color: #1c1208;
+  color: var(--warning-fg, #1c1208);
   border-color: var(--paused);
 }
 .inbox-item-action.is-primary:hover { filter: brightness(1.1); }
 .inbox-item-action.is-primary-info {
-  background: var(--done); border-color: var(--done); color: #0e1f0f;
+  background: var(--done); border-color: var(--done); color: var(--banner-success-fg, #0e1f0f);
 }
 .inbox-item-action.is-primary-info:hover { filter: brightness(1.1); }
 

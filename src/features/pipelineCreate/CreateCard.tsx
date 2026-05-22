@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PickerSelect } from "../../ui/PickerSelect";
+import { BranchIcon } from "../../ui/icons";
 
 const FALLBACK_BRANCHES = ["main"];
+const NAME_MAX_LENGTH = 60;
 
 export function CreateCard({
   onCancel,
@@ -31,17 +33,49 @@ export function CreateCard({
   const [autoMerge, setAutoMerge] = useState(defaultAutoMerge);
   const inputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLFormElement>(null);
+  const baseOpenRef = useRef(baseOpen);
+  baseOpenRef.current = baseOpen;
+
+  const uid = useId();
+  const inputId = "create-pipeline-name-" + uid;
+  const errorId = "create-pipeline-name-error-" + uid;
+  const counterId = "create-pipeline-name-counter-" + uid;
+  const autoMergeDescId = "create-pipeline-automerge-desc-" + uid;
 
   const trimmed = name.trim();
   const taken = existingNames.includes(trimmed);
   const formatOk = /^[a-z0-9][a-z0-9-_]*$/.test(trimmed);
   const valid = trimmed.length > 0 && !taken && formatOk;
   const showFormatHint = trimmed.length > 0 && !formatOk;
+  const hasError = taken || showFormatHint;
+  const counterNearLimit = name.length >= NAME_MAX_LENGTH - 10;
+  const counterAtLimit = name.length >= NAME_MAX_LENGTH;
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 80);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (e.defaultPrevented) return;
+      const card = cardRef.current;
+      const target = e.target as Node | null;
+      const insideCard = !!(card && target && card.contains(target));
+      if (!insideCard) return;
+      if (baseOpenRef.current) {
+        setBaseOpen(false);
+        e.stopPropagation();
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      onCancel();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
 
   function submit(e?: React.FormEvent) {
     e?.preventDefault();
@@ -53,7 +87,7 @@ export function CreateCard({
     <form className="create-card fade-up" onSubmit={submit} ref={cardRef}>
       <div className="create-card-head">
         <span className="rail-state-dot" style={{ background: "var(--draft)" }} />
-        <span className="create-card-eyebrow mono">新 pipeline</span>
+        <span className="create-card-eyebrow mono" style={{ textTransform: "none" }}>新 pipeline</span>
         <span style={{ flex: 1 }} />
         <button type="button" className="create-x" onClick={onCancel} title="取消 (Esc)" aria-label="取消">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -62,23 +96,58 @@ export function CreateCard({
         </button>
       </div>
 
-      <label className={"create-input" + (taken || showFormatHint ? " is-error" : "")}>
-        <input
-          ref={inputRef}
-          className="mono"
-          type="text"
-          value={name}
-          placeholder="pipeline 名稱"
-          onChange={(e) => setName(e.target.value)}
-          spellCheck={false}
-          autoComplete="off"
-        />
-        {taken && <span className="create-input-hint mono">已存在</span>}
-      </label>
-      {taken && <div className="create-error mono">名稱已存在,改一個。</div>}
-      {showFormatHint && !taken && (
-        <div className="create-error mono">只能用 a-z / 0-9 / - / _,首字需英數。</div>
-      )}
+      <div className="create-field create-field-name">
+        <label htmlFor={inputId} className="create-field-label">
+          名稱
+        </label>
+        <div className={"create-input" + (hasError ? " is-error" : "")}>
+          <input
+            ref={inputRef}
+            id={inputId}
+            className="mono"
+            type="text"
+            value={name}
+            placeholder="my-feature"
+            onChange={(e) => setName(e.target.value)}
+            spellCheck={false}
+            autoComplete="off"
+            maxLength={NAME_MAX_LENGTH}
+            aria-invalid={hasError || undefined}
+            aria-describedby={
+              [hasError ? errorId : null, counterNearLimit ? counterId : null]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
+          />
+          {taken && <span className="create-input-hint mono" aria-hidden="true">已存在</span>}
+        </div>
+        <div className="create-field-meta">
+          <div
+            id={errorId}
+            className="create-error mono"
+            role="alert"
+            aria-live="polite"
+            hidden={!hasError}
+          >
+            {taken
+              ? "名稱已存在，請換一個。"
+              : showFormatHint
+              ? "首字需英數；可用 a-z、0-9、-、_。"
+              : ""}
+          </div>
+<div
+            id={counterId}
+            className={
+              "create-counter mono" +
+              (counterAtLimit ? " is-limit" : counterNearLimit ? " is-near" : "")
+            }
+            aria-live="polite"
+            hidden={!counterNearLimit}
+          >
+            {name.length}/{NAME_MAX_LENGTH}
+          </div>
+        </div>
+      </div>
 
       <div className="create-field">
         <div className="create-field-label">基底分支</div>
@@ -87,28 +156,36 @@ export function CreateCard({
           setOpen={setBaseOpen}
           value={baseBranch}
           onChange={setBaseBranch}
-          icon={<span className="mono" style={{ color: "var(--fg-mute)" }}>⎇</span>}
+          icon={<span className="mono" style={{ color: "var(--fg-mute)", display: "inline-flex" }}><BranchIcon /></span>}
           options={baseList.map((b) => ({ id: b, label: b, mono: true }))}
         />
       </div>
 
-      <label
-        className={"toggle-pill mono" + (autoMerge ? " is-on" : "")}
-        title="全 ticket done → backend 自動 append merge ticket 走 runner 流程"
-      >
-        <input
-          type="checkbox"
-          checked={autoMerge}
-          onChange={(e) => setAutoMerge(e.target.checked)}
-        />
-        <span className="toggle-pill-track" aria-hidden>
-          <span className="toggle-pill-thumb" />
-        </span>
-        自動合併
-      </label>
+      <div className="create-field create-field-automerge">
+        <label className={"toggle-pill mono" + (autoMerge ? " is-on" : "")}>
+          <input
+            type="checkbox"
+            checked={autoMerge}
+            onChange={(e) => setAutoMerge(e.target.checked)}
+            aria-describedby={autoMergeDescId}
+          />
+          <span className="toggle-pill-track" aria-hidden>
+            <span className="toggle-pill-thumb" />
+          </span>
+          自動合併
+        </label>
+        <div id={autoMergeDescId} className="create-field-desc">
+          所有 ticket 完成後，自動建立合併 ticket。
+        </div>
+      </div>
 
       <div className="create-actions">
-        <button type="button" className="btn create-cancel" onClick={onCancel}>
+        <button
+          type="button"
+          className="btn create-cancel"
+          onClick={onCancel}
+          aria-keyshortcuts="Escape"
+        >
           <span>Esc</span>
           <span style={{ color: "var(--fg-faint)" }}>取消</span>
         </button>
@@ -134,7 +211,7 @@ export function CreatePlaceholder() {
         </div>
         <div className="create-empty-title">新 pipeline 還沒建立</div>
         <div className="create-empty-desc">
-          填好左側資訊 → 按 <span className="kbd mono">↵</span> → 自動切過去,立刻可以開第一張 ticket。
+          填好左側資訊後按 <span className="kbd mono">↵</span>，自動切過去開第一張 ticket。
         </div>
       </div>
     </main>

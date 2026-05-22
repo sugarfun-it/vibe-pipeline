@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { PlusIcon, TrashIcon } from "../ui/icons";
+import { DotsHorizontalIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { STATE_COLOR } from "../data/pipelines";
 import type { Pipeline } from "../types/pipeline";
 
@@ -21,7 +21,7 @@ export function Rail({
   creating = false,
   onStartCreate,
   createSlot,
-  addLabel = "新 pipeline",
+  addLabel = "新增 pipeline",
   draftPipelineIds,
   sectionMenuItems,
 }: {
@@ -36,9 +36,9 @@ export function Rail({
   sectionMenuItems?: RailMenuItem[];
 }) {
   return (
-    <aside className={"rail" + (creating ? " is-creating" : "")}>
+    <aside className={"rail" + (creating ? " is-creating" : "")} aria-label="Pipeline 列表">
       <div className="rail-section-header">
-        <span className="rail-section-label mono">PIPELINES</span>
+        <span className="rail-section-label mono" id="rail-pipelines-label">PIPELINES</span>
         {sectionMenuItems && sectionMenuItems.length > 0 && (
           <RailSectionMenu items={sectionMenuItems} />
         )}
@@ -52,16 +52,23 @@ export function Rail({
           </button>
         )}
 
-        {pipelines.map((p) => (
-          <RailItem
-            key={p.id}
-            p={p}
-            active={p.id === activeId}
-            onClick={() => onSelect(p.id)}
-            muted={creating}
-            hasDraft={draftPipelineIds?.has(p.id) ?? false}
-          />
-        ))}
+        <div
+          role="group"
+          aria-labelledby="rail-pipelines-label"
+          className="rail-list-items"
+          style={{ display: "contents" }}
+        >
+          {pipelines.map((p) => (
+            <RailItem
+              key={p.id}
+              p={p}
+              active={p.id === activeId}
+              onClick={() => onSelect(p.id)}
+              muted={creating}
+              hasDraft={draftPipelineIds?.has(p.id) ?? false}
+            />
+          ))}
+        </div>
       </div>
       <div className="rail-spacer" />
       {/* Archive 功能未實作,prototype 留下的假 chip 移除避免誤導 */}
@@ -84,21 +91,34 @@ function RailItem({
 }) {
   const done = p.tickets.filter((t) => t.status === "done").length;
   const total = p.tickets.length;
+  const stateText = PIPELINE_STATE_TEXT[p.state] ?? p.state;
+  const secondary = railSecondary(p);
+  const accessibleSecondary = railSecondaryAccessible(p);
+  const ariaLabel =
+    `${p.name} · ${stateText} · ${done}/${total} 完成` +
+    (hasDraft ? " · QA 進行中" : "") +
+    (accessibleSecondary ? ` · ${accessibleSecondary}` : "");
   return (
-    <button type="button" className={"rail-item" + (active ? " is-active" : "") + (muted ? " is-muted" : "")} onClick={onClick}>
+    <button
+      type="button"
+      className={"rail-item" + (active ? " is-active" : "") + (muted ? " is-muted" : "")}
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      aria-label={ariaLabel}
+    >
       <div className="rail-item-row">
-        <span className="rail-state-dot" style={{ background: STATE_COLOR[p.state] }} />
+        <span className="rail-state-dot" aria-hidden="true" style={{ background: STATE_COLOR[p.state] }} />
         <span className="rail-item-name">{p.name}</span>
         {hasDraft && (
-          <span className="mono rail-qa-badge" title="進行中 QA">
+          <span className="mono rail-qa-badge" aria-hidden="true" title="進行中 QA">
             QA
           </span>
         )}
-        <span className="rail-item-count mono">
+        <span className="rail-item-count mono" aria-hidden="true">
           {done}/{total}
         </span>
       </div>
-      <div className="rail-mini">
+      <div className="rail-mini" aria-hidden="true">
         {p.tickets.map((t) => {
           const fill =
             t.status === "done"
@@ -117,24 +137,38 @@ function RailItem({
           return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
         })}
       </div>
-      <div className="rail-item-meta">
-        <span className="mono">{railSecondary(p)}</span>
+      <div className="rail-item-meta" aria-hidden="true">
+        <span className="mono">{secondary}</span>
       </div>
     </button>
   );
 }
 
+const PIPELINE_STATE_TEXT: Record<string, string> = {
+  planning: "規劃中",
+  running: "執行中",
+  paused: "暫停",
+  ready: "可合併",
+  merged: "已合併",
+  failed: "失敗",
+};
+
 // PIPELINES section header 的 ⋯ menu。click-outside / Esc 關閉、disabled+tooltip 支援。
 function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKey);
@@ -143,9 +177,48 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+  // 開啟時 focus 第一個 enabled item,符合 ARIA menu pattern
+  useEffect(() => {
+    if (!open) return;
+    const firstEnabled = itemRefs.current.find((el) => el && !el.disabled);
+    firstEnabled?.focus();
+  }, [open]);
+  function focusItemAt(idx: number) {
+    const len = items.length;
+    if (len === 0) return;
+    for (let step = 0; step < len; step++) {
+      const i = ((idx + step) % len + len) % len;
+      const el = itemRefs.current[i];
+      if (el && !el.disabled) {
+        el.focus();
+        return;
+      }
+    }
+  }
+  function onMenuKey(e: React.KeyboardEvent) {
+    const active = document.activeElement;
+    const idx = itemRefs.current.findIndex((el) => el === active);
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusItemAt((idx < 0 ? -1 : idx) + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusItemAt((idx < 0 ? 0 : idx) - 1);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      focusItemAt(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusItemAt(items.length - 1);
+    } else if (e.key === "Tab") {
+      // Tab 關閉 menu,沿用 native Tab order
+      setOpen(false);
+    }
+  }
   return (
     <div ref={wrapRef} className={"rail-section-overflow" + (open ? " is-open" : "")}>
       <button
+        ref={triggerRef}
         type="button"
         className="rail-section-overflow-btn"
         onClick={(e) => {
@@ -153,16 +226,24 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
           setOpen((o) => !o);
         }}
         title="更多操作"
+        aria-label="更多操作"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        ⋯
+        <DotsHorizontalIcon />
       </button>
       {open && (
-        <div role="menu" className="focus-overflow-menu rail-section-overflow-menu">
-          {items.map((it) => (
+        <div
+          role="menu"
+          className="focus-overflow-menu rail-section-overflow-menu"
+          onKeyDown={onMenuKey}
+        >
+          {items.map((it, i) => (
             <button
               key={it.key}
+              ref={(el) => {
+                itemRefs.current[i] = el;
+              }}
               type="button"
               role="menuitem"
               className={"focus-overflow-item" + (it.danger ? " is-danger" : "")}
@@ -170,8 +251,10 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
               title={it.disabledReason ?? undefined}
               onClick={(e) => {
                 e.stopPropagation();
+                if (it.disabledReason) return;
                 setOpen(false);
                 it.onClick();
+                triggerRef.current?.focus();
               }}
             >
               <span className="focus-overflow-item-icon">{it.icon ?? <TrashIcon />}</span>
@@ -212,9 +295,44 @@ function railSecondary(p: Pipeline): string {
     if (last) return `⏸ #${last.n}${agoSuffix}`;
     return `暫停${agoSuffix}`;
   }
-  // planning(或未知 state):只顯時間,branch 跟 name 不同才補 branch
-  if (branchSuffix !== p.name) return `⎇ ${branchSuffix}${agoSuffix}`;
-  return ago ?? "未執行";
+  // planning(或未知 state):明確標「尚未執行」+ 更新時間,branch 跟 name 不同才補 branch
+  const planningAgo = ago ? `更新於 ${ago}` : "";
+  if (branchSuffix !== p.name) {
+    return planningAgo ? `⎇ ${branchSuffix} · ${planningAgo}` : `⎇ ${branchSuffix}`;
+  }
+  return planningAgo ? `尚未執行 · ${planningAgo}` : "尚未執行";
+}
+
+// 同 railSecondary 但符號展開成中文,供 aria-label 用;visual 仍走 railSecondary。
+function railSecondaryAccessible(p: Pipeline): string {
+  const base = p.baseBranch || "main";
+  const branchSuffix = p.branch.replace(/^pipeline\//, "");
+  const ago = fmtAgo(lastActivityAt(p));
+  const agoSuffix = ago ? ` · ${ago}` : "";
+
+  if (p.state === "running") {
+    const t = p.tickets.find((x) => x.status === "running");
+    if (t) {
+      const title = t.title.length > 18 ? t.title.slice(0, 17) + "…" : t.title;
+      return `執行中 ticket #${t.n} ${title}${agoSuffix}`;
+    }
+    return `執行中${agoSuffix}`;
+  }
+  if (p.state === "merged") return `已併入 ${base}${agoSuffix}`;
+  if (p.state === "ready") return `可合併入 ${base}${agoSuffix}`;
+  if (p.state === "failed") return `失敗${agoSuffix}`;
+  if (p.state === "paused") {
+    const last = [...p.tickets].reverse().find(
+      (x) => x.status === "paused" || x.status === "running"
+    );
+    if (last) return `暫停於 ticket #${last.n}${agoSuffix}`;
+    return `暫停${agoSuffix}`;
+  }
+  const planningAgo = ago ? `更新於 ${ago}` : "";
+  if (branchSuffix !== p.name) {
+    return planningAgo ? `branch ${branchSuffix} · ${planningAgo}` : `branch ${branchSuffix}`;
+  }
+  return planningAgo ? `尚未執行 · ${planningAgo}` : "尚未執行";
 }
 
 function lastActivityAt(p: Pipeline): number | null {

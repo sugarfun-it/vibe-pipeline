@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import * as api from "../../api/projects";
 import type { AuditEntry } from "../../api/projects";
+import { ArrowRightIcon, ChevronIcon } from "../../ui/icons";
 import "./auditTimeline.css";
 
 // Pipeline 狀態變動歷史 timeline。
@@ -22,6 +23,7 @@ export function AuditTimeline({
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(defaultOpen);
+  const panelId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -49,23 +51,37 @@ export function AuditTimeline({
         className="audit-toggle tdrw-section-label"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-controls={panelId}
       >
-        <span className="audit-chev">{open ? "▾" : "▸"}</span>
+        <span
+          className="audit-chev"
+          aria-hidden
+          style={{
+            display: "inline-flex",
+            transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+            transition: "transform 120ms ease",
+          }}
+        >
+          <ChevronIcon />
+        </span>
         狀態變動歷史
       </button>
       {open && (
-        <div className="tdrw-section-body">
+        <div className="tdrw-section-body" id={panelId} role="region" aria-label="狀態變動歷史">
           {error && <div className="tdrw-empty">讀取失敗:{error}</div>}
           {!error && entries === null && <div className="tdrw-empty">載入中…</div>}
           {!error && entries && entries.length === 0 && (
             <div className="tdrw-empty">尚無紀錄</div>
           )}
           {!error && entries && entries.length > 0 && (
-            <div className="audit-list">
-              {entries.map((e, i) => (
-                <AuditRow key={`${e.ts}-${i}`} entry={e} />
-              ))}
-            </div>
+            <>
+              <div className="audit-sort-hint" aria-live="polite">最新在上</div>
+              <div className="audit-list">
+                {entries.map((e, i) => (
+                  <AuditRow key={`${e.ts}-${i}`} entry={e} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -73,19 +89,32 @@ export function AuditTimeline({
   );
 }
 
+// 把後端 source 機器代號翻成中文,user 不需要懂 runner-self-detected / api-handler-explicit;
+// 找不到對應就 fallback 原值(保開發者可讀性)
+const SOURCE_LABEL: Record<string, string> = {
+  "user-action": "使用者操作",
+  "api-handler-explicit": "API 明確指定",
+  "runner-self-detected": "Runner 自動偵測",
+  "orchestrator.spawnDirect": "Orchestrator 啟動",
+  "ticketWatcher-detected": "Ticket Watcher 偵測",
+};
+
 function AuditRow({ entry }: { entry: AuditEntry }) {
+  const srcLabel = SOURCE_LABEL[entry.source] ?? entry.source;
   return (
     <div className="audit-row">
       <span className="audit-ts mono">{fmtTime(entry.ts)}</span>
       <span className="audit-states">
         <span className="audit-from mono">{entry.from}</span>
-        <span className="audit-arrow">→</span>
+        <span className="audit-arrow" aria-hidden>
+          <ArrowRightIcon />
+        </span>
         <span className="audit-to mono">{entry.to}</span>
       </span>
       <span className="audit-source-line">
-        <span className="audit-source mono">{entry.source}</span>
+        <span className="audit-source" title={entry.source}>{srcLabel}</span>
         {entry.sourceDetail && (
-          <span className="audit-detail"> · {entry.sourceDetail}</span>
+          <span className="audit-detail mono"> · {entry.sourceDetail}</span>
         )}
       </span>
     </div>

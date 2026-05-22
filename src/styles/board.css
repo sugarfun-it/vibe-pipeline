@@ -7,6 +7,258 @@
   color: var(--fg);
 }
 
+/* ─── Phase 4 cross-unit primitives ─────────────────────────────
+   tokens (--control-h, --control-pad-x, --radius-control, --focus-ring,
+   --danger-bg-soft, --danger-border, --shadow-popover, --danger-fg,
+   --z-popover, --z-drawer, --z-modal, --z-settings, --z-toast, --z-banner,
+   --scrim-modal, --scrim-drawer, --scrim-popover,
+   --accent-fg, --success-fg, --warning-fg, --inverse-fg, --status-dark-fg,
+   --space-1..6)
+   are added by tokens.css. Fallbacks here so this file degrades gracefully
+   if tokens.css updates land in a separate commit. */
+
+/* phase4-cross-010 — global screen-reader utility. Previously lived locally
+   inside diffModal.css; promoted to board.css so every unit (run-button,
+   run-history, ticket card, toast, diff-modal, confirm-dialog, qa-drawer,
+   icon-button) can share a single contract. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+/* .sr-only-focusable lifts text into view when focused (skip-links pattern) */
+.sr-only-focusable:focus,
+.sr-only-focusable:focus-visible,
+.sr-only.is-focusable:focus,
+.sr-only.is-focusable:focus-visible {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Shared base for button-like controls (phase4-control-001).
+   Existing .btn / .tdrw-action / .qadr-send / .sb-tab / .brw-btn / .run-button
+   selectors remain stable; we just align disabled/hover/active/focus. */
+.btn:disabled,
+.btn[aria-disabled="true"],
+.tdrw-action:disabled,
+.tdrw-action[aria-disabled="true"],
+.qadr-send:disabled,
+.qadr-send[aria-disabled="true"],
+.sb-tab:disabled,
+.sb-tab[aria-disabled="true"],
+.brw-btn:disabled,
+.brw-btn[aria-disabled="true"],
+.run-button:disabled,
+.run-button[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  color: var(--fg-faint);
+}
+.btn[aria-disabled="true"]:hover,
+.tdrw-action[aria-disabled="true"]:hover,
+.qadr-send[aria-disabled="true"]:hover,
+.sb-tab[aria-disabled="true"]:hover,
+.brw-btn[aria-disabled="true"]:hover,
+.run-button[aria-disabled="true"]:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+.btn:active:not(:disabled):not([aria-disabled="true"]),
+.tdrw-action:active:not(:disabled):not([aria-disabled="true"]),
+.qadr-send:active:not(:disabled):not([aria-disabled="true"]),
+.sb-tab:active:not(:disabled):not([aria-disabled="true"]),
+.brw-btn:active:not(:disabled):not([aria-disabled="true"]),
+.run-button:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0.5px);
+}
+
+/* Shared :focus-visible (phase4-focus-001) — single ring token, no outline:none dead-ends.
+   Components keep their own border/background; we layer the ring via box-shadow so it
+   never gets clipped by overflow:hidden parents. */
+:where(.btn, .tdrw-action, .qadr-send, .sb-tab, .brw-btn, .run-button,
+       .chip, .status-pill, .vp-chip, .sync-chip,
+       .picker-trigger, .create-x, .create-cancel, .create-submit,
+       .topbar-overflow-item, .topbar-overflow-toggle, .pipeline-overflow-menu-item,
+       .rail-item, .rail-add, .rail-section-overflow-btn,
+       .ticket.is-clickable, .ticket-mode,
+       .proj-trigger, .proj-menu-item, .picker-item,
+       .toggle-pill, .action-toast-close,
+       [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 2px var(--bg), 0 0 0 4px var(--accent));
+}
+
+/* Unified chip primitive (phase4-chip-001).
+   .vp-chip is the canonical base; existing .chip / .status-pill / .statechip /
+   .tdrw-status-chip / .tdrw-run-status / .rail-qa-badge selectors stay alive
+   but inherit the same base properties so they no longer drift. */
+.vp-chip,
+.chip,
+.status-pill,
+.statechip,
+.tdrw-status-chip,
+.tdrw-run-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs, 4px);
+  font: 500 11px/1.4 var(--font-mono);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.vp-chip-dot,
+.status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.vp-chip--success { color: var(--done); border-color: color-mix(in srgb, var(--done) 40%, var(--line-2)); background: color-mix(in srgb, var(--done) 12%, transparent); }
+.vp-chip--warning { color: var(--paused); border-color: color-mix(in srgb, var(--paused) 40%, var(--line-2)); background: color-mix(in srgb, var(--paused) 12%, transparent); }
+.vp-chip--danger  { color: var(--failed); border-color: color-mix(in srgb, var(--failed) 40%, var(--line-2)); background: color-mix(in srgb, var(--failed) 12%, transparent); }
+.vp-chip--info    { color: var(--iter); border-color: color-mix(in srgb, var(--iter) 40%, var(--line-2)); background: color-mix(in srgb, var(--iter) 12%, transparent); }
+
+/* phase4-cross-005 — chip taxonomy split.
+   --state    : read-only (status/verdict/role). cursor:default, no pointer cues
+   --readonly : alias of --state for explicit non-interactive intent
+   --action   : clickable command (commit copy, reveal-folder, sync). hover/active feedback
+   --toggle   : on/off semantic chip (mode-toggle). pressed-state visual
+   --mode     : variant style for radio-like mode selection
+   --metric   : decorative counter / badge (parallel-chip, focus-count-chip, qa-badge)
+   Aliases on existing component classes preserved further down. */
+.vp-chip--state,
+.vp-chip--readonly {
+  cursor: default;
+}
+.vp-chip--action {
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms, transform 80ms;
+}
+.vp-chip--action:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--hover);
+  border-color: var(--line);
+  color: var(--fg);
+}
+.vp-chip--action:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0.5px);
+}
+.vp-chip--action:disabled,
+.vp-chip--action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.vp-chip--toggle {
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.vp-chip--toggle[aria-pressed="true"],
+.vp-chip--toggle.is-on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.vp-chip--toggle[aria-pressed="false"]:hover,
+.vp-chip--toggle.is-off:hover {
+  border-color: var(--line);
+  background: var(--hover);
+}
+.vp-chip--mode {
+  cursor: pointer;
+}
+.vp-chip--metric {
+  font-weight: 600;
+  color: var(--fg-mute);
+}
+
+/* Component aliases — keep existing class names but bind them to taxonomy.
+   Result: ReadyBanner / TicketCard / Topbar continue to emit their own class,
+   while the visual contract converges. */
+.status-pill,
+.statechip,
+.tdrw-status-chip,
+.tdrw-run-status { cursor: default; }
+.topbar-reveal-folder,
+.sync-chip { /* action chips */ }
+.ticket-mode.is-toggle { cursor: pointer; }
+.parallel-chip,
+.focus-count-chip,
+.focus-count,
+.rail-qa-badge {
+  font-weight: 600;
+}
+
+/* Unified form fields (phase4-form-001).
+   .vp-input / .vp-select / .vp-textarea is the canonical contract; existing
+   .create-input input / .picker-trigger / .settings-input / .tdrw-iter-limit /
+   .qadr-input / .qadr-textarea inherit shared focus + radius + height. */
+.vp-input,
+.vp-select,
+.vp-textarea {
+  min-height: var(--control-h, 32px);
+  padding: 0 var(--control-pad-x, 12px);
+  border-radius: var(--radius-control, 6px);
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  transition: border-color 120ms, background 120ms;
+}
+.vp-textarea { padding: 8px var(--control-pad-x, 12px); min-height: calc(var(--control-h, 32px) * 2); }
+.vp-input:hover,
+.vp-select:hover,
+.vp-textarea:hover { border-color: var(--line); }
+.vp-input:focus-visible,
+.vp-select:focus-visible,
+.vp-textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring, 0 0 0 2px var(--bg), 0 0 0 4px var(--accent));
+}
+.vp-input:disabled,
+.vp-select:disabled,
+.vp-textarea:disabled { opacity: 0.48; cursor: not-allowed; }
+.vp-field-error { color: var(--failed); font-size: 11px; }
+.vp-help { color: var(--fg-faint); font-size: 11px; }
+
+/* Unified danger (phase4-danger-001) — semantic tokens, no hardcoded hex.
+   --danger-fg / --danger-bg-soft / --danger-border come from tokens.css. */
+.btn-danger {
+  background: var(--failed);
+  color: var(--danger-fg, #fff);
+  border-color: var(--failed);
+}
+.btn-danger:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--failed) 85%, #000);
+  border-color: color-mix(in srgb, var(--failed) 85%, #000);
+}
+.btn-danger.btn-ghost,
+.btn-danger-ghost {
+  background: transparent;
+  color: var(--failed);
+  border-color: color-mix(in srgb, var(--failed) 35%, var(--line-2));
+}
+.btn-danger.btn-ghost:hover:not(:disabled):not([aria-disabled="true"]),
+.btn-danger-ghost:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 55%, var(--line-2)));
+}
+
 /* ─── TopBar ─── */
 .topbar {
   height: 52px; flex-shrink: 0;
@@ -57,7 +309,7 @@
   border-radius: 10px;
   box-shadow: var(--shadow-md);
   padding: 6px;
-  z-index: 20;
+  z-index: var(--z-popover, 100);
 }
 .proj-menu-label {
   font-size: 10px; font-weight: 600;
@@ -195,6 +447,58 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
+/* phase4-cross-014 — toggle visual contract.
+   Unify Project auto-merge, Notifications push, CreateCard auto-merge toggles
+   under a single set of modifiers. Existing `.toggle-pill.is-on` keeps working;
+   new BEM-style modifiers added so SettingsPopover/NotificationsTab/CreateCard
+   can adopt without duplicating disabled/blocked visuals. */
+.toggle-pill {
+  /* coarse pointer target — promote to 40px on touch devices below */
+  min-height: var(--control-h, 32px);
+  padding: 0 var(--control-pad-x, 12px);
+}
+.toggle-pill--off,
+.toggle-pill.is-off {
+  color: var(--fg-mute);
+  border-color: var(--line-2);
+  background: var(--panel-2);
+}
+.toggle-pill--on,
+.toggle-pill.is-on {
+  color: var(--done);
+  border-color: var(--done);
+  background: color-mix(in srgb, var(--done) 12%, transparent);
+}
+.toggle-pill--disabled,
+.toggle-pill.is-disabled,
+.toggle-pill[aria-disabled="true"],
+.toggle-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+.toggle-pill--disabled:hover,
+.toggle-pill.is-disabled:hover,
+.toggle-pill[aria-disabled="true"]:hover,
+.toggle-pill:disabled:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+.toggle-pill--blocked,
+.toggle-pill.is-blocked {
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 45%, var(--line-2)));
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 10%, transparent));
+  color: var(--failed);
+}
+.toggle-pill-hint {
+  font-size: 11px;
+  color: var(--fg-faint);
+  margin-left: 6px;
+}
+@media (pointer: coarse) {
+  .toggle-pill { min-height: 40px; }
+}
+
 /* sync chip — 看起來是 button 不只是 chip。focus-head 上點擊觸發 AI sync。
    queued 色(teal-ish)區隔於 +N -M 的 fg-mute 灰、btn-primary 的 accent 橘 */
 .sync-chip {
@@ -268,12 +572,12 @@
 }
 .sync-chip.sync-chip-conflict .sync-chip-icon.sync-chip-primary {
   background: var(--accent, #d4956d);
-  color: #fff;
+  color: var(--accent-fg, #fff);
   border-color: var(--accent, #d4956d);
 }
 .sync-chip.sync-chip-failed .sync-chip-icon.sync-chip-primary {
   background: var(--failed);
-  color: #fff;
+  color: var(--danger-fg, #fff);
   border-color: var(--failed);
 }
 .sync-chip-icon.sync-chip-primary:hover {
@@ -282,18 +586,18 @@
 
 /* ─── Modal(SyncConflictModal 等共用基礎)─── */
 .modal-backdrop {
-  position: fixed; inset: 0; z-index: 1000;
-  background: color-mix(in srgb, #000 72%, transparent);
+  position: fixed; inset: 0; z-index: var(--z-modal, 1000);
+  background: var(--scrim-modal, color-mix(in srgb, #000 72%, transparent));
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
 }
 .modal-card {
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-panel, 10px);
   max-width: 520px; width: 100%;
   padding: 20px 22px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  box-shadow: var(--shadow-overlay, var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.4)));
 }
 .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--fg); }
 .modal-body { color: var(--fg); font-size: 14px; line-height: 1.55; }
@@ -307,6 +611,26 @@
   flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: 240px 1fr;
+}
+
+/* Landmark wrappers added by AppShell (<nav>/<main>/<aside>) must propagate
+   the grid cell's height to their inner pane (.rail / .focus / .inbox-col) so
+   internal overflow:auto kicks in. Without this, .rail-list / .inbox-list
+   grow past viewport and lose scroll. */
+.board-body > nav,
+.board-body > main,
+.board-body > aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.board-body > nav > .rail,
+.board-body > main > .focus,
+.board-body > aside > .inbox-col {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
 }
 
 .board-mobile-tabs {
@@ -459,18 +783,32 @@
 }
 .focus-head { margin-bottom: 16px; position: relative; z-index: 5; }
 .focus-head-top {
-  display: flex; align-items: center; gap: 10px;
-  flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 12px;
 }
-/* 動作群組(自動合併 toggle + RunButton + ⋯)整批靠右,desktop / mobile 都有效。
-   + ticket button 留在 left meta 區尾端,因為它是「對當前 pipeline 加 ticket」
-   的上下文動作,跟右側的 pipeline-level 控制(run / merge / 重置)不同層。 */
+/* 兩列結構:
+   row 1 = title + branch chip + ... actions(run / overflow)
+   row 2 = status chip + count + runs chip + diff/sync + ... + ticket button
+   每列獨立 flex-wrap;靠 spacer div 把 actions / + ticket 推到右側 */
+.focus-head-title-row,
+.focus-head-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.focus-head-title-spacer,
+.focus-head-meta-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .focus-actions {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;
+  gap: 8px;
+  flex-shrink: 0;
 }
 /* runs / 累積成本 chip:pipeline header 上 quick glance,完整明細在 OverflowMenu「執行紀錄」 drawer */
 .focus-title {
@@ -483,11 +821,13 @@
 
 /* ─── banners ─── */
 .banner {
-  display: flex; align-items: center; gap: 14px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  display: flex; align-items: center; gap: var(--space-3, 14px);
+  padding: var(--space-3, 12px) var(--space-3, 14px);
+  border-radius: var(--radius-panel, 10px);
   border: 1px solid;
-  margin-top: 12px;
+  margin-top: var(--space-3, 12px);
+  position: relative;
+  z-index: var(--z-banner, 5);
 }
 .banner-paused {
   background: var(--paused-soft);
@@ -497,11 +837,63 @@
   background: var(--done-soft);
   border-color: color-mix(in srgb, var(--done) 30%, transparent);
 }
-.banner-icon { display: inline-flex; flex-shrink: 0; }
+.banner-icon { display: inline-flex; flex-shrink: 0; color: currentColor; }
 .banner-paused .banner-icon { color: var(--paused); }
 .banner-body { flex: 1; min-width: 0; }
 .banner-title { font-size: 13px; font-weight: 600; color: var(--fg); }
 .banner-desc { font-size: 11.5px; color: var(--fg-mute); margin-top: 2px; }
+
+/* phase4-cross-011 — banner state modifiers + data-state contract.
+   ReadyBanner.tsx emits data-state="ready|merging|merged|failed"; styling
+   converges so RunButton merge-ready, rail ready/merged dot, focus-head
+   pipeline state all read off the same palette. Aliases mirror class form. */
+.banner[data-state="ready"],
+.banner--ready {
+  background: var(--done-soft);
+  border-color: color-mix(in srgb, var(--done) 35%, transparent);
+  color: var(--done);
+}
+.banner[data-state="merging"],
+.banner--merging {
+  background: color-mix(in srgb, var(--running) 12%, transparent);
+  border-color: color-mix(in srgb, var(--running) 35%, transparent);
+  color: var(--running);
+}
+.banner[data-state="merged"],
+.banner--merged {
+  background: color-mix(in srgb, var(--done) 8%, transparent);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line-2));
+  color: var(--done);
+}
+.banner[data-state="failed"],
+.banner--failed {
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 45%, var(--line-2)));
+  color: var(--failed);
+}
+.banner[data-state="paused"],
+.banner--paused {
+  background: var(--paused-soft);
+  border-color: color-mix(in srgb, var(--paused) 30%, transparent);
+  color: var(--paused);
+}
+/* icon inherits the banner state colour by default; body keeps neutral fg
+   so descriptive text remains readable while the accent stays on the icon. */
+.banner[data-state] .banner-icon,
+.banner--ready .banner-icon,
+.banner--merging .banner-icon,
+.banner--merged .banner-icon,
+.banner--failed .banner-icon { color: currentColor; }
+.banner[data-state] .banner-title,
+.banner--ready .banner-title,
+.banner--merging .banner-title,
+.banner--merged .banner-title,
+.banner--failed .banner-title { color: var(--fg); }
+.banner[data-state] .banner-desc,
+.banner--ready .banner-desc,
+.banner--merging .banner-desc,
+.banner--merged .banner-desc,
+.banner--failed .banner-desc { color: var(--fg-mute); }
 
 /* ─── ticket list ─── */
 .focus-list { display: flex; flex-direction: column; gap: 10px; }
@@ -516,6 +908,12 @@
   animation: fadeUp 280ms ease-out both;
 }
 .ticket:hover { border-color: var(--line-2); background: var(--panel-2); }
+/* tk-003:可點擊卡片強化 hover affordance(border + bg 雙訊號) */
+.ticket.is-clickable:hover {
+  border-color: var(--line-2);
+  background: var(--hover);
+}
+.ticket.is-clickable:hover .ticket-card__chevron { color: var(--fg); transform: translateX(2px); }
 .ticket.is-paused { border-color: color-mix(in srgb, var(--paused) 35%, var(--line-2)); }
 .ticket.is-draft { opacity: 0.6; }
 .ticket.is-draft:hover { opacity: 1; }
@@ -564,8 +962,39 @@
 .ticket-row {
   display: flex; align-items: center; gap: 10px;
 }
+/* tk-001:header 排成 grid,first row 只放 [num] [title] [trailing(status+chevron)],
+   mode chip 不再搶 header — 降到 .ticket-card__sub。*/
+.ticket-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.ticket-card__trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* tk-003:chevron affordance,提示卡片可開 drawer */
+.ticket-card__chevron {
+  color: var(--fg-mute);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: color 120ms, transform 120ms;
+}
+/* tk-005:mode chip + meta 同一列(sub row),subdued,跟 header 留小間距 */
+.ticket-card__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-left: 32px; /* 跟 title 對齊 (num 22px + gap 10px) */
+  flex-wrap: wrap;
+}
 .ticket-num {
-  font-size: 11px; color: var(--fg-faint); width: 22px; flex-shrink: 0;
+  /* tk-006:對比拉高(fg-faint → fg-mute) */
+  font-size: 11px; color: var(--fg-mute); width: 22px; flex-shrink: 0;
 }
 .ticket-title {
   flex: 1; font-size: 13.5px; font-weight: 500;
@@ -577,7 +1006,7 @@
   word-break: break-word;
 }
 .ticket-goal {
-  margin-top: 4px;
+  margin-top: 6px;
   margin-left: 32px; /* 對齊 .ticket-title(num 22px + gap 10px) */
   font-size: 12px;
   line-height: 1.4;
@@ -629,7 +1058,8 @@ button.ticket-mode {
 .status-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 .ticket-meta {
-  font-size: 10.5px; color: var(--fg-faint);
+  /* tk-006:contrast 拉高(fg-faint → fg-mute) */
+  font-size: 10.5px; color: var(--fg-mute);
 }
 
 /* ── iter row ── */
@@ -667,8 +1097,55 @@ button.ticket-mode {
   margin-top: 4px;
 }
 .iter-round-num {
-  font-size: 10px; color: var(--fg-faint);
+  /* tk-006:contrast 拉高(fg-faint → fg-mute) */
+  font-size: 10px; color: var(--fg-mute);
   min-width: 24px;
+}
+/* tk-002 / tk-008:compact round summary row — 取代 verbose per-round IterStages 顯示。
+   單一 inset bar:左側 round 編號 + stage flow + verdict,右側 elapsed。
+   背景用 done-tint 弱化容器感,不要再有獨立 shadow / 第二層 card。*/
+.ticket-card__progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 6px 10px;
+  margin-top: 8px;
+  border-radius: var(--radius-control, 6px);
+  background: color-mix(in srgb, var(--done) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--done) 18%, transparent);
+  font-size: 11.5px;
+  box-shadow: none;
+}
+/* failed 系列(把上面 done-tint 蓋掉,用 failed-tint)*/
+.ticket.is-failed .ticket-card__progress {
+  background: color-mix(in srgb, var(--failed) 7%, transparent);
+  border-color: color-mix(in srgb, var(--failed) 22%, transparent);
+}
+.ticket-card__round-summary .ticket-card__round-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ticket-card__round-flow {
+  /* tk-006:tertiary text 用 fg-mute 而非 fg-faint */
+  color: var(--fg-mute);
+  font-size: 11px;
+}
+.ticket-card__round-verdict {
+  font-weight: 600;
+  font-size: 11px;
+}
+.ticket-card__round-verdict.is-pass { color: var(--done); }
+.ticket-card__round-verdict.is-fail { color: var(--failed); }
+.ticket-card__round-verdict.is-part { color: var(--paused); }
+.ticket-card__round-verdict.is-unknown { color: var(--fg-mute); }
+.ticket-card__round-elapsed {
+  margin-left: 0;
+  color: var(--fg-mute);
 }
 .ticket-iter-summary {
   margin-top: 6px;
@@ -797,23 +1274,34 @@ html.light .create-card { background: var(--bg-elevated); }
   cursor: pointer;
   transition: background 120ms, color 120ms;
 }
-.create-x:hover,
+.create-x:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+/* :focus-visible handled by the shared ring rule above (phase4-focus-001).
+   Hover treatment still applied here for keyboard users. */
 .create-x:focus-visible {
   background: var(--hover);
   color: var(--fg);
-  outline: none;
 }
 
 .create-input {
   display: flex; align-items: center; gap: 0;
   padding: 6px 8px;
   background: var(--panel);
-  border: 1.5px solid var(--accent);
-  border-radius: 5px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
   font-size: 12.5px;
-  transition: border-color 120ms, background 120ms;
+  transition: border-color 120ms, background 120ms, box-shadow 120ms;
 }
+.create-input:hover { border-color: var(--line); }
+/* Match .picker-trigger's rest+focus look — border-color shift, no halo.
+   (.picker-trigger only shows the global focus halo on real keyboard tab via :focus-visible,
+   not on autofocus or mouse click. To keep the two fields visually identical without
+   relying on Chromium's autofocus heuristic, we drop the box-shadow ring here entirely.) */
+.create-input:focus-within { border-color: var(--accent); }
 .create-input.is-error { border-color: var(--failed); background: var(--failed-soft); }
+.create-input.is-error:focus-within { border-color: var(--failed); }
 
 .create-input input {
   flex: 1; min-width: 0;
@@ -835,6 +1323,12 @@ html.light .create-card { background: var(--bg-elevated); }
 .create-field-label {
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--fg-mute);
+  padding-left: 1px;
+}
+.create-field-desc {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fg-mute);
   padding-left: 1px;
 }
 
@@ -864,7 +1358,7 @@ html.light .create-card { background: var(--bg-elevated); }
   border-radius: 7px;
   box-shadow: var(--shadow-md);
   padding: 4px;
-  z-index: 30;
+  z-index: var(--z-popover, 100);
   display: flex; flex-direction: column; gap: 1px;
 }
 .picker-item {
@@ -1011,24 +1505,24 @@ html.light .focus-create-empty {
   }
 
   .topbar-left {
-    flex: 1;
     gap: 0;
+    min-width: 0;
   }
 
   .topbar-right {
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .proj-switcher {
-    flex: 1;
     min-width: 0;
   }
 
+  /* 專案 chip 自然寬度,不撐滿;name 過長 ellipsis */
   .proj-trigger {
-    width: 100%;
-    max-width: none;
+    max-width: 60vw;
     min-width: 0;
-    padding: 5px 7px;
+    padding: 4px 8px;
   }
 
   .proj-trigger-name {
@@ -1045,14 +1539,109 @@ html.light .focus-create-empty {
     width: min(320px, calc(100vw - 20px));
   }
 
-  /* 內容少不需要收合 — overflow toggle 不顯示,menu 保持 inline flex row */
+  /* mobile:不用 ⋯ 摺疊 — 把 parallel chip / theme toggle / settings 直接平鋪在 topbar */
   .topbar-overflow-toggle {
     display: none;
   }
-
   .topbar-overflow-menu {
-    /* 維持 desktop 的 inline flex row,單純 mobile 也直接顯示 */
+    display: inline-flex !important;
+    position: static;
+    flex-direction: row;
+    align-items: center;
     gap: 4px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    z-index: auto;
+  }
+  .topbar-overflow-mobile-items {
+    /* 額外塞給 mobile 用的 branch chip / reveal-folder 整段隱藏(資訊已在 Pipeline 內) */
+    display: none !important;
+  }
+
+  /* mobile:focus header 用兩列 flex 結構(JSX 切好的 title-row / meta-row),
+     不再強制 grid auto-place — auto-place 在窄寬度把每個 chip / button 各自踢成一列。 */
+  .focus-head-top {
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  .focus-head-title-row,
+  .focus-head-meta-row {
+    gap: 6px !important;
+  }
+  .focus-actions {
+    gap: 6px;
+  }
+  /* mobile:branch chip 弱化為 secondary text(去 chip 殼)*/
+  .focus-branch-chip {
+    background: transparent;
+    border: 0;
+    padding-inline: 0;
+    color: var(--fg-mute);
+  }
+  /* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
+  .run-btn-empty-label-full { display: none; }
+  .run-btn-empty-label-short { display: inline; }
+
+  /* v2-board-003:mobile tap target 拉到 44px。pencil + focus 區的 overflow ⋯
+     原本套 .btn min-height: 32px,觸控不夠;icon 視覺保持 16px。 */
+  .focus-title-edit-btn,
+  .focus-overflow > .btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+
+  /* v2-board-002:ReadyBanner merged 變體在 mobile 壓緊,別搶過已完成的 ticket。 */
+  .banner.banner-merged {
+    padding: var(--space-3, 12px) var(--space-4, 14px);
+    border-radius: var(--radius-control, 6px);
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2, 8px);
+  }
+  .banner.banner-merged .banner-title {
+    font-size: 12.5px;
+  }
+  .banner.banner-merged .banner-desc {
+    font-size: 11px;
+    margin-top: 1px;
+  }
+  .banner.banner-merged .banner-icon {
+    transform: scale(0.85);
+  }
+  .ticket-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  /* chips/meta past the title flow to a full-width second row */
+  .ticket-row > .chip,
+  .ticket-row > .status-pill,
+  .ticket-row > .ticket-mode,
+  .ticket-row > .ticket-meta {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  /* tk-001:header grid 在 mobile 維持 3 欄(num / title / trailing),trailing 不擠到第二列 —
+     title 自己 ellipsis,讓 status + chevron 永遠看得到 */
+  .ticket-card__header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .ticket-card__header > .ticket-card__trailing {
+    grid-column: auto;
+    justify-self: end;
+  }
+  /* tk-007:窄 viewport 優先保 title + result,description 收到 2 行 */
+  .ticket-card__header .ticket-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ticket-card__description {
+    margin-top: 6px;
   }
 
   .create-input,
@@ -1079,19 +1668,25 @@ html.light .focus-create-empty {
     min-width: 0;
   }
 
-  .board-root.is-mobile-board .inbox-col {
+  .board-root.is-mobile-board .inbox-col,
+  .board-root.is-mobile-board .board-body > aside {
     display: none;
   }
 
+  /* Phase 4 landmark wave 把 .rail / .focus 包進 <nav> / <main>;
+     mobile tab 切換時內層用 display:none 隱藏,wrapper 也得連動隱藏,
+     否則 grid 仍幫空 nav 留欄、視覺像佔位 */
   .board-root.is-mobile-tab-focus .rail,
-  .board-root.is-mobile-tab-rail .focus {
+  .board-root.is-mobile-tab-rail .focus,
+  .board-root.is-mobile-tab-focus .board-body > nav,
+  .board-root.is-mobile-tab-rail .board-body > main {
     display: none;
   }
 
   .board-mobile-tabs {
     position: sticky;
     bottom: 0;
-    z-index: 40;
+    z-index: var(--z-banner, 40);
     flex-shrink: 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1099,6 +1694,91 @@ html.light .focus-create-empty {
     padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     border-top: 1px solid var(--line);
     background: var(--bg-elevated);
+  }
+
+  /* phase4-cross-008 — unified mobile policy contract.
+     One breakpoint (767.98px). All fullscreen overlays follow the same rules:
+       1. Use 100dvh (not 100vh) — avoids iOS Safari url-bar jump.
+       2. inset:0 + safe-area-inset paddings on all four sides.
+       3. Sticky header (action row) uses --z-banner so it floats above content.
+       4. Reveal-folder + desktop-only meta hidden via single rule.
+       5. Coarse pointer targets >= 40px (toggle/icon-button).
+     Component-specific overrides (drawers, settings, qa, diff modal) live in
+     their own CSS files but MUST match this contract. */
+
+  /* shared fullscreen overlay primitive — drawer/settings/qa/diff inherit */
+  .vp-mobile-overlay,
+  .vp-fullscreen-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+
+  /* shared mobile header bar — sticky action row inside fullscreen overlays */
+  .vp-mobile-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-banner, 40);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* coarse pointer mobile target promotion */
+  .icon-button,
+  .vp-chip--action,
+  .toggle-pill,
+  .topbar-overflow-toggle,
+  .create-x,
+  .action-toast-close {
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  /* hide desktop-only context everywhere; centralised */
+  .desktop-only,
+  .topbar-reveal-folder {
+    display: none !important;
+  }
+
+  /* mobile-only helpers (counterpart) */
+  .mobile-only {
+    display: revert !important;
+  }
+}
+
+/* tk-007:極窄 viewport(<=480px)再緊一點 padding,progress 跟 header 留更小距離 */
+@media (max-width: 480px) {
+  .ticket {
+    padding: 10px 12px 12px 18px;
+  }
+  .ticket-card__progress {
+    margin-top: 6px;
+    padding: 5px 8px;
+  }
+  .ticket-card__sub {
+    margin-left: 30px;
+  }
+  .ticket-goal {
+    margin-left: 30px;
+  }
+}
+
+/* desktop default — mobile-only helpers hidden */
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
   }
 }
 
@@ -1170,7 +1850,7 @@ html.light .focus-create-empty {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 2000;
+  z-index: var(--z-toast, 2000);
   max-width: 420px;
   padding: 10px 14px 10px 12px;
   background: var(--bg-elevated);
@@ -1210,3 +1890,11 @@ html.light .focus-create-empty {
   color: var(--accent);
   letter-spacing: 0.04em;
 }
+
+/* RunButton disabled label:desktop 用長版「無可執行 ticket」、mobile 用短版「無可執行」
+   wrap 在 @media query 內,避免被 (max-width:767.98px) 區塊蓋過(那塊在檔案中段)。 */
+@media (min-width: 768px) {
+  .run-btn-empty-label-full { display: inline; }
+  .run-btn-empty-label-short { display: none; }
+}
+

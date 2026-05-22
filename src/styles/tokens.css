@@ -35,9 +35,66 @@
   --radius-sm: 6px;
   --radius-lg: 14px;
 
+  /* phase4-tokens-001 — canonical radius / control sizing */
+  --radius-xs: 4px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
+  --control-h: 32px;
+  --control-h-sm: 26px;
+  --control-pad-x: 12px;
+
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.25);
   --shadow-md: 0 12px 32px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
   --shadow-lg: 0 32px 80px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35);
+
+  /* phase4-tokens-001 — canonical popover / overlay shadows + scrim */
+  --shadow-popover: 0 2px 6px rgba(0,0,0,0.35), 0 12px 28px rgba(0,0,0,0.45);
+  --shadow-overlay: var(--shadow-lg);
+  --scrim: color-mix(in srgb, #000 45%, transparent);
+  --scrim-modal: color-mix(in srgb, #000 55%, transparent);
+  --scrim-drawer: color-mix(in srgb, #000 40%, transparent);
+
+  /* phase4-overlay-001 — z-index layering tokens (referenced by drawer/modal/toast layers) */
+  --z-overlay-base: 50;
+  --z-popover: 100;
+  --z-drawer: 200;
+  --z-banner: 300;
+  --z-modal: 1000;
+  --z-settings: 1100;
+  --z-toast: 2000;
+
+  /* phase4-cross-006 — canonical spacing scale (consumed by board/drawer/qa/diff/settings) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* phase4-danger-001 — semantic foreground tokens for status surfaces */
+  --accent-fg: rgba(255,255,255,0.95);
+  --danger-fg: #fff5f3;
+  --danger-bg-soft: var(--failed-soft);
+  --danger-border: color-mix(in srgb, var(--failed) 55%, var(--line-2));
+  --success-fg: #f1faf1;
+  --status-dark-fg: #0c0e12;
+
+  /* phase4-cross-007 — additional semantic foreground tokens (warning/info/banner/qa) */
+  --warning-fg: #1c1208;
+  --info-fg: #f1f4fa;
+  --banner-success-fg: #0e1f0f;
+  --banner-ready-fg: var(--status-dark-fg);
+  --qa-thinking-fg: var(--fg-mute);
+  --inverse-fg: #1c1916;
+  --on-accent-fg: var(--accent-fg);
+
+  /* phase4-focus-001 — shared :focus-visible ring tokens */
+  --focus-ring-offset: 2px;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 
   --font-ui: "Geist", "Inter Tight", -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
@@ -73,6 +130,36 @@ html.light {
   --queued: #2e8a80;
   --queued-soft: rgba(46, 138, 128, 0.10);
   --draft: #a8a292;
+
+  /* phase4-tokens-001 — shadows / scrim tuned for light theme */
+  --shadow-sm: 0 1px 2px rgba(28,25,22,0.08);
+  --shadow-md: 0 12px 32px rgba(28,25,22,0.14), 0 2px 6px rgba(28,25,22,0.08);
+  --shadow-lg: 0 32px 80px rgba(28,25,22,0.22), 0 4px 12px rgba(28,25,22,0.12);
+  --shadow-popover: 0 2px 6px rgba(28,25,22,0.10), 0 12px 28px rgba(28,25,22,0.18);
+  --shadow-overlay: var(--shadow-lg);
+  --scrim: color-mix(in srgb, #1c1916 35%, transparent);
+  --scrim-modal: color-mix(in srgb, #1c1916 45%, transparent);
+  --scrim-drawer: color-mix(in srgb, #1c1916 30%, transparent);
+
+  /* phase4-danger-001 — semantic foreground tokens (light) */
+  --accent-fg: #ffffff;
+  --danger-fg: #ffffff;
+  --danger-bg-soft: var(--failed-soft);
+  --danger-border: color-mix(in srgb, var(--failed) 45%, var(--line-2));
+  --success-fg: #ffffff;
+  --status-dark-fg: #1c1916;
+
+  /* phase4-cross-007 — additional semantic foreground tokens (light) */
+  --warning-fg: #1c1208;
+  --info-fg: #ffffff;
+  --banner-success-fg: #0e1f0f;
+  --banner-ready-fg: var(--status-dark-fg);
+  --qa-thinking-fg: var(--fg-mute);
+  --inverse-fg: #ffffff;
+  --on-accent-fg: var(--accent-fg);
+
+  /* phase4-focus-001 — focus ring uses theme bg so the 2px halo blends in both themes */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
 * { box-sizing: border-box; }
@@ -115,7 +202,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
 .icon-btn:hover { background: var(--hover); color: var(--fg); }
 
 .btn {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: var(--control-h, 32px);
   padding: 6px 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500;
   border: 1px solid var(--line-2); color: var(--fg);
   background: var(--panel-2);

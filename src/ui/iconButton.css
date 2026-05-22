@@ -1,0 +1,153 @@
+/* phase4-cross-009 — canonical IconButton primitive
+   shared 32/36/40 hit-target + focus-ring + variant surfaces for close / copy /
+   expand / more / delete / send. ariaLabel is TS-required so no icon-only btn
+   ships without an accessible name. */
+
+.vp-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease,
+    opacity 120ms ease, transform 80ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vp-icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.vp-icon-button:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.vp-icon-button:disabled,
+.vp-icon-button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vp-icon-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.vp-icon-button__icon > svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+
+/* ─── sizes ────────────────────────────────────────────────── */
+.vp-icon-button--sm {
+  width: var(--control-h-sm, 26px);
+  height: var(--control-h-sm, 26px);
+  min-width: var(--space-8, 32px);
+  min-height: var(--space-8, 32px);
+}
+.vp-icon-button--sm .vp-icon-button__icon {
+  font-size: 14px;
+}
+
+.vp-icon-button--md {
+  width: var(--control-h, 32px);
+  height: var(--control-h, 32px);
+  min-width: 36px;
+  min-height: 36px;
+}
+/* 36px 沒對應 --space token(--space-8=32, --space-10=40);留 literal */
+.vp-icon-button--md .vp-icon-button__icon {
+  font-size: 16px;
+}
+
+.vp-icon-button--lg {
+  width: var(--space-10, 40px);
+  height: var(--space-10, 40px);
+  min-width: var(--space-10, 40px);
+  min-height: var(--space-10, 40px);
+}
+.vp-icon-button--lg .vp-icon-button__icon {
+  font-size: 18px;
+}
+
+/* coarse pointer — every variant snaps to 40x40 minimum */
+@media (pointer: coarse) {
+  .vp-icon-button {
+    min-width: var(--space-10, 40px);
+    min-height: var(--space-10, 40px);
+  }
+}
+
+/* ─── variants ─────────────────────────────────────────────── */
+.vp-icon-button--default {
+  color: var(--fg);
+  background: transparent;
+}
+.vp-icon-button--default:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--fg);
+}
+.vp-icon-button--default.is-pressed,
+.vp-icon-button--default[aria-pressed="true"] {
+  background: var(--selected);
+  color: var(--fg);
+}
+
+.vp-icon-button--ghost {
+  color: var(--fg-mute);
+  background: transparent;
+  opacity: 0.85;
+}
+.vp-icon-button--ghost:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--fg);
+  opacity: 1;
+}
+.vp-icon-button--ghost.is-pressed,
+.vp-icon-button--ghost[aria-pressed="true"] {
+  background: var(--selected);
+  color: var(--fg);
+  opacity: 1;
+}
+
+.vp-icon-button--primary {
+  color: var(--accent);
+  background: transparent;
+}
+.vp-icon-button--primary:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.vp-icon-button--primary.is-pressed,
+.vp-icon-button--primary[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.vp-icon-button--danger {
+  color: var(--failed);
+  background: transparent;
+}
+.vp-icon-button--danger:hover:not(:disabled) {
+  background: var(--danger-bg-soft);
+  color: var(--failed);
+}
+.vp-icon-button--danger.is-pressed,
+.vp-icon-button--danger[aria-pressed="true"] {
+  background: var(--danger-bg-soft);
+  color: var(--failed);
+}

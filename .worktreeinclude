@@ -1,0 +1,5 @@
+# worktree 複製清單 — 開 worktree 時要一起帶進去的 gitignored 檔
+# 用 .gitignore 語法;只有「match 且本身被 gitignore」的檔會被複製(tracked 檔自動排除)。
+# 取消下面註解並改成這個 repo 實際的憑證 / 環境檔:
+# .env
+# .env.local

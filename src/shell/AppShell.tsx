@@ -25,14 +25,14 @@ export function AppShell({
 }) {
   return (
     <div className={"board-root " + rootClassName} data-density={density}>
-      {topBar}
+      <header>{topBar}</header>
       {bannerStack}
       <div className="board-body">
-        {rail}
-        {main}
-        {aside}
+        <nav aria-label="Pipelines">{rail}</nav>
+        <main>{main}</main>
+        {aside ? <aside aria-label="Inbox">{aside}</aside> : null}
       </div>
-      {mobileTabBar}
+      {mobileTabBar ? <nav aria-label="Sections">{mobileTabBar}</nav> : null}
       {overlay}
       <SwUpdateBanner />
     </div>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import { Logo } from "../ui/Logo";
-import { CheckIconSm, ChevronIcon, CloseIcon, FolderIcon, MoonIcon, PlusIcon, SunIcon } from "../ui/icons";
+import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHorizontalIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import type { Project } from "../../shared/types";
@@ -27,6 +27,8 @@ export function TopBar({
   const [error, setError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const overflowRef = useRef<HTMLDivElement>(null);
+  const projTriggerRef = useRef<HTMLButtonElement>(null);
+  const browseCloseRef = useRef<HTMLButtonElement>(null);
   // Browser folder picker — remote(Tailscale)用,native picker 在 host 上跳 user 看不到,
   // 改成 client-side browse:抓 host 上目錄列表,UI 點擊導覽 + 選擇
   const [browseOpen, setBrowseOpen] = useState(false);
@@ -123,6 +125,86 @@ export function TopBar({
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
+  // Browse modal:Escape 關閉 + 開啟時 initial focus 落在 modal body 第一個可導覽 button
+  // (上層 / 首頁 / 磁碟切換),沒有可用導覽時 fallback 到「取消」。比舊版直接落 「取消」
+  // 更符合 "user 是為了瀏覽 / 選資料夾才開這個 modal" 的常見路徑(advisor topbar-009)
+  // + Tab/Shift+Tab 焦點 trap 在 modal 內(無障礙 modal 標準行為)
+  // + 關閉時 focus 還給 proj-trigger
+  const browseDialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!browseOpen) return;
+    function getFocusable(): HTMLElement[] {
+      const root = browseDialogRef.current;
+      if (!root) return [];
+      const nodes = root.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      return Array.from(nodes).filter((el) => !el.hasAttribute("aria-hidden") && el.offsetParent !== null);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !busy) {
+        setBrowseOpen(false);
+        setBrowseData(null);
+        setError(null);
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusables = getFocusable();
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (e.shiftKey) {
+          if (activeEl === first || !browseDialogRef.current?.contains(activeEl)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (activeEl === last || !browseDialogRef.current?.contains(activeEl)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    const focusTimer = window.setTimeout(() => {
+      const root = browseDialogRef.current;
+      const navBtn = root?.querySelector<HTMLButtonElement>(".browse-toolbar button:not([disabled])");
+      if (navBtn) navBtn.focus();
+      else browseCloseRef.current?.focus();
+    }, 50);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.clearTimeout(focusTimer);
+    };
+  }, [browseOpen, busy]);
+
+  // browse data 載入完(toolbar 上層 / 首頁 / drive 才會 enabled)後,若 focus 還停在 fallback
+  // 「取消」上,把 focus 推到第一個可用的導覽 button — 修 advisor r2 topbar-009 的 race:
+  // 50ms timeout 觸發時可能 browseData 還沒到,nav 都 disabled,fallback 到取消後 user 卡死在
+  // 末端 action。等資料到再校正一次。
+  useEffect(() => {
+    if (!browseOpen || !browseData) return;
+    const root = browseDialogRef.current;
+    if (!root) return;
+    const navBtn = root.querySelector<HTMLButtonElement>(".browse-toolbar button:not([disabled])");
+    if (!navBtn) return;
+    const activeEl = document.activeElement as HTMLElement | null;
+    if (activeEl === browseCloseRef.current) {
+      navBtn.focus();
+    }
+  }, [browseOpen, browseData]);
+
+  // modal 關掉後把 focus 還給 proj-trigger(只在從 open → closed 轉換時)
+  const wasBrowseOpen = useRef(false);
+  useEffect(() => {
+    if (wasBrowseOpen.current && !browseOpen) {
+      projTriggerRef.current?.focus();
+    }
+    wasBrowseOpen.current = browseOpen;
+  }, [browseOpen]);
+
   const active = recents.find((p) => p.hash === hash) ?? null;
 
   async function selectExisting(p: Project) {
@@ -189,9 +271,14 @@ export function TopBar({
 
         <div className="proj-switcher" ref={wrapRef}>
           <button type="button"
+            ref={projTriggerRef}
             className={"proj-trigger" + (open ? " is-open" : "")}
             onClick={() => setOpen((o) => !o)}
             title="切換專案"
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-controls="proj-menu-popover"
+            aria-label={active ? `切換專案（目前：${active.name}）` : "選擇專案"}
           >
             <FolderIcon />
             <span className="proj-trigger-name">{active?.name ?? "選擇專案"}</span>
@@ -199,7 +286,7 @@ export function TopBar({
             <ChevronIcon />
           </button>
           {open && (
-            <div className="proj-menu fade-up" role="menu">
+            <div className="proj-menu fade-up" id="proj-menu-popover">
               <div className="proj-menu-label mono">最近專案</div>
               {recents.length === 0 && (
                 <div className="proj-menu-label mono proj-menu-label--empty">
@@ -234,8 +321,8 @@ export function TopBar({
                       className="proj-menu-remove"
                       onClick={() => removeRecentEntry(p)}
                       disabled={busy || isActive}
-                      title={isActive ? "目前使用中的專案不能從清單移除" : "從最近專案清單移除(不刪檔)"}
-                      aria-label={isActive ? "目前使用中,不能移除" : `從最近專案移除 ${p.name}`}
+                      title={isActive ? "目前使用中的專案不能從清單移除" : "從最近專案清單移除（不刪檔）"}
+                      aria-label={isActive ? "目前使用中，不能移除" : `從最近專案移除 ${p.name}`}
                     >
                       <CloseIcon />
                     </button>
@@ -256,7 +343,7 @@ export function TopBar({
                 title="瀏覽器內導覽 host 上目錄(local + Tailscale 遠端都用同一套)"
               >
                 <PlusIcon />
-                <span>選擇其他資料夾…</span>
+                <span>選擇專案資料夾…</span>
                 <span className="kbd mono proj-menu-shortcut">
                   {isMac() ? "⌘O" : "Ctrl+O"}
                 </span>
@@ -275,19 +362,20 @@ export function TopBar({
             {active.hasGit && active.currentBranch && (
               <span
                 className="chip mono topbar-current-branch"
-                title={`當前 branch: ${active.currentBranch}`}
+                title={`目前分支: ${active.currentBranch}`}
               >
-                <span className="topbar-branch-icon">⎇</span>{" "}
+                <span className="topbar-branch-icon"><BranchIcon /></span>{" "}
                 {active.currentBranch}
               </span>
             )}
             <button type="button"
               className="chip topbar-reveal-folder"
-              title="在檔案總管中開啟"
+              title="在系統檔案總管中開啟此專案資料夾"
+              aria-label="在系統檔案總管中開啟此專案資料夾"
               onClick={() => api.reveal(active.hash).catch(() => {})}
             >
               <FolderIcon />
-              <span>開啟專案資料夾</span>
+              <span>在檔案總管開啟</span>
             </button>
           </div>
         )}
@@ -296,40 +384,50 @@ export function TopBar({
       <span className="topbar-spacer" />
 
       <div className="topbar-right">
-        <div className="topbar-overflow" ref={overflowRef}>
+        <div className={"topbar-overflow" + (overflowOpen ? " is-open" : "")} ref={overflowRef}>
           <button
             type="button"
             className={"icon-btn topbar-overflow-toggle" + (overflowOpen ? " is-open" : "")}
             onClick={() => setOverflowOpen((o) => !o)}
             title="更多操作"
             aria-label="更多操作"
+            aria-haspopup="true"
             aria-expanded={overflowOpen}
+            aria-controls="topbar-overflow-menu-popover"
           >
-            ⋯
+            <DotsHorizontalIcon />
           </button>
-          <div className={"topbar-overflow-menu" + (overflowOpen ? " is-open" : "")}>
+          {/* role="group" + aria-label 表達「相關控制群」語義,避免 role="menu" 的嚴格
+              menuitem 鍵盤模型(menu 內混了 chip 狀態 + theme/settings 動作,不適合 menubar
+              keyboard contract;advisor r2 topbar-002 建議改 popover/group pattern) */}
+          <div
+            id="topbar-overflow-menu-popover"
+            role="group"
+            aria-label="更多操作"
+            className={"topbar-overflow-menu" + (overflowOpen ? " is-open" : "")}
+          >
             {active && (
               <div className="topbar-overflow-mobile-items">
                 {active.hasGit && active.currentBranch && (
                   <span
                     className="chip mono topbar-overflow-chip"
-                    title={`當前 branch: ${active.currentBranch}`}
+                    title={`目前分支: ${active.currentBranch}`}
                   >
-                    <span className="topbar-branch-icon">⎇</span>{" "}
+                    <span className="topbar-branch-icon"><BranchIcon /></span>{" "}
                     {active.currentBranch}
                   </span>
                 )}
                 <button
                   type="button"
                   className="topbar-overflow-item"
-                  title="在檔案總管中開啟"
+                  title="在系統檔案總管中開啟此專案資料夾"
                   onClick={() => {
                     setOverflowOpen(false);
                     api.reveal(active.hash).catch(() => {});
                   }}
                 >
                   <FolderIcon />
-                  <span>開啟專案資料夾</span>
+                  <span>在檔案總管開啟</span>
                 </button>
               </div>
             )}
@@ -352,6 +450,7 @@ export function TopBar({
         <div
           role="dialog"
           aria-modal="true"
+          aria-labelledby="browse-modal-title"
           className="modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget && !busy) {
@@ -361,33 +460,60 @@ export function TopBar({
             }
           }}
         >
-          <div className="modal-card browse-modal-card">
-            <div className="modal-title">瀏覽資料夾</div>
+          <div className="modal-card browse-modal-card" ref={browseDialogRef}>
+            <div className="browse-modal-head">
+              <div id="browse-modal-title" className="modal-title">選擇專案資料夾</div>
+              <button
+                type="button"
+                className="icon-btn browse-modal-close"
+                onClick={() => {
+                  if (busy) return;
+                  setBrowseOpen(false);
+                  setBrowseData(null);
+                  setError(null);
+                }}
+                disabled={busy}
+                title="關閉"
+                aria-label="關閉「選擇專案資料夾」對話框"
+              >
+                <CloseIcon />
+              </button>
+            </div>
             <div className="modal-body">
-              <div className="mono browse-current-path" title="當前路徑">
-                {browseData?.path ?? "(loading…)"}
+              <div className="browse-path-row">
+                <span className="browse-path-label" id="browse-path-label">目前位置</span>
+                <div
+                  className="mono browse-current-path"
+                  aria-labelledby="browse-path-label"
+                  aria-live="polite"
+                  title={browseData?.path ?? "載入中"}
+                >
+                  {browseData?.path ?? "(載入中…)"}
+                </div>
               </div>
-              <div className="browse-toolbar">
+              <div className="browse-toolbar" role="toolbar" aria-label="資料夾導覽">
                 <button
                   type="button"
                   className="btn"
                   onClick={() => void loadBrowse(browseData?.parent ?? undefined)}
                   disabled={!browseData?.parent || browseLoading}
-                  title="上一層"
+                  title="回到上一層資料夾"
+                  aria-label="回到上一層資料夾"
                 >
-                  ↑ 上層
+                  <ArrowUpIcon /> 上層
                 </button>
                 <button
                   type="button"
                   className="btn"
                   onClick={() => void loadBrowse(browseData?.home)}
                   disabled={browseLoading || !browseData?.home}
-                  title="跳回 home"
+                  title="跳回使用者家目錄"
+                  aria-label="跳回使用者家目錄"
                 >
-                  🏠 home
+                  <HomeIcon /> 首頁
                 </button>
                 {(browseData?.drives.length ?? 0) > 0 && (
-                  <>
+                  <span className="browse-drives-group">
                     <span className="browse-drives-label">磁碟:</span>
                     {browseData!.drives.map((d) => {
                       const active = browseData?.path.toUpperCase().startsWith(d.toUpperCase());
@@ -398,48 +524,53 @@ export function TopBar({
                           className={"btn browse-drive-btn" + (active ? " is-active" : "")}
                           onClick={() => void loadBrowse(d)}
                           disabled={browseLoading}
-                          title={`切到 ${d}`}
+                          title={`切到磁碟 ${d}`}
+                          aria-label={`切到磁碟 ${d}`}
+                          aria-pressed={active ? true : false}
                         >
                           {d.replace("\\", "")}
                         </button>
                       );
                     })}
-                  </>
+                  </span>
                 )}
               </div>
-              <div className="browse-list">
+              <ul className="browse-list" role="list" aria-label="資料夾內容">
                 {browseLoading ? (
-                  <div className="browse-list-placeholder">載入中…</div>
+                  <li className="browse-list-placeholder">載入中…</li>
                 ) : !browseData ? (
-                  <div className="browse-list-placeholder">—</div>
+                  <li className="browse-list-placeholder">—</li>
                 ) : browseData.entries.length === 0 ? (
-                  <div className="browse-list-placeholder">(空資料夾)</div>
+                  <li className="browse-list-placeholder">(空資料夾)</li>
                 ) : (
                   browseData.entries.map((e) => (
-                    <button
-                      type="button"
-                      key={e.name}
-                      onClick={() => {
-                        if (!e.isDir) return;
-                        const next = browseData.path + (browseData.path.endsWith(browseData.sep) ? "" : browseData.sep) + e.name;
-                        void loadBrowse(next);
-                      }}
-                      disabled={!e.isDir || browseLoading}
-                      className="browse-entry"
-                    >
-                      <span aria-hidden>{e.isDir ? "📁" : "📄"}</span>
-                      <span className="browse-entry-name">{e.name}</span>
-                    </button>
+                    <li key={e.name} role="listitem">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!e.isDir) return;
+                          const next = browseData.path + (browseData.path.endsWith(browseData.sep) ? "" : browseData.sep) + e.name;
+                          void loadBrowse(next);
+                        }}
+                        disabled={!e.isDir || browseLoading}
+                        className="browse-entry"
+                        aria-label={e.isDir ? `開啟資料夾 ${e.name}` : `${e.name}(檔案,不可選)`}
+                      >
+                        <span aria-hidden>{e.isDir ? <FolderIcon /> : <FileIcon />}</span>
+                        <span className="browse-entry-name">{e.name}</span>
+                      </button>
+                    </li>
                   ))
                 )}
-              </div>
+              </ul>
               {error && (
-                <div className="browse-error">{error}</div>
+                <div className="browse-error" role="alert">{error}</div>
               )}
             </div>
             <div className="modal-actions">
               <button
                 type="button"
+                ref={browseCloseRef}
                 className="btn"
                 onClick={() => {
                   if (busy) return;
@@ -456,8 +587,9 @@ export function TopBar({
                 className="btn btn-primary"
                 onClick={() => browseData && void openByPath(browseData.path)}
                 disabled={busy || !browseData}
+                title={browseData ? `將「${browseData.path}」設為目前專案` : undefined}
               >
-                {busy ? "開啟中…" : "選擇此資料夾"}
+                {busy ? "開啟中…" : "選擇目前資料夾"}
               </button>
             </div>
           </div>
@@ -483,12 +615,17 @@ function ParallelChip({ running, max }: { running: number; max: number }) {
       className="chip mono parallel-chip"
       title={
         overload
-          ? `running ${running} 條已超過 max_parallel ${max}(改小不會 kill 既有的)`
-          : `同時跑 ${running} / ${max} 條`
+          ? `正在執行 ${running} 條，已超過上限 ${max}（改小不會中止既有的）`
+          : `同時執行 ${running} / ${max} 條`
+      }
+      aria-label={
+        overload
+          ? `正在執行 ${running} 條，已超過上限 ${max}`
+          : `同時執行 ${running} / ${max} 條`
       }
       style={{ color }}
     >
-      <span className="topbar-branch-icon">▶</span>
+      <span className="topbar-branch-icon"><PlayIcon /></span>
       {running}/{max}
       {overload && <span className="parallel-chip-overload">!</span>}
     </span>

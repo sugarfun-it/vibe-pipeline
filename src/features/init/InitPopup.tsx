@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FolderQuestionIcon, RefreshIcon, SpinnerIcon } from "../../ui/icons";
+import { ChevronRightIcon, CloseIcon, FolderQuestionIcon, RefreshIcon, SpinnerIcon } from "../../ui/icons";
 import * as api from "../../api/projects";
 import type { Project } from "../../../shared/types";
 import "../../styles/init.css";
@@ -47,12 +47,12 @@ export function InitPopup({
             </div>
             <div className="init-scan-path">{project.path}</div>
             <div className="init-scan-miss">
-              <span style={{ color: "var(--accent)" }}>✕</span>{" "}
+              <span style={{ color: "var(--accent)", display: "inline-flex" }} aria-hidden><CloseIcon /></span>{" "}
               找不到 <code className="init-inline-code">.vibe-pipeline/</code>
             </div>
             {!project.hasGit && (
               <div className="init-scan-miss">
-                <span style={{ color: "var(--accent)" }}>✕</span>{" "}
+                <span style={{ color: "var(--accent)", display: "inline-flex" }} aria-hidden><CloseIcon /></span>{" "}
                 找不到 <code className="init-inline-code">.git/</code>(runner 階段需要)
               </div>
             )}
@@ -70,7 +70,7 @@ export function InitPopup({
           <div className="init-section-label mono">會建立</div>
           <div className="init-tree mono">
             <div>
-              <span className="init-tree-glyph">▸</span> .vibe-pipeline/
+              <span className="init-tree-glyph" aria-hidden><ChevronRightIcon /></span> .vibe-pipeline/
             </div>
             <div className="init-tree-row">
               <span className="init-tree-line">├──</span>
