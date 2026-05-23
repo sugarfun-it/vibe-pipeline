@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Logo } from "../ui/Logo";
 import { Popover } from "../ui/Popover";
-import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHorizontalIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
+import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import { useAsyncAction } from "../hooks/useAsyncAction";
@@ -26,9 +26,7 @@ export function TopBar({
   const { hash, setHash } = useActiveProjectHash();
   const [recents, setRecents] = useState<Project[]>([]);
   const [open, setOpen] = useState(false);
-  const [overflowOpen, setOverflowOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const overflowRef = useRef<HTMLDivElement>(null);
   const projTriggerRef = useRef<HTMLButtonElement>(null);
   const browseCloseRef = useRef<HTMLButtonElement>(null);
   // Browser folder picker — remote(Tailscale)用,native picker 在 host 上跳 user 看不到,
@@ -120,22 +118,6 @@ export function TopBar({
       .then(setRecents)
       .catch((e: Error) => setError(e.message));
   }, []);
-
-  useEffect(() => {
-    if (!overflowOpen) return;
-    function onPointerDown(e: PointerEvent) {
-      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) setOverflowOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOverflowOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [overflowOpen]);
 
   // ⌘O / Ctrl+O 開瀏覽資料夾 modal(對應 menu 裡的 kbd hint)
   // biome-ignore lint/correctness/useExhaustiveDependencies: 不放 deps 避免每 render 重綁聽器
@@ -373,69 +355,18 @@ export function TopBar({
       <span className="topbar-spacer" />
 
       <div className="topbar-right">
-        <div className={"topbar-overflow" + (overflowOpen ? " is-open" : "")} ref={overflowRef}>
-          <button
-            type="button"
-            className={"icon-btn topbar-overflow-toggle" + (overflowOpen ? " is-open" : "")}
-            onClick={() => setOverflowOpen((o) => !o)}
-            title="更多操作"
-            aria-label="更多操作"
-            aria-haspopup="true"
-            aria-expanded={overflowOpen}
-            aria-controls="topbar-overflow-menu-popover"
-          >
-            <DotsHorizontalIcon />
-          </button>
-          {/* role="group" + aria-label 表達「相關控制群」語義,避免 role="menu" 的嚴格
-              menuitem 鍵盤模型(menu 內混了 chip 狀態 + theme/settings 動作,不適合 menubar
-              keyboard contract;advisor r2 topbar-002 建議改 popover/group pattern) */}
-          <div
-            id="topbar-overflow-menu-popover"
-            role="group"
-            aria-label="更多操作"
-            className={"topbar-overflow-menu" + (overflowOpen ? " is-open" : "")}
-          >
-            {active && (
-              <div className="topbar-overflow-mobile-items">
-                {active.hasGit && active.currentBranch && (
-                  <span
-                    className="chip mono topbar-overflow-chip"
-                    title={`目前分支: ${active.currentBranch}`}
-                  >
-                    <span className="topbar-branch-icon"><BranchIcon /></span>{" "}
-                    {active.currentBranch}
-                  </span>
-                )}
-                {isLocalHost() && (
-                  <button
-                    type="button"
-                    className="topbar-overflow-item"
-                    title="在系統檔案總管中開啟此專案資料夾"
-                    onClick={() => {
-                      setOverflowOpen(false);
-                      api.reveal(active.hash).catch(() => {});
-                    }}
-                  >
-                    <FolderIcon />
-                    <span>在檔案總管開啟</span>
-                  </button>
-                )}
-              </div>
-            )}
-            {hash && maxParallel > 0 && (
-              <ParallelChip running={runningCount} max={maxParallel} />
-            )}
-            <button type="button"
-              className="icon-btn topbar-theme-toggle"
-              onClick={toggleTheme}
-              title={isDark ? "切到亮色" : "切到暗色"}
-              aria-label={isDark ? "切到亮色主題" : "切到暗色主題"}
-            >
-              {isDark ? <SunIcon /> : <MoonIcon />}
-            </button>
-            {settingsSlot}
-          </div>
-        </div>
+        {hash && maxParallel > 0 && (
+          <ParallelChip running={runningCount} max={maxParallel} />
+        )}
+        <button type="button"
+          className="icon-btn topbar-theme-toggle"
+          onClick={toggleTheme}
+          title={isDark ? "切到亮色" : "切到暗色"}
+          aria-label={isDark ? "切到亮色主題" : "切到暗色主題"}
+        >
+          {isDark ? <SunIcon /> : <MoonIcon />}
+        </button>
+        {settingsSlot}
       </div>
       {browseOpen && createPortal(
         <div

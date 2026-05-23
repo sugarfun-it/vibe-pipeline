@@ -48,11 +48,8 @@
   background: var(--hover);
   border-color: var(--line-2);
 }
+/* Rail 用 menu 較窄 — 收掉 .focus-overflow-menu 的 180px min-width 讓內容自然撐;定位 Popover 負責 */
 .rail-section-overflow-menu {
-  position: absolute;
-  top: calc(100% + 2px);
-  right: 0;
-  /* override .focus-overflow-menu 的 min-width:260px(rail 容器窄,讓 menu 自然依內容寬,不強撐)*/
   min-width: 0;
 }
 .rail-list { display: flex; flex-direction: column; gap: 4px; }

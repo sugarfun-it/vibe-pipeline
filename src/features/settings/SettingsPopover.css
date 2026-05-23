@@ -7,6 +7,7 @@
   /* 固定寬度,各 tab 切換時 popover 不會抖動;480 容得下 AI 任務 grid */
   width: min(480px, calc(100vw - 32px));
   max-height: calc(100vh - 80px);
+  overflow-x: hidden;
   overflow-y: auto;
   background: var(--bg-elevated);
   border: 1px solid var(--line);
@@ -27,10 +28,10 @@
   align-items: center;
   justify-content: center;
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
+  top: 4px;
+  right: 4px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
   border-radius: 4px;
@@ -100,7 +101,7 @@
 
 .settings-field-row {
   display: grid;
-  grid-template-columns: 148px 1fr;
+  grid-template-columns: minmax(136px, 152px) minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
@@ -126,7 +127,8 @@
 .settings-input--w-full { width: 100%; box-sizing: border-box; }
 
 /* form primitive 包進 .settings-field-controls 的限寬版型,讓 inline unit / saving status 不被 form-field 100% 推走 */
-.settings-form-field { width: auto; flex: 0 0 auto; }
+/* 加 .settings-popover scope 提高 specificity → 蓋過 forms.css 的 `.form-field { width: 100% }` */
+.settings-popover .settings-form-field { width: auto; flex: 0 0 auto; }
 .settings-form-field--narrow .form-input { width: 64px; }
 .settings-form-field--mid .form-input { width: 100px; }
 
@@ -134,7 +136,7 @@
   font-size: 12px;
   color: var(--fg-mute);
   line-height: 1.5;
-  margin-left: 158px;
+  margin-left: 162px;
   margin-bottom: 10px;
 }
 
@@ -166,11 +168,14 @@
 .settings-inline-unit {
   font-size: 11px;
   color: var(--fg-faint);
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .settings-field-controls {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
   min-width: 0;
 }
@@ -194,6 +199,12 @@
 /* tight 版 field row 給 auto-merge toggle 那行用(下方 subhint 緊接) */
 .settings-field-row--tight {
   margin-bottom: 4px;
+}
+
+/* auto-merge toggle 以內容寬度呈現,不撐滿右欄(避免像大輸入框) */
+.settings-field-row--tight .toggle-pill {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .push-action-row {

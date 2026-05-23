@@ -274,13 +274,14 @@ export function ProjectTab({
             {fieldErrors.max_parallel}
           </div>
         ) : (
-          <div className="settings-subhint">達到上限後新 Run 排隊，前面跑完自動接棒。</div>
+          <div className="settings-subhint">達到上限後，新執行會排隊，前一個完成後自動開始。</div>
         )}
 
         <div className="settings-field-row">
-          <label className="settings-field-label">基礎分支</label>
+          <label className="settings-field-label" htmlFor="proj-base-branch">基礎分支</label>
           <div className="settings-field-controls">
             <PickerSelect
+              id="proj-base-branch"
               open={basePickerOpen}
               setOpen={setBasePickerOpen}
               value={draftBaseBranch}
@@ -299,7 +300,6 @@ export function ProjectTab({
               icon={<span className="mono" style={{ color: "var(--fg-mute)", display: "inline-flex" }}><BranchIcon /></span>}
               options={(branches.length > 0 ? branches : BASE_BRANCH_FALLBACK).map((b) => ({ id: b, label: b, mono: true }))}
               disabled={!cfg}
-              ariaLabel="預設基礎分支"
               placeholder={cfg?.defaults.base_branch || "main"}
             />
             {savingFields.default_base_branch && (
@@ -342,7 +342,7 @@ export function ProjectTab({
               fieldClassName="settings-form-field settings-form-field--mid"
               inputClassName="mono"
             />
-            <span className="mono settings-inline-unit">USD（0 = 不限制）</span>
+            <span className="mono settings-inline-unit">USD</span>
             {savingFields.cost_limit_usd && (
               <span className="settings-field-status" aria-live="polite">儲存中…</span>
             )}
@@ -354,15 +354,15 @@ export function ProjectTab({
           </div>
         ) : (
           <>
-            <div className="settings-subhint settings-subhint-desktop">每條 pipeline 個別累積上限，超過時只擋該 pipeline 的下次 /run，不影響其他 pipeline。</div>
-            <div className="settings-subhint settings-subhint-mobile">超過上限時，只擋該 pipeline 的下次 /run。</div>
+            <div className="settings-subhint settings-subhint-desktop">0 代表不限制。超過後，只會阻止該 pipeline 的下一次執行，不影響其他 pipeline。</div>
+            <div className="settings-subhint settings-subhint-mobile">0 代表不限制。超過後只阻止該 pipeline 的下一次執行。</div>
           </>
         )}
 
         <div className="settings-field-row settings-field-row--tight">
           <span className="settings-field-label">自動合併</span>
           <label
-            className={"toggle-pill mono" + (draftAutoMerge ? " is-on" : "")}
+            className={"toggle-pill" + (draftAutoMerge ? " is-on" : "")}
             title="全 ticket done → backend 自動 append merge ticket 走 runner 流程"
             style={{ alignSelf: "start" }}
           >

@@ -47,6 +47,23 @@ Phase 8 候選清單。動工時搬進 pipeline ticket(`vbpl ticket add --pipeli
 - 同樣問題也存在主 agent 派 Task sub-agent(無 critic 全靠 user review);本 TODO 先解 VP path,Task 路徑靠紀律
 - 規格待寫;先補 ref doc 拆設計細節
 
+### 6. Primitive ownership cleanup — Popover / form-field 共用元件職責邊界
+
+- 2026-05-24 iter-uiux 6 輪 review SettingsPopover + Rail + OverflowMenu 後浮出的設計系統成熟度議題:T4-T11 refactor 把 overlay / popover / form primitive 拉出來,但 consumer 端的舊 CSS 沒同步清乾淨,跟 primitive 內部邏輯打架。已撞過至少 3 次 regression:
+  - **r5**: `.focus-overflow-menu` 留 `position: absolute; right: 0;` 跟 Popover JS-computed `left` 打架 → menu 拉伸到 viewport 邊
+  - **r6**: 修 r5 順手把 `z-index: 1000` 一起刪 → Popover portal 沒 z-index 被頁面 stacking 蓋
+  - **r3**: `.form-field { width: 100% }`(forms.css)蓋過 `.settings-form-field { width: auto }` → input wrapper 撐滿欄寬擠掉 inline-unit
+- 共通根因:**primitive 對「自己該負責什麼」沒講清楚**,consumer 還自己處理位置 / 寬度 / z-index 等,加新 consumer 就重複踩雷
+- 範圍(本 ticket 處理):
+  1. **Popover 自己負責 z-index** — primitive 該設,不該散在 8 個 `.xxx-menu` class。可走 `--popover-z` CSS var on root,或 Popover 內加 wrapper class `.popover-surface` 帶 z-index;React `CSSProperties` 對 CSS var string 不友善要 cast hack,所以走 CSS class 比 inline style 乾淨
+  2. **拆 `.focus-overflow-menu` 職責** — 一份共用 `.menu-surface`(背景 / 邊框 / 陰影 / 內距),consumer 各自 `.xxx-menu` 只放 size / variant。**禁設 position / top / right / left**(注釋 + lint?)
+  3. **`.form-field` 跟 `.settings-form-field` width 衝突** — 系統化處理:form primitive 提供 `inline` / `block` variant prop,不靠 consumer 用 specificity 蓋
+  4. **settings field group primitive** — codex round 3 P3-08 / round 2 P3-04 都提過:`.settings-field-row` + label col 寬度 + hint 對齊 + mobile stack 重複出現在 ProjectTab / AITab / NotificationsTab / UpdateTab。抽成 `<SettingsField label="..." hint="...">` component
+  5. **audit 其他 primitive** — Overlay / TextField / NumberField / PickerSelect 各自有沒有類似 consumer 端 stale CSS leak
+- 落點:`src/ui/Popover.tsx` / `src/ui/forms/forms.css` / `src/features/pipeline/focus.css` / 新增 `src/ui/menu/menu.css`(or 類似)/ 新增 `src/ui/forms/SettingsField.tsx`
+- 規模:中(~5 個檔變動,~15 處 consumer 改),iter 模式 critic 多輪查 visual regression
+- 風險:動既有共用 class 會波及多處(Rail / OverflowMenu / SettingsPopover / 各 Settings tab)— ship 前要全 popover 開一遍 + 全 settings tab 切一遍人工 visual 驗
+
 ### 3. Web UI 不該自動 fire `pipeline.run`(monitor only)
 - 痛點:settings-pixel-polish audit log 記到兩次 `user_action pipeline.run`(00:21:58 + 01:23:41)而 user 確認沒按
 - **2026-05-19 調查結論**:src/ 全 grep + backend internal caller / SW POST cache / fetch retry middleware 全排查,**找不到 auto-fire code path**(唯一 caller 是 RunButton onClick)。最一致解釋:user 自己按了忘記,或 vbpl CLI 從別處呼(以前 audit 無法區分 cli vs browser)
