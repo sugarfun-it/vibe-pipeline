@@ -7,7 +7,56 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 
 `/release 0.2.0`(自動補 `v`)。Tag 永遠指 HEAD(consolidate 模式)。
 
-前置:`docs/release/v<VERSION>.md` 寫好;working tree clean。
+前置:`docs/release/v<VERSION>.md` 寫好(規範見下);working tree clean。
+
+## Release notes 撰寫規範
+
+target user = enduser(裝 vbpl 的人),**不是** maintainer。寫的人(AI / 你)看完這段再下筆。
+
+### 結構(固定三段)
+
+```markdown
+## Highlights
+- **<一句話 user-visible 改動>** — 一行說明影響。
+- **<另一條>** — ...
+
+## Fix(若 release 主要是 bug fix)/ Feature(新功能)/ <領域>(視內容開節)
+### <短標題>
+1-3 句說 user 怎麼踩、修法摘要(不貼 code,不講 design rationale)。
+
+## 升級
+\`\`\`bash
+vbpl update
+# 或 PWA Settings → 「套用更新」
+\`\`\`
+```
+
+### 禁寫
+
+- Maintainer-only flow(release 流程、tag 策略、gateway redeploy 紀錄、build-tarball 內部)
+- Deep rationale / 設計信條對齊 / 雷區 walkthrough(那些去 commit / CHANGELOG / SKILL.md)
+- 完整 code block 跟堆砌 diff(超過 5 行就拆 link 出去)
+- 「砍了 N 行死碼 / N 個檔重構」這種 maintainer 指標(enduser 不在意,放 commit msg)
+- Token / class / 設計系統內部命名(`--radius-control`、`.vp-chip` 等;只在影響 enduser 行為時提)
+
+### 可寫
+
+- 一句話 highlights(每個 ≤ 25 字),user 一眼看到「我為什麼要升」
+- bug fix:症狀 + 一句修法(symptoms-first,user 認得症狀就升)
+- feature:新指令 / 新 UI 入口 / 行為改變
+- 升級步驟(永遠就這 4 行)
+
+### 大小參考
+
+| 類型 | 目標大小 |
+|---|---|
+| hotfix(v0.2.1 型) | < 600B / < 20 行 |
+| 一般 fix(v0.2.3 型) | < 1.5KB / < 40 行 |
+| 大改(v0.2.4 UI overhaul 型) | < 3.5KB / < 70 行 |
+
+超出就再砍。不確定砍哪 → 砍 maintainer 視角 / 砍 rationale / 砍 code block。
+
+
 
 ## 執行
 
