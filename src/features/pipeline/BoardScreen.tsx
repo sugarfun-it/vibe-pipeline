@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { AppShell } from "../../shell/AppShell";
 import { Rail } from "../../shell/Rail";
 import type { RailMenuItem } from "../../shell/Rail";
@@ -20,6 +19,8 @@ import type { NotifItem } from "../../types/notif";
 import { useActiveProjectHash } from "../../hooks/useActiveProject";
 import { useApi } from "../../hooks/useApi";
 import { useTimeout } from "../../hooks/useTimeout";
+import { useUrlParam } from "../../hooks/useUrlParam";
+import { useLocalStorageState } from "../../hooks/useLocalStorageState";
 import * as api from "../../api/projects";
 import * as qaApi from "../../api/qa";
 import type { Pipeline, Ticket } from "../../types/pipeline";
@@ -35,15 +36,15 @@ export function BoardScreen({
 }) {
   const { hash } = useActiveProjectHash();
   // PWA reload 體感 — mount 時從 localStorage hydrate 上次 project snapshot,避免 !project 全屏「載入中…」一閃
-  const [project, setProject] = useState<Project | null>(() => {
-    if (!hash) return null;
-    try {
-      const raw = localStorage.getItem(`vp-cache:project:${hash}`);
-      return raw ? (JSON.parse(raw) as Project) : null;
-    } catch {
-      return null;
-    }
-  });
+  // useLocalStorageState 走 JSON serializer;key 用 hash ?? "__none__" 隔離不同 project 的 cache
+  const [project, setProject] = useLocalStorageState<Project | null>(
+    `vp-cache:project:${hash ?? "__none__"}`,
+    null,
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (s) => JSON.parse(s) as Project | null,
+    },
+  );
   // 切兩種 error:
   // - loadError = 開專案時 status fetch 失敗 → 全屏 EmptyProject
   // - actionError = 跑 / 暫停 / 刪 / 建 等動作失敗 → top banner 顯示+自動消
@@ -51,19 +52,17 @@ export function BoardScreen({
   const [actionError, setActionError] = useState<string | null>(null);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   // activeId 持久化到 URL ?pipeline=<id> — F5 / 分享連結 / 上一頁都不丟。
-  // URL 是 source of truth,setActiveId wrapper 同時 push URL。
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeId = searchParams.get("pipeline") ?? "";
+  // URL 是 source of truth;useUrlParam 預設 replace(不污染 history),
+  // 切 pipeline 是「畫面狀態切換」不是「前後頁導覽」,back 鈕回上條 pipeline 沒意義
+  const [activeIdRaw, setActiveIdParam] = useUrlParam("pipeline", { push: true });
+  const activeId = activeIdRaw ?? "";
   const setActiveId = useCallback(
     (next: string | ((prev: string) => string)) => {
       const resolved = typeof next === "function" ? next(activeId) : next;
       if (resolved === activeId) return;
-      const p = new URLSearchParams(searchParams);
-      if (resolved) p.set("pipeline", resolved);
-      else p.delete("pipeline");
-      setSearchParams(p, { replace: false });
+      setActiveIdParam(resolved || null);
     },
-    [activeId, searchParams, setSearchParams]
+    [activeId, setActiveIdParam],
   );
   const [activeTab, setActiveTab] = useState<"rail" | "focus">("focus");
   // hash mount race grace period — 200ms 內顯「載入中」,過了還 !hash 才顯「請選專案」
@@ -269,12 +268,8 @@ export function BoardScreen({
       .status(hash)
       .then((p) => {
         if (cancelled) return;
+        // setProject 內部已寫 LS(useLocalStorageState),不需再手動 setItem
         setProject(p);
-        try {
-          localStorage.setItem(`vp-cache:project:${hash}`, JSON.stringify(p));
-        } catch {
-          /* quota / serialize 失敗 — memory 仍有 */
-        }
       })
       .catch((e: Error) => {
         if (cancelled) return;

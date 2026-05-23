@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "react-router-dom";
 import { Logo } from "../ui/Logo";
 import { Popover } from "../ui/Popover";
 import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHorizontalIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import { useAsyncAction } from "../hooks/useAsyncAction";
+import { useUrlParam } from "../hooks/useUrlParam";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import type { Project } from "../../shared/types";
 import "./topbar.css";
 
@@ -97,24 +98,18 @@ export function TopBar({
 
   const busy = selectPending || removePending || openByPathPending;
   // theme 來源:URL ?theme= override → localStorage → light
-  // toggle 寫 localStorage 並同步 <html> class(useTheme hook 也會跑,雙保險;localStorage 觸發不了 React 重 render,所以這裡也手動 setIsDark)
-  const [searchParams] = useSearchParams();
-  const urlTheme = searchParams.get("theme");
-  const [isDark, setIsDark] = useState(() => {
-    if (urlTheme === "dark") return true;
-    if (urlTheme === "light") return false;
-    try {
-      return localStorage.getItem("vibe-pipeline:theme") === "dark";
-    } catch {
-      return false;
-    }
-  });
+  // toggle 寫 localStorage(via hook)並同步 <html> class —
+  // index.html inline script 負責第一個 frame,這裡只負責 user 互動切換
+  const [urlTheme] = useUrlParam("theme");
+  const [storedTheme, setStoredTheme] = useLocalStorageState<string | null>(
+    "vibe-pipeline:theme",
+    null,
+  );
+  const isDark =
+    urlTheme === "dark" || (urlTheme !== "light" && storedTheme === "dark");
   function toggleTheme() {
     const next = !isDark;
-    setIsDark(next);
-    try {
-      localStorage.setItem("vibe-pipeline:theme", next ? "dark" : "light");
-    } catch {}
+    setStoredTheme(next ? "dark" : "light");
     document.documentElement.classList.toggle("light", !next);
   }
 
