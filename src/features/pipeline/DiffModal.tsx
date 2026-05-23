@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as api from "../../api/projects";
 import { useCopiedFeedback } from "../../hooks/useCopiedFeedback";
 import { ArrowRightIcon, CloseIcon } from "../../ui/icons";
@@ -57,7 +57,7 @@ export function DiffModal({
   }, [projectHash, pipelineId, reloadToken, toast]);
 
   // 點檔案列 → modal 內捲動到對應 block;不動 URL hash(避免污染 history / back button)。
-  const jumpToFile = useCallback((path: string) => {
+  function jumpToFile(path: string) {
     setActiveFile(path);
     const id = "diff-file-" + slug(path);
     const target = contentRef.current?.querySelector<HTMLElement>("#" + cssEscape(id));
@@ -67,7 +67,7 @@ export function DiffModal({
       const offset = target.offsetTop - scroller.offsetTop;
       scroller.scrollTo({ top: offset, behavior: "smooth" });
     }
-  }, []);
+  }
 
   // 載入後尚未點任何 file,顯示第一個檔案為 active(scroll position 預設在頂端,跟 UI 一致)。
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { Rail } from "../../shell/Rail";
 import type { RailMenuItem } from "../../shell/Rail";
 import { TrashIcon } from "../../ui/icons";
@@ -8,7 +9,7 @@ import type { Pipeline } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";
 
-export function BoardRail({
+export const BoardRail = memo(function BoardRail({
   project,
   pipelines,
   activeId,
@@ -37,6 +38,7 @@ export function BoardRail({
 }) {
   const { notifyError, notifyInfo } = useActiveProjectContext();
   const confirmDialog = useConfirm();
+  const existingNames = useMemo(() => pipelines.map((p) => p.name), [pipelines]);
 
   async function handleCleanupAllMergedWorktrees() {
     if (!project) return;
@@ -100,11 +102,11 @@ export function BoardRail({
         <CreateCard
           onCancel={() => setCreating(false)}
           onSubmit={onCreate}
-          existingNames={pipelines.map((p) => p.name)}
+          existingNames={existingNames}
           branches={branches}
           defaultAutoMerge={defaultAutoMerge}
         />
       }
     />
   );
-}
+});

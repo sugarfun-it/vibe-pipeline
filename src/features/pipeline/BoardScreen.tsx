@@ -266,58 +266,77 @@ export function BoardScreen({
     return pipelines.find((p) => p.id === activeId) || pipelines[0];
   }, [activeId, hash, pipelines, project?.hash]);
 
-  async function handleCreate({
-    name,
-    baseBranch,
-    autoMerge,
-  }: {
-    name: string;
-    baseBranch: string;
-    autoMerge: boolean;
-  }) {
-    if (!project) return;
-    const body = {
+  const handleCreate = useCallback(
+    async ({
       name,
-      branch: "pipeline/" + name,
       baseBranch,
-      state: "planning" as const,
-      tickets: [],
       autoMerge,
-    };
-    try {
-      const created = (await api.createPipeline(project.hash, body)) as Pipeline;
-      setPipelines((arr) => [created, ...arr]);
-      setActiveId(created.id);
-      setActiveTab("focus");
-      setCreating(false);
-      notifyInfo(`✓ pipeline "${name}" 已建立`, { pipelineId: created.id });
-    } catch (e) {
-      notifyError(`建立 pipeline 失敗: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
+    }: {
+      name: string;
+      baseBranch: string;
+      autoMerge: boolean;
+    }) => {
+      if (!project) return;
+      const body = {
+        name,
+        branch: "pipeline/" + name,
+        baseBranch,
+        state: "planning" as const,
+        tickets: [],
+        autoMerge,
+      };
+      try {
+        const created = (await api.createPipeline(project.hash, body)) as Pipeline;
+        setPipelines((arr) => [created, ...arr]);
+        setActiveId(created.id);
+        setActiveTab("focus");
+        setCreating(false);
+        notifyInfo(`✓ pipeline "${name}" 已建立`, { pipelineId: created.id });
+      } catch (e) {
+        notifyError(`建立 pipeline 失敗: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
+    [project, setActiveId, notifyInfo, notifyError],
+  );
 
   const runningCount = pipelines.filter((p) => p.state === "running").length;
-  const queuedIds = pipelines
-    .filter((p) => p.state === "queued")
-    .map((p) => p.id)
-    .sort();
+  const queuedIds = useMemo(
+    () =>
+      pipelines
+        .filter((p) => p.state === "queued")
+        .map((p) => p.id)
+        .sort(),
+    [pipelines],
+  );
   function queuePositionOf(pid: string): number {
     const i = queuedIds.indexOf(pid);
     return i < 0 ? 0 : i + 1;
   }
+
+  const handleConfigSaved = useCallback(
+    (cfg: { defaults: { max_parallel: number; auto_merge?: boolean } }) => {
+      setMaxParallel(cfg.defaults.max_parallel);
+      setDefaultAutoMerge(!!cfg.defaults.auto_merge);
+    },
+    [],
+  );
+  const handleStartInit = useCallback(() => setPopupDismissed(false), []);
+  const handleSelectPipeline = useCallback((id: string) => {
+    setActiveId(id);
+    setActiveTab("focus");
+  }, [setActiveId]);
+  const handleTicketClick = useCallback((t: Ticket) => setOpenTicket(t), []);
+  const draftPipelineIds = useMemo(
+    () => new Set(qa.drafts.map((d) => d.pipelineId)),
+    [qa.drafts],
+  );
 
   const topBar = (
     <TopBar
       runningCount={runningCount}
       maxParallel={maxParallel}
       settingsSlot={
-        <SettingsButton
-          hash={hash}
-          onConfigSaved={(cfg) => {
-            setMaxParallel(cfg.defaults.max_parallel);
-            setDefaultAutoMerge(!!cfg.defaults.auto_merge);
-          }}
-        />
+        <SettingsButton hash={hash} onConfigSaved={handleConfigSaved} />
       }
     />
   );
@@ -361,21 +380,19 @@ export function BoardScreen({
       </button>
     </div>
   );
-  function handleSelectPipeline(id: string) {
-    setActiveId(id);
-    setActiveTab("focus");
-  }
-
-  const ctxValue: ActiveProjectContextValue = {
-    hash,
-    project,
-    setProject,
-    reloadKey,
-    bumpReload,
-    notifyError,
-    notifyWarn,
-    notifyInfo,
-  };
+  const ctxValue: ActiveProjectContextValue = useMemo(
+    () => ({
+      hash,
+      project,
+      setProject,
+      reloadKey,
+      bumpReload,
+      notifyError,
+      notifyWarn,
+      notifyInfo,
+    }),
+    [hash, project, setProject, reloadKey, bumpReload, notifyError, notifyWarn, notifyInfo],
+  );
 
   if (!hash) {
     return (
@@ -444,8 +461,8 @@ export function BoardScreen({
             creating={creating}
             setCreating={setCreating}
             isUninit={isUninit}
-            onStartInit={() => setPopupDismissed(false)}
-            draftPipelineIds={new Set(qa.drafts.map((d) => d.pipelineId))}
+            onStartInit={handleStartInit}
+            draftPipelineIds={draftPipelineIds}
             branches={branches}
             defaultAutoMerge={defaultAutoMerge}
             onCreate={handleCreate}
@@ -465,7 +482,7 @@ export function BoardScreen({
             splittingTicketId={splittingTicketId}
             qaOpen={qa.open}
             qaDraftFor={qa.draftFor}
-            onTicketClick={(t) => setOpenTicket(t)}
+            onTicketClick={handleTicketClick}
           />
         }
         overlay={

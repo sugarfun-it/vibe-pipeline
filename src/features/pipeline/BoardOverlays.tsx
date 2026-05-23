@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { InitPopup } from "../init/InitPopup";
 import { QADrawer } from "../qa/QADrawer";
 import { TicketDrawer } from "./TicketDrawer";
@@ -20,7 +21,7 @@ type QaLike = {
   finalize: (edits: any, splitInto: any) => Promise<unknown>;
 };
 
-export function BoardOverlays({
+export const BoardOverlays = memo(function BoardOverlays({
   project,
   pipelines,
   setPipelines,
@@ -225,4 +226,4 @@ export function BoardOverlays({
       {actionToast}
     </>
   );
-}
+});

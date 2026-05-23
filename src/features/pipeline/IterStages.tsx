@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { normalizeVerdict } from "../../data/pipelines";
 import { ArrowRightIcon } from "../../ui/icons";
 import type { IterStage, TicketStatus } from "../../types/pipeline";
@@ -19,7 +20,7 @@ export function fmtVerdict(v: unknown): string {
   return n;
 }
 
-export function IterStages({
+export const IterStages = memo(function IterStages({
   stage,
   status,
   stages = ["doer", "critic", "✓"],
@@ -104,4 +105,4 @@ export function IterStages({
       })}
     </div>
   );
-}
+});

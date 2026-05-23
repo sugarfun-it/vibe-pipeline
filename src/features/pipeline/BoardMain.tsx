@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { CreatePlaceholder } from "../pipelineCreate/CreateCard";
 import { EmptyProject } from "./EmptyProject";
 import { FocusColumn } from "./FocusColumn";
@@ -6,7 +7,7 @@ import type { Pipeline, Ticket } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";
 
-export function BoardMain({
+export const BoardMain = memo(function BoardMain({
   project,
   pipelines,
   setPipelines,
@@ -37,6 +38,7 @@ export function BoardMain({
 }) {
   const { reloadKey, bumpReload, notifyError, notifyWarn, notifyInfo } = useActiveProjectContext();
   const isUninit = !project.hasInit;
+  const existingNames = useMemo(() => pipelines.map((p) => p.name), [pipelines]);
 
   if (creating) return <CreatePlaceholder />;
   if (isUninit) {
@@ -136,7 +138,7 @@ export function BoardMain({
           });
         }
       }}
-      existingNames={pipelines.map((p) => p.name)}
+      existingNames={existingNames}
       onRevealWorktree={async (pid) => {
         try {
           await api.revealWorktree(project.hash, pid);
@@ -244,4 +246,4 @@ export function BoardMain({
       }}
     />
   );
-}
+});
