@@ -3,6 +3,7 @@ import "../../styles/drawer.css";
 import "./qa.css";
 import type { Draft, TicketSpec } from "../../api/qa";
 import { ArrowRightIcon, CheckIconSm } from "../../ui/icons";
+import { Overlay } from "../../ui/Overlay";
 
 const FIRST_AI_MESSAGE = "描述需求、完成標準與限制條件，我會整理成 ticket 規格。";
 const FIRST_AI_OPTIONS = [
@@ -29,7 +30,7 @@ export function QADrawer({
   onClose: () => void;
 }) {
   const transcriptRef = useRef<HTMLDivElement>(null);
-  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const composerTextRef = useRef<string>("");
   const titleId = "qadr-title";
@@ -74,95 +75,17 @@ export function QADrawer({
     onClose();
   };
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") requestClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-    // requestClose 在每次 render 重建,但 ref 內值就足夠;不掛 dep 避免重綁
-    // biome-ignore lint/correctness/useExhaustiveDependencies: stable closure over refs
-  }, [onClose]);
-
-  // Modal open 時把背景宣告為 inert,免 AT 還能 navigate 到 board。
-  // drawer 不是 portal,實際藏在 BoardScreen 子樹裡,所以從 drawer-stage 一路往上,
-  // 每一層都把「不含 drawer-stage 的兄弟」標 inert + aria-hidden,直到 body。
-  useEffect(() => {
-    const stage = drawerRef.current?.closest(".drawer-stage") as HTMLElement | null;
-    if (!stage) return;
-    const affected: HTMLElement[] = [];
-    let node: HTMLElement | null = stage;
-    while (node && node.parentElement && node !== document.body) {
-      const parent: HTMLElement = node.parentElement;
-      Array.from(parent.children).forEach((sib) => {
-        const el = sib as HTMLElement;
-        if (el === node) return;
-        affected.push(el);
-        el.setAttribute("aria-hidden", "true");
-        (el as unknown as { inert: boolean }).inert = true;
-      });
-      node = parent;
-    }
-    return () => {
-      affected.forEach((el) => {
-        el.removeAttribute("aria-hidden");
-        (el as unknown as { inert: boolean }).inert = false;
-      });
-    };
-  }, []);
-
-  // 開啟時把焦點移到關閉按鈕(modal 慣例),關閉時還給原本的 trigger
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    closeBtnRef.current?.focus();
-    return () => {
-      if (opener && typeof opener.focus === "function") opener.focus();
-    };
-  }, []);
-
-  // Focus trap:Tab / Shift+Tab 不要漏到背景的 board
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "Tab") return;
-      const root = drawerRef.current;
-      if (!root) return;
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-
   return (
-    <div className="drawer-stage qadr-stage">
-      <button
-        type="button"
-        className="drawer-scrim"
-        onClick={requestClose}
-        aria-label="關閉需求單抽屜"
-        tabIndex={-1}
-      />
-      <div
-        className="drawer qadr-drawer"
-        ref={drawerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
+    <Overlay
+      role="dialog"
+      onRequestClose={requestClose}
+      labelledBy={titleId}
+      portal={false}
+      initialFocus="close"
+      surfaceRef={drawerRef}
+      stageClassName="qadr-stage"
+      surfaceClassName="qadr-drawer"
+    >
         <div className="drawer-head qadr-head">
           <div className="drawer-crumb qadr-crumb">
             <span className="qadr-crumb-text">
@@ -369,8 +292,7 @@ export function QADrawer({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Overlay>
   );
 }
 

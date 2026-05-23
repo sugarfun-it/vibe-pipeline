@@ -8,6 +8,7 @@ import { STATE_COLOR, fmtElapsed, normalizeVerdict } from "../../data/pipelines"
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { RefreshIcon, ScissorsIcon, TrashIcon } from "../../ui/icons";
 import { AuditTimeline } from "./AuditTimeline";
+import { Overlay } from "../../ui/Overlay";
 
 import { TICKET_STATUS_LABEL } from "../../data/pipelines";
 
@@ -45,66 +46,17 @@ export function TicketDrawer({
   const [resetPending, setResetPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
   const titleId = useId();
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-  // 開 drawer 前 active element(通常是觸發開啟的 ticket card)→ 關閉時還焦點回去,讓 keyboard user 不會迷路。
-  // 進入 drawer 時自動 focus 第一個可互動元素 — 關閉 button(避免 focus 還停在底下 board 的 ticket card 上)。
-  // Tab/Shift+Tab 由下方 keydown handler 做 focus trap;ESC 收尾。
-  useEffect(() => {
-    const trigger = (document.activeElement as HTMLElement) || null;
-    const el = drawerRef.current?.querySelector<HTMLButtonElement>(".create-x");
-    el?.focus();
-    return () => {
-      if (trigger && typeof trigger.focus === "function") {
-        // 用 try 包是因為 trigger 可能在 drawer 開期間從 DOM 拔掉(如 ticket 被刪)
-        try { trigger.focus(); } catch {}
-      }
-    };
-  }, []);
   // isSplitting true → 強制收起 pending UI(已經在跑了)
   useEffect(() => {
     if (isSplitting) setSplitPending(false);
   }, [isSplitting]);
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      // Tab — 輕量 focus trap:Tab / Shift+Tab 撞到 drawer 邊界時 wrap 回另一端,
-      // 不讓焦點從 drawer 逃到底下 board / scrim。比 portal+inert 輕,夠 cover keyboard 操作。
-      if (e.key === "Tab") {
-        const root = drawerRef.current;
-        if (!root) return;
-        const focusables = Array.from(
-          root.querySelectorAll<HTMLElement>(
-            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((el) => !el.hasAttribute("aria-hidden") && el.offsetParent !== null);
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        const active = document.activeElement as HTMLElement | null;
-        const outside = !active || !root.contains(active);
-        if (e.shiftKey) {
-          if (outside || active === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (outside || active === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-        return;
-      }
-      if (e.key !== "Escape") return;
-      // ESC 在 input / textarea / contenteditable 上要讓元件自己處理(IterLimitField 用 ESC 還原),別關 drawer
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-      // ESC 在 inline 拆分確認卡上 → 先收起確認卡,不關 drawer
-      if (splitPending) { setSplitPending(false); return; }
-      onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, splitPending]);
+  // Overlay 的 onRequestClose 入口:ESC / scrim 點擊都走這。
+  // 攔截 splitPending → 先收起 inline 拆分確認卡,不關 drawer。
+  // ESC 在 input / textarea / IterLimitField 上不會觸發到這(Overlay 內已過濾)。
+  function handleRequestClose() {
+    if (splitPending) { setSplitPending(false); return; }
+    onClose();
+  }
 
   const accent = STATE_COLOR[ticket.status] || "var(--fg-mute)";
   const statusLabel = TICKET_STATUS_LABEL[ticket.status] || ticket.status;
@@ -193,20 +145,15 @@ export function TicketDrawer({
     (isTerminalStatus(ticket.status) || isSplittable(ticket) || isDeletable(ticket));
 
   return (
-    <div className="drawer-stage tdrw-stage">
-      <button
-        type="button"
-        className="drawer-scrim"
-        onClick={onClose}
-        aria-label="關閉"
-      />
-      <div
-        className="drawer tdrw-drawer"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        ref={drawerRef}
-      >
+    <Overlay
+      role="dialog"
+      onRequestClose={handleRequestClose}
+      labelledBy={titleId}
+      portal={false}
+      initialFocus="close"
+      stageClassName="tdrw-stage"
+      surfaceClassName="tdrw-drawer"
+    >
         <div className="drawer-head tdrw-head">
           {/* td-003:desktop 顯完整 breadcrumb;mobile 改 single-line context meta */}
           <div className="drawer-crumb tdrw-breadcrumb">
@@ -226,7 +173,7 @@ export function TicketDrawer({
             <span className="drawer-crumb-spacer" />
             <button type="button"
               className="create-x tdrw-close"
-              onClick={onClose}
+              onClick={handleRequestClose}
               title="關閉 (Esc)"
               aria-label="關閉 ticket drawer"
             >
@@ -447,8 +394,7 @@ export function TicketDrawer({
             </div>
           )
         )}
-      </div>
-    </div>
+    </Overlay>
   );
 }
 
