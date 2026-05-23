@@ -9,6 +9,7 @@ import { useConfirm } from "../../ui/ConfirmDialog";
 import { RefreshIcon, ScissorsIcon, TrashIcon } from "../../ui/icons";
 import { AuditTimeline } from "./AuditTimeline";
 import { Overlay } from "../../ui/Overlay";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 
 import { TICKET_STATUS_LABEL } from "../../data/pipelines";
 
@@ -41,11 +42,16 @@ export function TicketDrawer({
 }) {
   const confirm = useConfirm();
   // inline split confirm:點 ✂ AI 拆分 後不跳 popup,actions 區塊就地展開成 inline 確認卡
+  // splitPending 是 UI 開關(顯不顯示 inline 確認卡),不是 async pending,因此維持手寫 useState
   const [splitPending, setSplitPending] = useState(false);
-  // local pending state for reset/delete async handlers — 避免重複點擊送出複次破壞性請求
-  const [resetPending, setResetPending] = useState(false);
-  const [deletePending, setDeletePending] = useState(false);
   const titleId = useId();
+  // reset / delete:雙擊保護 + 失敗時 caller 自己派 toast(這裡 hook 內 throw,error 不消費也 ok)
+  const [resetTicket, { pending: resetPending }] = useAsyncAction(async (id: string) => {
+    if (onResetTicket) await onResetTicket(id);
+  });
+  const [deleteTicket, { pending: deletePending }] = useAsyncAction(async (id: string) => {
+    if (onDeleteTicket) await onDeleteTicket(id);
+  });
   // isSplitting true → 強制收起 pending UI(已經在跑了)
   useEffect(() => {
     if (isSplitting) setSplitPending(false);
@@ -344,9 +350,7 @@ export function TicketDrawer({
                         danger: true,
                       });
                       if (!ok) return;
-                      setResetPending(true);
-                      try { await onResetTicket(ticket.id); }
-                      finally { setResetPending(false); }
+                      await resetTicket(ticket.id);
                     }}
                   >
                     <RefreshIcon /> 重開 ticket
@@ -382,9 +386,7 @@ export function TicketDrawer({
                       danger: true,
                     });
                     if (!ok) return;
-                    setDeletePending(true);
-                    try { await onDeleteTicket(ticket.id); }
-                    finally { setDeletePending(false); }
+                    await deleteTicket(ticket.id);
                   }}
                 >
                   <TrashIcon />

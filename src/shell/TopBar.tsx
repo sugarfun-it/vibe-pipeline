@@ -6,6 +6,7 @@ import { Popover } from "../ui/Popover";
 import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHorizontalIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
+import { useAsyncAction } from "../hooks/useAsyncAction";
 import type { Project } from "../../shared/types";
 import "./topbar.css";
 
@@ -24,7 +25,6 @@ export function TopBar({
   const [recents, setRecents] = useState<Project[]>([]);
   const [open, setOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const overflowRef = useRef<HTMLDivElement>(null);
   const projTriggerRef = useRef<HTMLButtonElement>(null);
@@ -47,6 +47,55 @@ export function TopBar({
       setBrowseLoading(false);
     }
   }
+
+  const [selectExisting, { pending: selectPending }] = useAsyncAction(async (p: Project) => {
+    setError(null);
+    try {
+      const project = await api.openProject(p.path);
+      setHash(project.hash);
+      setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    }
+  });
+
+  // 不 confirm — 只是移清單紀錄(不刪檔 / git / .vibe-pipeline/),重點下次可從「選擇其他資料夾…」加回來,無資料損失。confirm 純摩擦
+  const [removeRecentEntry, { pending: removePending }] = useAsyncAction(async (p: Project) => {
+    if (p.hash === hash) return; // active 不能刪(UI 上 X disabled,雙保險)
+    setError(null);
+    try {
+      await api.removeRecent(p.hash);
+      const list = await api.listRecent();
+      setRecents(list);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    }
+  });
+
+  const [openByPath, { pending: openByPathPending }] = useAsyncAction(async (path: string) => {
+    const trimmed = path.trim();
+    if (!trimmed) {
+      setError("路徑不能空");
+      return;
+    }
+    setError(null);
+    try {
+      const project = await api.openProject(trimmed);
+      const list = await api.listRecent();
+      setRecents(list);
+      setHash(project.hash);
+      setBrowseOpen(false);
+      setBrowseData(null);
+      setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    }
+  });
+
+  const busy = selectPending || removePending || openByPathPending;
   // theme 來源:URL ?theme= override → localStorage → light
   // toggle 寫 localStorage 並同步 <html> class(useTheme hook 也會跑,雙保險;localStorage 觸發不了 React 重 render,所以這裡也手動 setIsDark)
   const [searchParams] = useSearchParams();
@@ -191,58 +240,6 @@ export function TopBar({
 
   const active = recents.find((p) => p.hash === hash) ?? null;
 
-  async function selectExisting(p: Project) {
-    setBusy(true);
-    setError(null);
-    try {
-      const project = await api.openProject(p.path);
-      setHash(project.hash);
-      setOpen(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function removeRecentEntry(p: Project) {
-    if (p.hash === hash) return; // active 不能刪(UI 上 X disabled,雙保險)
-    // 不 confirm — 只是移清單紀錄(不刪檔 / git / .vibe-pipeline/),重點下次可從「選擇其他資料夾…」加回來,無資料損失。confirm 純摩擦
-    setBusy(true);
-    setError(null);
-    try {
-      await api.removeRecent(p.hash);
-      const list = await api.listRecent();
-      setRecents(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openByPath(path: string) {
-    const trimmed = path.trim();
-    if (!trimmed) {
-      setError("路徑不能空");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const project = await api.openProject(trimmed);
-      const list = await api.listRecent();
-      setRecents(list);
-      setHash(project.hash);
-      setBrowseOpen(false);
-      setBrowseData(null);
-      setOpen(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="topbar">

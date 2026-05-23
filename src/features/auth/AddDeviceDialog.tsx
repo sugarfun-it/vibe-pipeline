@@ -1,31 +1,25 @@
 import { useEffect, useState } from "react";
 import { setupInit } from "../../api/auth";
 import { useToast } from "../../ui/Toast";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import "./auth.css";
 
 export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
   const [qrSvg, setQrSvg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadQr, { pending: loading }] = useAsyncAction(async () => {
+    try {
+      const data = await setupInit();
+      setQrSvg(data.qr_svg);
+    } catch (e) {
+      toast(`產生 QR Code 失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
+      throw e;
+    }
+  });
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setupInit()
-      .then((data) => {
-        if (cancelled) return;
-        setQrSvg(data.qr_svg);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) toast(`產生 QR Code 失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [toast]);
+    void loadQr();
+  }, [loadQr]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -52,7 +46,7 @@ export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
         <div className="auth-dialog-desc">
           在新裝置的 Authenticator App 掃描此 QR Code。無需重新驗證，此 QR 使用相同的 secret。
         </div>
-        {loading && (
+        {(loading || !qrSvg) && (
           <div className="auth-dialog-loading">
             載入中…
           </div>

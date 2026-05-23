@@ -3,6 +3,7 @@ import { getSystemVersion, triggerSystemUpdate, getHealth, type VersionStatus } 
 import { ApiError } from "../../api/_client";
 import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 
 type UpdatingPhase =
   | { kind: "idle" }
@@ -28,15 +29,13 @@ function formatLastChecked(ts: number | null): string {
 export function UpdateTab() {
   const { toast } = useToast();
   const [version, setVersion] = useState<VersionStatus | null>(null);
-  const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<UpdatingPhase>({ kind: "idle" });
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  const fetchVersion = useCallback(async () => {
-    setLoading(true);
+  const [fetchVersion, { pending: fetching }] = useAsyncAction(async () => {
     try {
       const v = await getSystemVersion();
       setVersion(v);
@@ -44,10 +43,10 @@ export function UpdateTab() {
     } catch (e) {
       const msg = e instanceof Error && e.message ? e.message : "讀取版本失敗";
       toast(msg, { variant: "danger" });
-    } finally {
-      setLoading(false);
+      throw e;
     }
-  }, [toast]);
+  });
+  const loading = fetching;
 
   useEffect(() => {
     void fetchVersion();

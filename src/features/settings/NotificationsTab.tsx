@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import {
   getPermission,
@@ -32,7 +33,6 @@ function PushNotificationsSection({
   const [supported, setSupported] = useState<boolean | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>(getPermission());
   const [token, setToken] = useState<string | null>(getStoredToken());
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,8 +49,7 @@ function PushNotificationsSection({
     setToken(getStoredToken());
   }
 
-  async function enable() {
-    setLoading(true);
+  const [enable, { pending: enabling }] = useAsyncAction(async () => {
     try {
       await requestAndRegisterToken();
       refreshPermission();
@@ -58,23 +57,22 @@ function PushNotificationsSection({
       const message = e instanceof Error && e.message ? e.message : "啟用通知失敗";
       toast(message, { variant: "danger" });
       refreshPermission();
-    } finally {
-      setLoading(false);
+      throw e;
     }
-  }
+  });
 
-  async function disable() {
-    setLoading(true);
+  const [disable, { pending: disabling }] = useAsyncAction(async () => {
     try {
       await unregisterFcm();
       refreshPermission();
     } catch (e) {
       const message = e instanceof Error && e.message ? e.message : "停用通知失敗";
       toast(message, { variant: "danger" });
-    } finally {
-      setLoading(false);
+      throw e;
     }
-  }
+  });
+
+  const loading = enabling || disabling;
 
   const enabled = permission === "granted" && !!token;
   const disabled = supported === false || permission === "denied" || loading || supported === null;
@@ -161,19 +159,13 @@ function PushNotificationsSection({
 function InstallAppSection() {
   const { toast } = useToast();
   const { canInstall, installed, promptInstall } = useInstallPrompt();
-  const [busy, setBusy] = useState(false);
 
-  async function onClick() {
-    setBusy(true);
-    try {
-      const outcome = await promptInstall();
-      if (outcome === "unavailable") {
-        toast("此瀏覽器無法觸發安裝,請改用瀏覽器選單的「安裝 App」", { variant: "danger" });
-      }
-    } finally {
-      setBusy(false);
+  const [onClick, { pending: busy }] = useAsyncAction(async () => {
+    const outcome = await promptInstall();
+    if (outcome === "unavailable") {
+      toast("此瀏覽器無法觸發安裝,請改用瀏覽器選單的「安裝 App」", { variant: "danger" });
     }
-  }
+  });
 
   return (
     <>

@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary, RunDetail } from "../../api/projects";
 import { fmtDuration } from "../../data/pipelines";
 import { ChevronIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 
 // stdout raw 預設只顯前 N 行,避免 10-50KB JSONL 整段渲染拖慢 drawer 滾動。
 // user 點「展開全部」才完整顯示。
@@ -163,33 +164,24 @@ function RunCard({
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<RunDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [detailFailed, setDetailFailed] = useState(false);
   const { toast } = useToast();
   // a11y: head button 跟 detail region 用 useId 對接;screen reader 知道哪段 detail 屬於哪張卡
   const headId = useId();
   const detailId = useId();
-  // unmount 後遲到的 detail 回應不可 setState(切 pipeline / drawer close 時 RunCard 會 unmount,但 fetch 仍在飛)
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  const loadDetail = (): void => {
+  // useAsyncAction 已含 mounted guard,卸載後晚到回應不再 setState
+  const [loadDetail, { pending: detailLoading }] = useAsyncAction(async () => {
     setDetailFailed(false);
-    setDetailLoading(true);
-    api
-      .getPipelineRun(projectHash, pipelineId, run.filename)
-      .then((d) => { if (mountedRef.current) setDetail(d); })
-      .catch((e: Error) => {
-        if (mountedRef.current) {
-          setDetailFailed(true);
-          toast(`讀取執行明細失敗:${e?.message || "未知錯誤"}`, { variant: "danger" });
-        }
-      })
-      .finally(() => { if (mountedRef.current) setDetailLoading(false); });
-  };
+    try {
+      const d = await api.getPipelineRun(projectHash, pipelineId, run.filename);
+      setDetail(d);
+    } catch (e) {
+      setDetailFailed(true);
+      const msg = e instanceof Error ? e.message : "未知錯誤";
+      toast(`讀取執行明細失敗:${msg}`, { variant: "danger" });
+      throw e;
+    }
+  });
 
   const handleToggle = (): void => {
     const next = !open;
@@ -332,7 +324,7 @@ function RunCard({
           {detailLoading && <div className="tdrw-empty">載入執行明細中…</div>}
           {detailFailed && !detailLoading && !detail && (
             <div className="tdrw-empty tdrw-run-detail-error">
-              <button type="button" className="btn tdrw-run-pre-toggle" onClick={loadDetail}>
+              <button type="button" className="btn tdrw-run-pre-toggle" onClick={() => loadDetail()}>
                 重試
               </button>
             </div>

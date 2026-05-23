@@ -4,6 +4,7 @@ import * as api from "../../api/projects";
 import type { Project } from "../../../shared/types";
 import { useToast } from "../../ui/Toast";
 import { Overlay } from "../../ui/Overlay";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import "../../styles/init.css";
 
 export function InitPopup({
@@ -16,13 +17,10 @@ export function InitPopup({
   onDismiss: () => void;
 }) {
   const { toast } = useToast();
-  const [busy, setBusy] = useState(false);
   const [alsoGitInit, setAlsoGitInit] = useState(true);
   const titleId = useId();
 
-  async function autoInit() {
-    if (busy) return;
-    setBusy(true);
+  const [autoInit, { pending: busy }] = useAsyncAction(async () => {
     try {
       let p = project;
       if (!p.hasGit && alsoGitInit) {
@@ -32,9 +30,9 @@ export function InitPopup({
       onInitialized(next);
     } catch (e) {
       toast(`初始化失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
-      setBusy(false);
+      throw e;
     }
-  }
+  });
 
   // 用 Overlay primitive(portal / role=dialog / ESC / scrim click / focus trap / restore focus 都吃免費)
   // initialFocus="first" — 把焦點放在第一個可 focus(「稍後再說」按鈕),避免落到 root 後 user 第一下 Tab 才到按鈕
