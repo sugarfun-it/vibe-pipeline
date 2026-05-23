@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import * as api from "../../api/projects";
 import { ArrowRightIcon, CloseIcon } from "../../ui/icons";
+import { Overlay } from "../../ui/Overlay";
 import { useToast } from "../../ui/Toast";
 import "../../styles/drawer.css";
 import "./diffModal.css";
@@ -33,8 +33,6 @@ export function DiffModal({
   const branchId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  // 開 modal 前 active element → 關閉時還焦點回去,keyboard user 不會迷路
-  const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,57 +54,6 @@ export function DiffModal({
       cancelled = true;
     };
   }, [projectHash, pipelineId, reloadToken, toast]);
-
-  // 開啟時 focus 進 modal,關閉時還回 trigger(diff chip)。
-  useEffect(() => {
-    triggerRef.current = (document.activeElement as HTMLElement) || null;
-    const root = dialogRef.current;
-    // 優先 focus close button(stable selector);如 modal 還在 loading,close 仍是第一個可互動元素。
-    const closeBtn = root?.querySelector<HTMLButtonElement>(".diff-modal-x");
-    closeBtn?.focus();
-    return () => {
-      const t = triggerRef.current;
-      if (t && typeof t.focus === "function") {
-        try { t.focus(); } catch {}
-      }
-    };
-  }, []);
-
-  // Esc 關閉 + Tab focus trap — 避免 keyboard user Tab 跑到背景 board / scrim
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const root = dialogRef.current;
-      if (!root) return;
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((el) => el.offsetParent !== null);
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      const outside = !active || !root.contains(active);
-      if (e.shiftKey) {
-        if (outside || active === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (outside || active === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   // 點檔案列 → modal 內捲動到對應 block;不動 URL hash(避免污染 history / back button)。
   const jumpToFile = useCallback((path: string) => {
@@ -168,24 +115,19 @@ export function DiffModal({
   const addedTotal = totals.added;
   const deletedTotal = totals.deleted;
 
-  // Portal:跳出 ReadyBanner 的 transform containing block(.fade-up 會困住 position:fixed)
-  return createPortal(
-    <div className="drawer-stage drawer-stage--modal diff-modal-stage">
-      <button
-        type="button"
-        className="drawer-scrim diff-modal-scrim"
-        onClick={onClose}
-        aria-label="關閉差異視窗"
-        tabIndex={-1}
-      />
-      <div
-        className="drawer drawer--modal diff-modal fade-up"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={branchId}
-        ref={dialogRef}
-      >
+  // Overlay portal=true(預設):跳出 ReadyBanner 的 transform containing block(.fade-up 會困住 position:fixed)
+  // initialFocus="close":優先 focus close button(stable selector);loading 時 close 仍是第一個可互動元素。
+  return (
+    <Overlay
+      onRequestClose={onClose}
+      labelledBy={titleId}
+      describedBy={branchId}
+      initialFocus="close"
+      stageClassName="drawer-stage--modal diff-modal-stage"
+      scrimClassName="diff-modal-scrim"
+      surfaceClassName="drawer--modal diff-modal fade-up"
+      surfaceRef={dialogRef}
+    >
         <div className="drawer-head diff-modal-head">
           <div className="diff-modal-title">
             <span id={titleId}>差異</span>
@@ -339,9 +281,7 @@ export function DiffModal({
             </div>
           </div>
         )}
-      </div>
-    </div>,
-    document.body
+    </Overlay>
   );
 }
 
