@@ -23,6 +23,9 @@ export type TextFieldProps = {
   inputClassName?: string;
   fieldClassName?: string;
   labelHidden?: boolean;
+  spellCheck?: boolean;
+  ariaLabel?: string;
+  ariaDescribedBy?: string;
 };
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
@@ -48,12 +51,17 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     inputClassName,
     fieldClassName,
     labelHidden,
+    spellCheck,
+    ariaLabel,
+    ariaDescribedBy,
   },
   ref,
 ) {
   const reactId = useId();
   const id = idProp || `vp-field-${reactId.replace(/[^a-z0-9]/gi, "")}`;
-  const describedId = error || hint ? `${id}-desc` : undefined;
+  const ownDescribedId = error || hint ? `${id}-desc` : undefined;
+  const describedId =
+    [ownDescribedId, ariaDescribedBy].filter(Boolean).join(" ") || undefined;
   const describedText = error ?? hint;
 
   return (
@@ -87,9 +95,11 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         pattern={pattern}
         minLength={minLength}
         maxLength={maxLength}
+        spellCheck={spellCheck}
+        aria-label={ariaLabel}
       />
       {describedText !== undefined && describedText !== null && describedText !== "" && (
-        <div id={describedId} className={"form-hint" + (error ? " form-hint--error" : "")}>
+        <div id={ownDescribedId} className={"form-hint" + (error ? " form-hint--error" : "")}>
           {describedText}
         </div>
       )}

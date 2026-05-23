@@ -1,4 +1,4 @@
-import { forwardRef, useId, type ReactNode } from "react";
+import { forwardRef, useId, type KeyboardEventHandler, type FocusEventHandler, type ReactNode } from "react";
 import "./forms.css";
 
 export type NumberFieldProps = {
@@ -20,6 +20,11 @@ export type NumberFieldProps = {
   className?: string;
   inputClassName?: string;
   fieldClassName?: string;
+  labelHidden?: boolean;
+  onBlur?: FocusEventHandler<HTMLInputElement>;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  title?: string;
+  ariaLabel?: string;
 };
 
 export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(function NumberField(
@@ -42,6 +47,11 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
     className,
     inputClassName,
     fieldClassName,
+    labelHidden,
+    onBlur,
+    onKeyDown,
+    title,
+    ariaLabel,
   },
   ref,
 ) {
@@ -52,7 +62,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
 
   return (
     <div className={"form-field" + (fieldClassName ? ` ${fieldClassName}` : "")}>
-      <label htmlFor={id} className="form-label">
+      <label htmlFor={id} className={"form-label" + (labelHidden ? " form-label--sr" : "")}>
         <span>{label}</span>
         {required && (
           <span className="req" aria-hidden="true">
@@ -90,6 +100,10 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
         min={min}
         max={max}
         step={step}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
+        title={title}
+        aria-label={ariaLabel}
       />
       {describedText !== undefined && describedText !== null && describedText !== "" && (
         <div id={describedId} className={"form-hint" + (error ? " form-hint--error" : "")}>

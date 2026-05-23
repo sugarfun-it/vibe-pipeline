@@ -125,6 +125,11 @@
 .settings-input--w-mid { width: 100px; }
 .settings-input--w-full { width: 100%; box-sizing: border-box; }
 
+/* form primitive 包進 .settings-field-controls 的限寬版型,讓 inline unit / saving status 不被 form-field 100% 推走 */
+.settings-form-field { width: auto; flex: 0 0 auto; }
+.settings-form-field--narrow .form-input { width: 64px; }
+.settings-form-field--mid .form-input { width: 100px; }
+
 .settings-subhint {
   font-size: 12px;
   color: var(--fg-mute);

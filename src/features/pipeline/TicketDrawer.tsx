@@ -11,6 +11,7 @@ import { AuditTimeline } from "./AuditTimeline";
 import { Overlay } from "../../ui/Overlay";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useTimeout } from "../../hooks/useTimeout";
+import { NumberField } from "../../ui/forms/NumberField";
 
 import { TICKET_STATUS_LABEL } from "../../data/pipelines";
 
@@ -436,16 +437,18 @@ function IterLimitField({
     }
     if (draftNum !== value) onChange?.(ticket.id, draftNum);
   }
-  const hintId = `iterlimit-hint-${ticket.id}`;
   return (
     <span className="tdrw-iter-limit-wrap">
       <span style={{ color: "var(--fg-mute)" }}>上限</span>
-      <input
-        type="number"
+      <NumberField
+        label="迭代上限輪數"
+        labelHidden
+        ariaLabel="迭代上限輪數(1 至 5)"
+        title="迭代上限輪數,範圍 1-5。Enter 送出 / Esc 還原"
         min={1}
         max={5}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        value={draft === "" ? "" : Number(draft)}
+        onChange={(v) => setDraft(v === "" ? "" : String(v))}
         onBlur={commit}
         onKeyDown={(e) => {
           // ESC 在 input 內只還原,不冒泡(免 TicketDrawer 全域 ESC 又收掉 drawer)
@@ -459,23 +462,11 @@ function IterLimitField({
             (e.target as HTMLInputElement).blur();
           }
         }}
-        title="迭代上限輪數,範圍 1-5。Enter 送出 / Esc 還原"
-        aria-label="迭代上限輪數(1 至 5)"
-        aria-invalid={invalid || undefined}
-        aria-describedby={invalid ? hintId : undefined}
-        className={"tdrw-iter-limit" + (invalid ? " is-invalid" : "")}
+        error={invalid ? "請輸入 1-5 的整數,Esc 還原" : undefined}
+        fieldClassName="tdrw-iter-limit-field"
+        inputClassName={"tdrw-iter-limit" + (invalid ? " is-invalid" : "")}
       />
       <span style={{ color: "var(--fg-mute)" }}>輪 (1-5)</span>
-      {invalid && (
-        <span
-          id={hintId}
-          className="tdrw-iter-limit-hint"
-          role="status"
-          aria-live="polite"
-        >
-          請輸入 1-5 的整數,Esc 還原
-        </span>
-      )}
     </span>
   );
 }

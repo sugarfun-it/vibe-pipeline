@@ -3,6 +3,7 @@ import * as api from "../../api/projects";
 import { PickerSelect } from "../../ui/PickerSelect";
 import { BranchIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
+import { NumberField } from "../../ui/forms/NumberField";
 import "./SettingsPopover.css";
 
 const BASE_BRANCH_FALLBACK = ["main", "master"];
@@ -233,16 +234,17 @@ export function ProjectTab({
     <div className="settings-tab-content">
       <div className="task-group task-group--primary">
         <div className="settings-field-row">
-          <label className="settings-field-label">平行上限</label>
+          <span className="settings-field-label" id="proj-max-parallel-label">平行上限</span>
           <div className="settings-field-controls">
-            <input
-              type="number"
+            <NumberField
+              label="平行上限"
+              labelHidden
               min={MIN}
               max={MAX}
               step={1}
               value={draftMaxParallel}
-              onChange={(e) => {
-                const nextValue = Number(e.target.value);
+              onChange={(v) => {
+                const nextValue = v === "" ? MIN : v;
                 const clamped = Math.max(MIN, Math.min(MAX, Math.floor(nextValue || MIN)));
                 setDraftMaxParallel(nextValue);
                 scheduleProjectSave(
@@ -256,7 +258,8 @@ export function ProjectTab({
                 );
               }}
               disabled={!cfg}
-              className="mono settings-input settings-input--w-narrow"
+              fieldClassName="settings-form-field settings-form-field--narrow"
+              inputClassName="mono"
             />
             <span className="mono settings-inline-unit">
               {MIN}–{MAX} 條
@@ -313,15 +316,16 @@ export function ProjectTab({
         )}
 
         <div className="settings-field-row">
-          <label className="settings-field-label">單條 pipeline 成本上限</label>
+          <span className="settings-field-label" id="proj-cost-limit-label">單條 pipeline 成本上限</span>
           <div className="settings-field-controls">
-            <input
-              type="number"
+            <NumberField
+              label="單條 pipeline 成本上限"
+              labelHidden
               min={0}
               step={0.01}
-              value={draftCostLimit}
-              onChange={(e) => {
-                const nextValue = e.target.value;
+              value={draftCostLimit === "" ? "" : Number(draftCostLimit)}
+              onChange={(v) => {
+                const nextValue = v === "" ? "" : String(v);
                 setDraftCostLimit(nextValue);
                 scheduleProjectSave(
                   "cost_limit_usd",
@@ -335,7 +339,8 @@ export function ProjectTab({
               }}
               disabled={!cfg}
               placeholder="0"
-              className="mono settings-input settings-input--w-mid"
+              fieldClassName="settings-form-field settings-form-field--mid"
+              inputClassName="mono"
             />
             <span className="mono settings-inline-unit">USD（0 = 不限制）</span>
             {savingFields.cost_limit_usd && (
