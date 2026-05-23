@@ -86,14 +86,8 @@ html.light .init-cmd-text { color: #fbf8f1; }
 
 .init-foot-spacer { flex: 1; }
 
-.init-popup-overlay {
-  position: fixed; inset: 0;
-  background: var(--scrim-modal, rgba(0,0,0,0.55));
-  display: flex; align-items: center; justify-content: center;
-  z-index: var(--z-popover, 100);
-  backdrop-filter: blur(2px);
-}
-.init-popup-overlay .init-card {
+/* Overlay primitive 已提供 scrim + 置中(drawer-stage--modal),這裡只調 init popup 的寬度 */
+.init-popup-stage .init-card {
   width: 440px;
 }
 .init-popup-actions {
