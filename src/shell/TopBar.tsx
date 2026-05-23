@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import { Logo } from "../ui/Logo";
+import { Popover } from "../ui/Popover";
 import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHorizontalIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
@@ -25,7 +26,6 @@ export function TopBar({
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
   const overflowRef = useRef<HTMLDivElement>(null);
   const projTriggerRef = useRef<HTMLButtonElement>(null);
   const browseCloseRef = useRef<HTMLButtonElement>(null);
@@ -75,22 +75,6 @@ export function TopBar({
       .then(setRecents)
       .catch((e: Error) => setError(e.message));
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   useEffect(() => {
     if (!overflowOpen) return;
@@ -269,7 +253,7 @@ export function TopBar({
         </div>
         <span className="topbar-sep" />
 
-        <div className="proj-switcher" ref={wrapRef}>
+        <div className="proj-switcher">
           <button type="button"
             ref={projTriggerRef}
             className={"proj-trigger" + (open ? " is-open" : "")}
@@ -285,8 +269,19 @@ export function TopBar({
             <span className="proj-trigger-path mono">{active?.path ?? "(尚未選擇)"}</span>
             <ChevronIcon />
           </button>
-          {open && (
-            <div className="proj-menu fade-up" id="proj-menu-popover">
+          <Popover
+            anchorRef={projTriggerRef}
+            open={open}
+            onClose={() => setOpen(false)}
+            placement="bottom-start"
+            offset={6}
+            role="dialog"
+            ariaLabel="切換專案"
+            className="proj-menu fade-up"
+            id="proj-menu-popover"
+            autoFocusFirstItem={false}
+            manageRovingFocus={false}
+          >
               <div className="proj-menu-label mono">最近專案</div>
               {recents.length === 0 && (
                 <div className="proj-menu-label mono proj-menu-label--empty">
@@ -353,8 +348,7 @@ export function TopBar({
                   {error}
                 </div>
               )}
-            </div>
-          )}
+          </Popover>
         </div>
 
         {active && (

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { DotsHorizontalIcon, PlusIcon, TrashIcon } from "../ui/icons";
+import { Popover } from "../ui/Popover";
 import { STATE_COLOR } from "../data/pipelines";
 import type { Pipeline } from "../types/pipeline";
 
@@ -153,70 +154,12 @@ const PIPELINE_STATE_TEXT: Record<string, string> = {
   failed: "失敗",
 };
 
-// PIPELINES section header 的 ⋯ menu。click-outside / Esc 關閉、disabled+tooltip 支援。
+// PIPELINES section header 的 ⋯ menu。anchor 量測 / outside / esc / roving focus / flip 走 <Popover>。
 function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-  // 開啟時 focus 第一個 enabled item,符合 ARIA menu pattern
-  useEffect(() => {
-    if (!open) return;
-    const firstEnabled = itemRefs.current.find((el) => el && !el.disabled);
-    firstEnabled?.focus();
-  }, [open]);
-  function focusItemAt(idx: number) {
-    const len = items.length;
-    if (len === 0) return;
-    for (let step = 0; step < len; step++) {
-      const i = ((idx + step) % len + len) % len;
-      const el = itemRefs.current[i];
-      if (el && !el.disabled) {
-        el.focus();
-        return;
-      }
-    }
-  }
-  function onMenuKey(e: React.KeyboardEvent) {
-    const active = document.activeElement;
-    const idx = itemRefs.current.findIndex((el) => el === active);
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      focusItemAt((idx < 0 ? -1 : idx) + 1);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      focusItemAt((idx < 0 ? 0 : idx) - 1);
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      focusItemAt(0);
-    } else if (e.key === "End") {
-      e.preventDefault();
-      focusItemAt(items.length - 1);
-    } else if (e.key === "Tab") {
-      // Tab 關閉 menu,沿用 native Tab order
-      setOpen(false);
-    }
-  }
   return (
-    <div ref={wrapRef} className={"rail-section-overflow" + (open ? " is-open" : "")}>
+    <div className={"rail-section-overflow" + (open ? " is-open" : "")}>
       <button
         ref={triggerRef}
         type="button"
@@ -232,40 +175,38 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
       >
         <DotsHorizontalIcon />
       </button>
-      {open && (
-        <div
-          role="menu"
-          className="focus-overflow-menu rail-section-overflow-menu"
-          onKeyDown={onMenuKey}
-        >
-          {items.map((it, i) => (
-            <button
-              key={it.key}
-              ref={(el) => {
-                itemRefs.current[i] = el;
-              }}
-              type="button"
-              role="menuitem"
-              className={"focus-overflow-item" + (it.danger ? " is-danger" : "")}
-              disabled={!!it.disabledReason}
-              title={it.disabledReason ?? undefined}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (it.disabledReason) return;
-                setOpen(false);
-                it.onClick();
-                triggerRef.current?.focus();
-              }}
-            >
-              <span className="focus-overflow-item-icon">{it.icon ?? <TrashIcon />}</span>
-              <span className="focus-overflow-item-label">{it.label}</span>
-              {it.disabledReason && (
-                <span className="mono focus-overflow-item-hint">{it.disabledReason}</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
+      <Popover
+        anchorRef={triggerRef}
+        open={open}
+        onClose={() => setOpen(false)}
+        placement="bottom-end"
+        role="menu"
+        ariaLabel="Rail section 操作"
+        className="focus-overflow-menu rail-section-overflow-menu"
+      >
+        {items.map((it) => (
+          <button
+            key={it.key}
+            type="button"
+            role="menuitem"
+            className={"focus-overflow-item" + (it.danger ? " is-danger" : "")}
+            disabled={!!it.disabledReason}
+            title={it.disabledReason ?? undefined}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (it.disabledReason) return;
+              setOpen(false);
+              it.onClick();
+            }}
+          >
+            <span className="focus-overflow-item-icon">{it.icon ?? <TrashIcon />}</span>
+            <span className="focus-overflow-item-label">{it.label}</span>
+            {it.disabledReason && (
+              <span className="mono focus-overflow-item-hint">{it.disabledReason}</span>
+            )}
+          </button>
+        ))}
+      </Popover>
     </div>
   );
 }

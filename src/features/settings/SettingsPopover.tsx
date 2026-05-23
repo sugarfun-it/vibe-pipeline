@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import * as api from "../../api/projects";
+import { Popover } from "../../ui/Popover";
 import { AITab } from "./AITab";
 import { NotificationsTab } from "./NotificationsTab";
 import { ProjectTab } from "./ProjectTab";
@@ -29,7 +30,6 @@ export function SettingsPopover({
   const { toast } = useToast();
   const [savedVisible, setSavedVisible] = useState(false);
   const [savedFading, setSavedFading] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
   const tablistRef = useRef<HTMLDivElement>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { status: authStatus } = useAuthStatus();
@@ -74,45 +74,17 @@ export function SettingsPopover({
     };
   }, []);
 
+  // 開啟時把焦點移到目前 tab(SR / 鍵盤入口);關閉走 Popover restoreFocus。
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      const target = e.target as Node;
-      if (wrapRef.current?.contains(target)) return;
-      if (anchorRef.current?.contains(target)) return;
-      onClose();
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open, onClose, anchorRef]);
-
-  // 開啟時把焦點移到目前 tab(SR / 鍵盤入口);關閉時還焦點給觸發按鈕。
-  const wasOpenRef = useRef(false);
-  useEffect(() => {
-    if (open && !wasOpenRef.current) {
-      const t = window.setTimeout(() => {
-        const el = tablistRef.current?.querySelector<HTMLButtonElement>(
-          ".settings-popover-tab.is-active",
-        );
-        el?.focus();
-      }, 30);
-      wasOpenRef.current = true;
-      return () => window.clearTimeout(t);
-    }
-    if (!open && wasOpenRef.current) {
-      wasOpenRef.current = false;
-      anchorRef.current?.focus?.();
-    }
-  }, [open, anchorRef]);
-
-  if (!open) return null;
+    const t = window.setTimeout(() => {
+      const el = tablistRef.current?.querySelector<HTMLButtonElement>(
+        ".settings-popover-tab.is-active",
+      );
+      el?.focus();
+    }, 30);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   const tabs: ReadonlyArray<{ key: TabKey; label: string }> = [
     { key: "project", label: "專案" },
@@ -141,7 +113,18 @@ export function SettingsPopover({
   }
 
   return (
-    <div ref={wrapRef} className="settings-popover" role="dialog" aria-modal="false" aria-label="設定">
+    <Popover
+      anchorRef={anchorRef}
+      open={open}
+      onClose={onClose}
+      placement="bottom-end"
+      offset={6}
+      role="dialog"
+      ariaLabel="設定"
+      className="settings-popover"
+      autoFocusFirstItem={false}
+      manageRovingFocus={false}
+    >
       <button
         type="button"
         className="settings-popover-close"
@@ -236,6 +219,6 @@ export function SettingsPopover({
           <SecurityTab status={authStatus} />
         </div>
       )}
-    </div>
+    </Popover>
   );
 }
