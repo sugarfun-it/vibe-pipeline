@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authedFetch } from "./authApi";
+import { useToast } from "../../ui/Toast";
 import type { AuthStatus } from "./types";
 
 type AuthEnvelope<T> = { ok: boolean; data?: T; error?: { code: string; message: string } };
@@ -7,18 +8,16 @@ type AuthEnvelope<T> = { ok: boolean; data?: T; error?: { code: string; message:
 export function useAuthStatus(): {
   status: AuthStatus | null;
   loading: boolean;
-  error: string | null;
   refetch: () => void;
 } {
+  const { toast } = useToast();
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError(null);
     authedFetch("/api/auth/status")
       .then(async (res) => {
         if (!res.ok) throw new Error(`status ${res.status}`);
@@ -33,7 +32,7 @@ export function useAuthStatus(): {
       .catch((e: unknown) => {
         if (cancelled) return;
         setStatus({ bound: false });
-        setError(e instanceof Error ? e.message : String(e));
+        toast(`讀取登入狀態失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -41,7 +40,7 @@ export function useAuthStatus(): {
     return () => {
       cancelled = true;
     };
-  }, [tick]);
+  }, [tick, toast]);
 
-  return { status, loading, error, refetch: () => setTick((n) => n + 1) };
+  return { status, loading, refetch: () => setTick((n) => n + 1) };
 }

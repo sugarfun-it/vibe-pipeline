@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronRightIcon, CloseIcon, FolderQuestionIcon, RefreshIcon, SpinnerIcon } from "../../ui/icons";
 import * as api from "../../api/projects";
 import type { Project } from "../../../shared/types";
+import { useToast } from "../../ui/Toast";
 import "../../styles/init.css";
 
 export function InitPopup({
@@ -13,14 +14,13 @@ export function InitPopup({
   onInitialized: (next: Project) => void;
   onDismiss: () => void;
 }) {
+  const { toast } = useToast();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [alsoGitInit, setAlsoGitInit] = useState(true);
 
   async function autoInit() {
     if (busy) return;
     setBusy(true);
-    setError(null);
     try {
       let p = project;
       if (!p.hasGit && alsoGitInit) {
@@ -29,7 +29,7 @@ export function InitPopup({
       const next = await api.init(p.hash);
       onInitialized(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      toast(`初始化失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
       setBusy(false);
     }
   }
@@ -98,8 +98,6 @@ export function InitPopup({
             </label>
           </div>
         )}
-
-        {error && <div className="init-popup-error">{error}</div>}
 
         <div className="init-foot">
           <button type="button" className="btn" onClick={onDismiss} disabled={busy}>

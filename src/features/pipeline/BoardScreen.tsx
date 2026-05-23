@@ -426,12 +426,6 @@ export function BoardScreen({
       settingsSlot={
         <SettingsButton
           hash={hash}
-          onActionError={(message) => {
-            // Settings / Security / Push tab 的 action 失敗訊息亦寫進 Inbox 留 history
-            const looksOk = message.trim().startsWith("✓");
-            if (looksOk) notifyInfo(message);
-            else notifyError(message);
-          }}
           onConfigSaved={(cfg) => {
             setMaxParallel(cfg.defaults.max_parallel);
             setDefaultAutoMerge(!!cfg.defaults.auto_merge);
@@ -563,7 +557,6 @@ export function BoardScreen({
       }
       draft={qa.state.draft}
       busy={qa.state.busy}
-      error={qa.state.error}
       onSendTurn={qa.sendTurn}
       onCancel={qa.cancel}
       onClose={qa.close}
@@ -999,11 +992,9 @@ function fmtTs(ms: number): string {
 function SettingsButton({
   hash,
   onConfigSaved,
-  onActionError,
 }: {
   hash: string | null;
   onConfigSaved?: (cfg: api.ProjectConfig) => void;
-  onActionError?: (message: string) => void;
 }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -1029,7 +1020,6 @@ function SettingsButton({
           onSaved={(cfg) => {
             onConfigSaved?.(cfg);
           }}
-          onActionError={onActionError}
           anchorRef={btnRef}
         />
       )}

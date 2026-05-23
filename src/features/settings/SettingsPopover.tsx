@@ -8,6 +8,7 @@ import { UpdateTab } from "./UpdateTab";
 import { useAuthStatus } from "../auth/useAuthStatus";
 import { useUserConfig } from "./useUserConfig";
 import { CheckIconSm } from "../../ui/icons";
+import { useToast } from "../../ui/Toast";
 import "./SettingsPopover.css";
 
 const SAVED_VISIBLE_MS = 3000;
@@ -17,19 +18,17 @@ export function SettingsPopover({
   open,
   onClose,
   onSaved,
-  onActionError,
   anchorRef,
 }: {
   hash: string;
   open: boolean;
   onClose: () => void;
   onSaved?: (cfg: api.ProjectConfig) => void;
-  onActionError?: (message: string) => void;
   anchorRef: React.RefObject<HTMLElement | null>;
 }) {
+  const { toast } = useToast();
   const [savedVisible, setSavedVisible] = useState(false);
   const [savedFading, setSavedFading] = useState(false);
-  const [projectError, setProjectError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const tablistRef = useRef<HTMLDivElement>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,7 +46,7 @@ export function SettingsPopover({
   function toastSaveError(e: unknown) {
     if (isAbortError(e)) return;
     const message = e instanceof Error && e.message ? e.message : "儲存失敗，請重試";
-    onActionError?.(message);
+    toast(message, { variant: "danger" });
   }
 
   function showSaved() {
@@ -63,7 +62,7 @@ export function SettingsPopover({
     setSavedFading(false);
   }
 
-  const { userCfg, userCfgError, pushSaving, updateTask, updatePushEvent } = useUserConfig({
+  const { userCfg, pushSaving, updateTask, updatePushEvent } = useUserConfig({
     open,
     onSaved: showSaved,
     onSaveError: toastSaveError,
@@ -204,8 +203,6 @@ export function SettingsPopover({
           hash={hash}
           onSaved={onSaved}
           onSavedNotify={showSaved}
-          onActionError={onActionError}
-          onLoadError={setProjectError}
         />
       </div>
 
@@ -213,8 +210,6 @@ export function SettingsPopover({
         <div role="tabpanel" id={panelId("ai")} aria-labelledby={tabId("ai")}>
           <AITab
             userCfg={userCfg}
-            userCfgError={userCfgError}
-            projectError={projectError}
             onTaskChange={updateTask}
           />
         </div>
@@ -226,20 +221,19 @@ export function SettingsPopover({
             userCfg={userCfg}
             pushSaving={pushSaving}
             onTogglePushEvent={updatePushEvent}
-            onActionError={onActionError}
           />
         </div>
       )}
 
       {activeTab === "update" && (
         <div role="tabpanel" id={panelId("update")} aria-labelledby={tabId("update")} className="settings-tab-content">
-          <UpdateTab onActionError={onActionError} />
+          <UpdateTab />
         </div>
       )}
 
       {activeTab === "security" && authStatus?.bound === true && (
         <div role="tabpanel" id={panelId("security")} aria-labelledby={tabId("security")}>
-          <SecurityTab status={authStatus} onActionError={onActionError} />
+          <SecurityTab status={authStatus} />
         </div>
       )}
     </div>

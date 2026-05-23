@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "../../api/projects";
 import { PickerSelect } from "../../ui/PickerSelect";
 import { BranchIcon } from "../../ui/icons";
+import { useToast } from "../../ui/Toast";
 import "./SettingsPopover.css";
 
 const BASE_BRANCH_FALLBACK = ["main", "master"];
@@ -27,15 +28,14 @@ export function ProjectTab({
   hash,
   onSaved,
   onSavedNotify,
-  onActionError,
   onLoadError,
 }: {
   hash: string;
   onSaved?: (cfg: api.ProjectConfig) => void;
   onSavedNotify: () => void;
-  onActionError?: (message: string) => void;
   onLoadError?: (message: string | null) => void;
 }) {
+  const { toast } = useToast();
   const [cfg, setCfg] = useState<api.ProjectConfig | null>(null);
   const [draftMaxParallel, setDraftMaxParallel] = useState<number>(2);
   const [draftBaseBranch, setDraftBaseBranch] = useState<string>("");
@@ -55,7 +55,7 @@ export function ProjectTab({
   function toastSaveError(e: unknown) {
     if (isAbortError(e)) return;
     const message = e instanceof Error && e.message ? e.message : "儲存失敗，請重試";
-    onActionError?.(message);
+    toast(message, { variant: "danger" });
   }
 
   function setFieldSaving(field: ProjectField, v: boolean) {

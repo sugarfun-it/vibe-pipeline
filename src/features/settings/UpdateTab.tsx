@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSystemVersion, triggerSystemUpdate, getHealth, type VersionStatus } from "../../api/system";
 import { ApiError } from "../../api/_client";
 import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon } from "../../ui/icons";
+import { useToast } from "../../ui/Toast";
 
 type UpdatingPhase =
   | { kind: "idle" }
@@ -24,9 +25,9 @@ function formatLastChecked(ts: number | null): string {
   return `${hh}:${mm}`;
 }
 
-export function UpdateTab({ onActionError }: { onActionError?: (m: string) => void }) {
+export function UpdateTab() {
+  const { toast } = useToast();
   const [version, setVersion] = useState<VersionStatus | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<UpdatingPhase>({ kind: "idle" });
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
@@ -36,18 +37,17 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
 
   const fetchVersion = useCallback(async () => {
     setLoading(true);
-    setLoadError(null);
     try {
       const v = await getSystemVersion();
       setVersion(v);
       setLastCheckedAt(Date.now());
     } catch (e) {
       const msg = e instanceof Error && e.message ? e.message : "讀取版本失敗";
-      setLoadError(msg);
+      toast(msg, { variant: "danger" });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     void fetchVersion();
@@ -66,7 +66,9 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
 
     const tick = async () => {
       if (Date.now() - startTimeRef.current > HEALTH_POLL_TIMEOUT_MS) {
-        setPhase({ kind: "error", reason: "等待 backend 回來逾時(3 min)。請手動 reload 頁面。" });
+        const msg = "等待 backend 回來逾時(3 min)。請手動 reload 頁面。";
+        setPhase({ kind: "error", reason: msg });
+        toast(msg, { variant: "danger" });
         return;
       }
       const ctrl = new AbortController();
@@ -107,7 +109,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
     };
 
     void tick();
-  }, []);
+  }, [toast]);
 
   const onApply = useCallback(async () => {
     setPhase({ kind: "starting" });
@@ -122,9 +124,9 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
             ? e.message
             : "觸發更新失敗";
       setPhase({ kind: "error", reason: msg });
-      onActionError?.(msg);
+      toast(msg, { variant: "danger" });
     }
-  }, [onActionError, startHealthPoll]);
+  }, [toast, startHealthPoll]);
 
   const isUpdating = phase.kind === "starting" || phase.kind === "polling";
   const isDevBuild = !!version && /^dev-|-dirty$/.test(version.current);
@@ -134,7 +136,6 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
       <div className="settings-section-title">應用版本</div>
 
       {loading && !version && <div className="settings-subhint">載入中…</div>}
-      {loadError && !version && <div className="mono settings-error">{loadError}</div>}
 
       {version && (
         <div className="update-tab-body">
@@ -234,7 +235,6 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
             </div>
           )}
 
-          {phase.kind === "error" && <div className="mono settings-error">{phase.reason}</div>}
         </div>
       )}
     </div>

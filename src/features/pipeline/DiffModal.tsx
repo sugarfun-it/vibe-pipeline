@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import * as api from "../../api/projects";
 import { ArrowRightIcon, CloseIcon } from "../../ui/icons";
+import { useToast } from "../../ui/Toast";
 import "../../styles/drawer.css";
 import "./diffModal.css";
 
@@ -19,7 +20,8 @@ export function DiffModal({
   onClose: () => void;
 }) {
   const [diff, setDiff] = useState<api.FullDiff | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const { toast } = useToast();
   // 目前定位中的檔案 path(點 file row 時設定),畫上 active 視覺指示;
   // 不用 hash 路由 — modal 內導覽不該動瀏覽器 URL / history(雷:Esc / 上一頁語意被綁架)。
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -37,19 +39,23 @@ export function DiffModal({
   useEffect(() => {
     let cancelled = false;
     setDiff(null);
-    setError(null);
+    setLoadFailed(false);
     api
       .getFullDiff(projectHash, pipelineId)
       .then((d) => {
         if (!cancelled) setDiff(d);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
+        if (cancelled) return;
+        setLoadFailed(true);
+        // 拆 user msg + tech detail,只把 user msg 經過 humanize 後丟 toast;tech detail 略過
+        const parts = parseErrorMessage(e.message);
+        toast(`讀取差異失敗:${humanizeUserMsg(parts.userMsg)}`, { variant: "danger" });
       });
     return () => {
       cancelled = true;
     };
-  }, [projectHash, pipelineId, reloadToken]);
+  }, [projectHash, pipelineId, reloadToken, toast]);
 
   // 開啟時 focus 進 modal,關閉時還回 trigger(diff chip)。
   useEffect(() => {
@@ -246,30 +252,9 @@ export function DiffModal({
           </div>
         </div>
 
-        {error && (
+        {loadFailed && !diff && (
           <div className="diff-modal-err" role="alert">
             <div className="diff-modal-err-title">讀取差異失敗</div>
-            {(() => {
-              // backend / mock 的 error.message 常見格式:
-              //   "<user-facing 主訊息>(技術細節)" 例 "無法讀取 git diff(模擬:工作樹被外部修改)"
-              // 步驟:
-              //   1. 拆 paren block → userMsg / techDetail
-              //   2. userMsg 過 normalize map(已知 backend 訊息 → 使用者語言)
-              //   3. techDetail 收進 <details>,預設折疊,debug 才打開
-              const parts = parseErrorMessage(error);
-              const friendly = humanizeUserMsg(parts.userMsg);
-              return (
-                <>
-                  <div className="diff-modal-err-detail">{friendly}</div>
-                  {parts.techDetail && (
-                    <details className="diff-modal-err-tech-wrap">
-                      <summary>顯示技術細節</summary>
-                      <div className="diff-modal-err-tech mono">{parts.techDetail}</div>
-                    </details>
-                  )}
-                </>
-              );
-            })()}
             <button
               type="button"
               className="diff-modal-retry"
@@ -280,16 +265,16 @@ export function DiffModal({
             </button>
           </div>
         )}
-        {!error && !diff && (
+        {!loadFailed && !diff && (
           <div className="diff-modal-loading" role="status" aria-live="polite">
             <span className="diff-modal-loading-dot" aria-hidden />
             載入中…
           </div>
         )}
-        {!error && diff && diff.files.length === 0 && (
+        {diff && diff.files.length === 0 && (
           <div className="diff-modal-empty">沒有改動。</div>
         )}
-        {!error && diff && diff.files.length > 0 && (
+        {diff && diff.files.length > 0 && (
           <div className="diff-modal-body">
             <nav className="diff-modal-files" aria-label="檔案清單">
               {diff.files.map((f) => {

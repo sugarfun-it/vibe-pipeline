@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { authedFetch } from "./authApi";
 import { useConfirm } from "../../ui/ConfirmDialog";
+import { useToast } from "../../ui/Toast";
 import { AddDeviceDialog } from "./AddDeviceDialog";
 import type { AuthStatus, SessionInfo } from "./types";
 import "./auth.css";
@@ -37,20 +38,17 @@ function truncate(s: string, n: number): string {
 
 export function SecurityTab({
   status,
-  onActionError,
 }: {
   status: AuthStatus;
-  onActionError?: (message: string) => void;
 }) {
   const confirm = useConfirm();
+  const { toast } = useToast();
   const [sessions, setSessions] = useState<SessionInfo[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setError(null);
     authedFetch("/api/auth/sessions")
       .then(async (res) => {
         const body = (await res.json()) as Envelope<{ sessions: SessionInfo[] } | SessionInfo[]>;
@@ -64,14 +62,14 @@ export function SecurityTab({
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e));
+          toast(`讀取 sessions 失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
           setSessions([]);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [tick]);
+  }, [tick, toast]);
 
   async function revoke(cookieHash: string) {
     try {
@@ -81,7 +79,7 @@ export function SecurityTab({
       }
       setTick((n) => n + 1);
     } catch (e) {
-      onActionError?.(e instanceof Error ? e.message : "撤銷失敗");
+      toast(e instanceof Error ? e.message : "撤銷失敗", { variant: "danger" });
     }
   }
 
@@ -101,7 +99,7 @@ export function SecurityTab({
       }
       window.location.href = "/setup";
     } catch (e) {
-      onActionError?.(e instanceof Error ? e.message : "重置失敗");
+      toast(e instanceof Error ? e.message : "重置失敗", { variant: "danger" });
     }
   }
 
@@ -149,12 +147,6 @@ export function SecurityTab({
               </button>
             </div>
           ))}
-        </div>
-      )}
-
-      {error && (
-        <div className="mono auth-error">
-          {error}
         </div>
       )}
 

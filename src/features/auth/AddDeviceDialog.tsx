@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { authedFetch } from "./authApi";
+import { useToast } from "../../ui/Toast";
 import "./auth.css";
 
 type SetupInitData = { qr_svg: string; setup_token: string; otpauth_url?: string };
 type Envelope<T> = { ok: boolean; data?: T; error?: { code: string; message: string } };
 
 export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
+  const { toast } = useToast();
   const [qrSvg, setQrSvg] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setError(null);
     authedFetch("/api/auth/setup-init", { method: "POST" })
       .then(async (res) => {
         const body = (await res.json()) as Envelope<SetupInitData>;
@@ -24,7 +24,7 @@ export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
         setQrSvg(body.data.qr_svg);
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) toast(`產生 QR Code 失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -32,7 +32,7 @@ export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -62,11 +62,6 @@ export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
         {loading && (
           <div className="auth-dialog-loading">
             載入中…
-          </div>
-        )}
-        {error && (
-          <div className="mono auth-dialog-error">
-            {error}
           </div>
         )}
         {qrSvg && (

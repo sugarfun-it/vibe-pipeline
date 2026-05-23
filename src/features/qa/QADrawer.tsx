@@ -15,7 +15,6 @@ export function QADrawer({
   pipelineName,
   draft,
   busy,
-  error,
   onSendTurn,
   onFinalize,
   onCancel,
@@ -24,7 +23,6 @@ export function QADrawer({
   pipelineName: string;
   draft: Draft | null;
   busy: boolean;
-  error: string | null;
   onSendTurn: (userMessage: string) => void;
   onFinalize: (edits?: Partial<TicketSpec>, splitInto?: TicketSpec[]) => void;
   onCancel: () => void;
@@ -284,7 +282,6 @@ export function QADrawer({
                   <ThinkingDots />
                 </div>
               )}
-              {!draft && error && <div className="qadr-error">{error}</div>}
               {draft && (() => {
                 const lastTurn = draft.turns[draft.turns.length - 1];
                 // last 是 user → AI 還在跑(或 user 中途關 drawer 再回來,backend 仍 pending),
@@ -319,7 +316,6 @@ export function QADrawer({
                         <ThinkingDots />
                       </div>
                     )}
-                    {error && <div className="qadr-error">{error}</div>}
                   </>
                 );
               })()}
