@@ -68,8 +68,8 @@ function spawnQA(opts: QASpawnOpts): SpawnedProcess {
   // 註:刻意不加 --setting-sources ""。QA 少用、要的是準確 —— 載 user CLAUDE.md +
   // skills 索引讓 QA AI 拿到 project 脈絡(否則只有 QA_BEHAVIOR_PROMPT,專案知識零,
   // spec 品質落差大)。token cost +~19k/spawn 可接受(rare path)。
-  args.push("--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}');
-  args.push("--disable-slash-commands");
+  // 2026-05-23:MCP / slash commands 改不限。QA 拿得到 user 配的 MCP(codegraph 等)
+  // + superpowers / project skill,改善 spec 品質;Edit/Write/Task 仍禁,QA 不該動 code。
   args.push("--disallowedTools", "Edit Write Task");
   if (isFirstTurn) {
     args.push("--session-id", sessionId);
@@ -103,11 +103,10 @@ function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
     "json",
     // perf:保留 --setting-sources 預設(user/project/local),因為 Task sub-agent 改 source code 時
     // 仍可能需要 user CLAUDE.md / project lint config 等繼承。
-    "--strict-mcp-config",
-    "--mcp-config",
-    '{"mcpServers":{}}',
+    // 2026-05-23:MCP / slash commands 改不限。runner 拿得到 user 配的 MCP(codegraph 等)
+    // + superpowers / project skill;destructive skill(/release / /dev / /init 等)誤觸風險靠
+    // runnerPrompt 約束 + worktree 邊界控管(實測 runner prompt 已 scope 清楚)。
     "--no-session-persistence",
-    "--disable-slash-commands",
     "--session-id",
     sessionId,
     "--model",
