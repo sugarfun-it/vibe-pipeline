@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { login } from "../../api/auth";
 import { TextField } from "../../ui/forms/TextField";
-import "../../styles/auth.css";
+import "../../styles/auth-screen.css";
 
 export function LoginScreen() {
   const navigate = useNavigate();

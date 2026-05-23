@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setupInit, setupVerify, type SetupInitResp } from "../../api/auth";
 import { TextField } from "../../ui/forms/TextField";
-import "../../styles/auth.css";
+import "../../styles/auth-screen.css";
 
 export function SetupScreen() {
   const navigate = useNavigate();
