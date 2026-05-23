@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary, RunDetail } from "../../api/projects";
@@ -98,27 +98,6 @@ export function RunHistory({
     };
   }, [runs]);
 
-  // RH-004:expanded cards 可同時多張,在窄 drawer 內 user 容易迷路。
-  // 用 bumpable counter 廣播「全部收合」訊號;RunCard 收到 collapseSeq 變化就強制關 open。
-  // 不改成單一展開(會跟 user「想 compare 兩輪」的原始設計衝突)。
-  const [collapseSeq, setCollapseSeq] = useState(0);
-  // RH-015:全部收合應該只在「真的有 card open」時可按,否則按下去沒視覺改變看起來像壞掉。
-  //         RunCard open state 沒提升 (避免破壞 detail cache),用 openCount 反向計數:
-  //         RunCard 透過 callback 報告自己 open 狀態變動 → 父端維護 set 大小。
-  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
-  // useCallback 穩定 reference — 子 RunCard 用 onOpenChange 當 useEffect 依賴,
-  // 沒穩定會在每次 render 重觸發 effect → 自我喚醒 setState 迴圈
-  const reportOpenChange = useCallback((id: string, isOpen: boolean): void => {
-    setOpenIds((prev) => {
-      const hadInSet = prev.has(id);
-      if (isOpen === hadInSet) return prev;
-      const next = new Set(prev);
-      if (isOpen) next.add(id); else next.delete(id);
-      return next;
-    });
-  }, []);
-  const hasOpen = openIds.size > 0;
-
   if (error) {
     return <div className="tdrw-empty">讀取執行紀錄失敗：{error}</div>;
   }
@@ -158,23 +137,6 @@ export function RunHistory({
               {summary.totalCost != null ? `$${summary.totalCost.toFixed(2)}` : "—"}
             </strong>
           </span>
-          {/* hist-007:排序狀態移到列表右側,改成「排序：最新在前」,不再像統計值 */}
-          <span className="tdrw-runs-summary-order" aria-label="排序方式">
-            排序：最新在前
-          </span>
-          {/* RH-004 / RH-015 / hist-008:全部收合 — 用 canonical control 樣式,沿用 vp-chip action variant */}
-          {runs.length > 1 && (
-            <button
-              type="button"
-              className="btn tdrw-run-pre-toggle tdrw-runs-collapse-all"
-              onClick={() => setCollapseSeq((s) => s + 1)}
-              disabled={!hasOpen}
-              title={hasOpen ? "收合所有展開的執行明細" : "目前沒有展開的執行明細"}
-              aria-disabled={!hasOpen}
-            >
-              全部收合
-            </button>
-          )}
         </div>
       )}
       {runs.map((r) => (
@@ -184,8 +146,6 @@ export function RunHistory({
           run={r}
           projectHash={projectHash}
           pipelineId={pipelineId}
-          collapseSeq={collapseSeq}
-          onOpenChange={reportOpenChange}
         />
       ))}
     </div>
@@ -198,14 +158,10 @@ function RunCard({
   run,
   projectHash,
   pipelineId,
-  collapseSeq,
-  onOpenChange,
 }: {
   run: RunSummary;
   projectHash: string;
   pipelineId: string;
-  collapseSeq: number;
-  onOpenChange: (id: string, isOpen: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<RunDetail | null>(null);
@@ -221,25 +177,6 @@ function RunCard({
       mountedRef.current = false;
     };
   }, []);
-  // RH-004:RunHistory bump collapseSeq 時所有 card 強關 open(initial=0 不觸發 — useRef 比對前後值)
-  const lastSeqRef = useRef(collapseSeq);
-  useEffect(() => {
-    if (collapseSeq !== lastSeqRef.current) {
-      lastSeqRef.current = collapseSeq;
-      setOpen(false);
-    }
-  }, [collapseSeq]);
-  // RH-015:open state 變動向 parent 報告,parent 才能算 hasOpen / 控制「全部收合」disabled
-  // unmount 時也要主動報告 false,否則 set 留 stale id 讓全部收合誤亮
-  useEffect(() => {
-    onOpenChange(run.filename, open);
-  }, [open, run.filename, onOpenChange]);
-  useEffect(() => {
-    return () => {
-      onOpenChange(run.filename, false);
-    };
-  }, [run.filename, onOpenChange]);
-
   const loadDetail = (): void => {
     setDetailError(null);
     setDetailLoading(true);
@@ -282,10 +219,6 @@ function RunCard({
   const fullProvider = run.provider || run.model
     ? `${run.provider ?? "—"} · ${run.model ?? "—"}`
     : "—";
-  // hist-002:ticket count 改為「N ticket」+ chip nowrap,不再「3 個 ticke...」截斷。
-  // 「ticket」保留英文(本 repo domain 詞,跟 pipeline / commit / Runner 同層)
-  const ticketCount = run.ticketsAfter?.length ?? run.ticketsBefore?.length ?? null;
-  const ticketCountLabel = ticketCount != null ? `${ticketCount} ticket` : null;
   // RH-006:provider chip 全文不能只塞 title(touch 看不到、SR 不可靠)— 同字串塞進可見內容的 aria-label,
   //         然後在 chip 外另放 sr-only 隱藏 span 給 SR 唸完整(visible chip 仍 ellipsis 防爆版)
   const toggleAria = `${open ? "收合" : "展開"} ${fmtTime(run.startedAt)} 的執行明細(${outcomeLabel})`;
@@ -332,12 +265,6 @@ function RunCard({
             </span>
           )}
         </div>
-        {/* hist-002:ticket count 移到 header 右側固定 chip,中文一致 */}
-        {ticketCountLabel && (
-          <span className="tdrw-run-ticket-count" aria-label={`此執行含 ${ticketCountLabel}`}>
-            {ticketCountLabel}
-          </span>
-        )}
       </button>
       <div className="tdrw-run-meta">
         <span className="tdrw-run-meta-item">

@@ -1,5 +1,5 @@
 import { MODE_LABELS } from "../../api/qa";
-import { fmtElapsed, normalizeVerdict, STATE_COLOR, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../data/pipelines";
+import { fmtElapsed, STATE_COLOR, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../data/pipelines";
 import type { IterStage, Ticket, TicketStatus } from "../../types/pipeline";
 import { ChevronRightIcon } from "../../ui/icons";
 import { IterStages } from "./IterStages";
@@ -93,15 +93,6 @@ export function TicketCard({
     : isPaused
     ? `第 ${iterCurrentLabel} 輪 · 已暫停 · 已耗時 ${fmtElapsed(elapsed)}`
     : `第 ${iterCurrentLabel} 輪 · 已耗時 ${fmtElapsed(elapsed)}`;
-  // tk-002 / tk-004:完成的 round 用單行 compact summary 取代 verbose stage row。
-  // verdict 機器值(PASS/FAIL/PART)只進 aria,視覺用 通過/失敗/部分。
-  const verdictLabel = (v: unknown): { text: string; cls: string; machine: string } => {
-    const n = normalizeVerdict(v);
-    if (n === "PASS") return { text: "通過", cls: "is-pass", machine: "PASS" };
-    if (n === "FAIL") return { text: "失敗", cls: "is-fail", machine: "FAIL" };
-    if (n === "PARTIAL") return { text: "部分", cls: "is-part", machine: "PARTIAL" };
-    return { text: "—", cls: "is-unknown", machine: "UNKNOWN" };
-  };
   // 完整 accessible name:#NN <title>,<mode>,<state>(+iter 摘要 / paused reason / liveLog)
   // 給 SR user 跟 sighted user 同等資訊密度(原本只有 status,丟失了 mode、goal、進度、暫停原因)
   const ariaLabelParts: string[] = [];
@@ -173,10 +164,17 @@ export function TicketCard({
     >
       <span className="ticket-band" aria-hidden style={{ background: accent }} />
 
-      {/* tk-001:header grid = [num] [title] [trailing(status + chevron)];mode chip 降到 sub row */}
+      {/* tk-001:header grid = [num] [titleline(chip + title)] [trailing(status + chevron)] */}
       <div className="ticket-row ticket-card__header">
         <span className="ticket-num mono">{String(ticket.n).padStart(2, "0")}</span>
-        <div className="ticket-title">{ticket.title}</div>
+        <div className="ticket-card__titleline">
+          {modeLabel && (
+            <span className={"chip ticket-mode" + (isIter ? " is-iter" : "")}>
+              {modeLabel}
+            </span>
+          )}
+          <div className="ticket-title">{ticket.title}</div>
+        </div>
 
         <div className="ticket-card__trailing">
           {isSplitting ? (
@@ -191,13 +189,9 @@ export function TicketCard({
         </div>
       </div>
 
-      {/* tk-005:mode chip + meta 同一列(sub row),作為 secondary metadata */}
-      {(modeLabel || (ticket.meta && !isIter)) && (
+      {ticket.meta && !isIter && (
         <div className="ticket-card__sub">
-          <span className={"chip ticket-mode" + (isIter ? " is-iter" : "")}>
-            {modeLabel}
-          </span>
-          {ticket.meta && !isIter && <span className="ticket-meta mono">{ticket.meta}</span>}
+          <span className="ticket-meta mono">{ticket.meta}</span>
         </div>
       )}
 
@@ -225,24 +219,17 @@ export function TicketCard({
         return (
           <>
             {rounds.filter((r) => isRoundComplete(r)).map((r) => {
-              // tk-002 + tk-004:compact summary row — 一行同時帶 round 編號 / stage flow / verdict / elapsed
-              const v = verdictLabel(r.criticVerdict);
-              const stageFlow = hasCritic ? "執行 ✓ · 審核 ✓" : "執行 ✓";
+              // tk-002 / tk-004 / tk-010:完成 round 改用 IterStages 同款 chip + arrow,跟進行中視覺一致
               return (
-                <div
-                  key={r.n}
-                  className="ticket-iter ticket-card__progress ticket-card__round-summary"
-                >
-                  <span className="ticket-card__round-text">
-                    <span className="iter-round-num mono">第 {r.n} 輪</span>
-                    <span className="ticket-card__round-flow mono">{stageFlow}</span>
-                    {/* v2-board-004:strip 結尾 verdict 改 chip,跟 header 的 lifecycle「完成」明確分流 */}
-                    <span className={"vp-chip vp-chip--readonly ticket-card__round-verdict " + v.cls}>
-                      {v.text}
-                      <span className="sr-only"> (結果 {v.machine})</span>
-                    </span>
-                  </span>
-                  <span className="iter-meta mono ticket-card__round-elapsed">
+                <div key={r.n} className="ticket-iter ticket-iter-row">
+                  <span className="iter-round-num mono">第 {r.n} 輪</span>
+                  <IterStages
+                    stage="✓"
+                    status="done"
+                    stages={stageList}
+                    lastVerdict={r.criticVerdict}
+                  />
+                  <span className="iter-meta mono">
                     {r.startedAt
                       ? fmtElapsed(Math.round((r.endedAt! - r.startedAt) / 1000))
                       : "—"}
@@ -304,31 +291,19 @@ export function TicketCard({
         const ea = ticket.endedAt;
         const ms = sa ? (ea ?? Date.now()) - sa : 0;
         const elapsedStr = sa ? fmtElapsed(Math.max(0, Math.round(ms / 1000))) : null;
-        // 終結狀態(done/failed)用 compact summary row;running / paused 維持 stage flow row
-        if (isTerminal) {
-          const v = verdictLabel(ticket.status === "done" ? "PASS" : "FAIL");
-          return (
-            <div className="ticket-iter ticket-card__progress ticket-card__round-summary">
-              <span className="ticket-card__round-text">
-                <span className="ticket-card__round-flow mono">執行 ✓</span>
-                <span className={"ticket-card__round-verdict mono " + v.cls}>
-                  {v.text}
-                  <span className="sr-only"> (結果 {v.machine})</span>
-                </span>
-              </span>
-              {elapsedStr && (
-                <span className="iter-meta mono ticket-card__round-elapsed">{elapsedStr}</span>
-              )}
-            </div>
-          );
-        }
+        // tk-010:終結狀態跟 running/paused 一律用 IterStages chip + arrow,風格一致;
+        // verdict 在 result chip 內以中文顯示(通過 / 失敗)。
+        const terminalStage: "doer" | "✓" = isTerminal ? "✓" : "doer";
+        const terminalStatus: TicketStatus = isTerminal && ticket.status !== "done" ? "failed" : ticket.status;
+        const verdictHint = isTerminal ? (ticket.status === "done" ? "PASS" : "FAIL") : undefined;
         return (
           <div className="ticket-iter ticket-iter-row">
             <span className="iter-round-num mono">#1</span>
             <IterStages
-              stage="doer"
-              status={ticket.status}
+              stage={terminalStage}
+              status={terminalStatus}
               stages={["doer", "✓"]}
+              lastVerdict={verdictHint}
             />
             {elapsedStr && <span className="iter-meta mono">{elapsedStr}</span>}
           </div>

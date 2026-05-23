@@ -906,6 +906,11 @@
   border-radius: 10px;
   transition: border-color 120ms, background 120ms, transform 120ms;
   animation: fadeUp 280ms ease-out both;
+  /* tk-001c:content indent token — header num 欄寬 + header grid gap;sub/goal/progress/iter-row 等
+     ticket 內容類 row 全部 margin-left 引用同一個值,避免 num 左緣與內容欄左緣產生多條 indent。 */
+  --ticket-num-width: 22px;
+  --ticket-header-gap: 8px;
+  --ticket-content-indent: calc(var(--ticket-num-width) + var(--ticket-header-gap));
 }
 .ticket:hover { border-color: var(--line-2); background: var(--panel-2); }
 /* tk-003:可點擊卡片強化 hover affordance(border + bg 雙訊號) */
@@ -968,7 +973,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: var(--ticket-header-gap);
 }
 .ticket-card__trailing {
   display: inline-flex;
@@ -983,18 +988,29 @@
   flex-shrink: 0;
   transition: color 120ms, transform 120ms;
 }
-/* tk-005:mode chip + meta 同一列(sub row),subdued,跟 header 留小間距 */
+/* tk-005:sub row 只保留給 step+meta 用(iter 改去 iter-row,chip 已 inline 到 title) */
 .ticket-card__sub {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 4px;
-  margin-left: 32px; /* 跟 title 對齊 (num 22px + gap 10px) */
+  margin-left: var(--ticket-content-indent);
   flex-wrap: wrap;
+}
+/* tk-001b:chip 與 title 同一行(取代原 sub row 排版),省下純 step 卡多出的一行高度 */
+.ticket-card__titleline {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.ticket-card__titleline > .ticket-mode {
+  flex: 0 0 auto;
+  align-self: center;
 }
 .ticket-num {
   /* tk-006:對比拉高(fg-faint → fg-mute) */
-  font-size: 11px; color: var(--fg-mute); width: 22px; flex-shrink: 0;
+  font-size: 11px; color: var(--fg-mute); width: var(--ticket-num-width); flex-shrink: 0;
 }
 .ticket-title {
   flex: 1; font-size: 13.5px; font-weight: 500;
@@ -1007,7 +1023,7 @@
 }
 .ticket-goal {
   margin-top: 6px;
-  margin-left: 32px; /* 對齊 .ticket-title(num 22px + gap 10px) */
+  margin-left: var(--ticket-content-indent);
   font-size: 12px;
   line-height: 1.4;
   color: var(--fg-mute);
@@ -1019,7 +1035,6 @@
 
 .ticket-mode {
   background: var(--panel-2);
-  text-transform: lowercase;
   font-size: 10.5px;
   color: var(--fg-mute);
 }
@@ -1066,6 +1081,7 @@ button.ticket-mode {
 .ticket-iter {
   display: flex; align-items: center; gap: 18px;
   margin-top: 10px;
+  margin-left: var(--ticket-content-indent);
   padding: 8px 10px;
   border-radius: 7px;
   background: var(--panel-2);
@@ -1076,6 +1092,9 @@ button.ticket-mode {
 .iter-stages { display: flex; align-items: center; gap: 5px; }
 .iter-stage {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-mono); font-size: 10.5px;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1095,6 +1114,10 @@ button.ticket-mode {
 .ticket-iter-row {
   display: flex; align-items: center; gap: 10px;
   margin-top: 4px;
+  /* margin-left 由 .ticket-iter 處理(JSX 永遠是 "ticket-iter ticket-iter-row" 並用) */
+}
+.ticket-iter-summary {
+  margin-left: var(--ticket-content-indent);
 }
 .iter-round-num {
   /* tk-006:contrast 拉高(fg-faint → fg-mute) */
@@ -1158,11 +1181,10 @@ button.ticket-mode {
 
 /* 階段標記:past=✓ / current=▶或⏸或 verdict / future=? */
 .iter-stage-mark {
-  margin-left: 5px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 9px;
   line-height: 1;
-  vertical-align: 1px;
   font-family: var(--font-mono);
 }
 .iter-stage-mark.is-running {
@@ -1214,6 +1236,7 @@ button.ticket-mode {
 /* ── live log ── */
 .ticket-livelog {
   margin-top: 8px;
+  margin-left: var(--ticket-content-indent);
   padding: 7px 10px;
   font-size: 11px;
   color: var(--fg-mute);
@@ -1229,6 +1252,7 @@ html.light .ticket-livelog { background: #1c1916; color: #fbf8f1; border-color: 
 .ticket-paused-actions {
   display: flex; align-items: center; gap: 10px;
   margin-top: 10px; padding-top: 10px;
+  margin-left: var(--ticket-content-indent);
   border-top: 1px dashed var(--line);
   flex-wrap: wrap;
 }
@@ -1795,11 +1819,10 @@ html.light .focus-create-empty {
     margin-top: 6px;
     padding: 5px 8px;
   }
-  .ticket-card__sub {
-    margin-left: 30px;
-  }
-  .ticket-goal {
-    margin-left: 30px;
+  /* tk-001c:mobile 只改 indent token,所有 row 自動跟著變;不再個別重寫 margin-left */
+  .ticket {
+    --ticket-num-width: 20px;
+    --ticket-header-gap: 10px;
   }
 }
 

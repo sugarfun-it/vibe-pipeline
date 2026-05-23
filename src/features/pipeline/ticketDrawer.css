@@ -444,13 +444,8 @@
   color: var(--fg-mute);
   font-family: var(--font-mono);
 }
-/* hist-007:排序狀態移到列表右側,改成「排序：最新在前」並推到最右 */
-.tdrw-runs-summary-order {
+.tdrw-runs-collapse-all {
   margin-left: auto;
-  font-family: var(--font-sans, inherit);
-  font-size: 12px;
-  color: var(--fg-faint);
-  white-space: nowrap;
 }
 .tdrw-run-pre-toggle {
   align-self: flex-start;
@@ -559,21 +554,6 @@
   color: var(--fg-mute);
   background: var(--bg);
   border-color: var(--line-2);
-}
-/* hist-002:ticket count chip 給固定可容納寬度,不對短狀態文字用 ellipsis */
-.tdrw-run-ticket-count {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px var(--space-2, 8px);
-  border-radius: var(--radius-control, 6px);
-  color: var(--fg-mute);
-  background: var(--bg);
-  border: 1px solid var(--line-2);
-  font-family: var(--font-sans, inherit);
 }
 .tdrw-run-meta {
   /* hist-004:meta row 用 flex-wrap,每個 item 自然寬度,wrap 到下一列。

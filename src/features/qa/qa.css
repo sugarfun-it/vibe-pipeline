@@ -251,7 +251,8 @@
   flex-direction: column;
   gap: 6px;
 }
-.qadr-option {
+/* 提高 specificity 釘死置左,不被 .btn 的 justify-content:center 蓋掉 */
+.btn.qadr-option {
   justify-content: flex-start;
   text-align: left;
   font-weight: 400;

@@ -13,11 +13,23 @@ type UpdatingPhase =
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_POLL_TIMEOUT_MS = 180_000;
 
+function formatLastChecked(ts: number | null): string {
+  if (!ts) return "—";
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return "剛剛";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分鐘前`;
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 export function UpdateTab({ onActionError }: { onActionError?: (m: string) => void }) {
   const [version, setVersion] = useState<VersionStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<UpdatingPhase>({ kind: "idle" });
+  const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const pollAbortRef = useRef<AbortController | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -28,6 +40,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
     try {
       const v = await getSystemVersion();
       setVersion(v);
+      setLastCheckedAt(Date.now());
     } catch (e) {
       const msg = e instanceof Error && e.message ? e.message : "讀取版本失敗";
       setLoadError(msg);
@@ -125,33 +138,44 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
 
       {version && (
         <div className="update-tab-body">
-          <div className="update-version-block">
-            <div className="update-version-row">
-              <span className="update-version-label">目前版本</span>
-              <span
-                className="mono update-version-current"
-                title={version.current}
-              >
+          {/* 狀態摘要 — 不是資料表 */}
+          <div className="update-summary">
+            <div className="update-summary-headline">
+              <span className="mono update-version-current" title={version.current}>
                 {version.current}
               </span>
+              {!version.hasUpdate && !isDevBuild && version.latest && (
+                <span className="vp-chip vp-chip--success">已是最新</span>
+              )}
+              {version.hasUpdate && !isDevBuild && (
+                <span className="vp-chip vp-chip--info">有新 release</span>
+              )}
             </div>
             {version.latest ? (
-              <div className="update-version-row">
-                <span className="update-version-label">最新 release</span>
-                <span className="mono update-version-latest">{version.latest.tag}</span>
+              <div className="update-summary-sub">
+                最新 release{" "}
+                <span
+                  className={
+                    "mono update-version-latest" +
+                    (version.hasUpdate ? " update-version-latest--accent" : "")
+                  }
+                >
+                  {version.latest.tag}
+                </span>
+                <span className="update-summary-sep" aria-hidden>·</span>
                 <a
                   href={version.latest.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="update-release-link"
-                  aria-label={`查看 ${version.latest.tag} release notes（新分頁開啟）`}
+                  aria-label="開啟 release notes（新視窗）"
                 >
                   release notes <ExternalLinkIcon aria-hidden />
                 </a>
               </div>
             ) : (
-              <div className="update-version-row">
-                <span className="update-version-status">無法取得 release 資訊</span>
+              <div className="update-summary-sub update-summary-sub--error">
+                無法取得 release 資訊
               </div>
             )}
           </div>
@@ -162,7 +186,7 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
             </div>
           )}
 
-          <div className="push-action-row">
+          <div className="push-action-row update-action-row">
             <button
               type="button"
               className="btn"
@@ -192,9 +216,10 @@ export function UpdateTab({ onActionError }: { onActionError?: (m: string) => vo
                 {isUpdating ? "更新中…" : "切回正式 release"}
               </button>
             )}
-            {!version.hasUpdate && !isDevBuild && version.latest && (
-              <span className="update-version-status">已是最新</span>
-            )}
+          </div>
+
+          <div className="update-last-checked">
+            上次檢查：{formatLastChecked(lastCheckedAt)}
           </div>
 
           {phase.kind === "polling" && (

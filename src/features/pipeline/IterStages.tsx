@@ -11,6 +11,7 @@ export const STAGE_LABEL: Record<IterStage, string> = {
 
 // 顯示 PASS/FAIL/PARTIAL 簡短版,擺在「結果」階段裡。base 走 normalizeVerdict,
 // 這層只負責 UNKNOWN→? 與 PARTIAL→PART 的顯示縮寫。
+// 9px chip 用英文大寫(CJK 在此尺寸難辨識)。
 export function fmtVerdict(v: unknown): string {
   const n = normalizeVerdict(v);
   if (n === "UNKNOWN") return "?";
