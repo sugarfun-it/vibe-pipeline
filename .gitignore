@@ -54,3 +54,6 @@ release-tmp/
 update-flow.*
 .vibe-pipeline/
 .iter-uiux/
+
+# codegraph per-machine SQLite index(每台機自己跑 `codegraph init`)
+.codegraph/
