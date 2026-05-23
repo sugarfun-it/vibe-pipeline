@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { CheckIconSm } from "./icons";
+import { Popover } from "./Popover";
 
 export type PickerOption = {
   id: string;
@@ -36,7 +37,6 @@ export function PickerSelect({
   placeholder,
   id: idProp,
 }: PickerSelectProps) {
-  const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -59,23 +59,11 @@ export function PickerSelect({
 
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent | globalThis.KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey as EventListener, true);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey as EventListener, true);
-    };
-  }, [open, setOpen]);
+    // listbox 內 focus 應留在 listbox container(走 aria-activedescendant),
+    // 不靠 trigger 的 keydown — 開啟時把焦點推到 menu 容器。
+    const t = window.setTimeout(() => menuRef.current?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -209,7 +197,7 @@ export function PickerSelect({
   const labelText = current?.label ?? placeholder ?? "";
 
   return (
-    <div className={"picker vp-field" + (inert ? " is-inert" : "")} ref={wrapRef}>
+    <div className={"picker vp-field" + (inert ? " is-inert" : "")}>
       <button
         ref={triggerRef}
         type="button"
@@ -236,7 +224,15 @@ export function PickerSelect({
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
-      {open && !inert && (
+      <Popover
+        anchorRef={triggerRef}
+        open={open && !inert}
+        onClose={() => setOpen(false)}
+        placement="bottom-start"
+        matchAnchorWidth
+        autoFocusFirstItem={false}
+        manageRovingFocus={false}
+      >
         <div
           ref={menuRef}
           id={listboxId}
@@ -291,7 +287,7 @@ export function PickerSelect({
             </div>
           )}
         </div>
-      )}
+      </Popover>
     </div>
   );
 }

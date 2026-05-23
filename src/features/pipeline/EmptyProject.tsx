@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowUpIcon, FolderQuestionIcon } from "../../ui/icons";
+import "./emptyProject.css";
 
 export const EMPTY_PROJECT_DEFAULT_MESSAGE = "尚未選擇專案資料夾";
 export const EMPTY_PROJECT_DEFAULT_HINT =

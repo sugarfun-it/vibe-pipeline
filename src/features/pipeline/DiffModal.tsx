@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as api from "../../api/projects";
+import { useCopiedFeedback } from "../../hooks/useCopiedFeedback";
 import { ArrowRightIcon, CloseIcon } from "../../ui/icons";
+import { Overlay } from "../../ui/Overlay";
+import { useToast } from "../../ui/Toast";
 import "../../styles/drawer.css";
 import "./diffModal.css";
 
@@ -19,91 +21,43 @@ export function DiffModal({
   onClose: () => void;
 }) {
   const [diff, setDiff] = useState<api.FullDiff | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const { toast } = useToast();
   // 目前定位中的檔案 path(點 file row 時設定),畫上 active 視覺指示;
   // 不用 hash 路由 — modal 內導覽不該動瀏覽器 URL / history(雷:Esc / 上一頁語意被綁架)。
   const [activeFile, setActiveFile] = useState<string | null>(null);
   // fetch reload token — 「重新讀取」按鈕 +1 觸發 effect 重跑
   const [reloadToken, setReloadToken] = useState(0);
   // 「複製 diff」短暫回饋
-  const [copied, setCopied] = useState(false);
+  const { copied, flash: flashCopied } = useCopiedFeedback();
   const titleId = useId();
   const branchId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  // 開 modal 前 active element → 關閉時還焦點回去,keyboard user 不會迷路
-  const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setDiff(null);
-    setError(null);
+    setLoadFailed(false);
     api
       .getFullDiff(projectHash, pipelineId)
       .then((d) => {
         if (!cancelled) setDiff(d);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
+        if (cancelled) return;
+        setLoadFailed(true);
+        // 拆 user msg + tech detail,只把 user msg 經過 humanize 後丟 toast;tech detail 略過
+        const parts = parseErrorMessage(e.message);
+        toast(`讀取差異失敗:${humanizeUserMsg(parts.userMsg)}`, { variant: "danger" });
       });
     return () => {
       cancelled = true;
     };
-  }, [projectHash, pipelineId, reloadToken]);
-
-  // 開啟時 focus 進 modal,關閉時還回 trigger(diff chip)。
-  useEffect(() => {
-    triggerRef.current = (document.activeElement as HTMLElement) || null;
-    const root = dialogRef.current;
-    // 優先 focus close button(stable selector);如 modal 還在 loading,close 仍是第一個可互動元素。
-    const closeBtn = root?.querySelector<HTMLButtonElement>(".diff-modal-x");
-    closeBtn?.focus();
-    return () => {
-      const t = triggerRef.current;
-      if (t && typeof t.focus === "function") {
-        try { t.focus(); } catch {}
-      }
-    };
-  }, []);
-
-  // Esc 關閉 + Tab focus trap — 避免 keyboard user Tab 跑到背景 board / scrim
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const root = dialogRef.current;
-      if (!root) return;
-      const focusables = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((el) => el.offsetParent !== null);
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-      const outside = !active || !root.contains(active);
-      if (e.shiftKey) {
-        if (outside || active === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (outside || active === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [projectHash, pipelineId, reloadToken, toast]);
 
   // 點檔案列 → modal 內捲動到對應 block;不動 URL hash(避免污染 history / back button)。
-  const jumpToFile = useCallback((path: string) => {
+  function jumpToFile(path: string) {
     setActiveFile(path);
     const id = "diff-file-" + slug(path);
     const target = contentRef.current?.querySelector<HTMLElement>("#" + cssEscape(id));
@@ -113,7 +67,7 @@ export function DiffModal({
       const offset = target.offsetTop - scroller.offsetTop;
       scroller.scrollTo({ top: offset, behavior: "smooth" });
     }
-  }, []);
+  }
 
   // 載入後尚未點任何 file,顯示第一個檔案為 active(scroll position 預設在頂端,跟 UI 一致)。
   useEffect(() => {
@@ -162,24 +116,19 @@ export function DiffModal({
   const addedTotal = totals.added;
   const deletedTotal = totals.deleted;
 
-  // Portal:跳出 ReadyBanner 的 transform containing block(.fade-up 會困住 position:fixed)
-  return createPortal(
-    <div className="drawer-stage drawer-stage--modal diff-modal-stage">
-      <button
-        type="button"
-        className="drawer-scrim diff-modal-scrim"
-        onClick={onClose}
-        aria-label="關閉差異視窗"
-        tabIndex={-1}
-      />
-      <div
-        className="drawer drawer--modal diff-modal fade-up"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={branchId}
-        ref={dialogRef}
-      >
+  // Overlay portal=true(預設):跳出 ReadyBanner 的 transform containing block(.fade-up 會困住 position:fixed)
+  // initialFocus="close":優先 focus close button(stable selector);loading 時 close 仍是第一個可互動元素。
+  return (
+    <Overlay
+      onRequestClose={onClose}
+      labelledBy={titleId}
+      describedBy={branchId}
+      initialFocus="close"
+      stageClassName="drawer-stage--modal diff-modal-stage"
+      scrimClassName="diff-modal-scrim"
+      surfaceClassName="drawer--modal diff-modal fade-up"
+      surfaceRef={dialogRef}
+    >
         <div className="drawer-head diff-modal-head">
           <div className="diff-modal-title">
             <span id={titleId}>差異</span>
@@ -217,16 +166,14 @@ export function DiffModal({
                       ta.select();
                       document.execCommand("copy");
                       document.body.removeChild(ta);
-                      setCopied(true);
+                      flashCopied();
                     } catch {}
                   };
                   if (navigator.clipboard?.writeText) {
-                    navigator.clipboard.writeText(text).then(() => setCopied(true)).catch(fallback);
+                    navigator.clipboard.writeText(text).then(() => flashCopied()).catch(fallback);
                   } else {
                     fallback();
                   }
-                  // 2 秒後自動把 label 還原(不留 stuck state)
-                  window.setTimeout(() => setCopied(false), 2000);
                 }}
                 title="複製原始 diff"
                 aria-label={copied ? "已複製 diff" : "複製原始 diff 到剪貼簿"}
@@ -246,30 +193,9 @@ export function DiffModal({
           </div>
         </div>
 
-        {error && (
+        {loadFailed && !diff && (
           <div className="diff-modal-err" role="alert">
             <div className="diff-modal-err-title">讀取差異失敗</div>
-            {(() => {
-              // backend / mock 的 error.message 常見格式:
-              //   "<user-facing 主訊息>(技術細節)" 例 "無法讀取 git diff(模擬:工作樹被外部修改)"
-              // 步驟:
-              //   1. 拆 paren block → userMsg / techDetail
-              //   2. userMsg 過 normalize map(已知 backend 訊息 → 使用者語言)
-              //   3. techDetail 收進 <details>,預設折疊,debug 才打開
-              const parts = parseErrorMessage(error);
-              const friendly = humanizeUserMsg(parts.userMsg);
-              return (
-                <>
-                  <div className="diff-modal-err-detail">{friendly}</div>
-                  {parts.techDetail && (
-                    <details className="diff-modal-err-tech-wrap">
-                      <summary>顯示技術細節</summary>
-                      <div className="diff-modal-err-tech mono">{parts.techDetail}</div>
-                    </details>
-                  )}
-                </>
-              );
-            })()}
             <button
               type="button"
               className="diff-modal-retry"
@@ -280,16 +206,16 @@ export function DiffModal({
             </button>
           </div>
         )}
-        {!error && !diff && (
+        {!loadFailed && !diff && (
           <div className="diff-modal-loading" role="status" aria-live="polite">
             <span className="diff-modal-loading-dot" aria-hidden />
             載入中…
           </div>
         )}
-        {!error && diff && diff.files.length === 0 && (
+        {diff && diff.files.length === 0 && (
           <div className="diff-modal-empty">沒有改動。</div>
         )}
-        {!error && diff && diff.files.length > 0 && (
+        {diff && diff.files.length > 0 && (
           <div className="diff-modal-body">
             <nav className="diff-modal-files" aria-label="檔案清單">
               {diff.files.map((f) => {
@@ -354,9 +280,7 @@ export function DiffModal({
             </div>
           </div>
         )}
-      </div>
-    </div>,
-    document.body
+    </Overlay>
   );
 }
 

@@ -86,13 +86,9 @@ function TaskModelRow({
 
 export function AITab({
   userCfg,
-  userCfgError,
-  projectError,
   onTaskChange,
 }: {
   userCfg: UserConfig | null;
-  userCfgError: string | null;
-  projectError: string | null;
   onTaskChange: (tc: TaskClass, patch: TaskModelPatch) => void;
 }) {
   void TASK_CLASSES;
@@ -140,8 +136,6 @@ export function AITab({
       ) : (
         <div className="settings-subhint">載入中…</div>
       )}
-      {userCfgError && <div className="mono settings-error">{userCfgError}</div>}
-      {projectError && <div className="mono settings-error">{projectError}</div>}
     </div>
   );
 }

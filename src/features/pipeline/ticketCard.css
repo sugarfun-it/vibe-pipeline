@@ -1,0 +1,428 @@
+/* TicketCard — ticket 卡片、iter stages、verdict、status pill、density / mobile overrides。
+   從 src/styles/board.css 拆出來;非 ticket 共用的 primitives(.vp-chip / .btn / .sr-only)留 board.css。 */
+
+.ticket {
+  position: relative;
+  padding: 12px 16px 14px 22px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: border-color 120ms, background 120ms, transform 120ms;
+  animation: fadeUp 280ms ease-out both;
+  /* tk-001c:content indent token — header num 欄寬 + header grid gap;sub/goal/progress/iter-row 等
+     ticket 內容類 row 全部 margin-left 引用同一個值,避免 num 左緣與內容欄左緣產生多條 indent。 */
+  --ticket-num-width: 22px;
+  --ticket-header-gap: 8px;
+  --ticket-content-indent: calc(var(--ticket-num-width) + var(--ticket-header-gap));
+}
+.ticket:hover { border-color: var(--line-2); background: var(--panel-2); }
+/* tk-003:可點擊卡片強化 hover affordance(border + bg 雙訊號) */
+.ticket.is-clickable:hover {
+  border-color: var(--line-2);
+  background: var(--hover);
+}
+.ticket.is-clickable:hover .ticket-card__chevron { color: var(--fg); transform: translateX(2px); }
+.ticket.is-paused { border-color: color-mix(in srgb, var(--paused) 35%, var(--line-2)); }
+.ticket.is-draft { opacity: 0.6; }
+.ticket.is-draft:hover { opacity: 1; }
+
+/* status tint(不搶眼,只給視覺上 quick scan)— hover 仍走 panel-2 */
+.ticket.is-running { background: color-mix(in srgb, var(--running) 7%, var(--panel)); }
+.ticket.is-paused  { background: color-mix(in srgb, var(--paused)  6%, var(--panel)); }
+.ticket.is-done    { background: color-mix(in srgb, var(--done)    5%, var(--panel)); }
+.ticket.is-failed  { background: color-mix(in srgb, var(--failed)  8%, var(--panel)); }
+
+/* AI 拆分中 — accent 邊框 pulse,提示「卡片正在被處理」 */
+.ticket.is-splitting {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2));
+  animation: ticket-splitting-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ticket-splitting-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  50%      { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+}
+.chip.ticket-splitting {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line-2));
+  color: var(--accent);
+  font-weight: 600;
+}
+.ticket-splitting-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  animation: ticket-splitting-spin 700ms linear infinite;
+}
+@keyframes ticket-splitting-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ticket-band {
+  position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 3px; border-radius: 2px;
+}
+
+.ticket-row {
+  display: flex; align-items: center; gap: 10px;
+}
+/* tk-001:header 排成 grid,first row 只放 [num] [title] [trailing(status+chevron)],
+   mode chip 不再搶 header — 降到 .ticket-card__sub。*/
+.ticket-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ticket-header-gap);
+}
+.ticket-card__trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* tk-003:chevron affordance,提示卡片可開 drawer */
+.ticket-card__chevron {
+  color: var(--fg-mute);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: color 120ms, transform 120ms;
+}
+/* tk-005:sub row 只保留給 step+meta 用(iter 改去 iter-row,chip 已 inline 到 title) */
+.ticket-card__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-left: var(--ticket-content-indent);
+  flex-wrap: wrap;
+}
+/* tk-001b:chip 與 title 同一行(取代原 sub row 排版),省下純 step 卡多出的一行高度 */
+.ticket-card__titleline {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.ticket-card__titleline > .ticket-mode {
+  flex: 0 0 auto;
+  align-self: center;
+}
+.ticket-num {
+  /* tk-006:對比拉高(fg-faint → fg-mute) */
+  font-size: 11px; color: var(--fg-mute); width: var(--ticket-num-width); flex-shrink: 0;
+}
+.ticket-title {
+  flex: 1; font-size: 13.5px; font-weight: 500;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+  min-width: 0;
+  /* 中英混合 + 全形括弧 / 「/」沒空白時 browser 不知斷行,title 撐爆 row 蓋住 chip */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.ticket-goal {
+  margin-top: 6px;
+  margin-left: var(--ticket-content-indent);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-mute);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ticket-mode {
+  background: var(--panel-2);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+}
+.ticket-mode.is-iter {
+  background: var(--iter-soft);
+  color: var(--iter);
+  border-color: transparent;
+  font-weight: 600;
+}
+/* mode chip 可切換時(button 元素)— hover 加邊框 + 浮起,看得出可點 */
+button.ticket-mode {
+  /* button 預設樣式重置,跟 chip 對齊 */
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, transform 80ms;
+}
+.ticket-mode.is-toggle {
+  border-color: var(--line);
+}
+.ticket-mode.is-toggle:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+.ticket-mode.is-iter.is-toggle:hover {
+  background: color-mix(in srgb, var(--iter) 24%, transparent);
+}
+.ticket-mode.is-toggle:active { transform: translateY(0.5px); }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.status-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.ticket-meta {
+  /* tk-006:contrast 拉高(fg-faint → fg-mute) */
+  font-size: 10.5px; color: var(--fg-mute);
+}
+
+/* ── iter row ── */
+.ticket-iter {
+  display: flex; align-items: center; gap: 18px;
+  margin-top: 10px;
+  margin-left: var(--ticket-content-indent);
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  flex-wrap: wrap;
+}
+.iter-stages { display: flex; align-items: center; gap: 5px; }
+.iter-stage {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono); font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+  color: var(--fg-faint);
+  background: transparent;
+}
+.iter-stage.is-past { color: var(--fg-mute); border-color: var(--line-2); background: var(--panel); }
+.iter-stage.is-active {
+  color: var(--fg); border-color: var(--iter);
+  background: var(--iter-soft);
+  font-weight: 600;
+}
+.iter-stage.is-paused { color: var(--paused); border-color: var(--paused); background: var(--paused-soft); }
+.iter-stage-arrow { color: var(--fg-faint); font-size: 11px; }
+/* iter rounds 多 row 排列 */
+.ticket-iter-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 4px;
+  /* margin-left 由 .ticket-iter 處理(JSX 永遠是 "ticket-iter ticket-iter-row" 並用) */
+}
+.ticket-iter-summary {
+  margin-left: var(--ticket-content-indent);
+}
+.iter-round-num {
+  /* tk-006:contrast 拉高(fg-faint → fg-mute) */
+  font-size: 10px; color: var(--fg-mute);
+  min-width: 24px;
+}
+/* tk-002 / tk-008:compact round summary row — 取代 verbose per-round IterStages 顯示。
+   單一 inset bar:左側 round 編號 + stage flow + verdict,右側 elapsed。
+   背景用 done-tint 弱化容器感,不要再有獨立 shadow / 第二層 card。*/
+.ticket-card__progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 6px 10px;
+  margin-top: 8px;
+  border-radius: var(--radius-control, 6px);
+  background: color-mix(in srgb, var(--done) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--done) 18%, transparent);
+  font-size: 11.5px;
+  box-shadow: none;
+}
+/* failed 系列(把上面 done-tint 蓋掉,用 failed-tint)*/
+.ticket.is-failed .ticket-card__progress {
+  background: color-mix(in srgb, var(--failed) 7%, transparent);
+  border-color: color-mix(in srgb, var(--failed) 22%, transparent);
+}
+.ticket-card__round-summary .ticket-card__round-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ticket-card__round-flow {
+  /* tk-006:tertiary text 用 fg-mute 而非 fg-faint */
+  color: var(--fg-mute);
+  font-size: 11px;
+}
+.ticket-card__round-verdict {
+  font-weight: 600;
+  font-size: 11px;
+}
+.ticket-card__round-verdict.is-pass { color: var(--done); }
+.ticket-card__round-verdict.is-fail { color: var(--failed); }
+.ticket-card__round-verdict.is-part { color: var(--paused); }
+.ticket-card__round-verdict.is-unknown { color: var(--fg-mute); }
+.ticket-card__round-elapsed {
+  margin-left: 0;
+  color: var(--fg-mute);
+}
+.ticket-iter-summary {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+}
+
+/* legacy:.iter-stage-pulse 留著怕別處還用到,不再被 IterStages 渲染 */
+
+/* 階段標記:past=✓ / current=▶或⏸或 verdict / future=? */
+.iter-stage-mark {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+.iter-stage-mark.is-running {
+  color: var(--iter);
+  animation: iter-stage-mark-pulse 1.2s ease-in-out infinite;
+}
+.iter-stage-mark.is-paused {
+  color: var(--paused);
+  opacity: 0.9;
+}
+.iter-stage-mark.is-past-mark {
+  color: var(--done);
+  opacity: 0.85;
+}
+.iter-stage-mark.is-future-mark {
+  color: var(--fg-faint);
+  opacity: 0.55;
+}
+.iter-stage-mark.is-result-pass {
+  color: var(--done);
+  font-weight: 600;
+}
+.iter-stage-mark.is-result-fail {
+  color: var(--failed);
+  font-weight: 600;
+}
+.iter-stage-mark.is-result-part {
+  color: var(--paused);
+  font-weight: 600;
+}
+@keyframes iter-stage-mark-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+.verdicts { display: inline-flex; align-items: center; gap: 4px; }
+
+.verdict-pip.is-pass { background: var(--done); }
+.verdict-pip.is-warn { background: var(--paused); }
+.verdict-pip.is-fail { background: var(--failed); }
+
+.iter-meta {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-left: auto;
+  font-size: 10.5px; color: var(--fg-mute);
+}
+.iter-meta strong { color: var(--fg); font-weight: 600; }
+
+/* ── live log ── */
+.ticket-livelog {
+  margin-top: 8px;
+  margin-left: var(--ticket-content-indent);
+  padding: 7px 10px;
+  font-size: 11px;
+  color: var(--fg-mute);
+  background: #0a0c10;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+html.light .ticket-livelog { background: #1c1916; color: #fbf8f1; border-color: #1c1916; }
+.livelog-cursor { color: var(--running); }
+
+/* ── paused actions ── */
+.ticket-paused-actions {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; padding-top: 10px;
+  margin-left: var(--ticket-content-indent);
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.paused-reason {
+  flex: 1; min-width: 180px;
+  font-size: 11.5px; color: var(--paused);
+}
+
+/* density compact */
+[data-density="compact"] .ticket { padding: 9px 14px 10px 20px; }
+[data-density="compact"] .ticket-iter { padding: 6px 9px; gap: 12px; margin-top: 7px; }
+[data-density="compact"] .ticket-title { font-size: 12.5px; }
+
+/* ─── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  .ticket-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  /* chips/meta past the title flow to a full-width second row */
+  .ticket-row > .chip,
+  .ticket-row > .status-pill,
+  .ticket-row > .ticket-mode,
+  .ticket-row > .ticket-meta {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  /* tk-001:header grid 在 mobile 維持 3 欄(num / title / trailing),trailing 不擠到第二列 —
+     title 自己 ellipsis,讓 status + chevron 永遠看得到 */
+  .ticket-card__header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .ticket-card__header > .ticket-card__trailing {
+    grid-column: auto;
+    justify-self: end;
+  }
+  /* tk-007:窄 viewport 優先保 title + result,description 收到 2 行 */
+  .ticket-card__header .ticket-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ticket-card__description {
+    margin-top: 6px;
+  }
+}
+
+/* tk-007:極窄 viewport(<=480px)再緊一點 padding,progress 跟 header 留更小距離 */
+@media (max-width: 480px) {
+  .ticket {
+    padding: 10px 12px 12px 18px;
+  }
+  .ticket-card__progress {
+    margin-top: 6px;
+    padding: 5px 8px;
+  }
+  /* tk-001c:mobile 只改 indent token,所有 row 自動跟著變;不再個別重寫 margin-left */
+  .ticket {
+    --ticket-num-width: 20px;
+    --ticket-header-gap: 10px;
+  }
+}
+
+@media (hover: none) {
+  .ticket.is-draft {
+    opacity: 1;
+  }
+}

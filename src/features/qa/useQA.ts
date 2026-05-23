@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import * as qaApi from "../../api/qa";
 import type { Draft, TicketSpec } from "../../api/qa";
 import { useApi } from "../../hooks/useApi";
+import { useToast } from "../../ui/Toast";
 
 export type QAState = {
   open: boolean;
   pipelineId: string | null;
   draft: Draft | null;
   busy: boolean;
-  error: string | null;
 };
 
 const INITIAL: QAState = {
@@ -16,12 +16,17 @@ const INITIAL: QAState = {
   pipelineId: null,
   draft: null,
   busy: false,
-  error: null,
 };
 
 export function useQA(projectHash: string | null) {
+  const { toast } = useToast();
   const [state, setState] = useState<QAState>(INITIAL);
   const [drafts, setDrafts] = useState<Draft[]>([]);
+
+  const toastErr = useCallback((prefix: string, e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    toast(`${prefix}:${msg}`, { variant: "danger" });
+  }, [toast]);
 
   const refreshDrafts = useCallback(async () => {
     if (!projectHash) {
@@ -83,7 +88,7 @@ export function useQA(projectHash: string | null) {
   const open = useCallback(
     async (pipelineId: string) => {
       if (!projectHash) return;
-      setState((s) => ({ ...s, open: true, pipelineId, busy: true, error: null }));
+      setState((s) => ({ ...s, open: true, pipelineId, busy: true }));
       // 接續 QA 時:不靠 in-memory drafts(可能 stale,e.g. 別 tab 改、或 close 後沒同步)
       // 直接打 backend listDrafts 拿最新,再決定 resume / start
       let latest: Draft[] = [];
@@ -98,33 +103,23 @@ export function useQA(projectHash: string | null) {
       if (existing) {
         try {
           const d = await qaApi.getDraft(projectHash, existing.draftId);
-          setState({ open: true, pipelineId, draft: d, busy: false, error: null });
+          setState({ open: true, pipelineId, draft: d, busy: false });
         } catch (e) {
-          setState({
-            open: true,
-            pipelineId,
-            draft: null,
-            busy: false,
-            error: e instanceof Error ? e.message : String(e),
-          });
+          setState({ open: true, pipelineId, draft: null, busy: false });
+          toastErr("讀取草稿失敗", e);
         }
         return;
       }
       try {
         const { draft } = await qaApi.startQA(projectHash, pipelineId);
-        setState({ open: true, pipelineId, draft, busy: false, error: null });
+        setState({ open: true, pipelineId, draft, busy: false });
         await refreshDrafts();
       } catch (e) {
-        setState({
-          open: true,
-          pipelineId,
-          draft: null,
-          busy: false,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        setState({ open: true, pipelineId, draft: null, busy: false });
+        toastErr("啟動 QA 失敗", e);
       }
     },
-    [projectHash, drafts, refreshDrafts]
+    [projectHash, drafts, refreshDrafts, toastErr]
   );
 
   // close 時若 draft 還是空(沒任何 user turn、沒 spec 進展)→ auto-cancel,
@@ -156,19 +151,16 @@ export function useQA(projectHash: string | null) {
           { role: "user", message: userMessage, ts: Date.now() },
         ],
       };
-      setState((s) => ({ ...s, draft: optimistic, busy: true, error: null }));
+      setState((s) => ({ ...s, draft: optimistic, busy: true }));
       try {
         const { draft } = await qaApi.turnQA(projectHash, state.draft.draftId, userMessage);
         setState((s) => ({ ...s, draft, busy: false }));
       } catch (e) {
-        setState((s) => ({
-          ...s,
-          busy: false,
-          error: e instanceof Error ? e.message : String(e),
-        }));
+        setState((s) => ({ ...s, busy: false }));
+        toastErr("傳送訊息失敗", e);
       }
     },
-    [projectHash, state.draft]
+    [projectHash, state.draft, toastErr]
   );
 
   const cancel = useCallback(async () => {
@@ -188,7 +180,7 @@ export function useQA(projectHash: string | null) {
   const previewSplit = useCallback(
     async (edits?: Partial<TicketSpec>) => {
       if (!projectHash || !state.draft) return null;
-      setState((s) => ({ ...s, busy: true, error: null }));
+      setState((s) => ({ ...s, busy: true }));
       try {
         return await qaApi.previewSplitQA(projectHash, state.draft.draftId, edits);
       } finally {
@@ -204,22 +196,19 @@ export function useQA(projectHash: string | null) {
     async (edits?: Partial<TicketSpec>, splitInto?: TicketSpec[]): Promise<unknown | null> => {
       if (!projectHash || !state.draft) return null;
       const draftId = state.draft.draftId;
-      setState((s) => ({ ...s, busy: true, error: null }));
+      setState((s) => ({ ...s, busy: true }));
       try {
         const result = await qaApi.finalizeQA(projectHash, draftId, edits, splitInto);
         setState(INITIAL);
         await refreshDrafts();
         return result;
       } catch (e) {
-        setState((s) => ({
-          ...s,
-          busy: false,
-          error: e instanceof Error ? e.message : String(e),
-        }));
+        setState((s) => ({ ...s, busy: false }));
+        toastErr("建立需求單失敗", e);
         throw e instanceof Error ? e : new Error(String(e));
       }
     },
-    [projectHash, state.draft, refreshDrafts]
+    [projectHash, state.draft, refreshDrafts, toastErr]
   );
 
   return {

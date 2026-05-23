@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import * as api from "../../api/projects";
 import type { AuditEntry } from "../../api/projects";
 import { ArrowRightIcon, ChevronIcon } from "../../ui/icons";
+import { useToast } from "../../ui/Toast";
 import "./auditTimeline.css";
 
 // Pipeline 狀態變動歷史 timeline。
@@ -21,9 +22,9 @@ export function AuditTimeline({
   limit?: number;
 }) {
   const [entries, setEntries] = useState<AuditEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!open) return;
@@ -33,16 +34,16 @@ export function AuditTimeline({
       .then((arr) => {
         if (cancelled) return;
         setEntries(arr);
-        setError(null);
       })
       .catch((e: Error) => {
         if (cancelled) return;
-        setError(e.message);
+        toast(`讀取狀態變動歷史失敗:${e.message}`, { variant: "danger" });
+        setEntries([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [open, projectHash, pipelineId, limit]);
+  }, [open, projectHash, pipelineId, limit, toast]);
 
   return (
     <div className="tdrw-section">
@@ -68,12 +69,11 @@ export function AuditTimeline({
       </button>
       {open && (
         <div className="tdrw-section-body" id={panelId} role="region" aria-label="狀態變動歷史">
-          {error && <div className="tdrw-empty">讀取失敗:{error}</div>}
-          {!error && entries === null && <div className="tdrw-empty">載入中…</div>}
-          {!error && entries && entries.length === 0 && (
+          {entries === null && <div className="tdrw-empty">載入中…</div>}
+          {entries && entries.length === 0 && (
             <div className="tdrw-empty">尚無紀錄</div>
           )}
-          {!error && entries && entries.length > 0 && (
+          {entries && entries.length > 0 && (
             <>
               <div className="audit-sort-hint" aria-live="polite">最新在上</div>
               <div className="audit-list">

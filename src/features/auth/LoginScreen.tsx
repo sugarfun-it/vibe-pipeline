@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { login } from "./authApi";
-import "../../styles/auth.css";
+import { login } from "../../api/auth";
+import { TextField } from "../../ui/forms/TextField";
+import "../../styles/auth-screen.css";
 
 export function LoginScreen() {
   const navigate = useNavigate();
@@ -32,17 +33,19 @@ export function LoginScreen() {
       <div className="auth-card">
         <h1 className="auth-title">輸入驗證碼</h1>
         <form onSubmit={onSubmit} className="auth-form">
-          <input
-            className="auth-code-input"
+          <TextField
+            label="驗證碼"
+            labelHidden
             inputMode="numeric"
             maxLength={6}
             autoComplete="one-time-code"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
             placeholder="6 碼驗證碼"
             autoFocus
+            inputClassName="form-input--code"
+            error={error ?? undefined}
           />
-          {error && <p className="auth-error">{error}</p>}
           <button
             type="submit"
             className="btn btn-primary"

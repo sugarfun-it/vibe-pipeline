@@ -1,5 +1,135 @@
-/* FocusColumn feature 專用 CSS — 從 inline style 搬過來,集中管理。
-   非 feature 共用 styles 仍在 src/styles/board.css。 */
+/* FocusColumn feature 專用 CSS — focus column 容器、header、empty、overflow menu、
+   ReadyBanner、focus title edit、focus diff chip 等。
+   非 feature 共用 styles(.btn / .vp-chip / .modal-* / .sr-only / 等 primitives)留 src/styles/board.css。 */
+
+/* ─── Focus column 容器 ─────────────────────────────────────── */
+.focus {
+  display: flex; flex-direction: column;
+  min-height: 0; min-width: 0;
+  overflow-y: auto;
+  padding: 22px 28px 28px;
+  background: var(--bg);
+}
+.focus-head { margin-bottom: 16px; position: relative; z-index: 5; }
+.focus-head-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+/* 兩列結構:
+   row 1 = title + branch chip + ... actions(run / overflow)
+   row 2 = status chip + count + runs chip + diff/sync + ... + ticket button
+   每列獨立 flex-wrap;靠 spacer div 把 actions / + ticket 推到右側 */
+.focus-head-title-row,
+.focus-head-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.focus-head-title-spacer,
+.focus-head-meta-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.focus-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+/* runs / 累積成本 chip:pipeline header 上 quick glance,完整明細在 OverflowMenu「執行紀錄」 drawer */
+.focus-title {
+  margin: 0;
+  font-size: 22px; font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+.focus-count { font-size: 11.5px; color: var(--fg-mute); }
+
+/* ─── focus ticket list ───────────────────────────────────── */
+.focus-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* ─── banners(ReadyBanner / paused banner)─────────────── */
+.banner {
+  display: flex; align-items: center; gap: var(--space-3, 14px);
+  padding: var(--space-3, 12px) var(--space-3, 14px);
+  border-radius: var(--radius-panel, 10px);
+  border: 1px solid;
+  margin-top: var(--space-3, 12px);
+  position: relative;
+  z-index: var(--z-banner, 5);
+}
+.banner-paused {
+  background: var(--paused-soft);
+  border-color: color-mix(in srgb, var(--paused) 30%, transparent);
+}
+.banner-ready {
+  background: var(--done-soft);
+  border-color: color-mix(in srgb, var(--done) 30%, transparent);
+}
+.banner-icon { display: inline-flex; flex-shrink: 0; color: currentColor; }
+.banner-paused .banner-icon { color: var(--paused); }
+.banner-body { flex: 1; min-width: 0; }
+.banner-title { font-size: 13px; font-weight: 600; color: var(--fg); }
+.banner-desc { font-size: 11.5px; color: var(--fg-mute); margin-top: 2px; }
+
+/* phase4-cross-011 — banner state modifiers + data-state contract.
+   ReadyBanner.tsx emits data-state="ready|merging|merged|failed"; styling
+   converges so RunButton merge-ready, rail ready/merged dot, focus-head
+   pipeline state all read off the same palette. Aliases mirror class form. */
+.banner[data-state="ready"],
+.banner--ready {
+  background: var(--done-soft);
+  border-color: color-mix(in srgb, var(--done) 35%, transparent);
+  color: var(--done);
+}
+.banner[data-state="merging"],
+.banner--merging {
+  background: color-mix(in srgb, var(--running) 12%, transparent);
+  border-color: color-mix(in srgb, var(--running) 35%, transparent);
+  color: var(--running);
+}
+.banner[data-state="merged"],
+.banner--merged {
+  background: color-mix(in srgb, var(--done) 8%, transparent);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line-2));
+  color: var(--done);
+}
+.banner[data-state="failed"],
+.banner--failed {
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 45%, var(--line-2)));
+  color: var(--failed);
+}
+.banner[data-state="paused"],
+.banner--paused {
+  background: var(--paused-soft);
+  border-color: color-mix(in srgb, var(--paused) 30%, transparent);
+  color: var(--paused);
+}
+/* icon inherits the banner state colour by default; body keeps neutral fg
+   so descriptive text remains readable while the accent stays on the icon. */
+.banner[data-state] .banner-icon,
+.banner--ready .banner-icon,
+.banner--merging .banner-icon,
+.banner--merged .banner-icon,
+.banner--failed .banner-icon { color: currentColor; }
+.banner[data-state] .banner-title,
+.banner--ready .banner-title,
+.banner--merging .banner-title,
+.banner--merged .banner-title,
+.banner--failed .banner-title { color: var(--fg); }
+.banner[data-state] .banner-desc,
+.banner--ready .banner-desc,
+.banner--merging .banner-desc,
+.banner--merged .banner-desc,
+.banner--failed .banner-desc { color: var(--fg-mute); }
+
+/* density compact — focus padding 收一點 */
+[data-density="compact"] .focus-list { gap: 6px; }
+[data-density="compact"] .focus { padding: 16px 24px 24px; }
 
 /* ─── Diff chip(chip-state 旁邊的 +N -N Nf)──────────────────── */
 
@@ -192,4 +322,107 @@
 .run-btn-stop-now:hover {
   background: var(--failed-soft);
   border-color: var(--failed);
+}
+
+/* ─── Mobile(focus header / banner / RunButton 相關)─────── */
+@media (max-width: 767.98px) {
+  /* 手機 FocusColumn 縮小 padding,標題小一點,降低上方密度 */
+  .focus {
+    padding: 14px 14px 18px !important;
+  }
+  .focus-title {
+    font-size: 18px !important;
+  }
+  .focus-head { margin-bottom: 10px !important; }
+  .focus-head-top {
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  /* done count 字體略小,跟 state chip 同一視覺層 */
+  .focus-count {
+    font-size: 11px !important;
+  }
+
+  /* mobile:focus header 用兩列 flex 結構(JSX 切好的 title-row / meta-row),
+     不再強制 grid auto-place — auto-place 在窄寬度把每個 chip / button 各自踢成一列。 */
+  .focus-head-title-row,
+  .focus-head-meta-row {
+    gap: 6px !important;
+  }
+  /* view ↔ edit 切換用同樣 control-h(32px)按鈕,不再需要強制 44px lock */
+  .focus-head-title-row {
+    align-items: center;
+  }
+  .focus-actions {
+    gap: 6px;
+  }
+
+  /* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
+  .run-btn-empty-label-full { display: none; }
+  .run-btn-empty-label-short { display: inline; }
+
+  /* v2-board-003:mobile pencil / focus 區的 overflow ⋯ padding 收一點;
+     tap target 走 .btn 的 min-height(canonical control-h),不再強制 44px */
+  .focus-title-edit-btn,
+  .focus-overflow > .btn {
+    padding-inline: 8px;
+  }
+
+  /* rename confirm / cancel 跟 .btn / ⋯ overflow 同高(--control-h ≈ 32px),icon-only 收 padding。
+     較小尺寸讓 title row 一直容得下 input + ✓ + × + ⋯,不必在 edit mode 隱藏 overflow,
+     view ↔ edit 切換也不會造成行高跳動。 */
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
+    padding: 0;
+    border-radius: var(--radius-control, 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
+  }
+
+  /* mobile-focus-006:merged pipeline 的 disabled 「無可執行」button 在 mobile 隱藏 —
+     主動作只剩「+ 新增 ticket」,不要再讓 disabled 跟它競爭視覺權重 */
+  .run-btn-empty.run-btn-empty-merged {
+    display: none !important;
+  }
+
+  /* mobile-focus-004:ReadyBanner merged 變體在 mobile 把 branch desc(branch → base · N commit)
+     截成單行 ellipsis,避免長 branch name 換行撐高 banner */
+  .banner.banner-merged .banner-desc {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .banner.banner-merged .banner-body {
+    min-width: 0;
+  }
+
+  /* v2-board-002:ReadyBanner merged 變體在 mobile 壓緊,別搶過已完成的 ticket。 */
+  .banner.banner-merged {
+    padding: var(--space-3, 12px) var(--space-4, 14px);
+    border-radius: var(--radius-control, 6px);
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2, 8px);
+  }
+  .banner.banner-merged .banner-title {
+    font-size: 12.5px;
+  }
+  .banner.banner-merged .banner-desc {
+    font-size: 11px;
+    margin-top: 1px;
+  }
+  .banner.banner-merged .banner-icon {
+    transform: scale(0.85);
+  }
+}
+
+/* RunButton disabled label:desktop 用長版「無可執行 ticket」、mobile 用短版「無可執行」
+   wrap 在 @media query 內,避免被 (max-width:767.98px) 區塊蓋過(那塊在檔案中段)。 */
+@media (min-width: 768px) {
+  .run-btn-empty-label-full { display: inline; }
+  .run-btn-empty-label-short { display: none; }
 }

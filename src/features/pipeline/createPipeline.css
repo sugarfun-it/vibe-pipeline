@@ -1,0 +1,233 @@
+/* CreatePipelineCard — rail 內 inline create card + picker + create-empty CTA。
+   從 src/styles/board.css 拆出來。.rail.is-creating sibling muting 也在這(只跟 create flow 相關)。 */
+
+.rail.is-creating .rail-item.is-muted {
+  opacity: 0.32;
+  pointer-events: none;
+  filter: saturate(0.6);
+}
+.rail.is-creating .rail-archive.is-muted { opacity: 0.3; pointer-events: none; }
+
+.create-card {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 10px 11px 11px;
+  margin: 2px 0 4px;
+  background: var(--bg);
+  border: 1.5px solid var(--accent);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgba(216, 162, 90, 0.12), 0 2px 6px rgba(0,0,0,0.25);
+}
+html.light .create-card { background: var(--bg-elevated); }
+.create-card-head {
+  display: flex; align-items: center; gap: 6px;
+}
+.create-card-eyebrow {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--fg-mute);
+}
+/* 對齊 SettingsPopover 的右上 ✕ 關閉按鈕樣式 */
+.create-x {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.create-x:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+/* :focus-visible handled by the shared ring rule above (phase4-focus-001).
+   Hover treatment still applied here for keyboard users. */
+.create-x:focus-visible {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.create-input {
+  display: flex; align-items: center; gap: 0;
+  padding: 6px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
+  font-size: 12.5px;
+  transition: border-color 120ms, background 120ms, box-shadow 120ms;
+}
+.create-input:hover { border-color: var(--line); }
+/* Match .picker-trigger's rest+focus look — border-color shift, no halo.
+   (.picker-trigger only shows the global focus halo on real keyboard tab via :focus-visible,
+   not on autofocus or mouse click. To keep the two fields visually identical without
+   relying on Chromium's autofocus heuristic, we drop the box-shadow ring here entirely.) */
+.create-input:focus-within { border-color: var(--accent); }
+.create-input.is-error { border-color: var(--failed); background: var(--failed-soft); }
+.create-input.is-error:focus-within { border-color: var(--failed); }
+
+.create-input input {
+  flex: 1; min-width: 0;
+  background: transparent; border: 0; outline: none;
+  font: inherit; color: var(--fg);
+  font-weight: 600;
+  padding: 0; caret-color: var(--accent);
+}
+.create-input-hint {
+  font-size: 9.5px; color: var(--fg-faint);
+  margin-left: 6px; flex-shrink: 0;
+}
+.create-error {
+  font-size: 10px; color: var(--failed);
+  margin-top: -4px;
+}
+
+.create-field { display: flex; flex-direction: column; gap: 4px; }
+.create-field-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--fg-mute);
+  padding-left: 1px;
+}
+.create-field-desc {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fg-mute);
+  padding-left: 1px;
+}
+
+.picker { position: relative; }
+.picker-trigger {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--fg);
+  transition: border-color 100ms, background 100ms;
+  text-align: left;
+}
+.picker-trigger:hover { border-color: var(--line-2); background: var(--panel-2); }
+.picker-trigger.is-open { border-color: var(--accent); }
+.picker-trigger > svg:last-child { color: var(--fg-faint); transition: transform 140ms; }
+.picker-trigger.is-open > svg:last-child { transform: rotate(180deg); }
+.picker-hint { color: var(--fg-faint); font-size: 9.5px; }
+
+.picker-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  z-index: var(--z-popover, 100);
+  display: flex; flex-direction: column; gap: 1px;
+}
+.picker-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 7px;
+  border-radius: 4px;
+  font-size: 11.5px; color: var(--fg);
+  text-align: left;
+  background: transparent;
+  position: relative;
+}
+.picker-item:hover { background: var(--hover); }
+.picker-item.is-active { background: var(--selected); }
+.picker-item-icon { width: 0.75rem; display: inline-flex; }
+.picker-item-hint { font-size: 9.5px; color: var(--fg-faint); margin-left: auto; }
+.picker-item-check { color: var(--accent); display: inline-flex; margin-left: 4px; }
+.picker-item.is-active .picker-item-hint { margin-left: 4px; }
+
+.create-actions {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 2px;
+}
+.create-cancel {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--fg-mute);
+}
+.create-cancel:hover { color: var(--fg); background: var(--hover); }
+.create-cancel > span:first-child {
+  font-family: var(--font-mono); font-size: 9.5px;
+  padding: 1px 5px; border: 1px solid var(--line-2);
+  border-radius: 3px;
+}
+.create-submit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 11.5px;
+}
+.create-submit:disabled {
+  opacity: 0.45; cursor: not-allowed;
+}
+.kbd-inline {
+  font-size: 10px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+}
+.btn-primary .kbd-inline {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Focus column · empty state during create */
+.focus-create-empty {
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(rgba(232,228,217,0.04) 1px, transparent 1.5px) 0 0/22px 22px,
+    var(--bg);
+}
+html.light .focus-create-empty {
+  background:
+    radial-gradient(rgba(28,25,22,0.06) 1px, transparent 1.5px) 0 0/22px 22px,
+    var(--bg);
+}
+.create-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 36px 44px;
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  max-width: 380px; text-align: center;
+  background: color-mix(in srgb, var(--bg-elevated) 60%, transparent);
+}
+.create-empty-icon { color: var(--accent); opacity: 0.55; }
+.create-empty-title {
+  font-size: 14px; font-weight: 600; color: var(--fg);
+}
+.create-empty-desc {
+  font-size: 12px; color: var(--fg-mute);
+  line-height: 1.6; text-wrap: pretty;
+}
+.create-empty-desc .kbd {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  margin: 0 1px;
+}
+
+@media (max-width: 767.98px) {
+  .create-input,
+  .create-field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .create-input {
+    gap: 4px;
+  }
+
+  .create-input-hint {
+    margin-left: 0;
+  }
+}

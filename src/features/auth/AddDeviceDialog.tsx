@@ -1,38 +1,25 @@
 import { useEffect, useState } from "react";
-import { authedFetch } from "./authApi";
+import { setupInit } from "../../api/auth";
+import { useToast } from "../../ui/Toast";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import "./auth.css";
 
-type SetupInitData = { qr_svg: string; setup_token: string; otpauth_url?: string };
-type Envelope<T> = { ok: boolean; data?: T; error?: { code: string; message: string } };
-
 export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
+  const { toast } = useToast();
   const [qrSvg, setQrSvg] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadQr, { pending: loading }] = useAsyncAction(async () => {
+    try {
+      const data = await setupInit();
+      setQrSvg(data.qr_svg);
+    } catch (e) {
+      toast(`產生 QR Code 失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
+      throw e;
+    }
+  });
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    authedFetch("/api/auth/setup-init", { method: "POST" })
-      .then(async (res) => {
-        const body = (await res.json()) as Envelope<SetupInitData>;
-        if (cancelled) return;
-        if (!res.ok || !body.ok || !body.data) {
-          throw new Error(body.error?.message ?? `setup-init ${res.status}`);
-        }
-        setQrSvg(body.data.qr_svg);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadQr();
+  }, [loadQr]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -59,14 +46,9 @@ export function AddDeviceDialog({ onClose }: { onClose: () => void }) {
         <div className="auth-dialog-desc">
           在新裝置的 Authenticator App 掃描此 QR Code。無需重新驗證，此 QR 使用相同的 secret。
         </div>
-        {loading && (
+        {(loading || !qrSvg) && (
           <div className="auth-dialog-loading">
             載入中…
-          </div>
-        )}
-        {error && (
-          <div className="mono auth-dialog-error">
-            {error}
           </div>
         )}
         {qrSvg && (

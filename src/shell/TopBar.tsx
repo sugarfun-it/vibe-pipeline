@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "react-router-dom";
 import { Logo } from "../ui/Logo";
+import { Popover } from "../ui/Popover";
 import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHorizontalIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
+import { useAsyncAction } from "../hooks/useAsyncAction";
+import { useUrlParam } from "../hooks/useUrlParam";
+import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import type { Project } from "../../shared/types";
 import { isLocalHost } from "../lib/isLocalHost";
 import "./topbar.css";
@@ -24,9 +27,7 @@ export function TopBar({
   const [recents, setRecents] = useState<Project[]>([]);
   const [open, setOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
   const overflowRef = useRef<HTMLDivElement>(null);
   const projTriggerRef = useRef<HTMLButtonElement>(null);
   const browseCloseRef = useRef<HTMLButtonElement>(null);
@@ -48,25 +49,68 @@ export function TopBar({
       setBrowseLoading(false);
     }
   }
-  // theme 來源:URL ?theme= override → localStorage → light
-  // toggle 寫 localStorage 並同步 <html> class(useTheme hook 也會跑,雙保險;localStorage 觸發不了 React 重 render,所以這裡也手動 setIsDark)
-  const [searchParams] = useSearchParams();
-  const urlTheme = searchParams.get("theme");
-  const [isDark, setIsDark] = useState(() => {
-    if (urlTheme === "dark") return true;
-    if (urlTheme === "light") return false;
+
+  const [selectExisting, { pending: selectPending }] = useAsyncAction(async (p: Project) => {
+    setError(null);
     try {
-      return localStorage.getItem("vibe-pipeline:theme") === "dark";
-    } catch {
-      return false;
+      const project = await api.openProject(p.path);
+      setHash(project.hash);
+      setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
     }
   });
+
+  // 不 confirm — 只是移清單紀錄(不刪檔 / git / .vibe-pipeline/),重點下次可從「選擇其他資料夾…」加回來,無資料損失。confirm 純摩擦
+  const [removeRecentEntry, { pending: removePending }] = useAsyncAction(async (p: Project) => {
+    if (p.hash === hash) return; // active 不能刪(UI 上 X disabled,雙保險)
+    setError(null);
+    try {
+      await api.removeRecent(p.hash);
+      const list = await api.listRecent();
+      setRecents(list);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    }
+  });
+
+  const [openByPath, { pending: openByPathPending }] = useAsyncAction(async (path: string) => {
+    const trimmed = path.trim();
+    if (!trimmed) {
+      setError("路徑不能空");
+      return;
+    }
+    setError(null);
+    try {
+      const project = await api.openProject(trimmed);
+      const list = await api.listRecent();
+      setRecents(list);
+      setHash(project.hash);
+      setBrowseOpen(false);
+      setBrowseData(null);
+      setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    }
+  });
+
+  const busy = selectPending || removePending || openByPathPending;
+  // theme 來源:URL ?theme= override → localStorage → light
+  // toggle 寫 localStorage(via hook)並同步 <html> class —
+  // index.html inline script 負責第一個 frame,這裡只負責 user 互動切換
+  const [urlTheme] = useUrlParam("theme");
+  const [storedTheme, setStoredTheme] = useLocalStorageState<string | null>(
+    "vibe-pipeline:theme",
+    null,
+  );
+  const isDark =
+    urlTheme === "dark" || (urlTheme !== "light" && storedTheme === "dark");
   function toggleTheme() {
     const next = !isDark;
-    setIsDark(next);
-    try {
-      localStorage.setItem("vibe-pipeline:theme", next ? "dark" : "light");
-    } catch {}
+    setStoredTheme(next ? "dark" : "light");
     document.documentElement.classList.toggle("light", !next);
   }
 
@@ -76,22 +120,6 @@ export function TopBar({
       .then(setRecents)
       .catch((e: Error) => setError(e.message));
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
 
   useEffect(() => {
     if (!overflowOpen) return;
@@ -208,58 +236,6 @@ export function TopBar({
 
   const active = recents.find((p) => p.hash === hash) ?? null;
 
-  async function selectExisting(p: Project) {
-    setBusy(true);
-    setError(null);
-    try {
-      const project = await api.openProject(p.path);
-      setHash(project.hash);
-      setOpen(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function removeRecentEntry(p: Project) {
-    if (p.hash === hash) return; // active 不能刪(UI 上 X disabled,雙保險)
-    // 不 confirm — 只是移清單紀錄(不刪檔 / git / .vibe-pipeline/),重點下次可從「選擇其他資料夾…」加回來,無資料損失。confirm 純摩擦
-    setBusy(true);
-    setError(null);
-    try {
-      await api.removeRecent(p.hash);
-      const list = await api.listRecent();
-      setRecents(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openByPath(path: string) {
-    const trimmed = path.trim();
-    if (!trimmed) {
-      setError("路徑不能空");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const project = await api.openProject(trimmed);
-      const list = await api.listRecent();
-      setRecents(list);
-      setHash(project.hash);
-      setBrowseOpen(false);
-      setBrowseData(null);
-      setOpen(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="topbar">
@@ -270,7 +246,7 @@ export function TopBar({
         </div>
         <span className="topbar-sep" />
 
-        <div className="proj-switcher" ref={wrapRef}>
+        <div className="proj-switcher">
           <button type="button"
             ref={projTriggerRef}
             className={"proj-trigger" + (open ? " is-open" : "")}
@@ -286,8 +262,19 @@ export function TopBar({
             <span className="proj-trigger-path mono">{active?.path ?? "(尚未選擇)"}</span>
             <ChevronIcon />
           </button>
-          {open && (
-            <div className="proj-menu fade-up" id="proj-menu-popover">
+          <Popover
+            anchorRef={projTriggerRef}
+            open={open}
+            onClose={() => setOpen(false)}
+            placement="bottom-start"
+            offset={6}
+            role="dialog"
+            ariaLabel="切換專案"
+            className="proj-menu fade-up"
+            id="proj-menu-popover"
+            autoFocusFirstItem={false}
+            manageRovingFocus={false}
+          >
               <div className="proj-menu-label mono">最近專案</div>
               {recents.length === 0 && (
                 <div className="proj-menu-label mono proj-menu-label--empty">
@@ -354,8 +341,7 @@ export function TopBar({
                   {error}
                 </div>
               )}
-            </div>
-          )}
+          </Popover>
         </div>
 
         {active && (

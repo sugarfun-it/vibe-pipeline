@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { EmptyTickets } from "./EmptyTickets";
 import { TicketCard } from "./TicketCard";
 import type { Pipeline, Ticket } from "../../types/pipeline";
 
 // pipeline.tickets 渲染區 — 空 list 顯 EmptyTickets,否則 map TicketCard
-export function FocusTicketList({
+export const FocusTicketList = memo(function FocusTicketList({
   pipeline,
   tick,
   hasActiveDraft,
@@ -36,10 +37,10 @@ export function FocusTicketList({
               tick={tick}
               index={i}
               isSplitting={splittingTicketId === t.id}
-              onClick={onTicketClick ? () => onTicketClick(t) : undefined}
+              onSelect={onTicketClick}
             />
           ))
       )}
     </div>
   );
-}
+});

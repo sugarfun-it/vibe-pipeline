@@ -1,22 +1,25 @@
+import { memo } from "react";
 import { MODE_LABELS } from "../../api/qa";
 import { fmtElapsed, STATE_COLOR, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../data/pipelines";
 import type { IterStage, Ticket, TicketStatus } from "../../types/pipeline";
 import { ChevronRightIcon } from "../../ui/icons";
 import { IterStages } from "./IterStages";
+import "./ticketCard.css";
 
-export function TicketCard({
+export const TicketCard = memo(function TicketCard({
   ticket,
   tick,
   index,
   isSplitting = false,
-  onClick,
+  onSelect,
 }: {
   ticket: Ticket;
   tick: number;
   index: number;
   isSplitting?: boolean;
-  onClick?: () => void;
+  onSelect?: (ticket: Ticket) => void;
 }) {
+  const onClick = onSelect ? () => onSelect(ticket) : undefined;
   // merge / sync ticket 也跟 iter 一樣有 iter.rounds 結構,渲染走同分支
   const isIter = ticket.mode === "iter" || ticket.mode === "merge" || ticket.mode === "sync";
   // 但 merge / sync 沒真的 critic AI(sub-agent 自己跑驗證自己回 PASS/FAIL),
@@ -328,7 +331,7 @@ export function TicketCard({
       )}
     </div>
   );
-}
+});
 
 function StatusPill({ status }: { status: TicketStatus }) {
   const c = TICKET_STATUS_COLOR[status] ?? STATE_COLOR[status];

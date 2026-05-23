@@ -1,9 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary, RunDetail } from "../../api/projects";
 import { fmtDuration } from "../../data/pipelines";
 import { ChevronIcon } from "../../ui/icons";
+import { useToast } from "../../ui/Toast";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
+import { useCopiedFeedback } from "../../hooks/useCopiedFeedback";
 
 // stdout raw 預設只顯前 N 行,避免 10-50KB JSONL 整段渲染拖慢 drawer 滾動。
 // user 點「展開全部」才完整顯示。
@@ -47,12 +50,11 @@ export function RunHistory({
   pipelineId: string;
 }) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // 切 pipeline 立即清舊 state — 否則「上次 error」會卡在 UI、上次 runs 殘留到新 fetch 完才換
+    // 切 pipeline 立即清舊 runs — 上次資料殘留到新 fetch 完才換會誤導
     setRuns(null);
-    setError(null);
     let cancelled = false;
     api
       .listPipelineRuns(projectHash, pipelineId)
@@ -62,12 +64,13 @@ export function RunHistory({
       })
       .catch((e: Error) => {
         if (cancelled) return;
-        setError(e.message);
+        toast(`讀取執行紀錄失敗:${e.message}`, { variant: "danger" });
+        setRuns([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [projectHash, pipelineId]);
+  }, [projectHash, pipelineId, toast]);
 
   // pipeline 級總計:整條 pipeline 跑下來累積 cost / 時間 / 次數。
   // costPartial:有 run 缺 cost(codex 等)時標記,避免顯示誤導性「總成本」
@@ -98,9 +101,6 @@ export function RunHistory({
     };
   }, [runs]);
 
-  if (error) {
-    return <div className="tdrw-empty">讀取執行紀錄失敗：{error}</div>;
-  }
   if (runs === null) {
     return <div className="tdrw-empty">載入執行紀錄中…</div>;
   }
@@ -165,29 +165,24 @@ function RunCard({
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<RunDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailFailed, setDetailFailed] = useState(false);
+  const { toast } = useToast();
   // a11y: head button 跟 detail region 用 useId 對接;screen reader 知道哪段 detail 屬於哪張卡
   const headId = useId();
   const detailId = useId();
-  // unmount 後遲到的 detail 回應不可 setState(切 pipeline / drawer close 時 RunCard 會 unmount,但 fetch 仍在飛)
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  const loadDetail = (): void => {
-    setDetailError(null);
-    setDetailLoading(true);
-    api
-      .getPipelineRun(projectHash, pipelineId, run.filename)
-      .then((d) => { if (mountedRef.current) setDetail(d); })
-      .catch((e: Error) => {
-        if (mountedRef.current) setDetailError(e?.message || "讀取失敗");
-      })
-      .finally(() => { if (mountedRef.current) setDetailLoading(false); });
-  };
+  // useAsyncAction 已含 mounted guard,卸載後晚到回應不再 setState
+  const [loadDetail, { pending: detailLoading }] = useAsyncAction(async () => {
+    setDetailFailed(false);
+    try {
+      const d = await api.getPipelineRun(projectHash, pipelineId, run.filename);
+      setDetail(d);
+    } catch (e) {
+      setDetailFailed(true);
+      const msg = e instanceof Error ? e.message : "未知錯誤";
+      toast(`讀取執行明細失敗:${msg}`, { variant: "danger" });
+      throw e;
+    }
+  });
 
   const handleToggle = (): void => {
     const next = !open;
@@ -328,10 +323,9 @@ function RunCard({
           className="tdrw-run-detail"
         >
           {detailLoading && <div className="tdrw-empty">載入執行明細中…</div>}
-          {detailError && !detailLoading && (
+          {detailFailed && !detailLoading && !detail && (
             <div className="tdrw-empty tdrw-run-detail-error">
-              <span>讀取失敗：{detailError}</span>
-              <button type="button" className="btn tdrw-run-pre-toggle" onClick={loadDetail}>
+              <button type="button" className="btn tdrw-run-pre-toggle" onClick={() => loadDetail()}>
                 重試
               </button>
             </div>
@@ -436,13 +430,12 @@ function CopyableBlock({
   readonlyStyle?: boolean;
   copyAriaLabel?: string;
 }): JSX.Element {
-  const [copied, setCopied] = useState(false);
+  const { copied, flash: flashCopied } = useCopiedFeedback();
   const handleCopy = (): void => {
     if (!text) return;
     void navigator.clipboard.writeText(text).then(
       () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+        flashCopied();
       },
       () => {},
     );

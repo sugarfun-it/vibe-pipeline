@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PickerSelect } from "../../ui/PickerSelect";
 import { BranchIcon } from "../../ui/icons";
+import { TextField } from "../../ui/forms/TextField";
+import "../pipeline/createPipeline.css";
 
 const FALLBACK_BRANCHES = ["main"];
 const NAME_MAX_LENGTH = 60;
@@ -38,7 +40,6 @@ export function CreateCard({
 
   const uid = useId();
   const inputId = "create-pipeline-name-" + uid;
-  const errorId = "create-pipeline-name-error-" + uid;
   const counterId = "create-pipeline-name-counter-" + uid;
   const autoMergeDescId = "create-pipeline-automerge-desc-" + uid;
 
@@ -97,45 +98,31 @@ export function CreateCard({
       </div>
 
       <div className="create-field create-field-name">
-        <label htmlFor={inputId} className="create-field-label">
-          名稱
-        </label>
-        <div className={"create-input" + (hasError ? " is-error" : "")}>
-          <input
-            ref={inputRef}
-            id={inputId}
-            className="mono"
-            type="text"
-            value={name}
-            placeholder="my-feature"
-            onChange={(e) => setName(e.target.value)}
-            spellCheck={false}
-            autoComplete="off"
-            maxLength={NAME_MAX_LENGTH}
-            aria-invalid={hasError || undefined}
-            aria-describedby={
-              [hasError ? errorId : null, counterNearLimit ? counterId : null]
-                .filter(Boolean)
-                .join(" ") || undefined
-            }
-          />
-          {taken && <span className="create-input-hint mono" aria-hidden="true">已存在</span>}
-        </div>
+        <TextField
+          ref={inputRef}
+          id={inputId}
+          label="名稱"
+          value={name}
+          onChange={setName}
+          placeholder="my-feature"
+          spellCheck={false}
+          autoComplete="off"
+          maxLength={NAME_MAX_LENGTH}
+          fieldClassName={"create-field-form" + (hasError ? " is-error" : "")}
+          inputClassName="mono create-field-form-input"
+          ariaDescribedBy={counterNearLimit ? counterId : undefined}
+          error={
+            hasError
+              ? taken
+                ? "名稱已存在，請換一個。"
+                : showFormatHint
+                ? "首字需英數；可用 a-z、0-9、-、_。"
+                : undefined
+              : undefined
+          }
+        />
         <div className="create-field-meta">
           <div
-            id={errorId}
-            className="create-error mono"
-            role="alert"
-            aria-live="polite"
-            hidden={!hasError}
-          >
-            {taken
-              ? "名稱已存在，請換一個。"
-              : showFormatHint
-              ? "首字需英數；可用 a-z、0-9、-、_。"
-              : ""}
-          </div>
-<div
             id={counterId}
             className={
               "create-counter mono" +

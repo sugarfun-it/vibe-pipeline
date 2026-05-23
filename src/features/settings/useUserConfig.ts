@@ -13,6 +13,7 @@ import {
   type TaskClass,
   type UserConfig,
 } from "../../../shared/types";
+import { useToast } from "../../ui/Toast";
 
 const AUTOSAVE_DELAY_MS = 400;
 
@@ -35,8 +36,8 @@ export function useUserConfig({
   onSaved: () => void;
   onSaveError: (e: unknown) => void;
 }) {
+  const { toast } = useToast();
   const [userCfg, setUserCfg] = useState<UserConfig | null>(null);
-  const [userCfgError, setUserCfgError] = useState<string | null>(null);
   const [pushSaving, setPushSaving] = useState<Partial<Record<PushEventKey, boolean>>>({});
   const timersRef = useRef<Partial<Record<AutosaveKey, ReturnType<typeof setTimeout>>>>({});
   const controllersRef = useRef<Partial<Record<AutosaveKey, AbortController>>>({});
@@ -123,7 +124,6 @@ export function useUserConfig({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setUserCfgError(null);
     userConfigApi
       .getUserConfig()
       .then((c) => {
@@ -133,12 +133,12 @@ export function useUserConfig({
         setUserCfg(c);
       })
       .catch((e: Error) => {
-        if (!cancelled) setUserCfgError(e.message);
+        if (!cancelled) toast(`讀取使用者設定失敗:${e.message}`, { variant: "danger" });
       });
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, toast]);
 
   function updateTask(tc: TaskClass, patch: TaskModelPatch) {
     if (!userCfg) return;
@@ -163,7 +163,6 @@ export function useUserConfig({
       defaults: { ...userCfg.defaults, [tc]: merged },
     };
     setUserCfg(next);
-    setUserCfgError(null);
     scheduleTaskSave(tc, field, sendPatch, () => {
       const confirmedValues = confirmedTaskValuesRef.current;
       setUserCfg((current) => {
@@ -191,7 +190,6 @@ export function useUserConfig({
       pushEvents: { ...userCfg.pushEvents, [key]: enabled },
     };
     setUserCfg(next);
-    setUserCfgError(null);
     setPushSaving((current) => ({ ...current, [key]: true }));
     userConfigApi
       .updateUserConfig({ pushEvents: { [key]: enabled } })
@@ -216,5 +214,5 @@ export function useUserConfig({
       });
   }
 
-  return { userCfg, userCfgError, pushSaving, updateTask, updatePushEvent };
+  return { userCfg, pushSaving, updateTask, updatePushEvent };
 }

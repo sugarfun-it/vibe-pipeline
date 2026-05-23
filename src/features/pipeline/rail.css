@@ -1,0 +1,123 @@
+/* Rail — left-side pipeline list (sections / items / state dots / mini-bar / add button).
+   從 src/styles/board.css 拆出來,Rail-only 樣式 colocate;create-card 系列另檔 createPipeline.css。 */
+
+.rail {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--bg-elevated);
+  padding: 14px 10px 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.rail-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 6px 8px;
+  gap: 8px;
+}
+.rail-section-label {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--fg-faint);
+}
+.rail-section-overflow {
+  position: relative;
+  display: inline-block;
+}
+.rail-section-overflow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.rail-section-overflow-btn:hover {
+  color: var(--fg);
+  background: var(--hover);
+  border-color: var(--line-2);
+}
+.rail-section-overflow.is-open .rail-section-overflow-btn {
+  color: var(--fg);
+  background: var(--hover);
+  border-color: var(--line-2);
+}
+.rail-section-overflow-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  /* override .focus-overflow-menu 的 min-width:260px(rail 容器窄,讓 menu 自然依內容寬,不強撐)*/
+  min-width: 0;
+}
+.rail-list { display: flex; flex-direction: column; gap: 4px; }
+
+.rail-item {
+  display: flex; flex-direction: column; gap: 6px;
+  text-align: left;
+  padding: 9px 10px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 120ms, border-color 120ms;
+  position: relative;
+}
+.rail-item:hover { background: var(--hover); }
+.rail-item.is-active {
+  background: var(--selected);
+  border-color: var(--line-2);
+}
+.rail-item-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.rail-state-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rail-item-name { flex: 1; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-item.is-active .rail-item-name { font-weight: 600; }
+.rail-item-count { font-size: 10.5px; color: var(--fg-faint); }
+
+.rail-mini {
+  display: grid; gap: 2px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  height: 4px;
+}
+.rail-mini-cell { border-radius: 1px; }
+.rail-mini-cell.is-running {
+  position: relative; overflow: hidden;
+  background: linear-gradient(90deg, var(--running) 0%, color-mix(in srgb, var(--running) 30%, transparent) 50%, var(--running) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.rail-item-meta {
+  font-size: 10px;
+  color: var(--fg-faint);
+  display: flex; align-items: center; gap: 6px;
+}
+
+.rail-add {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--line-2);
+  color: var(--fg-mute);
+  font-size: 12px;
+  background: transparent;
+  transition: background 120ms, color 120ms;
+}
+.rail-add:hover { background: var(--hover); color: var(--fg); }
+
+.rail-spacer { flex: 1; min-height: 12px; }
+
+/* Rail QA draft badge — 跟在 rail-item 內,colocate 一起 */
+.rail-qa-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}

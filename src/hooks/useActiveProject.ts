@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect } from "react";
+import { useUrlParam } from "./useUrlParam";
+import { useLocalStorageState } from "./useLocalStorageState";
 
 const LS_KEY = "vibe-pipeline:lastProjectHash";
 
@@ -7,43 +8,22 @@ export function useActiveProjectHash(): {
   hash: string | null;
   setHash: (next: string | null) => void;
 } {
-  const [params, setParams] = useSearchParams();
-  const urlHash = params.get("project");
-  const [fallback, setFallback] = useState<string | null>(() => {
-    if (urlHash) return urlHash;
-    try {
-      return localStorage.getItem(LS_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [urlHash, setUrlHash] = useUrlParam("project");
+  const [fallback, setFallback] = useLocalStorageState<string | null>(LS_KEY, null);
 
+  // URL 有值 → 寫進 LS 當下次 mount 的 fallback(refresh / 直接打 /board 不丟)
   useEffect(() => {
-    if (urlHash) {
-      try {
-        localStorage.setItem(LS_KEY, urlHash);
-      } catch {}
+    if (urlHash && urlHash !== fallback) {
       setFallback(urlHash);
     }
-  }, [urlHash]);
+  }, [urlHash, fallback, setFallback]);
 
   const setHash = useCallback(
     (next: string | null) => {
-      const p = new URLSearchParams(params);
-      if (next) {
-        p.set("project", next);
-        try {
-          localStorage.setItem(LS_KEY, next);
-        } catch {}
-      } else {
-        p.delete("project");
-        try {
-          localStorage.removeItem(LS_KEY);
-        } catch {}
-      }
-      setParams(p, { replace: false });
+      setUrlHash(next);
+      setFallback(next);
     },
-    [params, setParams]
+    [setUrlHash, setFallback],
   );
 
   return { hash: urlHash ?? fallback, setHash };

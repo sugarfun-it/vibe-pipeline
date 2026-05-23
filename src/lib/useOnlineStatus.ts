@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useApi } from "../hooks/useApi";
 
 // online/offline 雙層偵測:
 // 1) navigator.onLine + online/offline event(系統層,連 wifi 報 online,可能 false positive)
@@ -8,7 +9,6 @@ export function useOnlineStatus(): boolean {
   const [navOnline, setNavOnline] = useState<boolean>(
     typeof navigator === "undefined" ? true : navigator.onLine
   );
-  const [backendOnline, setBackendOnline] = useState<boolean>(true);
 
   // (1) navigator online/offline event
   useEffect(() => {
@@ -22,38 +22,22 @@ export function useOnlineStatus(): boolean {
     };
   }, []);
 
-  // (2) backend ping /api/health,visible 時 polling
-  useEffect(() => {
-    let cancelled = false;
-    let timerId: ReturnType<typeof setInterval> | null = null;
-
-    const ping = async () => {
-      if (document.hidden) return;
+  // (2) backend ping /api/health,visible 時 polling(useApi 已處理 visibility / freeze)
+  const { data, error } = useApi<boolean>(
+    async () => {
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 4000);
       try {
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 4000);
         // cache: 'no-store' 避開 SW SWR cache(否則 cache hit 一直假 online)
         const res = await fetch("/api/health", { signal: ctrl.signal, cache: "no-store" });
+        return res.ok;
+      } finally {
         clearTimeout(timeout);
-        if (!cancelled) setBackendOnline(res.ok);
-      } catch {
-        if (!cancelled) setBackendOnline(false);
       }
-    };
+    },
+    { intervalMs: 5_000 }
+  );
 
-    ping();
-    timerId = setInterval(ping, 5_000);
-
-    // visibility 切回也 ping 一次
-    const onVisible = () => { if (!document.hidden) ping(); };
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      cancelled = true;
-      if (timerId) clearInterval(timerId);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, []);
-
+  const backendOnline = error ? false : data ?? true;
   return navOnline && backendOnline;
 }

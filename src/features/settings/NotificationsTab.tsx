@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import {
   getPermission,
@@ -8,6 +9,7 @@ import {
   unregisterToken as unregisterFcm,
 } from "../../lib/fcm";
 import type { PushEventKey, UserConfig } from "../../../shared/types";
+import { useToast } from "../../ui/Toast";
 import "./SettingsPopover.css";
 
 const PUSH_EVENT_LABELS: Array<{ key: PushEventKey; label: string }> = [
@@ -22,18 +24,15 @@ function PushNotificationsSection({
   userCfg,
   pushSaving,
   onTogglePushEvent,
-  onActionError,
 }: {
   userCfg: UserConfig | null;
   pushSaving: Partial<Record<PushEventKey, boolean>>;
   onTogglePushEvent: (key: PushEventKey, enabled: boolean) => void;
-  onActionError?: (message: string) => void;
 }) {
+  const { toast } = useToast();
   const [supported, setSupported] = useState<boolean | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>(getPermission());
   const [token, setToken] = useState<string | null>(getStoredToken());
-  const [loading, setLoading] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,36 +49,30 @@ function PushNotificationsSection({
     setToken(getStoredToken());
   }
 
-  async function enable() {
-    setLoading(true);
-    setLastError(null);
+  const [enable, { pending: enabling }] = useAsyncAction(async () => {
     try {
       await requestAndRegisterToken();
       refreshPermission();
     } catch (e) {
       const message = e instanceof Error && e.message ? e.message : "啟用通知失敗";
-      setLastError(message);
-      onActionError?.(message);
+      toast(message, { variant: "danger" });
       refreshPermission();
-    } finally {
-      setLoading(false);
+      throw e;
     }
-  }
+  });
 
-  async function disable() {
-    setLoading(true);
-    setLastError(null);
+  const [disable, { pending: disabling }] = useAsyncAction(async () => {
     try {
       await unregisterFcm();
       refreshPermission();
     } catch (e) {
       const message = e instanceof Error && e.message ? e.message : "停用通知失敗";
-      setLastError(message);
-      onActionError?.(message);
-    } finally {
-      setLoading(false);
+      toast(message, { variant: "danger" });
+      throw e;
     }
-  }
+  });
+
+  const loading = enabling || disabling;
 
   const enabled = permission === "granted" && !!token;
   const disabled = supported === false || permission === "denied" || loading || supported === null;
@@ -159,30 +152,20 @@ function PushNotificationsSection({
         </div>
       )}
 
-      {lastError && (
-        <div className="mono push-error">
-          {lastError}
-        </div>
-      )}
     </div>
   );
 }
 
-function InstallAppSection({ onActionError }: { onActionError?: (message: string) => void }) {
+function InstallAppSection() {
+  const { toast } = useToast();
   const { canInstall, installed, promptInstall } = useInstallPrompt();
-  const [busy, setBusy] = useState(false);
 
-  async function onClick() {
-    setBusy(true);
-    try {
-      const outcome = await promptInstall();
-      if (outcome === "unavailable") {
-        onActionError?.("此瀏覽器無法觸發安裝,請改用瀏覽器選單的「安裝 App」");
-      }
-    } finally {
-      setBusy(false);
+  const [onClick, { pending: busy }] = useAsyncAction(async () => {
+    const outcome = await promptInstall();
+    if (outcome === "unavailable") {
+      toast("此瀏覽器無法觸發安裝,請改用瀏覽器選單的「安裝 App」", { variant: "danger" });
     }
-  }
+  });
 
   return (
     <>
@@ -217,17 +200,15 @@ export function NotificationsTab({
   userCfg,
   pushSaving,
   onTogglePushEvent,
-  onActionError,
 }: {
   userCfg: UserConfig | null;
   pushSaving: Partial<Record<PushEventKey, boolean>>;
   onTogglePushEvent: (key: PushEventKey, enabled: boolean) => void;
-  onActionError?: (message: string) => void;
 }) {
   return (
     <div className="settings-tab-content">
       <div className="task-group task-group--primary">
-        <InstallAppSection onActionError={onActionError} />
+        <InstallAppSection />
       </div>
       <div className="task-group task-group--primary">
         <div className="settings-section-title">推播通知</div>
@@ -235,7 +216,6 @@ export function NotificationsTab({
           userCfg={userCfg}
           pushSaving={pushSaving}
           onTogglePushEvent={onTogglePushEvent}
-          onActionError={onActionError}
         />
       </div>
     </div>

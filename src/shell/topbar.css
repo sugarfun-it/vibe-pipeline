@@ -1,7 +1,219 @@
-/* TopBar 專用 CSS — 集中管理 inline style 搬出來的塊狀樣式。
-   非 TopBar 共用的 chip / proj-menu / topbar-* base styles 仍在 src/styles/board.css。 */
+/* TopBar 專用 CSS — topbar shell、proj switcher / menu、overflow menu。
+   跨 feature primitives(.btn / .vp-chip / .toggle-pill / .modal-* / .sr-only)留 src/styles/board.css。 */
 
-/* ─── proj-menu 內元素 ────────────────────────────────────────── */
+/* ─── topbar shell ────────────────────────────────────────── */
+.topbar {
+  height: 52px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.topbar-sep { width: 1px; height: 18px; background: var(--line-2); }
+.topbar-active-meta { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar-spacer { flex: 1; }
+
+/* ─── Project switcher ─── */
+.proj-switcher { position: relative; }
+.proj-trigger {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 9px 5px 9px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg);
+  transition: background 120ms, border-color 120ms;
+  max-width: 320px;
+}
+.proj-trigger:hover { background: var(--hover); border-color: var(--line); }
+.proj-trigger.is-open { background: var(--hover); border-color: var(--line-2); }
+.proj-trigger > svg:first-child { color: var(--fg-mute); flex-shrink: 0; }
+.proj-trigger-name {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.proj-trigger-path {
+  font-size: 11px; color: var(--fg-faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 180px;
+}
+.proj-trigger > svg:last-child { color: var(--fg-faint); flex-shrink: 0; transition: transform 160ms; }
+.proj-trigger.is-open > svg:last-child { transform: rotate(180deg); }
+
+.proj-menu {
+  position: absolute; top: calc(100% + 6px); left: 0;
+  width: 320px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  z-index: var(--z-popover, 100);
+}
+.proj-menu-label {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--fg-faint);
+  padding: 6px 8px 4px;
+}
+.proj-menu-item {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  text-align: left;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  position: relative;
+}
+.proj-menu-item:hover { background: var(--hover); }
+.proj-menu-item.is-active { background: var(--selected); }
+.proj-menu-item > svg:first-child { color: var(--fg-mute); flex-shrink: 0; }
+.proj-menu-item-text { flex: 1; min-width: 0; }
+.proj-menu-item-name { font-size: 12.5px; font-weight: 500; }
+.proj-menu-item-path { font-size: 10.5px; color: var(--fg-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-menu-item-meta { font-size: 10px; color: var(--fg-faint); margin-left: auto; flex-shrink: 0; }
+/* ✓ 跟 .proj-menu-remove(X)用同樣 absolute right:6px 對齊;active row 沒 X(disabled+opacity:0),
+   ✓ 出現在原本 X 的視覺位置;hover 非 active row 時 X 出現也在同位置 → 兩 icon 完美對齊。 */
+.proj-menu-check {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  pointer-events: none;
+}
+.proj-menu-divider { height: 1px; background: var(--line); margin: 4px 0; }
+.proj-menu-item-action { color: var(--fg-mute); font-size: 12px; }
+.proj-menu-item-action:hover { color: var(--fg); }
+
+/* ─── Topbar right + overflow menu ─── */
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+.topbar-overflow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.topbar-overflow-toggle { display: none; }
+.topbar-overflow-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.topbar-overflow-mobile-items { display: none; }
+.topbar-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  color: var(--fg);
+  text-align: left;
+  font-size: 12px;
+}
+.topbar-overflow-item:hover {
+  background: var(--hover);
+}
+.pipeline-overflow-menu-item {
+  background: transparent;
+}
+.pipeline-overflow-menu-item:not(:disabled):hover,
+.pipeline-overflow-menu-item:not(:disabled):focus-visible {
+  background: var(--panel-2);
+}
+
+/* ─── Mobile(topbar / proj menu)─── */
+@media (max-width: 767.98px) {
+  .topbar {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .topbar-brand,
+  .topbar-sep,
+  .topbar-spacer {
+    display: none;
+  }
+  /* topbar-active-meta(branch chip + 開啟資料夾)mobile 仍 inline,不收進 overflow */
+  .topbar-active-meta {
+    gap: 6px;
+  }
+  .topbar-active-meta .chip {
+    padding: 3px 7px;
+    font-size: 11px;
+  }
+  /* 「開啟專案資料夾」在手機沒有 file explorer,直接隱藏 */
+  .topbar-reveal-folder {
+    display: none !important;
+  }
+  /* 內容少不需要 overflow menu — 全部 inline 顯示 */
+  .topbar-overflow-mobile-items {
+    display: none !important;
+  }
+
+  .topbar-left {
+    gap: 0;
+    min-width: 0;
+  }
+
+  .topbar-right {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .proj-switcher {
+    min-width: 0;
+  }
+
+  /* 專案 chip 自然寬度,不撐滿;name 過長 ellipsis */
+  .proj-trigger {
+    max-width: 60vw;
+    min-width: 0;
+    padding: 4px 8px;
+  }
+
+  .proj-trigger-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .proj-trigger-path {
+    display: none;
+  }
+
+  .proj-menu {
+    width: min(320px, calc(100vw - 20px));
+  }
+
+  /* mobile:不用 ⋯ 摺疊 — 把 parallel chip / theme toggle / settings 直接平鋪在 topbar */
+  .topbar-overflow-toggle {
+    display: none;
+  }
+  .topbar-overflow-menu {
+    display: inline-flex !important;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    z-index: auto;
+  }
+  .topbar-overflow-mobile-items {
+    /* 額外塞給 mobile 用的 branch chip / reveal-folder 整段隱藏(資訊已在 Pipeline 內) */
+    display: none !important;
+  }
+}
+
+/* ─── proj-menu 內元素(以下為 popover row + X 等內細部樣式) ───────── */
 
 .proj-menu-label--empty {
   opacity: 0.6;

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BoardScreen } from "./features/pipeline/BoardScreen";
 import { SetupScreen } from "./features/auth/SetupScreen";
 import { LoginScreen } from "./features/auth/LoginScreen";
@@ -7,34 +7,29 @@ import { ConfirmProvider } from "./ui/ConfirmDialog";
 import { ToastProvider, ToastStage } from "./ui/Toast";
 import { OnlineStatusBadge } from "./shell/OnlineStatusBadge";
 import { initFCM, setupForegroundHandler } from "./lib/fcm";
+import { useUrlParam } from "./hooks/useUrlParam";
+import { useLocalStorageState } from "./hooks/useLocalStorageState";
 
 // Theme priority: URL ?theme=  →  localStorage  →  default light
+// 第一個 frame 的 theme class 由 index.html inline script 設(避 flash),這裡只負責
+// URL override 變動時同步 <html> class
 function useTheme() {
-  const [params] = useSearchParams();
-  const urlTheme = params.get("theme");
+  const [urlTheme] = useUrlParam("theme");
+  const [stored] = useLocalStorageState<string | null>("vibe-pipeline:theme", null);
   const dark =
-    urlTheme === "dark" ||
-    (urlTheme == null && readStoredTheme() === "dark");
+    urlTheme === "dark" || (urlTheme == null && stored === "dark");
   useEffect(() => {
     document.documentElement.classList.toggle("light", !dark);
   }, [dark]);
   return dark;
 }
 
-function readStoredTheme(): "dark" | "light" | null {
-  try {
-    const v = localStorage.getItem("vibe-pipeline:theme");
-    return v === "dark" || v === "light" ? v : null;
-  } catch {
-    return null;
-  }
-}
-
 function BoardRoute() {
   useTheme();
-  const [params] = useSearchParams();
-  const density = (params.get("density") as "compact" | "medium") || "medium";
-  const startCreating = params.get("creating") === "1";
+  const [densityRaw] = useUrlParam("density");
+  const [creatingRaw] = useUrlParam("creating");
+  const density = (densityRaw as "compact" | "medium") || "medium";
+  const startCreating = creatingRaw === "1";
   return <BoardScreen density={density} startCreating={startCreating} />;
 }
 
