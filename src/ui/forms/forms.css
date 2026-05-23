@@ -1,0 +1,95 @@
+/* Shared form primitives — TextField / NumberField */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  width: 100%;
+}
+
+.form-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-label .req {
+  color: var(--failed);
+  font-weight: 600;
+}
+
+.form-input {
+  width: 100%;
+  min-height: var(--control-h, 32px);
+  padding: 6px var(--control-pad-x, 12px);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.form-input::placeholder {
+  color: var(--fg-faint);
+}
+
+.form-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.form-input[aria-invalid="true"] {
+  border-color: var(--failed);
+}
+
+.form-input[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--failed-soft);
+}
+
+.form-input:disabled,
+.form-input[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--panel);
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.form-hint--error {
+  color: var(--failed);
+}
+
+/* Visually hidden label (a11y label retained for screen readers) */
+.form-label--sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Variant: centered code input (OTP / 6-digit verification) */
+.form-input--code {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 6px;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}

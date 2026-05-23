@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setupInit, setupVerify, type SetupInitResp } from "../../api/auth";
+import { TextField } from "../../ui/forms/TextField";
 import "../../styles/auth.css";
 
 export function SetupScreen() {
@@ -73,17 +74,19 @@ export function SetupScreen() {
           <div className="auth-qr" dangerouslySetInnerHTML={{ __html: data.qr_svg }} />
         )}
         <form onSubmit={onSubmit} className="auth-form">
-          <input
-            className="auth-code-input"
+          <TextField
+            label="驗證碼"
+            labelHidden
             inputMode="numeric"
             maxLength={6}
             autoComplete="one-time-code"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
             placeholder="6 碼驗證碼"
             autoFocus
+            inputClassName="form-input--code"
+            error={error ?? undefined}
           />
-          {error && <p className="auth-error">{error}</p>}
           <button
             type="submit"
             className="btn btn-primary"
