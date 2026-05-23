@@ -1,6 +1,6 @@
 ---
-description: 推 GitHub release vX.Y.Z — build tarball + move tag to HEAD + upload asset + sync release notes(自動 create or update)
-argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
+description: 推 GitHub release vX.Y.Z — build tarball + move tag to HEAD + upload asset + sync release notes(自動 create or update)。支援 fake-version 重發測 PWA 更新流程。
+argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`;或 `<ship-version> fake <internal-version>` 例 `0.2.4 fake 0.2.0`
 ---
 
 # /release — VP GitHub release ship
@@ -8,6 +8,15 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`
 `/release 0.2.0`(自動補 `v`)。Tag 永遠指 HEAD(consolidate 模式)。
 
 前置:`docs/release/v<VERSION>.md` 寫好(規範見下);working tree clean。
+
+## Fake-version 模式(`<ship> fake <internal>`)
+
+`/release 0.2.4 fake 0.2.0` = 用 v0.2.4 tag / release 發 + 但 tarball 內 `package.json.version` 寫 `0.2.0`,讓 enduser 裝完後 `getCurrentVersion()` 回 `0.2.0`,跟 GH latest `v0.2.4` 不一致 → PWA update banner 會跳。**只給測 PWA 更新動線用。**
+
+- ship 版本 = GH release tag / asset 檔名 / docs 路徑(`docs/release/v<ship>.md`)
+- internal 版本 = tarball 內 `package.json.version`(enduser backend 讀這個)
+- 雙端 commit/tag 都沿用 ship 版本,internal 版本不留 git history(build 期間 swap、build 完還原)
+- 副作用:enduser 重複裝同一個 tarball 會無限觸發 update banner(裝完仍是 internal,跟 latest 永遠對不上)。測完跑一次正規 `/release <ship>` 把 package.json 跟 tag 對齊回去收尾。
 
 ## Release notes 撰寫規範
 
@@ -62,14 +71,26 @@ vbpl update
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
-VERSION="v${ARGUMENTS#v}"
+
+# 0. 解析 args:支援 "<ship>" 或 "<ship> fake <internal>"
+read -r SHIP_RAW REST <<< "$ARGUMENTS"
+VERSION="v${SHIP_RAW#v}"
 TARGET="${VERSION#v}"
+FAKE_TARGET=""
+if [[ "$REST" =~ ^fake[[:space:]]+([0-9vV.]+)$ ]]; then
+  FAKE_RAW="${BASH_REMATCH[1]}"
+  FAKE_TARGET="${FAKE_RAW#v}"
+  echo "⚠ fake-version 模式:ship=$VERSION internal=$FAKE_TARGET"
+fi
+BUILD_TARGET="${FAKE_TARGET:-$TARGET}"   # build-tarball arg(fake 模式用 internal)
 
 # 1. pre-flight
 [ -f "docs/release/$VERSION.md" ] || { echo "❌ docs/release/$VERSION.md 不存在"; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "❌ tree 不乾淨,先 commit / stash"; git status --short; exit 1; }
 
-# 2. package.json 對齊(build-tarball 有 arg vs version 一致檢查)
+# 2. package.json 對齊
+#   normal: 跟 ship 對齊,差異就 commit 一次
+#   fake:   先確保 main 上是 ship(差異 commit),build 前再 swap 成 internal,build 完還原
 CURRENT=$(python -c "import json;print(json.load(open('package.json'))['version'])")
 if [ "$CURRENT" != "$TARGET" ]; then
   python -c "import json;p=json.load(open('package.json'));p['version']='$TARGET';open('package.json','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')"
@@ -80,7 +101,16 @@ fi
 git push origin main
 
 # 4. build tarball
-bun run scripts/build-tarball.ts $VERSION 2>&1 | tail -5
+if [ -n "$FAKE_TARGET" ]; then
+  # 暫時把 package.json 改 internal,build 後立即還原(不 commit)
+  python -c "import json;p=json.load(open('package.json'));p['version']='$FAKE_TARGET';open('package.json','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')"
+  bun run scripts/build-tarball.ts $BUILD_TARGET --allow-dirty 2>&1 | tail -5
+  python -c "import json;p=json.load(open('package.json'));p['version']='$TARGET';open('package.json','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')"
+  # build-tarball 出檔名 = vibe-pipeline-v$BUILD_TARGET.tar.gz,rename 對齊 ship
+  mv "vibe-pipeline-v$BUILD_TARGET.tar.gz" "vibe-pipeline-$VERSION.tar.gz"
+else
+  bun run scripts/build-tarball.ts $VERSION 2>&1 | tail -5
+fi
 ls -la vibe-pipeline-$VERSION.tar.gz || { echo "❌ build fail"; exit 1; }
 
 # 5. tag move + force push
