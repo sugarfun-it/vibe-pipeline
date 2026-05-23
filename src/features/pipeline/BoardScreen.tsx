@@ -19,6 +19,7 @@ import { GearIcon } from "../../ui/icons";
 import type { NotifItem } from "../../types/notif";
 import { useActiveProjectHash } from "../../hooks/useActiveProject";
 import { useApi } from "../../hooks/useApi";
+import { useTimeout } from "../../hooks/useTimeout";
 import * as api from "../../api/projects";
 import * as qaApi from "../../api/qa";
 import type { Pipeline, Ticket } from "../../types/pipeline";
@@ -67,10 +68,7 @@ export function BoardScreen({
   const [activeTab, setActiveTab] = useState<"rail" | "focus">("focus");
   // hash mount race grace period — 200ms 內顯「載入中」,過了還 !hash 才顯「請選專案」
   const [hashGraceExpired, setHashGraceExpired] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setHashGraceExpired(true), 200);
-    return () => clearTimeout(t);
-  }, []);
+  useTimeout(() => setHashGraceExpired(true), 200);
   const [creating, setCreating] = useState(startCreating);
   const [tick, setTick] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
@@ -181,11 +179,7 @@ export function BoardScreen({
     markRead(id);
   }
 
-  useEffect(() => {
-    if (!highlightId) return;
-    const t = setTimeout(() => setHighlightId(null), 1600);
-    return () => clearTimeout(t);
-  }, [highlightId]);
+  useTimeout(() => setHighlightId(null), highlightId ? 1600 : null, [highlightId]);
 
   // Notifs polling 10s — 通知不是即時訊息,過頻只是 backend 噪音
   const notifsResult = useApi(
@@ -221,11 +215,7 @@ export function BoardScreen({
   }, [creating]);
 
   // actionError 自動消(6s),跟切換 project 一起 reset
-  useEffect(() => {
-    if (!actionError) return;
-    const t = setTimeout(() => setActionError(null), 6000);
-    return () => clearTimeout(t);
-  }, [actionError]);
+  useTimeout(() => setActionError(null), actionError ? 6000 : null, [actionError]);
 
   // browser tab title 反映 project / pipeline 狀態(背景 tab 也看得見)
   useEffect(() => {

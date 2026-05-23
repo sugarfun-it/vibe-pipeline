@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import * as api from "../../api/projects";
+import { useCopiedFeedback } from "../../hooks/useCopiedFeedback";
 import { ArrowRightIcon, CloseIcon } from "../../ui/icons";
 import { Overlay } from "../../ui/Overlay";
 import { useToast } from "../../ui/Toast";
@@ -28,7 +29,7 @@ export function DiffModal({
   // fetch reload token — 「重新讀取」按鈕 +1 觸發 effect 重跑
   const [reloadToken, setReloadToken] = useState(0);
   // 「複製 diff」短暫回饋
-  const [copied, setCopied] = useState(false);
+  const { copied, flash: flashCopied } = useCopiedFeedback();
   const titleId = useId();
   const branchId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -165,16 +166,14 @@ export function DiffModal({
                       ta.select();
                       document.execCommand("copy");
                       document.body.removeChild(ta);
-                      setCopied(true);
+                      flashCopied();
                     } catch {}
                   };
                   if (navigator.clipboard?.writeText) {
-                    navigator.clipboard.writeText(text).then(() => setCopied(true)).catch(fallback);
+                    navigator.clipboard.writeText(text).then(() => flashCopied()).catch(fallback);
                   } else {
                     fallback();
                   }
-                  // 2 秒後自動把 label 還原(不留 stuck state)
-                  window.setTimeout(() => setCopied(false), 2000);
                 }}
                 title="複製原始 diff"
                 aria-label={copied ? "已複製 diff" : "複製原始 diff 到剪貼簿"}

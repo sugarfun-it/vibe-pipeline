@@ -10,6 +10,7 @@ import { RefreshIcon, ScissorsIcon, TrashIcon } from "../../ui/icons";
 import { AuditTimeline } from "./AuditTimeline";
 import { Overlay } from "../../ui/Overlay";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
+import { useTimeout } from "../../hooks/useTimeout";
 
 import { TICKET_STATUS_LABEL } from "../../data/pipelines";
 
@@ -635,11 +636,7 @@ function IterRounds({ rounds }: { rounds: IterRound[] }) {
 
 function Commits({ commits }: { commits: CommitRef[] }) {
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
-  useEffect(() => {
-    if (!copiedHash) return;
-    const t = setTimeout(() => setCopiedHash(null), 1400);
-    return () => clearTimeout(t);
-  }, [copiedHash]);
+  useTimeout(() => setCopiedHash(null), copiedHash ? 1500 : null, [copiedHash]);
 
   async function copy(hash: string) {
     try {

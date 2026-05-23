@@ -6,6 +6,7 @@ import { fmtDuration } from "../../data/pipelines";
 import { ChevronIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
+import { useCopiedFeedback } from "../../hooks/useCopiedFeedback";
 
 // stdout raw 預設只顯前 N 行,避免 10-50KB JSONL 整段渲染拖慢 drawer 滾動。
 // user 點「展開全部」才完整顯示。
@@ -429,13 +430,12 @@ function CopyableBlock({
   readonlyStyle?: boolean;
   copyAriaLabel?: string;
 }): JSX.Element {
-  const [copied, setCopied] = useState(false);
+  const { copied, flash: flashCopied } = useCopiedFeedback();
   const handleCopy = (): void => {
     if (!text) return;
     void navigator.clipboard.writeText(text).then(
       () => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+        flashCopied();
       },
       () => {},
     );

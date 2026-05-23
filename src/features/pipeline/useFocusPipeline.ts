@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApi } from "../../hooks/useApi";
+import { useTimeout } from "../../hooks/useTimeout";
 import * as api from "../../api/projects";
 import type { RunSummary } from "../../api/projects";
 import { STATE_COLOR, STATE_LABEL } from "../../data/pipelines";
@@ -102,11 +103,7 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
     }
   }, [pipeline.state]);
   // 安全網:15s 還沒進場視同失敗(打了 API 沒生效),解除 spawning 讓 user 重試
-  useEffect(() => {
-    if (!spawning) return;
-    const id = setTimeout(() => setSpawning(false), 15000);
-    return () => clearTimeout(id);
-  }, [spawning]);
+  useTimeout(() => setSpawning(false), spawning ? 15000 : null, [spawning]);
 
   const onStart = (pid: string) => {
     setSpawning(true);
