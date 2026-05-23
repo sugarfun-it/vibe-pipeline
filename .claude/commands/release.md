@@ -1,6 +1,6 @@
 ---
-description: 推 GitHub release vX.Y.Z — build tarball + move tag to HEAD + upload asset + sync release notes(自動 create or update)。支援 fake-version 重發測 PWA 更新流程。
-argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`;或 `<ship-version> fake <internal-version>` 例 `0.2.4 fake 0.2.0`
+description: 推 GitHub release vX.Y.Z — build tarball + move tag to HEAD + upload asset + sync release notes(自動 create or update)。支援 fake-local 模式給 maintainer 測 PWA 更新動線。
+argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`;或 `<ship-version> fake <local-version>` 例 `0.2.4 fake 0.2.0`
 ---
 
 # /release — VP GitHub release ship
@@ -9,14 +9,15 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`;或 `<ship-version> fake <inte
 
 前置:`docs/release/v<VERSION>.md` 寫好(規範見下);working tree clean。
 
-## Fake-version 模式(`<ship> fake <internal>`)
+## Fake-local 模式(`<ship> fake <local>`)
 
-`/release 0.2.4 fake 0.2.0` = 用 v0.2.4 tag / release 發 + 但 tarball 內 `package.json.version` 寫 `0.2.0`,讓 enduser 裝完後 `getCurrentVersion()` 回 `0.2.0`,跟 GH latest `v0.2.4` 不一致 → PWA update banner 會跳。**只給測 PWA 更新動線用。**
+`/release 0.2.4 fake 0.2.0` = **正常發 v0.2.4(tarball 內就是真 0.2.4)** + **裝完之後把本機 `~/.vibe-pipeline/current/package.json` 版本改成 0.2.0 並 restart backend**。
 
-- ship 版本 = GH release tag / asset 檔名 / docs 路徑(`docs/release/v<ship>.md`)
-- internal 版本 = tarball 內 `package.json.version`(enduser backend 讀這個)
-- 雙端 commit/tag 都沿用 ship 版本,internal 版本不留 git history(build 期間 swap、build 完還原)
-- 副作用:enduser 重複裝同一個 tarball 會無限觸發 update banner(裝完仍是 internal,跟 latest 永遠對不上)。測完跑一次正規 `/release <ship>` 把 package.json 跟 tag 對齊回去收尾。
+用途:maintainer 在自己機器上製造「本機 < GH latest」假狀態,PWA update banner 會跳,可以走完整 update flow:點「套用更新」→ 真.下載 v0.2.4 tarball → 裝完 backend 報 v0.2.4 → banner 消失。
+
+- ship 版本 = GH release tag / asset 檔名 / tarball 內 `package.json.version` / docs `docs/release/v<ship>.md`(全部一致,**沒造假**)
+- fake-local 是 ship 完之後的本機 side effect:patch `~/.vibe-pipeline/current/package.json` + `vbpl server restart`。完全不動 GH 上的東西。
+- 副作用:測完跑一次 `vbpl update`(或 PWA「套用更新」)就會把本機 package.json 蓋回正常。沒清理也不會影響別人 ── 只有自己這台機器顯版本怪。
 
 ## Release notes 撰寫規範
 
@@ -72,25 +73,21 @@ vbpl update
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 
-# 0. 解析 args:支援 "<ship>" 或 "<ship> fake <internal>"
+# 0. 解析 args:支援 "<ship>" 或 "<ship> fake <local>"
 read -r SHIP_RAW REST <<< "$ARGUMENTS"
 VERSION="v${SHIP_RAW#v}"
 TARGET="${VERSION#v}"
-FAKE_TARGET=""
+FAKE_LOCAL=""
 if [[ "$REST" =~ ^fake[[:space:]]+([0-9vV.]+)$ ]]; then
-  FAKE_RAW="${BASH_REMATCH[1]}"
-  FAKE_TARGET="${FAKE_RAW#v}"
-  echo "⚠ fake-version 模式:ship=$VERSION internal=$FAKE_TARGET"
+  FAKE_LOCAL="${BASH_REMATCH[1]#v}"
+  echo "⚠ fake-local 模式:ship=$VERSION 本機裝完會被改回 $FAKE_LOCAL 並 restart backend"
 fi
-BUILD_TARGET="${FAKE_TARGET:-$TARGET}"   # build-tarball arg(fake 模式用 internal)
 
 # 1. pre-flight
 [ -f "docs/release/$VERSION.md" ] || { echo "❌ docs/release/$VERSION.md 不存在"; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "❌ tree 不乾淨,先 commit / stash"; git status --short; exit 1; }
 
-# 2. package.json 對齊
-#   normal: 跟 ship 對齊,差異就 commit 一次
-#   fake:   先確保 main 上是 ship(差異 commit),build 前再 swap 成 internal,build 完還原
+# 2. package.json 對齊 ship
 CURRENT=$(python -c "import json;print(json.load(open('package.json'))['version'])")
 if [ "$CURRENT" != "$TARGET" ]; then
   python -c "import json;p=json.load(open('package.json'));p['version']='$TARGET';open('package.json','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')"
@@ -100,17 +97,8 @@ fi
 # 3. push main
 git push origin main
 
-# 4. build tarball
-if [ -n "$FAKE_TARGET" ]; then
-  # 暫時把 package.json 改 internal,build 後立即還原(不 commit)
-  python -c "import json;p=json.load(open('package.json'));p['version']='$FAKE_TARGET';open('package.json','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')"
-  bun run scripts/build-tarball.ts $BUILD_TARGET --allow-dirty 2>&1 | tail -5
-  python -c "import json;p=json.load(open('package.json'));p['version']='$TARGET';open('package.json','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')"
-  # build-tarball 出檔名 = vibe-pipeline-v$BUILD_TARGET.tar.gz,rename 對齊 ship
-  mv "vibe-pipeline-v$BUILD_TARGET.tar.gz" "vibe-pipeline-$VERSION.tar.gz"
-else
-  bun run scripts/build-tarball.ts $VERSION 2>&1 | tail -5
-fi
+# 4. build tarball(永遠走正常 ship build,fake-local 不影響 tarball)
+bun run scripts/build-tarball.ts $VERSION 2>&1 | tail -5
 ls -la vibe-pipeline-$VERSION.tar.gz || { echo "❌ build fail"; exit 1; }
 
 # 5. tag move + force push
@@ -136,6 +124,21 @@ d=json.load(sys.stdin); print(f\"tag={d['tag_name']} published={d['published_at'
 for a in d['assets']: print(f\"asset {a['name']} {a['size']}B\")
 sys.exit(0 if d['tag_name']=='$VERSION' else 1)
 "
+
+# 9. fake-local(only if fake mode):patch ~/.vibe-pipeline/current/package.json + restart
+if [ -n "$FAKE_LOCAL" ]; then
+  LOCAL_PKG="$HOME/.vibe-pipeline/current/package.json"
+  [ -f "$LOCAL_PKG" ] || { echo "⚠ 本機沒裝(找不到 $LOCAL_PKG),fake-local 跳過"; exit 0; }
+  python -c "
+import json
+p=json.load(open('$LOCAL_PKG'))
+p['version']='$FAKE_LOCAL'
+open('$LOCAL_PKG','w',encoding='utf-8').write(json.dumps(p,indent=2,ensure_ascii=False)+'\n')
+print(f'[fake-local] $LOCAL_PKG → $FAKE_LOCAL')
+"
+  vbpl server restart 2>&1 | tail -3
+  echo "✓ 本機 backend restart 完。PWA 開起來會看到「目前版本 $FAKE_LOCAL」< latest $VERSION,update banner 會跳。"
+fi
 ```
 
 ## 報告
