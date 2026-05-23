@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { login } from "./authApi";
+import { login } from "../../api/auth";
 import "../../styles/auth.css";
 
 export function LoginScreen() {

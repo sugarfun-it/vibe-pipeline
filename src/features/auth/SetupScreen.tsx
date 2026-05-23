@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setupInit, setupVerify, type SetupInitResp } from "./authApi";
+import { setupInit, setupVerify, type SetupInitResp } from "../../api/auth";
 import "../../styles/auth.css";
 
 export function SetupScreen() {
