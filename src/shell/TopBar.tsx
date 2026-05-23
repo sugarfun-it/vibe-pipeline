@@ -6,6 +6,7 @@ import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, DotsHoriz
 import * as api from "../api/projects";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import type { Project } from "../../shared/types";
+import { isLocalHost } from "../lib/isLocalHost";
 import "./topbar.css";
 
 export function TopBar({
@@ -368,15 +369,17 @@ export function TopBar({
                 {active.currentBranch}
               </span>
             )}
-            <button type="button"
-              className="chip topbar-reveal-folder"
-              title="在系統檔案總管中開啟此專案資料夾"
-              aria-label="在系統檔案總管中開啟此專案資料夾"
-              onClick={() => api.reveal(active.hash).catch(() => {})}
-            >
-              <FolderIcon />
-              <span>在檔案總管開啟</span>
-            </button>
+            {isLocalHost() && (
+              <button type="button"
+                className="chip topbar-reveal-folder"
+                title="在系統檔案總管中開啟此專案資料夾"
+                aria-label="在系統檔案總管中開啟此專案資料夾"
+                onClick={() => api.reveal(active.hash).catch(() => {})}
+              >
+                <FolderIcon />
+                <span>在檔案總管開啟</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -417,18 +420,20 @@ export function TopBar({
                     {active.currentBranch}
                   </span>
                 )}
-                <button
-                  type="button"
-                  className="topbar-overflow-item"
-                  title="在系統檔案總管中開啟此專案資料夾"
-                  onClick={() => {
-                    setOverflowOpen(false);
-                    api.reveal(active.hash).catch(() => {});
-                  }}
-                >
-                  <FolderIcon />
-                  <span>在檔案總管開啟</span>
-                </button>
+                {isLocalHost() && (
+                  <button
+                    type="button"
+                    className="topbar-overflow-item"
+                    title="在系統檔案總管中開啟此專案資料夾"
+                    onClick={() => {
+                      setOverflowOpen(false);
+                      api.reveal(active.hash).catch(() => {});
+                    }}
+                  >
+                    <FolderIcon />
+                    <span>在檔案總管開啟</span>
+                  </button>
+                )}
               </div>
             )}
             {hash && maxParallel > 0 && (

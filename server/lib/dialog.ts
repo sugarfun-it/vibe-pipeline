@@ -5,7 +5,7 @@
 //
 // Returns null if user cancels.
 
-import { runCapture, spawnFireForget } from "./spawn";
+import { runCapture, spawnFireForget, spawnGuiFireForget } from "./spawn";
 
 // PowerShell 7+ + .NET 8 → 現代 WPF OpenFolderDialog;舊環境 fallback 老的 FolderBrowserDialog。
 const PS_SCRIPT = `
@@ -67,15 +67,15 @@ end try`;
 export async function revealFolder(path: string): Promise<void> {
   const platform = process.platform;
   if (platform === "win32") {
-    spawnFireForget(["explorer", path]);
+    spawnGuiFireForget(["explorer", path]);
     return;
   }
   if (platform === "darwin") {
-    spawnFireForget(["open", path]);
+    spawnGuiFireForget(["open", path]);
     return;
   }
   if (platform === "linux") {
-    spawnFireForget(["xdg-open", path]);
+    spawnGuiFireForget(["xdg-open", path]);
     return;
   }
   throw new Error(`Unsupported platform: ${platform}`);

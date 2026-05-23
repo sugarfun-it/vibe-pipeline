@@ -7,6 +7,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { currentBranch } from "./git";
+import { exists as worktreeExists } from "./git/worktree";
 import { appendStateChange } from "./auditLog";
 import { atomicWriteJson } from "./atomicWrite";
 import type { Pipeline } from "../../shared/types";
@@ -213,6 +214,11 @@ export async function listPipelines(projectPath: string): Promise<unknown[]> {
         const tsHex = idStr.split("-")[0];
         const ts = tsHex && /^[0-9a-f]+$/i.test(tsHex) ? parseInt(tsHex, 16) : 0;
         obj.createdAt = Number.isFinite(ts) ? ts : 0;
+      }
+      // hasWorktree:fs 真實狀態,讓 UI 不靠 state heuristic 判斷「開啟 worktree」可不可點。
+      // 涵蓋 merged 自動 cleanup、外部手動 rm、cleanup-merged bulk sweep 等 state 跟 fs 不一致情境。
+      if (typeof obj.id === "string") {
+        obj.hasWorktree = worktreeExists(projectPath, obj.id);
       }
       out.push(obj);
     } catch {}

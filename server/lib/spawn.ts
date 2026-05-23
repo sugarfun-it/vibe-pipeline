@@ -72,13 +72,27 @@ export function spawnStreaming<T extends Bun.Subprocess = Bun.PipedSubprocess>(
   return Bun.spawn(args, merged) as unknown as T;
 }
 
-// fire-and-forget:不 await,不關心結果。dialog reveal / open / xdg-open 用。
+// fire-and-forget:不 await,不關心結果。
 export function spawnFireForget(args: string[]): void {
   try {
     Bun.spawn(args, {
       stdout: "ignore",
       stderr: "ignore",
       windowsHide: true,
+    });
+  } catch {
+    // ignore
+  }
+}
+
+// GUI 變體:explorer / open / xdg-open 等 launcher。Bun.spawn 在 Windows 起 explorer 時
+// 設 windowsHide: true 會讓 GUI window 不彈出來(現象:user 點「開啟 worktree」沒反應),
+// 所以這條 path 不掛 windowsHide。stdout / stderr 仍 ignore。
+export function spawnGuiFireForget(args: string[]): void {
+  try {
+    Bun.spawn(args, {
+      stdout: "ignore",
+      stderr: "ignore",
     });
   } catch {
     // ignore

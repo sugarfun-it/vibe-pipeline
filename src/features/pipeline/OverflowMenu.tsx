@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { DotsHorizontalIcon, FolderIcon, HistoryIcon, RefreshIcon, TrashIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import type { Pipeline } from "../../types/pipeline";
+import { isLocalHost } from "../../lib/isLocalHost";
 
 // Pipeline 級操作的 overflow menu(原本一字排開太擠,收進 ⋯ 內)。
 // 各 action 用 useConfirm() 二次確認(刪除 / 重跑全部);reveal 不需要。
@@ -177,18 +178,34 @@ export function OverflowMenu({
               }}
             />
           )}
-          {onRevealWorktree && (
-            <MenuItem
-              icon={<FolderIcon />}
-              label="開啟 worktree"
-              hint=""
-              onClick={() => {
-                setOpen(false);
-                triggerRef.current?.focus();
-                onRevealWorktree(pipeline.id);
-              }}
-            />
-          )}
+          {onRevealWorktree && isLocalHost() && (() => {
+            // 用 backend 提供的 hasWorktree(existsSync 算出來)當真實 source。
+            // 涵蓋 planning(沒建)、merged 自動 cleanup、外部手動 rm、cleanup-merged bulk 等
+            // state 跟 fs 不一致情境。沒帶該欄位(舊 backend / 載入中)就 fallback 用 state heuristic。
+            const hasWorktree = typeof pipeline.hasWorktree === "boolean"
+              ? pipeline.hasWorktree
+              : pipeline.state !== "planning" && pipeline.state !== "merged";
+            const hint = hasWorktree
+              ? ""
+              : pipeline.state === "planning"
+              ? "未建立"
+              : pipeline.state === "merged"
+              ? "已合併"
+              : "已清除";
+            return (
+              <MenuItem
+                icon={<FolderIcon />}
+                label="開啟 worktree"
+                hint={hint}
+                disabled={!hasWorktree}
+                onClick={() => {
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                  onRevealWorktree(pipeline.id);
+                }}
+              />
+            );
+          })()}
           {hasSafeSection && hasDangerSection && (
             <div
               role="separator"

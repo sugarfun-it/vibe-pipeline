@@ -320,6 +320,9 @@ export type Pipeline = {
   // Sync 狀態(把 base merge 進 worktree)。不在 tickets[] 內,純 pipeline-level state。
   // 不存在或 state="idle" → 沒在 sync。其他狀態 → UI 顯示對應提示 + 鎖定操作
   syncJob?: SyncJob;
+  // listPipelines 時 backend 用 existsSync 算出來;UI 用來判「開啟 worktree」可不可點。
+  // 非持久化欄位 — 不寫回 pipeline.json,只在 list response 出現。
+  hasWorktree?: boolean;
 };
 
 // Sync 流程的 state machine。
