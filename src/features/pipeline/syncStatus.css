@@ -1,0 +1,85 @@
+/* SyncStatusBar — focus-head 上的 sync chip(button-look chip + state 變體)。
+   從 src/styles/board.css 拆出來。consumer = SyncStatusBar.tsx。 */
+
+.sync-chip {
+  /* 對齊 .btn 高度(padding 6px 12px / font 12.5px / radius 7px),不破壞 focus-head 行高 */
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
+  padding: 6px 12px; border-radius: 7px;
+  border: 1px solid var(--queued);
+  background: color-mix(in srgb, var(--queued) 14%, transparent);
+  color: var(--queued);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms, transform 80ms, box-shadow 120ms;
+}
+.sync-chip:hover {
+  background: color-mix(in srgb, var(--queued) 24%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--queued) 18%, transparent);
+}
+.sync-chip:active { transform: translateY(0.5px); }
+.sync-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+.sync-chip .sync-chip-arrow {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* SyncJob 進度狀態:跟 button 用同套 chip 殼,顏色 / 行為依 state 切。
+   busy(merging / ai_running):同 queued 色,disabled 不可點;
+   conflict_await:橘色強調,user 要回應;
+   failed:紅;done:綠。 */
+.sync-chip.sync-chip-busy {
+  cursor: default;
+  color: var(--queued);
+}
+.sync-chip.sync-chip-conflict {
+  border-color: var(--accent, #d4956d);
+  background: color-mix(in srgb, var(--accent, #d4956d) 14%, transparent);
+  color: var(--accent, #d4956d);
+}
+.sync-chip.sync-chip-failed {
+  border-color: var(--failed);
+  background: color-mix(in srgb, var(--failed) 14%, transparent);
+  color: var(--failed);
+}
+.sync-chip.sync-chip-done {
+  border-color: var(--done);
+  background: color-mix(in srgb, var(--done) 14%, transparent);
+  color: var(--done);
+}
+/* sync-chip 內的 icon-only 動作按鈕。icon 用 currentColor 著色,跟 chip 殼色語意一致 */
+.sync-chip-icon {
+  margin-left: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  padding: 0;
+  border-radius: 5px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background 100ms, filter 100ms;
+}
+.sync-chip-icon svg {
+  width: 13px; height: 13px;
+}
+.sync-chip-icon:hover {
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.sync-chip.sync-chip-conflict .sync-chip-icon.sync-chip-primary {
+  background: var(--accent, #d4956d);
+  color: var(--accent-fg, #fff);
+  border-color: var(--accent, #d4956d);
+}
+.sync-chip.sync-chip-failed .sync-chip-icon.sync-chip-primary {
+  background: var(--failed);
+  color: var(--danger-fg, #fff);
+  border-color: var(--failed);
+}
+.sync-chip-icon.sync-chip-primary:hover {
+  filter: brightness(1.1);
+}

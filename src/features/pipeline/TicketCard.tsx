@@ -3,6 +3,7 @@ import { fmtElapsed, STATE_COLOR, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } fro
 import type { IterStage, Ticket, TicketStatus } from "../../types/pipeline";
 import { ChevronRightIcon } from "../../ui/icons";
 import { IterStages } from "./IterStages";
+import "./ticketCard.css";
 
 export function TicketCard({
   ticket,

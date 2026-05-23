@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PickerSelect } from "../../ui/PickerSelect";
 import { BranchIcon } from "../../ui/icons";
 import { TextField } from "../../ui/forms/TextField";
+import "../pipeline/createPipeline.css";
 
 const FALLBACK_BRANCHES = ["main"];
 const NAME_MAX_LENGTH = 60;

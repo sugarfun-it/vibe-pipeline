@@ -3,6 +3,7 @@ import { DotsHorizontalIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { Popover } from "../ui/Popover";
 import { STATE_COLOR } from "../data/pipelines";
 import type { Pipeline } from "../types/pipeline";
+import "../features/pipeline/rail.css";
 
 // Rail section header 的 ⋯ menu item。array-driven 結構,未來 actions 直接 push 進去。
 // disabled + tooltip 用 disabledReason 表達(非 undefined → disabled,值就是 tooltip)。

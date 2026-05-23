@@ -1,0 +1,55 @@
+.empty-project-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  color: var(--fg-mute);
+  position: relative;
+}
+
+.empty-project-topbar-hint {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.empty-project-topbar-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.empty-project-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.empty-project-message {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.empty-project-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 380px;
+  text-align: center;
+}

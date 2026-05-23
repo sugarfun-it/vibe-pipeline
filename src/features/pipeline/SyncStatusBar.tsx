@@ -1,6 +1,7 @@
 import { CheckIconSm, CloseIcon, RefreshIcon } from "../../ui/icons";
 import { fmtElapsed } from "../../data/pipelines";
 import type { Pipeline } from "../../types/pipeline";
+import "./syncStatus.css";
 
 // Sync 狀態列 — 在 pipeline header 顯示 syncJob 進度;沒 syncJob 且 behind > 0 退回顯示「落後 N · 同步」按鈕。
 // 鎖按鈕邏輯:lockedByState(pipeline 在跑)時「同步」按鈕禁用。其他狀態列各自決定按鈕可點性。

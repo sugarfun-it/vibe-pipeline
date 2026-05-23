@@ -26,6 +26,7 @@ import * as qaApi from "../../api/qa";
 import type { Pipeline, Ticket } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
 import type { InboxFilter, InboxState } from "../../types/notif";
+import "./boardScreen.css";
 
 export function BoardScreen({
   density = "medium",
