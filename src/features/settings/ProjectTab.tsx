@@ -14,6 +14,16 @@ const AUTOSAVE_DELAY_MS = 400;
 
 type ProjectField = "max_parallel" | "default_base_branch" | "cost_limit_usd" | "auto_merge";
 type AutosaveKey = `project:${ProjectField}`;
+
+// sp-proj-r1-004 / 005:toast 與 field error 分工 —
+//   field error = backend 回傳的具體理由(已經貼在欄位旁)
+//   toast = 概括「<欄位> 未儲存」,避免和 field error 逐字重複
+const FIELD_LABEL: Record<ProjectField, string> = {
+  max_parallel: "平行上限",
+  default_base_branch: "基礎分支",
+  cost_limit_usd: "單次成本上限",
+  auto_merge: "自動合併",
+};
 type ProjectConfirmedValues = {
   max_parallel: number;
   default_base_branch: string;
@@ -53,10 +63,10 @@ export function ProjectTab({
   const [branches, setBranches] = useState<string[]>([]);
   const [basePickerOpen, setBasePickerOpen] = useState(false);
 
-  function toastSaveError(e: unknown) {
+  function toastFieldSaveFailure(field: ProjectField, e: unknown) {
     if (isAbortError(e)) return;
-    const message = e instanceof Error && e.message ? e.message : "儲存失敗，請重試";
-    toast(message, { variant: "danger" });
+    // sp-proj-r1-004:toast 用概括版「<欄位>未儲存」,避免和 inline field error 文案完全重複
+    toast(`${FIELD_LABEL[field]}未儲存，請重試`, { variant: "danger" });
   }
 
   function setFieldSaving(field: ProjectField, v: boolean) {
@@ -168,11 +178,17 @@ export function ProjectTab({
         onSavedNotify();
       },
       (e) => {
-        const msg = e instanceof Error && e.message ? e.message : "儲存失敗，請重試";
+        // sp-proj-r1-005:field error 保留 backend 的具體理由(已經是可修正的訊息);
+        // 只有在 backend 沒給訊息時才 fallback,避免把可修正的輸入錯誤誤導成系統錯誤。
+        // sp-proj-r2-001:不再 rollback draft 回 confirmed — 保留 user 輸入的(已 clamped)值,
+        // 讓 error 訊息與當下 visible value 對齊。User 改成合法值會自動重 schedule;
+        // 切離 tab/popover 再回時 useEffect 會用 confirmed value 重新 init,不會 leak 髒狀態。
+        const reason = e instanceof Error && e.message ? e.message : "儲存失敗，請重試";
         setFieldSaving(field, false);
-        setFieldError(field, msg);
-        toastSaveError(e);
-        rollback();
+        setFieldError(field, reason);
+        toastFieldSaveFailure(field, e);
+        // rollback() intentionally skipped — see comment above.
+        void rollback;
       }
     );
   }

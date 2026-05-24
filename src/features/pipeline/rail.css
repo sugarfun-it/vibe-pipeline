@@ -102,9 +102,10 @@
 }
 .rail-item-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
 .rail-state-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.rail-item-name { flex: 1; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* min-width:0 so flex truncation owns the name column; QA badge + count stay full-width on either side */
+.rail-item-name { flex: 1; min-width: 0; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rail-item.is-active .rail-item-name { font-weight: 600; }
-.rail-item-count { font-size: 10.5px; color: var(--fg-faint); }
+.rail-item-count { font-size: 10.5px; color: var(--fg-faint); flex-shrink: 0; }
 
 .rail-mini {
   display: grid; gap: 2px;
@@ -160,7 +161,9 @@
 
 .rail-spacer { flex: 1; min-height: 12px; }
 
-/* Rail QA draft badge — 跟在 rail-item 內,colocate 一起 */
+/* Rail QA draft badge — 跟在 rail-item 內,colocate 一起。
+   flex-shrink:0 confirms QA badge never collapses when pipeline name is long;
+   .rail-item-name owns truncation via flex:1 + min-width:0. */
 .rail-qa-badge {
   font-size: 9px;
   padding: 1px 5px;
@@ -169,4 +172,21 @@
   color: var(--accent);
   letter-spacing: 0.04em;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* rail.empty 補一行 hint — focus 欄已有 EmptyProject CTA,但 mobile 切到 Pipeline tab 時
+   focus 欄不可見,rail 自己也要有方向感(不能只有孤零零的 + 新 pipeline 按鈕)。
+   權重壓低(font-size + color)避免跟正式 rail-item 搶視線。 */
+.rail-empty-hint {
+  margin: 6px 8px 0;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-faint);
+  text-wrap: pretty;
+}
+.rail-empty-hint .mono {
+  font-size: 10.5px;
+  color: var(--fg-mute);
 }

@@ -97,11 +97,19 @@
   opacity: 0;
 }
 
+/* sp-proj-r1-003:picker dropdown 走 body portal,z-index 預設 100 < settings-popover (1500),
+   會被 settings panel 蓋住整片 options 看不見。提到 1600(modal 1000 / settings 1500 / toast 2000 之間)。
+   用 attribute selector 提高 specificity,蓋過 createPipeline.css 內 `.picker-menu { z-index: var(--z-popover,100) }`。 */
+.picker-menu[role="listbox"] {
+  z-index: 1600;
+}
+
 /* ─── Field row(Project tab + 通用)─────────────────────────── */
 /* sp-r2-003 / 006: label allow wrap; hint align under control column via shared label-col token */
 
 :root {
-  --settings-label-col: 152px;
+  /* sp-proj-r1-008:label column 從 152 → 136,desktop 第一欄左側不再過鬆 */
+  --settings-label-col: 136px;
   --settings-row-gap: 10px;
 }
 
@@ -160,10 +168,13 @@
   color: var(--failed);
 }
 
+/* sp-proj-r1-001:saving 狀態提升可辨識度 — 字級拉到 12,取消 italic,
+   顏色從 fg-faint → fg-mute,避免和 inline unit/range hint 視覺混為一體 */
 .settings-field-status {
-  font-size: 10.5px;
-  color: var(--fg-faint);
-  font-style: italic;
+  font-size: 12px;
+  color: var(--fg-mute);
+  font-style: normal;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -324,6 +335,142 @@
   word-break: break-all;
 }
 
+/* sp-notif-r2:persistent state block — 對齊 .update-* 模式。
+   neutral / info / ok / error 四 variant 共用排版,顏色透過 token 切換。 */
+.push-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.push-state {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  font-size: 12.5px;
+  line-height: 1.5;
+  width: 100%;
+  box-sizing: border-box;
+}
+.push-state-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.push-state-title {
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 13px;
+}
+.push-state-sub {
+  color: var(--fg-mute);
+  font-size: 12px;
+  word-break: break-word;
+}
+.push-state-steps {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--fg-mute);
+  font-size: 12px;
+}
+.push-state-steps strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+.push-state-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--fg-mute) 14%, transparent);
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
+}
+
+.push-state--neutral {
+  border-color: var(--line);
+}
+.push-state--info {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.push-state--ok {
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+  background: color-mix(in srgb, var(--done) 8%, transparent);
+}
+.push-state--ok .push-state-badge--ok {
+  background: color-mix(in srgb, var(--done) 18%, transparent);
+  color: var(--done);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+}
+.push-state--error {
+  border-color: color-mix(in srgb, var(--failed) 45%, var(--line));
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+}
+.push-state--error .push-state-badge {
+  background: color-mix(in srgb, var(--failed) 14%, transparent);
+  color: var(--failed);
+  border-color: color-mix(in srgb, var(--failed) 45%, var(--line));
+}
+
+/* sp-notif-r3:events-grid 是 secondary controls,視覺重量壓下去
+   - on-state 不用 CTA 等級的綠底/綠框,只剩 track 顏色作 affordance
+   - 字級略小、padding 收緊、border 透明,符合次級設定語意 */
+.settings-popover .push-events-grid .toggle-pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: transparent;
+  border-color: transparent;
+}
+.settings-popover .push-events-grid .toggle-pill:hover {
+  background: var(--hover);
+  border-color: transparent;
+}
+.settings-popover .push-events-grid .toggle-pill.is-on {
+  background: transparent;
+  color: var(--fg);
+  border-color: transparent;
+}
+.settings-popover .push-events-grid .toggle-pill.is-on .toggle-pill-track {
+  background: color-mix(in srgb, var(--done) 80%, transparent);
+}
+/* events grid 本身視覺也壓淡 — left rule 從 --line 改用更淡 */
+.push-events-grid {
+  border-left-color: color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* mobile:state block 撐滿 popover content,行內元素不互卡;
+   events grid 不再撐滿(避免每顆 toggle 像 CTA),靠左 wrap */
+@media (max-width: 640px) {
+  .push-state {
+    max-width: 100%;
+  }
+  .push-events-grid {
+    width: auto;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 2px;
+    margin-left: 8px;
+    padding-left: 8px;
+  }
+  .settings-popover .push-events-grid .toggle-pill {
+    width: auto;
+    padding: 4px 8px;
+  }
+}
+
 /* ─── AI 任務 row(2026-05-13 拆 2 層 layout)────────────────────────
    row1: label(左)+ selects(右,grid 對齊兩 group)
    row2: hint(獨立一行,full width,長文字可自由換行不裁字)
@@ -471,6 +618,14 @@
   .update-action-row .btn-primary {
     order: -1;  /* primary 永遠頂部 */
   }
+  /* upd-r2-004:mobile error action 也 stack(維持 44px hit target) */
+  .update-error-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .update-error-actions .btn {
+    width: 100%;
+  }
 }
 
 .update-dev-hint {
@@ -518,19 +673,117 @@
   align-items: center;
 }
 
-.update-progress-hint {
-  font-size: 11px;
-  color: var(--fg-faint);
+/* upd-r2-001:polling 區塊升級 — spinner + 主副標 + aria-live polite,告訴 user「不是壞掉」 */
+.update-progress {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel-2, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 6px;
+  font-size: 12.5px;
   line-height: 1.5;
 }
 
+.update-progress-spinner {
+  color: var(--accent);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.update-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.update-progress-title {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.update-progress-sub {
+  color: var(--fg-mute);
+}
+
+/* upd-r2-002:done 區塊加 reload 提示 + new-tag chip 樣式 */
 .update-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   color: var(--done);
   background: var(--done-soft);
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
   font-size: 12.5px;
   line-height: 1.5;
+}
+
+.update-success-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.update-success-title {
+  font-weight: 500;
+  color: var(--done);
+}
+
+.update-success-tag {
+  color: var(--done);
+  font-weight: 700;
+}
+
+.update-success-sub {
+  color: var(--fg-mute);
+  font-weight: 400;
+}
+
+/* upd-r2-003 / upd-r2-004:error 持久 in-body 區塊 — 取代過去只靠 toast(會自動消失) */
+.update-error {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--failed) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.update-error-title {
+  color: var(--failed);
+  font-weight: 600;
+}
+
+.update-error-reason {
+  color: var(--fg);
+  word-break: break-word;
+}
+
+.update-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* upd-r2-005:disabled button 對比加強 — 維持「明顯 disabled」但 label 仍可讀 */
+.update-action-row .btn:disabled,
+.update-action-row .btn[aria-disabled="true"] {
+  color: var(--fg-mute);
+  opacity: 0.85;
+}
+.update-action-row .btn.btn-primary:disabled,
+.update-action-row .btn.btn-primary[aria-disabled="true"] {
+  background: color-mix(in srgb, var(--accent) 40%, var(--panel-2, transparent));
+  color: var(--accent-fg, #fff);
+  opacity: 0.9;
 }
 
 .update-cmd-row {
@@ -578,7 +831,11 @@
 }
 
 .task-group--primary {
+  /* sp-ai-r1-003:popover 已是 var(--bg-elevated),primary group 同 var(--panel) 在 light theme
+     幾乎無對比;補一條 var(--line) 邊界跟 secondary 的 dashed 拉開層級(實線 vs 虛線),
+     但不加 background tint 以免跟 secondary 視覺權重打架。 */
   background: var(--panel);
+  border: 1px solid var(--line);
 }
 
 .task-group--secondary {
@@ -693,6 +950,11 @@
   .task-row-selects > select {
     width: 100% !important;
     min-width: 0;
+    /* sp-ai-r1-001:mobile select 提升到 tap-friendly 高度(對齊 settings-project .form-input/.picker-trigger 40px 規格);
+       桌面密度不動(--task-w-* token + 11.5px font 維持緊湊 grid)。 */
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 
   /* sp-r2-ai-001:mobile 沒 provider 的 task row(Executor/Critic/Merge)讓 model + effort 撐滿,
@@ -759,6 +1021,16 @@
     min-height: 40px;
   }
 
+  /* sp-proj-r1-002:NumberField/PickerSelect 在 settings popover 內 mobile 觸控高度;
+     NumberField 實際 class 是 .form-input,picker trigger 是 .picker-trigger,前段 mobile
+     規則只蓋 .settings-input/.picker-select,沒對到。明確選到實際 class 並提到 40px。 */
+  .settings-popover .form-input,
+  .settings-popover .picker-trigger {
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
   .settings-input--w-narrow,
   .settings-input--w-mid {
     /* 數字 input 限制在合理寬度,不被 flex 撐到全 row;但保留 min-height 大 */
@@ -766,10 +1038,13 @@
     min-width: 0;
   }
 
+  /* sp-proj-r1-010:USD / 條 / 範圍提示在 mobile 保持 inline 緊跟 input,
+     僅在實在沒空間時才靠 wrap 換行。原本強制 flex-basis:100% 把 USD 壓到下一行,
+     讓使用者讀起來像獨立 hint;改成 auto + nowrap,讓單位緊貼數值。 */
   .settings-inline-unit {
-    /* 單位 / 解釋 text 換下一行貼齊 input 左,不再 inline 壓寬度 */
-    flex-basis: 100%;
+    flex-basis: auto;
     margin-left: 0;
+    white-space: nowrap;
   }
 
   .settings-subhint {

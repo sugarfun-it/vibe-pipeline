@@ -3,41 +3,45 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 32px;
+  /* Desktop: bias the content stack upward so the instruction visually connects
+     to the top-bar control it references, instead of floating in the middle of
+     a tall canvas. */
+  justify-content: flex-start;
+  gap: var(--space-3, 12px);
+  padding: clamp(48px, 12vh, 120px) var(--space-6, 24px) var(--space-6, 24px);
   color: var(--fg-mute);
   position: relative;
 }
+/* Mobile keeps the centered composition: the viewport is short, the top bar is
+   only a few logical pixels above the empty state, and the bottom tab bar
+   anchors the lower edge — flex-start with a large top bias leaves the lower
+   half visually empty and reads top-heavy. */
+@media (max-width: 479.98px) {
+  .empty-project-root {
+    justify-content: center;
+    gap: var(--space-2, 8px);
+    padding: var(--space-6, 24px) var(--space-4, 16px);
+  }
+}
 
 .empty-project-topbar-hint {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
   color: var(--accent);
   font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.04em;
-  opacity: 0.85;
 }
 
-/* phase4-2026-05-23-003 — in-flow modifier replaces inline style overrides
-   (position/transform/left/top/margin) so callers don't bypass token governance. */
+/* Modifier kept as an explicit hook so callers can opt out of the chip-above
+   layout without restyling the base hint. Currently identical visually to the
+   base rule, but the class boundary preserves the optionality the prop exposes. */
 .empty-project-topbar-hint--in-flow {
-  position: static;
-  transform: none;
-  left: auto;
-  top: auto;
   margin-bottom: var(--space-1, 4px);
-}
-
-.empty-project-topbar-arrow {
-  font-size: 18px;
-  line-height: 1;
 }
 
 .empty-project-icon {
@@ -55,21 +59,26 @@
   font-size: 16px;
   font-weight: 600;
   color: var(--fg);
+  text-align: center;
 }
 
 .empty-project-hint {
   font-size: 13px;
   line-height: 1.6;
-  max-width: 380px;
+  max-width: min(420px, calc(100vw - 40px));
   text-align: center;
-  /* phase4-2026-05-23-003 — long localized strings (e.g. en-US 約 1.5x zh) need
-     to wrap cleanly at any character without overflowing the centered column. */
+  /* Wrap policy: prefer word boundaries (text-wrap: pretty + word-break: normal)
+     so longer locales (en-US, ja-JP) don't fragment mid-word; overflow-wrap:
+     anywhere is the safety fallback for unusual long unbreakable tokens. */
   text-wrap: pretty;
+  word-break: normal;
   overflow-wrap: anywhere;
 }
-@media (max-width: 479.98px) {
-  .empty-project-hint {
-    max-width: calc(100vw - 48px);
-    padding: 0 var(--space-3, 12px);
-  }
+
+.empty-project-action {
+  margin-top: var(--space-2, 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2, 8px);
 }

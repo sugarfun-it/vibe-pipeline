@@ -1,10 +1,45 @@
 /* phase4-toast-001 — canonical transient feedback primitive
-   bottom-right desktop / bottom-center mobile, stack max 3, slide-up enter / fade-out exit */
+   bottom-right desktop / bottom-center mobile, stack max 3, slide-up enter / fade-out exit
+   2026-05-24 iter-uiux toast pass: theme-aware soft-surface foregrounds, action
+   affordance with border, severity stripe, safe-area inset, action-row wrap. */
+
+/* Per-theme foregrounds for soft toast surfaces (NOT the inverse `--*-fg` family,
+   which is designed for solid status backgrounds). Defined as local CSS vars
+   so variants can mix once and reuse for message + action + close.
+   Dark theme: mix toward white (the soft bg sits over dark --bg-elevated).
+   Light theme: mix toward black (the soft bg sits over cream --bg-elevated). */
+:root {
+  --toast-info-fg: var(--fg);
+  --toast-info-fg-mute: var(--fg-mute);
+  --toast-info-stripe: color-mix(in srgb, var(--fg) 18%, transparent);
+  --toast-success-fg: color-mix(in srgb, var(--done) 35%, #fff);
+  --toast-success-fg-mute: color-mix(in srgb, var(--done) 25%, #d8d8d8);
+  --toast-success-stripe: color-mix(in srgb, var(--done) 90%, transparent);
+  --toast-warning-fg: color-mix(in srgb, var(--paused) 35%, #fff);
+  --toast-warning-fg-mute: color-mix(in srgb, var(--paused) 25%, #d8d8d8);
+  --toast-warning-stripe: color-mix(in srgb, var(--paused) 90%, transparent);
+  --toast-danger-fg: color-mix(in srgb, var(--failed) 35%, #fff);
+  --toast-danger-fg-mute: color-mix(in srgb, var(--failed) 25%, #d8d8d8);
+  --toast-danger-stripe: color-mix(in srgb, var(--failed) 90%, transparent);
+}
+html.light {
+  --toast-success-fg: color-mix(in srgb, var(--done) 88%, #000);
+  --toast-success-fg-mute: color-mix(in srgb, var(--done) 70%, #000);
+  --toast-success-stripe: var(--done);
+  --toast-warning-fg: color-mix(in srgb, var(--paused) 88%, #000);
+  --toast-warning-fg-mute: color-mix(in srgb, var(--paused) 70%, #000);
+  --toast-warning-stripe: var(--paused);
+  --toast-danger-fg: color-mix(in srgb, var(--failed) 88%, #000);
+  --toast-danger-fg-mute: color-mix(in srgb, var(--failed) 70%, #000);
+  --toast-danger-stripe: var(--failed);
+}
 
 .toast-stage {
   position: fixed;
-  right: var(--space-4, 16px);
-  bottom: var(--space-4, 16px);
+  /* --toast-stage-right defaults to clear the right inbox strip (~52px collapsed)
+     + 12px gap. Overridable per shell layout (codex toast-stack-006 / danger-010). */
+  right: calc(var(--toast-stage-right, 64px) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
   left: auto;
   display: flex;
   flex-direction: column;
@@ -12,25 +47,39 @@
   gap: var(--space-2, 8px);
   z-index: var(--z-toast);
   pointer-events: none;
-  max-width: min(420px, calc(100vw - 32px));
+  max-width: min(420px, calc(100vw - 96px));
 }
 
 .toast {
   pointer-events: auto;
-  display: inline-flex;
-  align-items: flex-start;
-  gap: var(--space-3, 12px);
-  min-width: 220px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 8px) var(--space-3, 12px);
+  min-width: 240px;
   max-width: 100%;
-  padding: 10px 12px 10px 14px;
+  padding: 10px 12px 10px 16px;
   border-radius: var(--radius-card);
   border: 1px solid var(--line-2);
   background: var(--bg-elevated);
-  color: var(--fg);
+  color: var(--toast-info-fg);
   box-shadow: var(--shadow-popover);
   font-size: 13px;
   line-height: 1.45;
   animation: toastIn 200ms ease-out both;
+}
+
+/* Severity stripe — subtle 3px left bar, theme-aware. Adds severity signal
+   without needing real icons (codex toast-danger-004, toast-stack-001). */
+.toast::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-top-left-radius: var(--radius-card);
+  border-bottom-left-radius: var(--radius-card);
+  background: var(--toast-info-stripe);
 }
 
 @keyframes toastIn {
@@ -48,9 +97,12 @@
 }
 
 .toast-message {
-  flex: 1 1 auto;
+  flex: 1 1 200px;
+  min-width: 0;
   white-space: pre-wrap;
-  word-break: break-word;
+  /* Keep raw error URLs / paths from blowing out width (codex danger-008) */
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .toast-actions {
@@ -58,6 +110,7 @@
   align-items: center;
   gap: var(--space-1, 4px);
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .toast-action {
@@ -67,15 +120,16 @@
   padding: 0 10px;
   border-radius: var(--radius-control);
   font-size: 12.5px;
-  font-weight: 500;
-  color: var(--accent);
+  font-weight: 600;
+  color: var(--toast-info-fg);
   background: transparent;
-  border: 1px solid transparent;
+  /* Visible resting affordance — codex toast-success-003 / toast-danger-009 */
+  border: 1px solid var(--toast-info-stripe);
   transition: background 120ms, border-color 120ms, color 120ms;
 }
 .toast-action:hover {
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--toast-info-fg) 8%, transparent);
+  border-color: color-mix(in srgb, var(--toast-info-fg) 45%, transparent);
 }
 .toast-action:focus-visible {
   outline: none;
@@ -87,15 +141,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-xs);
-  color: var(--fg-mute);
+  color: var(--toast-info-fg-mute);
   font-size: 18px;
   line-height: 1;
   transition: background 120ms, color 120ms;
 }
-.toast-close:hover { background: var(--hover); color: var(--fg); }
+.toast-close:hover { background: var(--hover); color: var(--toast-info-fg); }
 .toast-close:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
@@ -104,61 +158,107 @@
 /* ── variants ─────────────────────────────────────────────────── */
 
 .toast-info {
-  /* default surface — no extra accent; border subtle */
+  color: var(--toast-info-fg);
 }
 
 .toast-success {
   border-color: color-mix(in srgb, var(--done) 55%, var(--line-2));
   background: color-mix(in srgb, var(--done) 14%, var(--bg-elevated));
-  color: var(--success-fg);
+  color: var(--toast-success-fg);
 }
-.toast-success .toast-action { color: var(--success-fg); }
+.toast-success::before { background: var(--toast-success-stripe); }
+.toast-success .toast-action {
+  color: var(--toast-success-fg);
+  border-color: color-mix(in srgb, var(--toast-success-fg) 35%, transparent);
+}
 .toast-success .toast-action:hover {
-  background: color-mix(in srgb, var(--inverse-fg) 10%, transparent);
-  border-color: color-mix(in srgb, var(--inverse-fg) 25%, transparent);
+  background: color-mix(in srgb, var(--toast-success-fg) 10%, transparent);
+  border-color: color-mix(in srgb, var(--toast-success-fg) 55%, transparent);
 }
-.toast-success .toast-close { color: color-mix(in srgb, var(--success-fg) 75%, transparent); }
-.toast-success .toast-close:hover { color: var(--success-fg); background: color-mix(in srgb, var(--inverse-fg) 10%, transparent); }
+.toast-success .toast-close { color: var(--toast-success-fg-mute); }
+.toast-success .toast-close:hover {
+  color: var(--toast-success-fg);
+  background: color-mix(in srgb, var(--toast-success-fg) 10%, transparent);
+}
 
 .toast-warning {
   border-color: color-mix(in srgb, var(--paused) 55%, var(--line-2));
   background: color-mix(in srgb, var(--paused) 16%, var(--bg-elevated));
-  color: var(--accent-fg);
+  color: var(--toast-warning-fg);
 }
-.toast-warning .toast-action { color: var(--accent-fg); }
+.toast-warning::before { background: var(--toast-warning-stripe); }
+.toast-warning .toast-action {
+  color: var(--toast-warning-fg);
+  border-color: color-mix(in srgb, var(--toast-warning-fg) 35%, transparent);
+}
 .toast-warning .toast-action:hover {
-  background: color-mix(in srgb, var(--inverse-fg) 10%, transparent);
-  border-color: color-mix(in srgb, var(--inverse-fg) 25%, transparent);
+  background: color-mix(in srgb, var(--toast-warning-fg) 10%, transparent);
+  border-color: color-mix(in srgb, var(--toast-warning-fg) 55%, transparent);
 }
-.toast-warning .toast-close { color: color-mix(in srgb, var(--accent-fg) 75%, transparent); }
-.toast-warning .toast-close:hover { color: var(--accent-fg); background: color-mix(in srgb, var(--inverse-fg) 10%, transparent); }
+.toast-warning .toast-close { color: var(--toast-warning-fg-mute); }
+.toast-warning .toast-close:hover {
+  color: var(--toast-warning-fg);
+  background: color-mix(in srgb, var(--toast-warning-fg) 10%, transparent);
+}
 
 .toast-danger {
   border-color: var(--danger-border);
   background: color-mix(in srgb, var(--failed) 22%, var(--bg-elevated));
-  color: var(--danger-fg);
+  color: var(--toast-danger-fg);
 }
-.toast-danger .toast-action { color: var(--danger-fg); }
+.toast-danger::before { background: var(--toast-danger-stripe); }
+.toast-danger .toast-action {
+  color: var(--toast-danger-fg);
+  border-color: color-mix(in srgb, var(--toast-danger-fg) 40%, transparent);
+}
 .toast-danger .toast-action:hover {
-  background: color-mix(in srgb, var(--inverse-fg) 12%, transparent);
-  border-color: color-mix(in srgb, var(--inverse-fg) 28%, transparent);
+  background: color-mix(in srgb, var(--toast-danger-fg) 12%, transparent);
+  border-color: color-mix(in srgb, var(--toast-danger-fg) 60%, transparent);
 }
-.toast-danger .toast-close { color: color-mix(in srgb, var(--danger-fg) 80%, transparent); }
-.toast-danger .toast-close:hover { color: var(--danger-fg); background: color-mix(in srgb, var(--inverse-fg) 12%, transparent); }
+.toast-danger .toast-close { color: var(--toast-danger-fg-mute); }
+.toast-danger .toast-close:hover {
+  color: var(--toast-danger-fg);
+  background: color-mix(in srgb, var(--toast-danger-fg) 12%, transparent);
+}
 
 /* ── responsive: mobile bottom-center ─────────────────────────── */
 
 @media (max-width: 767.98px) {
   .toast-stage {
-    right: var(--space-3, 12px);
-    left: var(--space-3, 12px);
-    bottom: var(--space-3, 12px);
-    align-items: center;
+    right: calc(var(--space-3, 12px) + env(safe-area-inset-right, 0px));
+    left: calc(var(--space-3, 12px) + env(safe-area-inset-left, 0px));
+    bottom: calc(var(--space-3, 12px) + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
     max-width: none;
   }
   .toast {
+    /* Force vertical layout on mobile so message gets a clean full-width row
+       and the action row anchors below it (codex toast-danger-002). */
     width: 100%;
     min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2, 8px);
+    padding: 12px 14px 12px 16px;
+  }
+  .toast .toast-message {
+    flex: 1 1 auto;
+  }
+  .toast .toast-actions {
+    margin-left: 0;
+    align-self: flex-end;
+    gap: var(--space-2, 8px);
+  }
+  /* Bigger tap targets on mobile (codex toast-danger-006) */
+  .toast .toast-action {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 13.5px;
+  }
+  .toast-close {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
   }
 }
 

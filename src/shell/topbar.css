@@ -457,6 +457,71 @@
   list-style: none;
 }
 
+/* placeholder centered 視覺 — loading / empty / error 三種狀態用 icon + 文字,
+   避免左上純文字看起來像 "壞掉"(advisor 2026-05-24:browse-list-placeholder-weak) */
+.browse-list-placeholder--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 200px;
+  padding: 24px;
+}
+
+.browse-list-placeholder-folder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--fg-faint);
+  opacity: 0.7;
+}
+
+.browse-list-placeholder-folder svg {
+  width: 28px;
+  height: 28px;
+}
+
+.browse-list-placeholder-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: browse-spin 0.7s linear infinite;
+}
+
+@keyframes browse-spin {
+  to { transform: rotate(360deg); }
+}
+
+.browse-list-placeholder--error {
+  color: var(--failed);
+}
+
+.browse-list-placeholder-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--failed);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* error placeholder 的「重試」鍵:不從外部 .btn 變數覆寫,
+   直接用 sm 變體(現有 button-sm 沒有,自己 inline 小一點) */
+.browse-list-placeholder--error .btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 .browse-entry {
   display: flex;
   align-items: center;
@@ -504,6 +569,18 @@
   border-color: var(--line);
 }
 
+/* overload 視覺強化 — 從只有 "!" 改成 pill 「超載」文字,
+   不只靠 color 傳達(advisor 2026-05-24:overload-chip-ambiguous) */
 .parallel-chip-overload {
-  color: var(--failed);
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 0 6px;
+  background: var(--failed);
+  color: var(--bg);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
 }

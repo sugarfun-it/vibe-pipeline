@@ -8,14 +8,22 @@
 }
 .rail.is-creating .rail-archive.is-muted { opacity: 0.5; pointer-events: none; }
 
+/* Rail-inline create card.
+   border 1.5→1px + 8px radius(對齊 .rail-item 8px) + 卸掉 strong shadow,讓 card 在
+   rail 列表內讀起來像「升級版 rail-item」而非 modal 浮塊。muted rows 已用
+   pointer-events:none(createPipeline.css:4),不需要 card 再壓視覺。 */
 .create-card {
   display: flex; flex-direction: column; gap: 9px;
   padding: 10px 11px 11px;
   margin: 2px 0 4px;
   background: var(--bg);
-  border: 1.5px solid var(--accent);
-  border-radius: 9px;
-  box-shadow: 0 4px 14px rgba(216, 162, 90, 0.08), 0 1px 3px rgba(0,0,0,0.18);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line-2));
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+}
+.create-card:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.14);
 }
 html.light .create-card { background: var(--bg-elevated); }
 .create-card-head {

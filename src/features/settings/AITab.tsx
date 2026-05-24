@@ -44,6 +44,7 @@ function TaskModelRow({
             <select
               value={provider}
               disabled={disabled}
+              aria-label={`${label} provider`}
               onChange={(e) => onChange({ provider: e.target.value as Provider })}
             >
               {PROVIDERS.map((p) => (
@@ -53,11 +54,12 @@ function TaskModelRow({
               ))}
             </select>
           ) : (
-            <span className="task-row-placeholder" />
+            <span className="task-row-placeholder" aria-hidden />
           )}
           <select
             value={model}
             disabled={disabled}
+            aria-label={`${label} model`}
             onChange={(e) => onChange({ model: e.target.value as ModelName })}
           >
             {modelsForProvider(provider).map((m) => (
@@ -69,6 +71,7 @@ function TaskModelRow({
           <select
             value={effort}
             disabled={disabled}
+            aria-label={`${label} effort`}
             onChange={(e) => onChange({ effort: e.target.value as Effort })}
           >
             {effortsForProvider(provider).map((eff) => (

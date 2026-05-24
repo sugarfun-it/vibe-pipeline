@@ -7,10 +7,10 @@ type BannerVariant = "ready" | "merged" | "merging" | "failed";
 
 const M = {
   merged: (base: string) => `已合併入 ${base}`,
-  failedWithRetry: "合併失敗 — 修正 working tree 後重試",
-  failedNoAction: "合併失敗 — 請至執行紀錄查看錯誤並修正 working tree",
-  merging: "正在合併，處理衝突中",
-  mergeQueued: "合併已排入佇列，即將開始",
+  failedWithRetry: "合併失敗 — 修正工作區後重試",
+  failedNoAction: "合併失敗 — 請至執行紀錄查看錯誤並修正工作區",
+  merging: "正在合併,處理衝突中",
+  mergeQueued: "合併已排入佇列,即將開始",
   ready: "所有 ticket 已完成",
   commits: (n: number) => `${n} 個 commit`,
 };
@@ -67,7 +67,7 @@ export function ReadyBanner({
 
   const iconColor =
     variant === "merged"
-      ? "var(--fg-mute)"
+      ? "var(--done)"
       : variant === "failed"
       ? "var(--failed)"
       : variant === "merging"
@@ -133,10 +133,13 @@ export function ReadyBanner({
           {title}
         </div>
         {/* phase4-2026-05-23-010 — meta-row utility: atomic tokens stay together,
-            row wraps at separators when viewport gets narrow */}
+            row wraps at separators when viewport gets narrow.
+            iter-uiux 2026-05-24:窄寬度時 `·` 不該成為下一行起頭或上一行結尾,
+            這裡用 `<br/>` (mobile-friendly) 替換,讓 commit count 自然另行起頭。
+            sep 仍保留給 sighted user 在寬版見;窄版 CSS 隱藏 sep。 */}
         <div className="banner-desc mono meta-row" id={descId}>
           <span className="meta-atom">{pipeline.branch} → {baseBranch}</span>
-          <span className="meta-sep" aria-hidden="true">·</span>
+          <span className="meta-sep banner-meta-sep" aria-hidden="true"> · </span>
           <span className="meta-atom">{M.commits(commitCount)}</span>
         </div>
       </div>
@@ -156,7 +159,7 @@ export function ReadyBanner({
                 : `合併 ${pipeline.branch} → ${baseBranch}?`,
               description: isRetry
                 ? `將清除上次失敗紀錄並重新嘗試合併。\n\n` +
-                  `若上次因 working tree 有未提交變更而失敗,請先 commit 或 stash 再重試,否則會再次失敗。`
+                  `若上次因工作區有未提交變更而失敗,請先 commit 或 stash 再重試,否則會再次失敗。`
                 : `會先嘗試一般合併;若遇到衝突,系統會自動由 AI 協助解決。\n\n` +
                   `多數情況下會直接成功,不需要進一步操作。`,
               confirmLabel: isRetry ? "重試合併" : `合併入 ${baseBranch}`,

@@ -45,9 +45,13 @@ const detailTagStyle: CSSProperties = {
 export function RunHistory({
   projectHash,
   pipelineId,
+  onCloseDrawer,
 }: {
   projectHash: string;
   pipelineId: string;
+  // 由 PipelineHistoryDrawer 注入。empty state CTA「關閉並回 pipeline」用,
+  // 不傳入時 empty state 不渲染該按鈕(degrade gracefully)。
+  onCloseDrawer?: () => void;
 }) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const { toast } = useToast();
@@ -102,10 +106,35 @@ export function RunHistory({
   }, [runs]);
 
   if (runs === null) {
-    return <div className="tdrw-empty">載入執行紀錄中…</div>;
+    return (
+      <div className="tdrw-empty" role="status" aria-live="polite">
+        載入執行紀錄中…
+      </div>
+    );
   }
   if (runs.length === 0) {
-    return <div className="tdrw-empty">尚無執行紀錄</div>;
+    // history-empty-001 / 003 / 004 / 006 / 007 / 010 / 012 (2026-05-24):
+    //   2 段 empty-state(標題 + 說明)+ 行動 CTA(關閉抽屜 = 把焦點放回上方執行按鈕,
+    //   不再死路);copy 全中文不混 raw English「runner」/「state change」。
+    return (
+      <div className="rh-empty-state" role="status" aria-live="polite">
+        <div className="rh-empty-title">這個 pipeline 還沒被執行過</div>
+        <div className="rh-empty-hint">
+          這裡會列出每次「執行」之後 runner 留下的紀錄(耗時、成本、結果)。目前還沒有任何一筆。
+        </div>
+        {onCloseDrawer && (
+          <div className="rh-empty-actions">
+            <button
+              type="button"
+              className="btn rh-empty-cta"
+              onClick={onCloseDrawer}
+            >
+              關閉並回 pipeline 執行
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -394,10 +423,17 @@ function RunCard({
                 </section>
               )}
               {detail.sessionId && (
-                // hist-015:session-id 改 read-only code block,short UUID 不附複製按鈕(triple-click 即可選取)
+                // hist-015 / HRD-EXP-004 (2026-05-24):read-only code block + 複製按鈕。
+                //   session id 是 codex / claude resume 取用的關鍵字串,
+                //   triple-click select 在 mobile 不可行,visible copy 按鈕讓兩平台一致。
                 <section className="tdrw-run-detail-section">
                   <h4 className="tdrw-run-detail-label">工作階段 ID</h4>
-                  <pre className="tdrw-run-session-id">{detail.sessionId}</pre>
+                  <CopyableBlock
+                    text={detail.sessionId}
+                    oneLine
+                    readonlyStyle
+                    copyAriaLabel="複製工作階段 ID"
+                  />
                 </section>
               )}
               {/* hist-005:標題用 zh-TW「原始輸出 · stdout」,實作來源以同列右側 mono badge 形式呈現 */}

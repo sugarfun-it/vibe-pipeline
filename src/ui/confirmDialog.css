@@ -23,14 +23,16 @@
   color: var(--fg);
 }
 /* 危險警告 banner — 紅框 + ⚠ icon + 紅字,給資料遺失風險用 */
+/* phase4-2026-05-24-cross-005 — consume shared --bg-danger-soft / --danger-border
+   so this surface stays in sync with other destructive callout surfaces. */
 .confirm-warning {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 9px 12px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--failed) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--failed) 60%, transparent);
+  border-radius: var(--radius-control, 6px);
+  background: var(--bg-danger-soft);
+  border: 1px solid var(--danger-border);
   color: var(--failed);
   font-size: 12.5px;
   font-weight: 600;
@@ -56,12 +58,33 @@
   overflow-y: auto;
 }
 
+/* iter-uiux-2026-05-24 confirm-dialog.rich_desc r1 fixes — rich content variant:
+   `pre-wrap` preserves stray JSX/markup whitespace, producing oversized gaps
+   between <p> / <ul> children. When `descriptionRich` is passed, swap to a
+   normal-whitespace container with explicit child-spacing contract so callers
+   don't each need local CSS (rich-desc-whitespace-prewrap, rich-desc-paragraph-contract). */
+.confirm-desc.confirm-desc--rich {
+  white-space: normal;
+}
+.confirm-desc.confirm-desc--rich > p {
+  margin: 0;
+}
+.confirm-desc.confirm-desc--rich > * + * {
+  margin-top: 10px;
+}
+.confirm-desc.confirm-desc--rich > p + ul,
+.confirm-desc.confirm-desc--rich > ul + p {
+  margin-top: 8px;
+}
+
 /* phase4-2026-05-23-012 — utility classes for destructive descriptionRich:
    callers building bullet rows / mono details get a consistent visual without
    each one rolling its own styling. */
 .confirm-desc ul.confirm-desc-list {
   margin: 0;
-  padding-left: 16px;
+  /* iter-uiux-2026-05-24 rich-desc r1 — bump marker/content breathing room
+     (16→18px) so mobile wrap rows don't crowd the marker. */
+  padding-left: 18px;
   display: flex;
   flex-direction: column;
   gap: var(--space-1, 4px);
@@ -69,6 +92,9 @@
 .confirm-desc ul.confirm-desc-list li {
   font-size: 12px;
   line-height: 1.5;
+}
+.confirm-desc ul.confirm-desc-list li::marker {
+  color: var(--fg-mute);
 }
 .confirm-desc code.confirm-desc-mono {
   font-family: var(--font-mono);
@@ -78,6 +104,15 @@
   background: var(--panel-2);
   border: 1px solid var(--line);
   color: var(--fg);
+  /* iter-uiux-2026-05-24 rich-desc r1 — mixed CJK/Latin prose: tiny logical
+     margin so chip doesn't kiss adjacent Chinese characters. Long-path chips
+     (`~/.vibe-pipeline/worktrees/...`) need to wrap on character boundaries
+     and keep border/background continuous on each wrapped line. */
+  margin-inline: 2px;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 .confirm-actions {
   display: flex;
@@ -95,11 +130,14 @@
   justify-content: center;
 }
 /* Modal action focus ring — in an alertdialog the focused button is the
-   intended next interaction (autoFocus on Cancel for danger, Confirm otherwise);
-   use :focus so the ring shows for both keyboard and programmatic focus.
-   Override global --focus-ring(--accent 是暖琥珀)以中性色,避免在 danger 模式下
-   橘色 ring 跟紅色 danger 互相競爭視覺焦點(codex r1 005/009)。 */
-.confirm-card .btn:focus {
+   intended next interaction (autoFocus on Cancel for danger, Confirm otherwise).
+   iter-uiux-2026-05-24 confirm-dialog.standard r1 std-01 — switch :focus →
+   :focus-visible so programmatic autoFocus on the primary confirm button no
+   longer makes the cancel button look like it has a permanent secondary outline
+   when user inspects after click. Mouse users see no ring at rest; keyboard
+   users still see the ring on Tab focus. Neutral --fg-mute avoids competing
+   with red danger (prior r3 fix 005/009). */
+.confirm-card .btn:focus-visible {
   outline: 2px solid var(--fg-mute);
   outline-offset: 2px;
   box-shadow: none;

@@ -28,6 +28,8 @@
   padding: 14px var(--space-5, 20px);
   /* 鍵盤 / 程式化捲動定位時,讓 target 從 head 下緣留 12px breathing room,不貼在頂 */
   scroll-padding-top: var(--space-3, 12px);
+  /* InlineMultiSelect / 最末 bubble 滾到底時不會被 sticky footer 吃掉送出按鈕 */
+  scroll-padding-bottom: var(--space-4, 16px);
 }
 
 .qadr-checklist {
@@ -81,14 +83,14 @@
   letter-spacing: 0.04em;
 }
 .qadr-chip-panel {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-left: 2px solid var(--accent);
-  border-radius: 0 6px 6px 0;
-  background: var(--accent-soft);
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .qadr-chip-panel-label {
   font-size: 10px;
@@ -205,6 +207,31 @@
   font-size: 12px;
   padding: 8px 0;
 }
+
+/* bootstrapping:沒 draft 時的中央 placeholder。比舊的 inline qadr-loading 更明確
+   是「整個 drawer 還沒準備好」,而不是「AI 在思考」(後者用 qadr-thinking-dots inline 在 body 內) */
+.qadr-bootstrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+  min-height: 220px;
+  padding: var(--space-5, 20px);
+  color: var(--fg-mute);
+  text-align: center;
+}
+.qadr-bootstrap-label {
+  font-size: 13px;
+  color: var(--fg);
+  font-weight: 500;
+}
+.qadr-bootstrap-sub {
+  font-size: 12px;
+  color: var(--fg-faint);
+  line-height: 1.5;
+  max-width: 28rem;
+}
 .qadr-thinking-dots {
   display: inline-flex;
   align-items: center;
@@ -310,6 +337,54 @@
 .qadr-multi-send {
   align-self: flex-start;
   font-size: 12px;
+}
+
+/* multi 模式 inline reply block:render 在 chat body 內,跟對話脈絡黏在一起,
+   避免 mobile sticky footer 被多選 list 撐高吃掉視野 */
+.qadr-inline-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 var(--space-3, 12px);
+  padding: var(--space-3, 12px);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  /* 滾動到 panel 底部時,留一段呼吸空間給 sticky footer / mobile safe-area,不被吃掉送出按鈕 */
+  scroll-margin-bottom: 80px;
+}
+.qadr-inline-multi .qadr-options-multi {
+  margin: 0;
+}
+.qadr-inline-multi .qadr-multi-status {
+  align-self: flex-start;
+}
+.qadr-inline-multi .qadr-multi-send {
+  align-self: flex-start;
+}
+@media (max-width: 767.98px) {
+  .qadr-inline-multi .qadr-multi-send {
+    align-self: stretch;
+  }
+}
+.qadr-multi-status {
+  font-size: 11px;
+  color: var(--fg-mute);
+  padding: 0 2px;
+}
+@media (pointer: coarse), (max-width: 767.98px) {
+  /* multi-select 選項 / 送出按鈕在 mobile 給足 44px hit-target,跟 starter chip 對齊 */
+  .btn.qadr-option,
+  .btn.qadr-option-multi {
+    min-height: 44px;
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    font-size: 12.5px;
+  }
+  .qadr-multi-send {
+    min-height: 44px;
+    padding-inline: var(--space-4, 16px);
+    align-self: stretch;
+  }
 }
 .qadr-composer-row {
   display: flex;
@@ -486,21 +561,75 @@
   }
 }
 
-/* spec-complete banner — shown when spec 5/5 but user is in chat view */
+/* spec-complete banner — shown when spec 5/5 but user is in chat view.
+   提升到 primary CTA 視覺 (border-bottom 強化 / btn-primary) — 之前太弱,
+   user 容易繼續打字忽略「該收尾去最終預覽」這個流程訊號。 */
 .qadr-spec-ready-bar {
-  padding: var(--space-2, 8px) var(--space-4, 16px);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border-bottom: 1px solid var(--line);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: var(--accent-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   display: flex;
   align-items: center;
-  gap: var(--space-2, 10px);
-  font-size: 12px;
-  color: var(--fg-mute);
+  gap: var(--space-3, 12px);
+  font-size: 13px;
+  color: var(--fg);
+}
+.qadr-spec-ready-bar-text {
+  flex: 1;
+  min-width: 0;
 }
 .qadr-spec-ready-bar-btn {
   margin-left: auto;
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* close-confirm 改 inline alert(非 modal)— 視覺 + 結構強化,desktop / mobile 都讓
+   message + actions 上下分層,而不是擠在 flex-wrap 邊緣 */
+.qadr-close-confirm {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-top: 1px solid color-mix(in srgb, var(--paused) 35%, var(--line));
+  border-bottom: 1px solid color-mix(in srgb, var(--paused) 35%, var(--line));
+  background: color-mix(in srgb, var(--paused) 10%, var(--panel-2));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+.qadr-close-confirm-msg {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg);
+}
+.qadr-close-confirm-actions {
+  display: flex;
+  gap: var(--space-2, 8px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* drawer close X — 桌面維持小 icon,mobile 一律 44px hit-target,
+   避免 focus-visible 邊框讓控制鈕「忽大忽小」 */
+@media (max-width: 767.98px) {
+  .qadr-drawer .drawer-close.create-x {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .qadr-close-confirm-actions {
+    justify-content: stretch;
+  }
+  .qadr-close-confirm-actions > .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
 }
 
 /* split proposal */
@@ -586,44 +715,106 @@
   }
 }
 
-/* split-proposal block(QADrawer 內 AI 拆分提案區)。原本散在 src/styles/qa.css,
- * 但該檔早就沒被任何地方 import → 規則從沒生效。合進本檔讓 split-proposal 真有樣式。 */
+/* split-proposal block(QADrawer 內 AI 拆分提案區)— 視覺加重,代表這是「會改變
+ * 送出後行為(N 張 vs 1 張)」的高影響選擇,別讓 user 跟一般 form field 混淆。 */
 .qadr-split-proposal {
-  padding: var(--space-3, 12px) 14px;
+  padding: var(--space-4, 16px);
   margin-bottom: var(--space-3, 12px);
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 12px);
 }
-.qadr-split-title {
-  font-size: 12.5px;
-  color: var(--fg);
-  margin-bottom: var(--space-2, 8px);
-}
-.qadr-split-list {
-  list-style: none;
-  margin: 0 0 10px 0;
-  padding: 0;
+.qadr-split-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
 }
-.qadr-split-list li {
+.qadr-split-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+  line-height: 1.4;
+}
+.qadr-split-subtitle {
+  font-size: 12px;
+  color: var(--fg-mute);
+  margin: 0;
+  line-height: 1.55;
+}
+.qadr-split-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  font-size: 13px;
+}
+.qadr-split-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.qadr-split-item-title {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
 }
 .qadr-split-num {
   color: var(--fg-mute);
   font-size: 11px;
   background: var(--panel-2);
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 3px;
+  flex-shrink: 0;
 }
 .qadr-split-toggle {
-  padding-top: var(--space-2, 8px);
+  padding-top: var(--space-3, 12px);
   border-top: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+.qadr-split-toggle-label {
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+}
+.qadr-split-toggle-label input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.qadr-split-toggle-hint {
+  display: block;
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  margin-top: 2px;
+}
+
+/* chat_progress mobile:progress row + composer + cancel row + hint 都擠在 sticky footer,
+ * 把 progress 字級壓小、padding 收窄,給 transcript 多一些垂直空間 */
+@media (max-width: 767.98px) {
+  .qadr-foot .qadr-progress {
+    font-size: 10.5px;
+    padding: 0;
+    gap: 4px;
+  }
+  .qadr-foot .qadr-progress-missing {
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+  .qadr-spec-ready-bar {
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    gap: var(--space-2, 8px);
+    font-size: 12px;
+  }
+  .qadr-spec-ready-bar-btn {
+    padding: 6px 10px;
+  }
 }
 
 .qadr-iter-limit-input { width: 5rem; }

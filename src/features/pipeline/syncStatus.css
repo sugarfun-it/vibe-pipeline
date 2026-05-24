@@ -4,13 +4,20 @@
 .sync-chip {
   /* 對齊 .btn 高度(padding 6px 12px / font 12.5px / radius 7px),不破壞 focus-head 行高 */
   display: inline-flex; align-items: center; gap: 6px;
+  /* iter-uiux 2026-05-24 sync R2 (sync-004):強制 28px min-height 與 .btn 對齊;
+     vertical padding 收成 4px 讓 22px icon button 不撐高 chip */
+  min-height: 28px;
   font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
-  padding: 6px 12px; border-radius: 7px;
+  padding: 4px 12px; border-radius: 7px;
   border: 1px solid var(--queued);
   background: color-mix(in srgb, var(--queued) 14%, transparent);
   color: var(--queued);
   cursor: pointer;
   white-space: nowrap;
+  /* iter-uiux 2026-05-24 sync R2 (sync-003):mobile 收縮、避免擠掉 RunButton */
+  max-width: 100%;
+  flex-shrink: 1;
+  min-width: 0;
   transition: background 120ms, transform 80ms, box-shadow 120ms;
 }
 .sync-chip:hover {
@@ -54,6 +61,7 @@
 /* sync-chip 內的 icon-only 動作按鈕。icon 用 currentColor 著色,跟 chip 殼色語意一致 */
 .sync-chip-icon {
   margin-left: 6px;
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center;
   width: 22px; height: 22px;
   padding: 0;
@@ -70,6 +78,20 @@
 .sync-chip-icon:hover {
   background: color-mix(in srgb, currentColor 18%, transparent);
 }
+/* iter-uiux 2026-05-24 sync R2 (sync-001):touch hit-area expand to ≥40px,不撐 chip 視覺寬高 */
+.sync-chip-icon::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 10px;
+}
+/* iter-uiux 2026-05-24 sync R3 (sync-013):focus-visible 對齊 invisible hit area,
+   keyboard 使用者看到的 focus ring 涵蓋整個 hit target,不是 22px visual box */
+.sync-chip-icon:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 10px;
+  border-radius: 5px;
+}
 .sync-chip.sync-chip-conflict .sync-chip-icon.sync-chip-primary {
   background: var(--accent, #d4956d);
   color: var(--accent-fg, #fff);
@@ -82,4 +104,35 @@
 }
 .sync-chip-icon.sync-chip-primary:hover {
   filter: brightness(1.1);
+}
+/* iter-uiux 2026-05-24 sync R2 (sync-009):failed chip 內 dismiss(右側 X)降為 ghost 風,
+   避免「紅邊 + 紅 X glyph + 紅 retry + 紅 X dismiss」四重紅色擠在一個 chip */
+.sync-chip.sync-chip-failed .sync-chip-icon.sync-chip-ghost {
+  color: var(--fg-mute);
+  border-color: color-mix(in srgb, var(--fg-mute) 40%, transparent);
+}
+.sync-chip.sync-chip-failed .sync-chip-icon.sync-chip-ghost:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg-mute) 14%, transparent);
+}
+
+/* iter-uiux 2026-05-24 sync R2 (sync-011):dot loader 本地化,不再 reuse .qadr-thinking-dots
+   (避免 QA drawer 改 dot style 連帶影響 sync chip 視覺) */
+.sync-thinking-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.sync-thinking-dots span {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: sync-thinking-dot 1.2s infinite ease-in-out;
+}
+.sync-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.sync-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes sync-thinking-dot {
+  0%, 60%, 100% { opacity: 0.4; transform: scale(1); }
+  30%           { opacity: 1;   transform: scale(1.25); }
 }

@@ -102,7 +102,12 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             </div>
           )}
           {(state.descriptionRich || state.description) && (
-            <div id={descId} className="confirm-desc">
+            <div
+              id={descId}
+              className={
+                "confirm-desc" + (state.descriptionRich ? " confirm-desc--rich" : "")
+              }
+            >
               {state.descriptionRich ?? state.description}
             </div>
           )}
@@ -131,9 +136,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               onClick={() => close("confirm")}
               // biome-ignore lint/a11y/noAutofocus: 非 danger 預期立刻可以 Enter 確認,符合 UX 慣例
               autoFocus={!state.danger}
+              // iter-uiux-2026-05-24 confirm-dialog.standard r1 std-04 —
+              // 視覺 ↵ chip aria-hidden,鍵盤 / 螢幕閱讀器使用者要可讀的提示:
+              // 非 danger 時補 aria-keyshortcuts + sr-only "按 Enter 鍵確認" hint。
+              aria-keyshortcuts={!state.danger ? "Enter" : undefined}
             >
               {state.confirmLabel ?? "確認"}
-              {!state.danger && <span className="kbd-inline mono" aria-hidden="true">↵</span>}
+              {!state.danger && (
+                <>
+                  <span className="kbd-inline mono" aria-hidden="true">↵</span>
+                  <span className="sr-only">(按 Enter 鍵確認)</span>
+                </>
+              )}
             </button>
           </div>
         </Overlay>

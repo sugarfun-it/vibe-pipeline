@@ -37,6 +37,7 @@ export function Rail({
   draftPipelineIds?: Set<string>;
   sectionMenuItems?: RailMenuItem[];
 }) {
+  const isEmpty = !creating && pipelines.length === 0;
   return (
     <aside className={"rail" + (creating ? " is-creating" : "")} aria-label="Pipeline 列表">
       <div className="rail-section-header">
@@ -52,6 +53,12 @@ export function Rail({
           <button type="button" className="rail-add" onClick={onStartCreate}>
             <PlusIcon /> <span>{addLabel}</span>
           </button>
+        )}
+
+        {isEmpty && (
+          <p className="rail-empty-hint" role="note">
+            還沒有 pipeline。點上方<span className="mono">「+ {addLabel}」</span>建立第一條。
+          </p>
         )}
 
         <div
@@ -109,6 +116,8 @@ function RailItem({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       aria-label={ariaLabel}
+      aria-disabled={muted ? true : undefined}
+      tabIndex={muted ? -1 : undefined}
     >
       <div className="rail-item-row">
         <span className="rail-state-dot" aria-hidden="true" style={{ background: STATE_COLOR[p.state] }} />
@@ -187,6 +196,7 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
         open={open}
         onClose={() => setOpen(false)}
         placement="bottom-end"
+        offset={8}
         role="menu"
         ariaLabel="Rail section 操作"
         className="focus-overflow-menu rail-section-overflow-menu"
@@ -243,8 +253,10 @@ function railSecondary(p: Pipeline): string {
     if (last) return `⏸ #${last.n}${agoSuffix}`;
     return `暫停${agoSuffix}`;
   }
-  // planning(或未知 state):明確標「尚未執行」+ 更新時間,branch 跟 name 不同才補 branch
-  const planningAgo = ago ? `更新於 ${ago}` : "";
+  // planning(或未知 state):明確標「尚未執行」+ 更新時間,branch 跟 name 不同才補 branch。
+  // 沒 activity 時 fallback 到 createdAt(剛建好的 pipeline 也能顯示 "剛剛 / N 分鐘前"),避免
+  // 「idle 草稿 vs stale 草稿」在 rail 看起來一樣。
+  const planningAgo = ago ? `更新於 ${ago}` : (p.createdAt ? `建立於 ${fmtAgo(p.createdAt) || "剛剛"}` : "");
   if (branchSuffix !== p.name) {
     return planningAgo ? `⎇ ${branchSuffix} · ${planningAgo}` : `⎇ ${branchSuffix}`;
   }

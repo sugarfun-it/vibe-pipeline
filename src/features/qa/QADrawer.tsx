@@ -11,6 +11,7 @@ const FIRST_AI_OPTIONS = [
   "整理錯誤回報",
   "盤點可建立的需求單",
 ];
+const BOOTSTRAP_LABEL = "啟動需求整理";
 
 export function QADrawer({
   pipelineName,
@@ -166,43 +167,39 @@ export function QADrawer({
         </div>
 
         {pendingClose && (
-          <div
+          <section
             className="qadr-close-confirm"
-            role="alertdialog"
-            aria-modal="true"
-            aria-label="關閉確認"
-            style={{
-              padding: "12px 16px",
-              borderTop: "1px solid var(--border, rgba(0,0,0,0.1))",
-              borderBottom: "1px solid var(--border, rgba(0,0,0,0.1))",
-              background: "var(--surface-2, rgba(0,0,0,0.04))",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
+            role="group"
+            aria-labelledby="qadr-close-confirm-msg"
           >
-            <span style={{ flex: 1, minWidth: 220, fontSize: 13 }}>
-              輸入框還有未送出的內容,要關閉嗎?(草稿仍會保留,下次可接續)
-            </span>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setPendingClose(false)}
+            <p
+              id="qadr-close-confirm-msg"
+              className="qadr-close-confirm-msg"
+              role="status"
+              aria-live="polite"
             >
-              繼續編輯
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setPendingClose(false);
-                onClose();
-              }}
-            >
-              關閉並保留草稿
-            </button>
-          </div>
+              輸入框還有未送出的內容，要關閉嗎？（草稿仍會保留，下次可接續）
+            </p>
+            <div className="qadr-close-confirm-actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setPendingClose(false)}
+              >
+                繼續編輯
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setPendingClose(false);
+                  onClose();
+                }}
+              >
+                關閉並保留草稿
+              </button>
+            </div>
+          </section>
         )}
 
         {showReview ? (
@@ -220,23 +217,33 @@ export function QADrawer({
           <>
             {/* spec 5/5 齊但 user 在 chat(被 override 或 backend complete=false)→ 顯示「回最終預覽」橫條 */}
             {specComplete && !showReview && (
-              <div className="qadr-spec-ready-bar">
-                <span>規格已備齊，聊完想送出時：</span>
+              <div
+                className="qadr-spec-ready-bar"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="qadr-spec-ready-bar-text">
+                  規格已備齊，可隨時送出建立需求單。
+                </span>
                 <button
                   type="button"
-                  className="btn qadr-spec-ready-bar-btn"
+                  className="btn btn-primary qadr-spec-ready-bar-btn"
                   onClick={() => setViewOverride("review")}
                   disabled={busy}
                 >
-                  <ArrowRightIcon aria-hidden /> 回最終預覽
+                  <ArrowRightIcon aria-hidden focusable="false" />
+                  回最終預覽
                 </button>
               </div>
             )}
             <div className="drawer-body qadr-body" ref={transcriptRef}>
               {!draft && busy && (
-                <div className="qadr-loading mono">
-                  <span>啟動 QA session</span>
+                <div className="qadr-bootstrap" role="status" aria-live="polite">
                   <ThinkingDots />
+                  <span className="qadr-bootstrap-label">{BOOTSTRAP_LABEL}</span>
+                  <span className="qadr-bootstrap-sub">
+                    正在準備這次的需求對話，稍候即可開始描述。
+                  </span>
                 </div>
               )}
               {draft && (() => {
@@ -246,6 +253,12 @@ export function QADrawer({
                 const waitingForAI = lastTurn?.role === "user";
                 const showThinking = busy || waitingForAI;
                 const emptyTurns = draft.turns.length === 0;
+                const last = lastAiOptions(draft);
+                const showInlineMulti =
+                  !emptyTurns &&
+                  !showThinking &&
+                  last.mode === "multi" &&
+                  last.options.length > 0;
                 return (
                   <>
                     <Bubble kind="ai" message={FIRST_AI_MESSAGE} />
@@ -276,6 +289,13 @@ export function QADrawer({
                     {draft.turns.map((t) => (
                       <Bubble key={t.ts + ":" + t.role} kind={t.role} message={t.message} />
                     ))}
+                    {showInlineMulti && (
+                      <InlineMultiSelect
+                        options={last.options}
+                        busy={busy}
+                        onSendMulti={(picks) => onSendTurn(picks.join("、"))}
+                      />
+                    )}
                     {showThinking && (
                       <div className="qadr-loading mono">
                         <span>助理思考中</span>
@@ -286,54 +306,63 @@ export function QADrawer({
                 );
               })()}
             </div>
-            <div className="drawer-foot qadr-foot">
-              {/* spec 進度提示:防 AI 嘴砲「可以建 ticket」但實際還沒齊讓 user 困惑 */}
-              {draft?.spec && (() => {
-                const missing = FIELD_LABELS.filter((f) => {
-                  const v = draft.spec?.[f.key];
-                  if (v == null || v === "") return true;
-                  if (Array.isArray(v) && v.length === 0) return true;
-                  if (f.key === "mode") return v !== "step" && v !== "iter";
-                  return false;
-                });
-                if (missing.length === 0) return null;
-                const filled = FIELD_LABELS.length - missing.length;
-                return (
-                  <div className="qadr-progress mono" role="status" aria-live="polite">
-                    <span>規格 {filled}/{FIELD_LABELS.length} · 還差</span>
-                    {missing.map((m) => (
-                      <span key={m.key} className="qadr-progress-missing">
-                        {m.label}
-                      </span>
-                    ))}
-                  </div>
-                );
-              })()}
-              {(() => {
-                const last = lastAiOptions(draft);
-                // 首輪 options 已用 inline quickreply 呈現(緊鄰首條 AI bubble),composer 不重複
-                const isFirstTurn = !!draft && draft.turns.length === 0;
-                const composerOptions = isFirstTurn ? [] : last.options;
-                return (
-                  <Composer
-                    options={composerOptions}
-                    optionsMode={last.mode}
-                    busy={busy}
-                    onSend={(msg) => {
-                      // 不要在送訊息時清 forceChat — 那會在 backend 還沒處理完前讓 SpecReview
-                      // 用 disk 上 stale 的 complete=true 又跳出來。
-                      // user 想離開 chat 回最終預覽走專屬按鈕(SpecComplete 時顯出)。
-                      onSendTurn(msg);
-                    }}
-                    onCancel={onCancel}
-                    onTextChange={(v) => {
-                      composerTextRef.current = v;
-                    }}
-                    inputRef={composerInputRef}
-                  />
-                );
-              })()}
-            </div>
+            {/* bootstrap 階段(尚未有 draft)整個 footer 都收掉:沒 draft 沒有合法 input,
+                composer / cancel / hint 出現只會誤導 user 以為可輸入。等 startQA 回來才掛 footer。 */}
+            {draft && (
+              <div className="drawer-foot qadr-foot">
+                {/* spec 進度提示:防 AI 嘴砲「可以建 ticket」但實際還沒齊讓 user 困惑 */}
+                {draft.spec && (() => {
+                  const missing = FIELD_LABELS.filter((f) => {
+                    const v = draft.spec?.[f.key];
+                    if (v == null || v === "") return true;
+                    if (Array.isArray(v) && v.length === 0) return true;
+                    if (f.key === "mode") return v !== "step" && v !== "iter";
+                    return false;
+                  });
+                  if (missing.length === 0) return null;
+                  const filled = FIELD_LABELS.length - missing.length;
+                  return (
+                    <div className="qadr-progress mono" role="status" aria-live="polite">
+                      <span>規格 {filled}/{FIELD_LABELS.length} · 還差</span>
+                      {missing.map((m) => (
+                        <span key={m.key} className="qadr-progress-missing">
+                          {m.label}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
+                {(() => {
+                  const last = lastAiOptions(draft);
+                  const isFirstTurn = draft.turns.length === 0;
+                  // multi 模式 options 改 render 成 inline reply block(InlineMultiSelect)在對話脈絡內,
+                  // composer 只保留輸入列。mobile 不會再被 sticky footer 整組選項吃掉視野。
+                  // single 模式 options 維持塞在 footer(短 list 排在輸入上方;首輪也走 inline starter)。
+                  const composerOptions =
+                    isFirstTurn || last.mode === "multi" ? [] : last.options;
+                  // chat_thinking:last turn 是 user → AI 還在跑,把 textarea / send / options 一併鎖,
+                  // 避免 user 再連送一輪(對 backend 也沒意義,turnQA 還沒回來)
+                  const lastTurn = draft.turns[draft.turns.length - 1];
+                  const waitingForAI = lastTurn?.role === "user";
+                  const composerBusy = busy || waitingForAI;
+                  return (
+                    <Composer
+                      options={composerOptions}
+                      optionsMode={last.mode}
+                      busy={composerBusy}
+                      onSend={(msg) => {
+                        onSendTurn(msg);
+                      }}
+                      onCancel={onCancel}
+                      onTextChange={(v) => {
+                        composerTextRef.current = v;
+                      }}
+                      inputRef={composerInputRef}
+                    />
+                  );
+                })()}
+              </div>
+            )}
           </>
         )}
     </Overlay>
@@ -402,7 +431,7 @@ function SpecChecklist({ spec }: { spec: Partial<TicketSpec> | null }) {
               aria-label={`${f.label}（${isFilled ? "已填" : "未填"}）`}
               aria-pressed={isOpen}
               aria-expanded={isOpen}
-              aria-controls={isOpen ? panelId : undefined}
+              aria-controls={panelId}
               onClick={() => toggle(f.key)}
             >
               <span className="qadr-chip-dot" aria-hidden />
@@ -415,11 +444,16 @@ function SpecChecklist({ spec }: { spec: Partial<TicketSpec> | null }) {
         </span>
       </div>
       {expandedField && (
-        <div className="qadr-chip-panel" id={panelId} role="region" aria-label={expandedField.label}>
+        <div
+          className="qadr-chip-panel"
+          id={panelId}
+          role="region"
+          aria-label={`${expandedField.label}內容`}
+        >
           <div className="qadr-chip-panel-label mono">{expandedField.label}</div>
           <div className="qadr-chip-panel-value">
             {!filled(expandedField.key) ? (
-              <span className="qadr-chip-panel-empty">(未填)</span>
+              <span className="qadr-chip-panel-empty">（未填）</span>
             ) : Array.isArray(expandedValue) ? (
               <ul className="qadr-chip-panel-list">
                 {expandedValue.map((v) => (
@@ -457,6 +491,107 @@ function ThinkingDots() {
   );
 }
 
+function InlineMultiSelect({
+  options,
+  busy,
+  onSendMulti,
+}: {
+  options: string[];
+  busy: boolean;
+  onSendMulti: (picks: string[]) => void;
+}) {
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const sendBtnRef = useRef<HTMLButtonElement | null>(null);
+  const statusId = "qadr-inline-multi-status";
+  // 新 AI turn 出新 options → 重置上輪選擇,避免殘留勾選誤送
+  // biome-ignore lint/correctness/useExhaustiveDependencies: options is intentional reset trigger
+  useEffect(() => {
+    setPicked(new Set());
+  }, [options]);
+  // mobile:options 出現後 / user 改變勾選時,把送出按鈕滾進可視區,避免被 sticky footer 蓋住看不到主動作
+  // biome-ignore lint/correctness/useExhaustiveDependencies: picked.size 是觸發訊號
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      sendBtnRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [picked.size]);
+
+  function toggle(i: number) {
+    setPicked((s) => {
+      const next = new Set(s);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  function send() {
+    if (busy || picked.size === 0) return;
+    const chosen = Array.from(picked)
+      .sort((a, b) => a - b)
+      .map((i) => options[i]);
+    onSendMulti(chosen);
+    setPicked(new Set());
+  }
+
+  return (
+    <div className="qadr-inline-multi">
+      <div
+        className="qadr-options qadr-options-multi"
+        role="group"
+        aria-label="多選回覆選項"
+        aria-describedby={statusId}
+      >
+        {options.map((o, i) => {
+          const checked = picked.has(i);
+          return (
+            <button
+              key={o}
+              type="button"
+              role="checkbox"
+              aria-checked={checked}
+              className={
+                "btn qadr-option qadr-option-multi" + (checked ? " is-picked" : "")
+              }
+              onClick={() => toggle(i)}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  toggle(i);
+                }
+              }}
+              disabled={busy}
+            >
+              <span className="qadr-option-check" aria-hidden>
+                {checked ? <CheckIconSm /> : null}
+              </span>
+              <span>{o}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div
+        id={statusId}
+        role="status"
+        aria-live="polite"
+        className="qadr-multi-status mono"
+      >
+        {picked.size === 0 ? "尚未選擇任何選項" : `已選 ${picked.size} 項`}
+      </div>
+      <button
+        ref={sendBtnRef}
+        className="btn btn-primary qadr-multi-send"
+        onClick={send}
+        disabled={busy || picked.size === 0}
+        type="button"
+      >
+        送出已選（{picked.size}）
+      </button>
+    </div>
+  );
+}
+
 function Bubble({ kind, message }: { kind: "user" | "ai"; message: string }) {
   return (
     <div className={"qadr-bubble qadr-bubble-" + kind}>
@@ -484,19 +619,12 @@ function Composer({
   inputRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
 }) {
   const [text, setText] = useState("");
-  const [picked, setPicked] = useState<Set<number>>(new Set());
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const setTaRef = (el: HTMLTextAreaElement | null) => {
     taRef.current = el;
     if (inputRef) inputRef.current = el;
   };
   const taId = "qadr-composer-textarea";
-
-  // reset multi selection when options change (new AI turn)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: options is the intentional trigger; setPicked is stable
-  useEffect(() => {
-    setPicked(new Set());
-  }, [options]);
 
   function send(value: string) {
     const v = value.trim();
@@ -508,24 +636,8 @@ function Composer({
     if (taRef.current) taRef.current.style.height = "auto";
   }
 
-  function toggleMulti(i: number) {
-    setPicked((s) => {
-      const next = new Set(s);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
-      return next;
-    });
-  }
-
-  function sendMulti() {
-    if (busy || picked.size === 0) return;
-    const chosen = Array.from(picked)
-      .sort((a, b) => a - b)
-      .map((i) => options[i]);
-    onSend(chosen.join("、"));
-    setPicked(new Set());
-  }
-
+  // multi 模式 options 已由 InlineMultiSelect 在 body 內 inline 渲染,不再走 Composer。
+  // Composer 只負責 single quickreply chips + textarea + send + cancel-link。
   return (
     <div className="qadr-composer">
       {options.length > 0 && optionsMode === "single" && (
@@ -541,36 +653,6 @@ function Composer({
             </button>
           ))}
         </div>
-      )}
-      {options.length > 0 && optionsMode === "multi" && (
-        <>
-          <div className="qadr-options qadr-options-multi">
-            {options.map((o, i) => (
-              <button
-                key={o}
-                type="button"
-                className={
-                  "btn qadr-option qadr-option-multi" + (picked.has(i) ? " is-picked" : "")
-                }
-                onClick={() => toggleMulti(i)}
-                disabled={busy}
-              >
-                <span className="qadr-option-check" aria-hidden>
-                  {picked.has(i) ? <CheckIconSm /> : null}
-                </span>
-                <span>{o}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            className="btn btn-primary qadr-multi-send"
-            onClick={sendMulti}
-            disabled={busy || picked.size === 0}
-            type="button"
-          >
-            送出已選 ({picked.size})
-          </button>
-        </>
       )}
       <div className="qadr-composer-row">
         <label
@@ -664,23 +746,33 @@ function SpecReview({
   onResumeChat?: () => void;
 }) {
   const [edited, setEdited] = useState<TicketSpec>(spec);
-  // 預設「拆」(若 AI 提案了);user 可 toggle 改成保留 1 張
+  // 預設「不拆」:拆分=高影響動作(直接變 N 張需求單),不該偷偷預設選上;
+  // user 看完 AI 拆分提案、確認想拆才主動勾。否則一鍵送出可能不知不覺多 N 張 ticket。
   const hasSplit = Array.isArray(splitInto) && splitInto.length >= 2;
-  const [useSplit, setUseSplit] = useState<boolean>(hasSplit);
+  const [useSplit, setUseSplit] = useState<boolean>(false);
 
   return (
     <div className="qadr-spec">
       <div className="qadr-spec-head mono">最終預覽 — 微調後送出建立需求單。</div>
       {hasSplit && (
-        <div className="qadr-split-proposal">
-          <div className="qadr-split-title mono">
-            <strong>AI 評估這需求單範圍橫跨 {splitInto!.length} 件獨立工作</strong>
-          </div>
+        <section
+          className="qadr-split-proposal"
+          aria-labelledby="qadr-split-title"
+        >
+          <header className="qadr-split-header">
+            <h3 id="qadr-split-title" className="qadr-split-title">
+              助理評估這張需求單範圍橫跨 {splitInto!.length} 件獨立工作
+            </h3>
+            <p className="qadr-split-subtitle">
+              若拆分送出，會建立 {splitInto!.length} 張獨立需求單分別執行；
+              若不拆分，以下方單張 spec 為準。
+            </p>
+          </header>
           <ol className="qadr-split-list">
             {splitInto!.map((s, i) => (
-              <li key={i}>
+              <li key={i} className="qadr-split-item">
                 <span className="qadr-split-num mono">#{i + 1}</span>
-                <span>{s.title}</span>
+                <span className="qadr-split-item-title">{s.title}</span>
                 <span className={"chip ticket-mode qadr-split-mode-chip" + (s.mode === "iter" ? " is-iter" : "")}>
                   {s.mode === "iter" ? "迭代" : "單次"}
                 </span>
@@ -694,10 +786,15 @@ function SpecReview({
                 checked={useSplit}
                 onChange={(e) => setUseSplit(e.target.checked)}
               />
-              送出時拆成 {splitInto!.length} 張獨立需求單(取消勾選 = 合 1 張下方 spec)
+              <span>
+                <strong>送出時拆成 {splitInto!.length} 張獨立需求單</strong>
+                <span className="qadr-split-toggle-hint">
+                  （取消勾選 = 合 1 張下方 spec）
+                </span>
+              </span>
             </label>
           </div>
-        </div>
+        </section>
       )}
       <Field label="標題">
         <input
@@ -754,7 +851,7 @@ function SpecReview({
       </Field>
       {edited.mode === "iter" && (
         <>
-          <Field label="iter 上限輪數">
+          <Field label="迭代上限輪數">
             <input
               className="qadr-input qadr-iter-limit-input"
               type="number"

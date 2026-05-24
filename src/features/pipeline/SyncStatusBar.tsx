@@ -35,8 +35,8 @@ export function SyncStatusBar({
         className="sync-chip"
         title={
           pipelineBusy
-            ? `落後 ${pipeline.baseBranch || "base"} ${behindFallback} commit(pipeline 在跑,等停止後或 ready 才能 sync)`
-            : `落後 ${pipeline.baseBranch || "base"} ${behindFallback} commit · 點擊先試 git merge,衝突才呼叫 AI`
+            ? `落後 ${pipeline.baseBranch || "base"} ${behindFallback} 個 commit(pipeline 在跑,等停止後或 ready 才能同步)`
+            : `落後 ${pipeline.baseBranch || "base"} ${behindFallback} 個 commit · 點擊先試合併,衝突才呼叫助理`
         }
         disabled={pipelineBusy}
         onClick={onStart}
@@ -47,17 +47,19 @@ export function SyncStatusBar({
     );
   }
 
-  // 有 syncJob → 依 state 渲染
+  // 有 syncJob → 依 state 渲染。busy / 結果類 chip 加 role+aria-live,讓螢幕閱讀器知道狀態改變
   if (j.state === "merging") {
     return (
       <span
         className="sync-chip sync-chip-busy"
-        title={`git merge ${pipeline.baseBranch || "base"} 進行中(落後 ${j.behindCount} commits)`}
+        role="status"
+        aria-live="polite"
+        title={`合併 ${pipeline.baseBranch || "base"} 進行中(落後 ${j.behindCount} 個 commit)`}
       >
-        <span className="qadr-thinking-dots">
+        <span className="sync-thinking-dots" aria-hidden>
           <span /><span /><span />
         </span>
-        {" "}同步中… git merge
+        {" "}同步中
       </span>
     );
   }
@@ -66,20 +68,22 @@ export function SyncStatusBar({
     const files = j.conflictFiles ?? [];
     const n = files.length;
     const tipPreview = files.slice(0, 8).join("\n");
-    const tipMore = files.length > 8 ? `\n…還有 ${files.length - 8} 檔` : "";
+    const tipMore = files.length > 8 ? `\n…還有 ${files.length - 8} 個檔案` : "";
     return (
       <span
         className="sync-chip sync-chip-conflict"
-        title={`遇衝突 ${n} 檔(落後 ${j.behindCount} commits):\n${tipPreview}${tipMore}\n\n按 ✓ 讓 AI 解 / ✕ 跳過(abort merge)`}
+        role="status"
+        aria-live="polite"
+        title={`等待處理衝突 ${n} 個檔案(落後 ${j.behindCount} 個 commit):\n${tipPreview}${tipMore}\n\n按 ✓ 交給助理 / ✕ 取消並中止合併`}
       >
         <span className="sync-chip-arrow" aria-hidden>!</span>
-        遇衝突({n} 檔)
+        等待處理衝突（{n} 個檔案）
         <button
           type="button"
           className="sync-chip-icon sync-chip-primary"
           onClick={onConfirmAi}
-          title="讓 AI 解"
-          aria-label="讓 AI 解"
+          title="交給助理解衝突"
+          aria-label="交給助理解衝突"
         >
           <CheckIconSm />
         </button>
@@ -87,8 +91,8 @@ export function SyncStatusBar({
           type="button"
           className="sync-chip-icon"
           onClick={onCancel}
-          title="跳過(abort merge)"
-          aria-label="跳過"
+          title="取消並中止合併"
+          aria-label="取消並中止合併"
         >
           <CloseIcon />
         </button>
@@ -101,22 +105,27 @@ export function SyncStatusBar({
     void tick;
     const files = j.conflictFiles ?? [];
     const tipPreview = files.slice(0, 8).join("\n");
-    const tipMore = files.length > 8 ? `\n…還有 ${files.length - 8} 檔` : "";
+    const tipMore = files.length > 8 ? `\n…還有 ${files.length - 8} 個檔案` : "";
     return (
       <span
         className="sync-chip sync-chip-busy"
-        title={`AI 解衝突中 · ${fmtElapsed(elapsedSec)} elapsed\n衝突檔(${files.length}):\n${tipPreview}${tipMore}`}
+        // role=status 公告「助理處理中」狀態進入(polite);elapsed 秒數放 aria-hidden span,
+        // 不會每秒被 SR 反覆讀。aria-label 只描述狀態本身,不帶 ticking number。
+        role="status"
+        aria-live="polite"
+        aria-label="助理處理中"
+        title={`助理處理中 · 已歷時 ${fmtElapsed(elapsedSec)}\n衝突檔(${files.length}):\n${tipPreview}${tipMore}`}
       >
-        <span className="qadr-thinking-dots">
+        <span className="sync-thinking-dots" aria-hidden>
           <span /><span /><span />
         </span>
-        {" "}AI 解衝突 · {fmtElapsed(elapsedSec)}
+        {" "}助理處理中 · <span aria-hidden>{fmtElapsed(elapsedSec)}</span>
         <button
           type="button"
           className="sync-chip-icon"
           onClick={onCancel}
           title="取消"
-          aria-label="取消"
+          aria-label="取消助理處理"
         >
           <CloseIcon />
         </button>
@@ -126,13 +135,15 @@ export function SyncStatusBar({
 
   if (j.state === "failed") {
     const files = j.conflictFiles ?? [];
-    const tipPreview = files.length > 0 ? `\n衝突檔(${files.length}):\n${files.slice(0, 8).join("\n")}${files.length > 8 ? `\n…還有 ${files.length - 8} 檔` : ""}` : "";
+    const tipPreview = files.length > 0 ? `\n衝突檔(${files.length}):\n${files.slice(0, 8).join("\n")}${files.length > 8 ? `\n…還有 ${files.length - 8} 個檔案` : ""}` : "";
     // reason 可能是 AI raw stdout(幾百字),截短避免 tooltip 爆炸
     const shortReason = (j.reason || "(未知)").slice(0, 200);
     return (
       <span
         className="sync-chip sync-chip-failed"
-        title={`同步失敗(落後 ${j.behindCount} commits)\n原因:${shortReason}${tipPreview}`}
+        role="status"
+        aria-live="polite"
+        title={`同步失敗(落後 ${j.behindCount} 個 commit)\n原因:${shortReason}${tipPreview}`}
       >
         <span className="sync-chip-arrow" aria-hidden>✕</span>
         同步失敗
@@ -140,17 +151,17 @@ export function SyncStatusBar({
           type="button"
           className="sync-chip-icon sync-chip-primary"
           onClick={onStart}
-          title="重試"
-          aria-label="重試"
+          title="重試同步"
+          aria-label="重試同步"
         >
           <RefreshIcon />
         </button>
         <button
           type="button"
-          className="sync-chip-icon"
+          className="sync-chip-icon sync-chip-ghost"
           onClick={onDismiss}
           title="關"
-          aria-label="關"
+          aria-label="關閉同步失敗提示"
         >
           <CloseIcon />
         </button>
@@ -162,10 +173,15 @@ export function SyncStatusBar({
   const doneTitle = j.mergeCommit
     ? `同步完成(merge commit ${j.mergeCommit.hash.slice(0, 7)})\n${j.mergeCommit.subject}`
     : j.behindCount > 0
-    ? `同步完成(整合 ${j.behindCount} commits)`
+    ? `同步完成(整合 ${j.behindCount} 個 commit)`
     : "已是最新,無需同步";
   return (
-    <span className="sync-chip sync-chip-done" title={doneTitle}>
+    <span
+      className="sync-chip sync-chip-done"
+      role="status"
+      aria-live="polite"
+      title={doneTitle}
+    >
       <span className="sync-chip-arrow" aria-hidden>✓</span>
       已同步
       <button
@@ -173,7 +189,7 @@ export function SyncStatusBar({
         className="sync-chip-icon"
         onClick={onDismiss}
         title="關"
-        aria-label="關"
+        aria-label="關閉同步完成提示"
       >
         <CloseIcon />
       </button>

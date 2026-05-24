@@ -32,7 +32,7 @@ export function InitPopup({
       const next = await api.init(p.hash);
       onInitialized(next);
     } catch (e) {
-      toast(`初始化失敗:${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
+      toast(`初始化失敗：${e instanceof Error ? e.message : String(e)}`, { variant: "danger" });
       throw e;
     }
   });
@@ -59,14 +59,14 @@ export function InitPopup({
             <span className="init-dim">這個專案還沒初始化</span>
           </div>
           <div className="init-scan-path">{project.path}</div>
-          <div className="init-scan-miss">
+          <div className="init-scan-miss" role="listitem" aria-label="缺少 .vibe-pipeline 目錄">
             <span className="init-icon-accent" aria-hidden><CloseIcon /></span>{" "}
             找不到 <code className="init-inline-code">.vibe-pipeline/</code>
           </div>
           {!project.hasGit && (
-            <div className="init-scan-miss">
+            <div className="init-scan-miss" role="listitem" aria-label="缺少 .git 目錄，runner 階段需要">
               <span className="init-icon-accent" aria-hidden><CloseIcon /></span>{" "}
-              找不到 <code className="init-inline-code">.git/</code>（runner 階段需要）
+              找不到 <span className="init-scan-miss-tail"><code className="init-inline-code">.git/</code><span className="init-scan-miss-note">（runner 階段需要）</span></span>
             </div>
           )}
         </div>
@@ -74,7 +74,7 @@ export function InitPopup({
 
       <div className="init-body">
         <h1 id={titleId} className="init-title">
-          要在這個專案初始化 <span className="init-h1-nowrap">vibe-pipeline</span> 嗎?
+          要在這個專案初始化 <span className="init-h1-nowrap">vibe-pipeline</span> 嗎？
         </h1>
         <p id={descId} className="init-desc">
           在 <code className="init-inline-code">{project.name}</code> 底下建立 <code className="init-inline-code">.vibe-pipeline/</code> 和必須的專案層級設定。

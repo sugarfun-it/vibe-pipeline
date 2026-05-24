@@ -172,24 +172,40 @@
   border-color: var(--accent);
 }
 
-/* inline AI 拆分確認卡 — 取代彈 popup,在 footer 內直接展開 */
+/* inline AI 拆分確認卡 — 取代彈 popup,在 footer 內直接展開。
+   TDRW-SPLIT-VISUAL-001 / DESIGN-001:用 warning surface(soft warning bg + 左 border + icon)
+   把它跟一般 footer / accent 視覺拉開,符合「會取代原 ticket」的不可逆 / 高風險語意。 */
 .tdrw-split-confirm {
-  background: color-mix(in srgb, var(--accent) 6%, var(--bg-elevated));
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 8%, var(--bg-elevated)));
+  border-left: 3px solid color-mix(in srgb, var(--failed) 55%, transparent);
   animation: tdrw-split-confirm-in 160ms ease-out;
 }
 @keyframes tdrw-split-confirm-in {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* TDRW-SPLIT-STRUCT-001:title 前加 scissors icon,讓「我現在在做什麼」有狀態錨點 */
+.tdrw-split-confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.tdrw-split-confirm-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--failed);
+  flex: 0 0 auto;
+}
 .tdrw-split-confirm-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--fg);
-  margin-bottom: 6px;
+  margin: 0;
 }
 .tdrw-split-confirm-desc {
   font-size: 12px;
-  color: var(--fg-mute);
+  color: var(--fg);
   line-height: 1.55;
   margin-bottom: 10px;
 }
@@ -200,6 +216,12 @@
 .tdrw-split-confirm-actions .tdrw-action {
   flex: none;
   padding: 6px 14px;
+}
+/* TDRW-SPLIT-INTERACTION-001:確認按鈕用 danger tone(.tdrw-action-danger 已定義),
+   但 inline-flex 內保留 margin-left:auto 在 footer 排版時不適用 — confirm-actions 自己 gap 排,
+   不要拉到尾端;reset 用 .tdrw-split-confirm-cta 個別 override */
+.tdrw-split-confirm .tdrw-split-confirm-cta {
+  margin-left: 0;
 }
 
 /* AI 拆分中 inline 狀態 — footer 內 */
@@ -268,11 +290,17 @@
   border-radius: var(--radius-control, 6px);
 }
 
-/* mode chip 在 drawer 內 — 可切換時加更明確 affordance(hover 變色 + focus 環),不可切時去掉 cursor */
+/* mode chip 在 drawer 內 — 可切換時加更明確 affordance(hover 變色 + focus 環),不可切時去掉 cursor。
+   TDRW-SPEC-004:預設用 neutral outline,hover/focus 才上 accent,
+   避免 status pill 的主狀態被 mode chip 的紫色搶走視覺權重 */
 .tdrw-drawer .tdrw-meta-chip.is-toggle,
 .tdrw-drawer .ticket-mode.is-toggle {
   cursor: pointer;
   transition: background 120ms, border-color 120ms, color 120ms;
+  background: transparent;
+  color: var(--fg-mute);
+  border-style: dashed;
+  border-color: var(--line-2);
 }
 .tdrw-drawer .tdrw-meta-chip.is-toggle:hover,
 .tdrw-drawer .ticket-mode.is-toggle:hover {
@@ -358,6 +386,74 @@
 .tdrw-empty {
   color: var(--fg-faint);
   font-style: italic;
+}
+
+/* history-empty-012 round 3 (2026-05-24):drawer meta 第二行 scope hint 從 PipelineHistoryDrawer 內 inline
+   style 移到 class,維護設計系統一致性。 */
+.pipeline-history-scope {
+  color: var(--fg-mute);
+  font-size: 12px;
+  margin-top: 2px;
+  font-family: inherit;
+}
+
+/* history-audit-010 round 5 (2026-05-24):drawer body 頂部 1 行 summary,顯示「目前狀態 + 最後一次變動」,
+   user 不必往下捲就能回答「為何現在是這個狀態」。視覺輕量(背景 panel-2 + 1px line),
+   不搶 RunHistory 主體 spotlight。 */
+.pipeline-history-top-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2, 8px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card, 8px);
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  font-size: 12.5px;
+  margin-bottom: var(--space-3, 12px);
+}
+.pipeline-history-top-summary-label {
+  color: var(--fg-faint);
+}
+.pipeline-history-top-summary-state {
+  color: var(--fg);
+  font-weight: 500;
+}
+.pipeline-history-top-summary-sep {
+  margin-right: var(--space-1, 4px);
+  color: var(--fg-faint);
+}
+.pipeline-history-top-summary-reason {
+  color: var(--fg-mute);
+}
+
+/* hist-empty-001 (2026-05-24):RunHistory empty state 升級為 2 段式 — 標題正常字重,輔助說明次要色;
+   解 user 一眼分不出「沒紀錄 / 載入失敗 / 篩選空」的痛點。auditTimeline 內也有對偶 .audit-empty-state。
+   round 3:加 .rh-empty-actions 行動列(關閉抽屜 = 把焦點放回 RunButton),解死路問題。 */
+.rh-empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  padding: var(--space-3, 12px) 0 var(--space-4, 16px);
+  align-items: flex-start;
+}
+.rh-empty-state .rh-empty-title {
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+}
+.rh-empty-state .rh-empty-hint {
+  color: var(--fg-mute);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.rh-empty-state .rh-empty-actions {
+  margin-top: var(--space-2, 8px);
+}
+.rh-empty-state .rh-empty-cta {
+  font-size: 12.5px;
+  padding: 6px 12px;
 }
 .tdrw-list {
   margin: 0;
@@ -792,11 +888,42 @@
   color: var(--fg-mute);
 }
 
-/* IterLimitField wrapper span */
+/* IterLimitField wrapper span — TD-ITER-INVALID-003 / 007 / 008:
+   muted label / unit 改 class(不再用 inline style),
+   wrap 用 inline-flex 不換行,error 訊息掛在 NumberField 的 form-hint 上(.tdrw-iter-limit-field gap=2),
+   error 顯時 wrap baseline 對齊 input,error 行不擾亂整個 status row baseline */
 .tdrw-iter-limit-wrap {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+.tdrw-iter-limit-label,
+.tdrw-iter-limit-unit {
+  color: var(--fg-mute);
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* invalid 狀態 wrap 加微 highlight(讓整個 cluster 一眼看出哪個 control 出錯,
+   不只靠 input border) */
+.tdrw-iter-limit-wrap.is-invalid .tdrw-iter-limit-label,
+.tdrw-iter-limit-wrap.is-invalid .tdrw-iter-limit-unit {
+  color: var(--failed);
+}
+@media (max-width: 720px) {
+  /* TD-ITER-INVALID-003:窄寬度下把 label / input / unit 排第一行,error 文字落到全寬第二行,
+     不再把整個 status row baseline 撐爛 */
+  .tdrw-iter-limit-wrap {
+    flex-wrap: wrap;
+    column-gap: 4px;
+    row-gap: 2px;
+  }
+  .tdrw-iter-limit-field {
+    flex: 1 1 auto;
+  }
+  .tdrw-iter-limit-field .form-hint {
+    flex-basis: 100%;
+    white-space: normal;
+  }
 }
 
 /* critic feedback 空值 placeholder */
@@ -874,12 +1001,14 @@
   flex-direction: column;
   gap: 4px;
 }
+/* ticket-drawer-003:done outcome 下 commit row 不該長得像 warning / pending —
+   原本 panel-2(暖米色)看起來警示;改 neutral bg-elevated,跟 ticket card 主 surface 對齊 */
 .tdrw-commit {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   padding: 6px 10px;
-  background: var(--panel-2);
+  background: var(--bg-elevated);
   border: 1px solid var(--line);
   border-radius: 4px;
   font-size: 12px;
@@ -889,16 +1018,22 @@
   color: var(--accent, var(--running));
   font-size: 11px;
 }
-/* button 形式 — 按下複製。保留 hash text 樣式 */
+/* button 形式 — 按下複製。保留 hash text 樣式。
+   TD-COPY-005:觸控目標補大:desktop ≥ 32 高,mobile ≥ 36 高 + ≥ 44 寬,確保不只是文字 pill */
 .tdrw-commit-hash-btn {
   background: transparent;
   border: 1px dashed transparent;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 4px 8px;
+  border-radius: 4px;
   cursor: pointer;
   text-align: left;
   font-family: var(--font-mono);
   transition: background 100ms, border-color 100ms;
+  min-height: 32px;
+  min-width: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 .tdrw-commit-hash-btn:hover {
   background: color-mix(in srgb, var(--accent, var(--running)) 14%, transparent);
@@ -924,11 +1059,17 @@
 @media (max-width: 767.98px) {
   /* Stage / drawer mobile sizing inherited from shared drawer.css.
      Ticket-only mobile rules below. */
-  /* TDRW-RWD-001:sticky footer 約 56-64px(action 32px + padding 12*2),
-     mobile body padding-bottom 留出 footer clearance + safe-area;
-     原本只 16px,prompt 展開鈕 / AuditTimeline toggle 會被 footer 蓋住 */
+  /* TDRW-RWD-001 / ticket-drawer-001 / ticket-drawer-005 / TD-COPY-002:
+     sticky footer 約 56-64px,mobile body padding-bottom 從 80 → 112 給最後一列 breathing room
+     (commit row / AuditTimeline toggle 才不會視覺貼齊 footer);safe-area 額外加 */
   .tdrw-body {
-    padding: 12px 16px calc(80px + env(safe-area-inset-bottom));
+    padding: 12px 16px calc(112px + env(safe-area-inset-bottom));
+  }
+  /* TDRW-SPLIT-RWD-001:split-confirm footer 比一般 actions 高出 ~120px
+     (head + desc + actions stack),body clearance 必須加碼,
+     否則 prompt 折疊預覽 / AuditTimeline toggle 在 confirm 出現時會被擋 */
+  .tdrw-drawer.has-split-confirm .tdrw-body {
+    padding-bottom: calc(240px + env(safe-area-inset-bottom));
   }
 
   .tdrw-split-confirm-actions {
@@ -972,15 +1113,18 @@
   white-space: nowrap;
 }
 
-/* 折疊式 prompt — 預設 max-height + fade,展開後恢復 */
+/* 折疊式 prompt — 預設 max-height + fade,展開後恢復。
+   TDRW-PROMPT-003:max-height 響應式 — mobile 縮到 ~12 行,desktop 維持 ~14 行,
+   太高的 collapsed 預覽會讓 toggle 推到 viewport 外。
+   TDRW-PROMPT-002:fade end color 用 panel-2(跟 prompt-md bg 同 token),不會在 dark mode 看起來像方塊 */
 .tdrw-prompt-collapse {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .tdrw-prompt-md.is-collapsed {
   position: relative;
-  max-height: 360px;
+  max-height: 22em;
   overflow: hidden;
 }
 .tdrw-prompt-fade {
@@ -988,60 +1132,73 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 64px;
+  height: 5em;
+  /* 從 prompt-md 自己的背景(panel-2)漸出,避免主題切換時 fade end color 不匹配 */
   background: linear-gradient(to bottom, transparent, var(--panel-2));
   pointer-events: none;
 }
+@media (max-width: 720px) {
+  .tdrw-prompt-md.is-collapsed { max-height: 14em; }
+  .tdrw-prompt-fade { height: 4em; }
+}
+/* TDRW-PROMPT-005:toggle 一階提升 — 高度對齊 control token、padding 加大、font 改 sans
+   (跟其他 button 系統一致;mono 留給 hash / branch / dur 等 machine value) */
 .tdrw-prompt-toggle {
   align-self: flex-start;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  font-weight: 500;
+  font-family: var(--font-sans, inherit);
+  font-size: 12px;
+  font-weight: 600;
   color: var(--accent);
   background: transparent;
   border: 1px solid var(--line-2);
-  padding: 4px 10px;
-  border-radius: 5px;
+  min-height: var(--control-h, 32px);
+  padding: 4px 14px;
+  border-radius: var(--radius-control, 6px);
   cursor: pointer;
   transition: background 120ms, border-color 120ms;
 }
 .tdrw-prompt-toggle:hover {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   border-color: var(--accent);
 }
 .tdrw-prompt-toggle:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
-/* commit hash 複製成功 chip — position:absolute 浮層,不擠進 row width(原本 inline 會推走 subject) */
+/* commit hash 複製成功 chip — position:absolute 浮層。
+   TD-COPY-001:不再 left:100% 蓋住 subject(或撐字面看起來像 hash 被改寫),改 bottom:100% 浮在 button 上方,
+   水平靠左對齊 hash 起點;按鈕本身 .is-copied 同時改 border + bg 提供雙重視覺訊號(chip 浮上 + button 變綠) */
 .tdrw-commit-hash-btn {
   position: relative;
 }
 .tdrw-commit-copied {
   position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 6px;
+  left: 0;
+  bottom: calc(100% + 4px);
   font-size: 10px;
   font-family: var(--font-sans, inherit);
+  font-weight: 600;
   color: var(--done);
-  background: color-mix(in srgb, var(--done) 16%, transparent);
-  padding: 1px 5px;
+  background: color-mix(in srgb, var(--done) 16%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--done) 35%, var(--line));
+  padding: 2px 6px;
   border-radius: 3px;
   letter-spacing: 0.04em;
   opacity: 0;
+  transform: translateY(2px);
   pointer-events: none;
-  transition: opacity 120ms;
+  transition: opacity 120ms, transform 120ms;
   white-space: nowrap;
-  z-index: 1;
+  z-index: 2;
 }
 .tdrw-commit-copied[data-visible] {
   opacity: 1;
+  transform: translateY(0);
 }
 .tdrw-commit-hash-btn.is-copied {
-  border-color: color-mix(in srgb, var(--done) 35%, var(--line));
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+  background: color-mix(in srgb, var(--done) 8%, transparent);
 }
 
 /* AuditTimeline:排序提示 — 「最新在上」放在列表頂端,讓 user 不用猜 chronological 方向 */
@@ -1124,7 +1281,15 @@
     margin: 0;
     background: transparent;
     padding-inline: var(--space-2, 8px);
+    /* TD-ITER-INVALID-006:mobile icon-only 觸控目標 ≥ 44×44 */
     min-width: 44px;
+    min-height: 44px;
+  }
+  /* TD-COPY-005 r4:mobile hash button 提升到 44×44 觸控目標(reviewer 強制達標)*/
+  .tdrw-commit-hash-btn {
+    min-height: 44px;
+    min-width: 72px;
+    padding: 8px 12px;
   }
   .tdrw-delete-icon .tdrw-delete-icon-label {
     /* mobile 只剩 trash icon,文字 sr-only */

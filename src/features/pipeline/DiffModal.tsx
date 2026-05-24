@@ -28,8 +28,13 @@ export function DiffModal({
   const [activeFile, setActiveFile] = useState<string | null>(null);
   // fetch reload token — 「重新讀取」按鈕 +1 觸發 effect 重跑
   const [reloadToken, setReloadToken] = useState(0);
-  // 「複製 diff」短暫回饋
-  const { copied, flash: flashCopied } = useCopiedFeedback();
+  // 「複製 diff」短暫回饋。原本 1.5s,mobile 一眼瞄回 diff body 就消失(issue copied-interaction-001);
+  // 拉到 2.2s 留足 glance window。
+  const { copied, flash: flashCopied } = useCopiedFeedback(2200);
+  // 把 user-facing humanized message 也存進 state,err block 才能直接顯示而非只靠 toast(error-001 / error-002 / error-003)
+  const [errMsg, setErrMsg] = useState<{ user: string; tech: string } | null>(null);
+  // 等待超過 ~4s 切換 copy 成「仍在讀取…」— 給 user 一個「沒當機」訊號(interaction-loading-002)
+  const [longWait, setLongWait] = useState(false);
   const titleId = useId();
   const branchId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +44,11 @@ export function DiffModal({
     let cancelled = false;
     setDiff(null);
     setLoadFailed(false);
+    setErrMsg(null);
+    setLongWait(false);
+    const longWaitTimer = setTimeout(() => {
+      if (!cancelled) setLongWait(true);
+    }, 4000);
     api
       .getFullDiff(projectHash, pipelineId)
       .then((d) => {
@@ -47,12 +57,14 @@ export function DiffModal({
       .catch((e: Error) => {
         if (cancelled) return;
         setLoadFailed(true);
-        // 拆 user msg + tech detail,只把 user msg 經過 humanize 後丟 toast;tech detail 略過
+        // 拆 user msg + tech detail。modal 內顯示 user msg(辨識度高 → user 不用追 toast),tech 折疊在 details
+        // (error-001 / error-004)。toast 不再開以避免雙 alert 同時宣告(error-002 / error-003)。
         const parts = parseErrorMessage(e.message);
-        toast(`讀取差異失敗:${humanizeUserMsg(parts.userMsg)}`, { variant: "danger" });
+        setErrMsg({ user: humanizeUserMsg(parts.userMsg), tech: parts.techDetail });
       });
     return () => {
       cancelled = true;
+      clearTimeout(longWaitTimer);
     };
   }, [projectHash, pipelineId, reloadToken, toast]);
 
@@ -68,6 +80,15 @@ export function DiffModal({
       scroller.scrollTo({ top: offset, behavior: "smooth" });
     }
   }
+
+  // 把 aria-busy 直接打在 dialog surface 上 — SR 一打開就知道內容尚未 ready(a11y-loading-001)。
+  // 不在 Overlay 元件加 prop 避免改動 cross-component scaffold(scope 控在本檔)。
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (!diff && !loadFailed) el.setAttribute("aria-busy", "true");
+    else el.removeAttribute("aria-busy");
+  }, [diff, loadFailed]);
 
   // 載入後尚未點任何 file,顯示第一個檔案為 active(scroll position 預設在頂端,跟 UI 一致)。
   useEffect(() => {
@@ -118,6 +139,11 @@ export function DiffModal({
 
   // Overlay portal=true(預設):跳出 ReadyBanner 的 transform containing block(.fade-up 會困住 position:fixed)
   // initialFocus="close":優先 focus close button(stable selector);loading 時 close 仍是第一個可互動元素。
+  // is-terminal-state:loading / empty / error 三個 terminal state 加 class,讓 CSS 收縮 modal 尺寸,
+  // 不再「整片大白底配一行訊息」(rwd-loading-001 / rwd-empty-001 / visual-empty-001 / error-005 / error-006)。
+  const isLoading = !diff && !loadFailed;
+  const isEmpty = !!diff && diff.files.length === 0;
+  const isTerminal = isLoading || isEmpty || loadFailed;
   return (
     <Overlay
       onRequestClose={onClose}
@@ -126,14 +152,23 @@ export function DiffModal({
       initialFocus="close"
       stageClassName="drawer-stage--modal diff-modal-stage"
       scrimClassName="diff-modal-scrim"
-      surfaceClassName="drawer--modal diff-modal fade-up"
+      surfaceClassName={"drawer--modal diff-modal fade-up" + (isTerminal ? " is-terminal-state" : "")}
       surfaceRef={dialogRef}
     >
         <div className="drawer-head diff-modal-head">
           <div className="diff-modal-title">
             <span id={titleId} className="diff-modal-title-label">差異總覽</span>
-            <span id={branchId} className="diff-modal-branch mono" title={`${pipelineBranch} → ${baseBranch}`}>
-              {pipelineBranch} <span aria-hidden><ArrowRightIcon /></span> {baseBranch}
+            {/* aria-label 把 arrow icon 的「對比」語意補回來(SR 不讀 aria-hidden 的 icon)
+                + 把 base branch 段獨立 wrap 給 CSS 用,讓 mobile branch 截斷時 base 永遠看得到(rwd-008 / copy-002 / a11y-title-001)。 */}
+            <span
+              id={branchId}
+              className="diff-modal-branch mono"
+              title={`${pipelineBranch} → ${baseBranch}`}
+              aria-label={`${pipelineBranch} 對比 ${baseBranch}`}
+            >
+              <span className="diff-modal-branch-head">{pipelineBranch}</span>
+              <span aria-hidden className="diff-modal-branch-arrow"><ArrowRightIcon /></span>
+              <span className="diff-modal-branch-base">{baseBranch}</span>
             </span>
           </div>
           {diff && (
@@ -151,10 +186,10 @@ export function DiffModal({
             {diff && diff.files.length > 0 && (
               <button
                 type="button"
-                className="diff-modal-copy"
-                aria-live="polite"
+                className={"diff-modal-copy" + (copied ? " is-copied" : "")}
                 onClick={() => {
-                  // 直接複製 server 回傳的原始 git diff,維持完整可貼回 patch 工具
+                  // 直接複製 server 回傳的原始 git diff,維持完整可貼回 patch 工具。
+                  // copied-interaction-002:fallback 也炸時要讓 user 知道,丟 toast danger。
                   if (!diff?.raw) return;
                   const text = diff.raw;
                   const fallback = () => {
@@ -165,10 +200,13 @@ export function DiffModal({
                       ta.style.left = "-9999px";
                       document.body.appendChild(ta);
                       ta.select();
-                      document.execCommand("copy");
+                      const ok = document.execCommand("copy");
                       document.body.removeChild(ta);
-                      flashCopied();
-                    } catch {}
+                      if (ok) flashCopied();
+                      else toast("複製失敗，請手動選取差異內容。", { variant: "danger" });
+                    } catch {
+                      toast("複製失敗，請手動選取差異內容。", { variant: "danger" });
+                    }
                   };
                   if (navigator.clipboard?.writeText) {
                     navigator.clipboard.writeText(text).then(() => flashCopied()).catch(fallback);
@@ -177,7 +215,9 @@ export function DiffModal({
                   }
                 }}
                 title="複製原始 diff"
-                aria-label={copied ? "已複製差異" : "複製原始差異到剪貼簿"}
+                /* aria-label 維持不變(不在 copied 時換字),避免「focused button 名字突然變」的 SR 噪音;
+                   「已複製」公告交給外部 sr-only role=status region(a11y-002 copied) */
+                aria-label="複製原始差異到剪貼簿"
               >
                 {copied ? "已複製" : "複製差異"}
               </button>
@@ -195,8 +235,44 @@ export function DiffModal({
         </div>
 
         {loadFailed && !diff && (
-          <div className="diff-modal-err" role="alert">
+          // role=alert 已存在;humanized user msg 直接放 modal 內(error-001),tech 折疊在 details(error-004)。
+          // 不再開 toast 避免雙 alert / 雙 SR 宣告(error-002 / error-003)。
+          <div className="diff-modal-err" role="alert" aria-live="assertive">
             <div className="diff-modal-err-title">讀取差異失敗</div>
+            {errMsg?.user && (
+              <div className="diff-modal-err-detail">{errMsg.user}</div>
+            )}
+            <button
+              type="button"
+              className="diff-modal-retry"
+              onClick={() => setReloadToken((n) => n + 1)}
+              aria-label="重新讀取差異"
+            >
+              重新讀取
+            </button>
+            {errMsg?.tech && (
+              <details className="diff-modal-err-tech-wrap">
+                <summary>顯示技術細節</summary>
+                <div className="diff-modal-err-tech mono">{errMsg.tech}</div>
+              </details>
+            )}
+          </div>
+        )}
+        {!loadFailed && !diff && (
+          <div className="diff-modal-loading" role="status" aria-live="polite">
+            <span className="diff-modal-loading-spinner" aria-hidden />
+            {longWait ? "仍在讀取…(可能 worktree 較大)" : "載入中…"}
+          </div>
+        )}
+        {diff && diff.files.length === 0 && (
+          // 不只一行「沒有改動。」— 補上 title + desc 解釋為什麼 chip 顯示有改動但這裡卻空,
+          // 並給 重新讀取 入口讓使用者不必關掉再開(copy-empty-001 / interaction-empty-001 / structure-empty-001
+          // / a11y-empty-001 / design-empty-001 / i18n-empty-001)。
+          <div className="diff-modal-empty" role="status" aria-live="polite">
+            <div className="diff-modal-empty-title">目前沒有可顯示的改動</div>
+            <div className="diff-modal-empty-desc">
+              工作樹和 <span className="mono">{baseBranch}</span> 對比後沒有實質差異(可能剛被 reset 或 stash)。
+            </div>
             <button
               type="button"
               className="diff-modal-retry"
@@ -207,15 +283,12 @@ export function DiffModal({
             </button>
           </div>
         )}
-        {!loadFailed && !diff && (
-          <div className="diff-modal-loading" role="status" aria-live="polite">
-            <span className="diff-modal-loading-dot" aria-hidden />
-            載入中…
-          </div>
-        )}
-        {diff && diff.files.length === 0 && (
-          <div className="diff-modal-empty">沒有改動。</div>
-        )}
+        {/* 獨立 aria-live region 給「已複製」公告 — 不掛在 button 上避免 label 變更 + live region 雙重宣告
+            導致部分 SR 把舊新 label 都唸一次(a11y-001 / a11y-002 copied)。
+            aria-atomic=true 確保整段一次完整宣告,避免 partial diff 觸發兩次。 */}
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {copied ? "已複製差異到剪貼簿" : ""}
+        </div>
         {diff && diff.files.length > 0 && (
           <div
             className={
@@ -233,7 +306,7 @@ export function DiffModal({
                     className={"diff-modal-file-row mono" + (isActive ? " is-active" : "")}
                     onClick={() => jumpToFile(f.path)}
                     title={f.path}
-                    aria-label={`跳到 ${f.path},新增 ${f.added} 行,刪除 ${f.deleted} 行`}
+                    aria-label={`${isActive ? "目前在 " : "跳到 "}${f.path},新增 ${f.added} 行,刪除 ${f.deleted} 行`}
                     aria-current={isActive ? "location" : undefined}
                   >
                     {/* 兩行排版:

@@ -1,95 +1,966 @@
-/* auth feature — SecurityTab + AddDeviceDialog */
+/* auth feature — SetupScreen + LoginScreen + SecurityTab + AddDeviceDialog */
 
-/* SecurityTab */
-.auth-bound-header {
+/* ─── SetupScreen — page wrapper / card ───────────────────────────── */
+.setup-screen {
+  justify-content: flex-start;
+  padding-top: clamp(56px, 9vh, 120px);
+  padding-bottom: var(--space-8);
+}
+
+.setup-card {
+  max-width: 420px;
+  padding: 24px 28px 22px;
+  gap: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .setup-card {
+    padding: 22px 18px 18px;
+    max-width: min(420px, calc(100vw - 24px));
+  }
+}
+
+.setup-card--loading {
+  max-width: 360px;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 32px 28px 30px;
+  min-height: 220px;
+  justify-content: center;
+}
+
+.setup-card--error {
+  max-width: 380px;
+  gap: 14px;
+  padding: 22px 22px 22px;
+}
+
+/* ─── SetupScreen — brand mark ────────────────────────────────────── */
+.setup-brand {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+}
+
+/* ─── SetupScreen — header (title + subtitle) ─────────────────────── */
+.setup-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.setup-title {
+  font-size: 17px;
+  margin-top: 2px;
+}
+
+.setup-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg-mute);
+}
+
+/* ─── SetupScreen — numbered steps ────────────────────────────────── */
+.setup-steps {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.setup-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg);
+}
+
+.setup-step-num {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.setup-step-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── SetupScreen — QR plate ──────────────────────────────────────── */
+.setup-qr {
+  background: var(--qr-plate, #fff);
+  padding: 12px;
+  border-radius: var(--radius);
+  align-self: center;
+}
+
+.setup-qr-svg {
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.setup-qr-svg svg {
+  display: block;
+  width: clamp(200px, 56vw, 232px);
+  height: auto;
+}
+
+@media (max-width: 480px) {
+  .setup-qr {
+    padding: 10px;
+  }
+  .setup-qr-svg svg {
+    width: clamp(196px, 60vw, 232px);
+  }
+}
+
+/* ─── SetupScreen — manual setup disclosure (parity with AddDeviceDialog) ─ */
+.setup-manual {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin-bottom: 10px;
+  width: 100%;
+}
+
+.setup-manual-toggle {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fg-mute);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  align-self: center;
+  min-height: 32px;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.setup-manual-toggle:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+.setup-manual-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  color: var(--fg);
+}
+@media (max-width: 480px) {
+  .setup-manual-toggle {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+  }
+}
+
+.setup-manual-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 32%, var(--line));
+  border-radius: 6px;
+}
+
+.setup-manual-hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+}
+
+.setup-manual-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.setup-manual-code {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 4px);
+  padding: 6px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--fg);
+  user-select: all;
+  font-family: var(--font-mono);
+}
+
+.setup-manual-copy {
+  font-size: 11.5px;
+  padding: 4px 12px;
+  flex-shrink: 0;
+  min-height: 32px;
+  font-weight: 500;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.setup-manual-copy.is-copied {
+  background: var(--done-soft);
+  color: var(--done);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+}
+@media (max-width: 480px) {
+  .setup-manual-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .setup-manual-code {
+    white-space: normal;
+    word-break: break-all;
+    overflow-x: visible;
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+  .setup-manual-copy {
+    min-height: 40px;
+    align-self: stretch;
+  }
+}
+
+/* ─── SetupScreen — form / field ──────────────────────────────────── */
+.setup-form {
+  gap: var(--space-3);
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setup-field-inner.form-field {
+  gap: 4px;
+}
+
+.setup-code-input {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 12px 14px;
+}
+.setup-code-input::placeholder {
+  letter-spacing: 4px;
+  color: var(--fg-faint);
+  opacity: 1;
+  font-weight: 500;
+}
+.setup-code-input:disabled {
+  background: color-mix(in srgb, var(--panel-2) 80%, var(--bg));
+  color: var(--fg-mute);
+  cursor: progress;
+}
+.setup-code-input[aria-invalid="true"] {
+  border-color: var(--failed);
+}
+
+.setup-input-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-mute);
+  text-align: center;
+  min-height: 1.5em;
+}
+.setup-input-hint--counter {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.setup-field-inner .form-hint--error {
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* ─── SetupScreen — submit / retry buttons ────────────────────────── */
+.setup-submit,
+.setup-retry-btn {
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 40px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+@media (max-width: 480px) {
+  .setup-submit,
+  .setup-retry-btn {
+    min-height: 44px;
+  }
+}
+
+.setup-submit.setup-submit--loading,
+.setup-retry-btn.setup-retry-btn--loading {
+  cursor: progress;
+  opacity: 1;
+  background: color-mix(in srgb, var(--accent) 78%, transparent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
+
+.setup-spinner {
+  width: 32px;
+  height: 32px;
+  margin-top: 4px;
+}
+
+.setup-spinner-inline {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--accent-fg) 35%, transparent);
+  border-top-color: var(--accent-fg);
+  border-radius: 50%;
+  animation: setup-spin 0.85s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes setup-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setup-spinner,
+  .auth-spinner.setup-spinner {
+    animation: none;
+    border-top-color: var(--accent);
+  }
+  .setup-spinner-inline {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--accent-fg) 60%, transparent);
+  }
+}
+
+/* ─── SetupScreen — loading copy ──────────────────────────────────── */
+.setup-loading-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--fg);
+}
+.setup-loading-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+}
+
+/* ─── SetupScreen — init-error panel ──────────────────────────────── */
+.setup-error-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  border-radius: 6px;
+}
+
+.setup-error-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--failed);
+  color: var(--accent-fg, #fff);
+  font-weight: 700;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.setup-error-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.setup-error-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.setup-error-detail {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg-mute);
+}
+
+/* ─── SetupScreen — SR-only status live region ────────────────────── */
+.setup-sr-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── LoginScreen — page wrapper / card overrides ─────────────────── */
+.login-screen {
+  /* Pull centering up slightly so card stays above the on-screen keyboard
+     on mobile (390px tall viewport minus 280-300px keyboard = ~540px usable).
+     Desktop still feels centered because we add a brand-level breathing room
+     below via .login-card max-height. */
+  justify-content: flex-start;
+  padding-top: clamp(72px, 12vh, 140px);
+  padding-bottom: var(--space-8);
+}
+
+.login-card {
+  max-width: 380px;
+  padding: 28px 28px 24px;
+  gap: var(--space-4);
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px 20px;
+    max-width: min(380px, calc(100vw - 32px));
+  }
+}
+
+/* ─── LoginScreen — header (title + subtitle) ─────────────────────── */
+.login-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+}
+
+.login-title {
+  font-size: 17px;
+}
+
+.login-subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg-mute);
+}
+
+/* ─── LoginScreen — form layout ───────────────────────────────────── */
+.login-form {
+  gap: var(--space-3);
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* TextField's own form-field wrapper — visible label restored (no longer
+   labelHidden); compact gap so the label + input + hint flow read as one
+   unit instead of three stacked rows. */
+.login-field-inner.form-field {
+  gap: 4px;
+}
+
+/* ─── LoginScreen — code input (digit affordance) ─────────────────── */
+.login-code-input {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 8px;
+  text-align: center;
+  padding: 12px 14px;
+}
+.login-code-input::placeholder {
+  /* Reset the wide letter-spacing for placeholder so the zero-pattern
+     guide reads as a single token, not 6 floating chars. */
+  letter-spacing: 4px;
+  color: var(--fg-faint);
+  opacity: 1;
+  font-weight: 500;
+}
+.login-code-input:disabled {
+  background: color-mix(in srgb, var(--panel-2) 80%, var(--bg));
+  color: var(--fg-mute);
+  cursor: progress;
+  /* keep the typed digits readable while submitting */
+}
+.login-code-input[aria-invalid="true"] {
+  border-color: var(--failed);
+}
+
+/* ─── LoginScreen — input hint / counter ──────────────────────────── */
+.login-input-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-mute);
+  text-align: center;
+  min-height: 1.5em;
+  /* reserve space so the layout does not jump when counter content swaps */
+}
+.login-input-hint--counter {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ─── LoginScreen — submit button ─────────────────────────────────── */
+.login-submit {
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 40px;
+  font-weight: 600;
+  /* No letter-spacing — vp design system mandates 0 on button labels
+     (Chinese punctuation rhythm degrades with non-zero spacing). */
+}
+@media (max-width: 480px) {
+  .login-submit {
+    min-height: 44px;
+  }
+}
+
+/* Disabled-but-not-loading (invalid / awaiting input). Must read as
+   unavailable across viewports. The global .btn:disabled fadeout
+   (opacity:0.48) still applies; we strip the primary amber fill so the
+   button reads as muted neutral, distinct from the saturated
+   .login-submit--loading in-flight state. Spec note: at 320px the amber
+   fill stayed too vivid even with opacity:0.48, looking tappable; this
+   neutral surface restores the unavailable signal across all widths. */
+.login-submit:disabled:not(.login-submit--loading),
+.login-submit:disabled:not(.login-submit--loading):hover {
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  border-color: var(--line-2);
+}
+
+/* Loading variant — distinct token from disabled-because-invalid.
+   Keep the button shape and color saturation; just dial back interactivity
+   and add the spinner. Selector list includes :disabled / :disabled:hover
+   to outrank the global phase4-control-001 disabled-fadeout rule group
+   in board.css (.btn:disabled — specificity 0,1,1). */
+.login-submit.login-submit--loading,
+.login-submit.login-submit--loading:disabled,
+.login-submit.login-submit--loading:disabled:hover {
+  cursor: progress;
+  /* In-flight should still read as the primary action, not as a disabled
+     control. Keep saturated accent fill + white foreground; only the
+     spinner + aria-busy signal the request state. */
+  opacity: 1;
+  background: color-mix(in srgb, var(--accent) 88%, transparent);
+  color: var(--accent-fg);
+  border-color: color-mix(in srgb, var(--accent) 88%, transparent);
+}
+
+.login-submit-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--accent-fg) 35%, transparent);
+  border-top-color: var(--accent-fg);
+  border-radius: 50%;
+  animation: login-spin 0.85s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes login-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-submit-spinner {
+    animation: none;
+    /* fall back to a static ring so the spinner is still recognisable */
+    border-top-color: color-mix(in srgb, var(--accent-fg) 60%, transparent);
+  }
+}
+
+/* ─── LoginScreen — SR-only status live region ────────────────────── */
+.login-sr-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── LoginScreen — error visibility tightening ───────────────────── */
+/* TextField renders .form-hint--error inside the .login-field-inner; we
+   nudge its visual weight up so the failure cause is scannable without
+   overpowering the rest of the card. */
+.login-field-inner .form-hint--error {
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* ─── SecurityTab — auth-bound header ─────────────────────────────── */
+.auth-bound-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 14px;
   font-size: 12.5px;
 }
 
 .auth-bound-check {
   color: var(--done);
   font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.auth-bound-label {
+  color: var(--fg);
+}
+
+.auth-bound-sep {
+  color: var(--fg-faint);
 }
 
 .auth-bound-ts {
-  font-size: 11px;
-  color: var(--fg-faint);
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+}
+
+/* ─── SecurityTab — section labels / hint / loading ───────────────── */
+.security-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 12px;
+  margin-bottom: 6px;
 }
 
 .auth-section-label {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--fg-mute);
   font-weight: 600;
-  margin-top: 12px;
-  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+
+.security-session-count {
+  margin-left: 4px;
+  color: var(--fg-faint);
+  font-weight: 500;
 }
 
 .auth-hint {
-  font-size: 11px;
-  color: var(--fg-faint);
+  font-size: 12px;
+  color: var(--fg-mute);
   line-height: 1.5;
   margin-bottom: 8px;
 }
 
-.auth-session-list {
-  margin-bottom: 10px;
+/* Skeleton row matches the resolved session row rhythm so the action row
+   below does not jump when sessions resolve (R2 sec-loading-r2-001 / 003). */
+.security-loading {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.auth-session-row {
+.security-loading-row {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
+}
+.security-loading-row:last-of-type {
+  border-bottom: none;
 }
 
-.auth-session-info {
+.security-loading-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.auth-session-ip {
-  color: var(--fg);
-  font-size: 12px;
+.security-loading-bar {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--line) 0%,
+    color-mix(in srgb, var(--line) 60%, var(--bg)) 50%,
+    var(--line) 100%
+  );
+  background-size: 200% 100%;
+  animation: security-loading-shimmer 1.4s ease-in-out infinite;
+}
+.security-loading-bar--w1 { width: 38%; }
+.security-loading-bar--w2 { width: 72%; }
+.security-loading-bar--w3 { width: 28%; }
+
+.security-loading-revoke {
+  width: 48px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--line);
+  flex-shrink: 0;
+  opacity: 0.55;
 }
 
-.auth-session-ua {
-  color: var(--fg-faint);
-  font-size: 10.5px;
-  margin-top: 2px;
-  word-break: break-all;
-}
-
-.auth-session-last-active {
+.security-loading-status {
+  margin: 6px 0 0;
+  font-size: 11.5px;
   color: var(--fg-mute);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.security-loading-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: security-loading-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes security-loading-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes security-loading-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .security-loading-bar,
+  .security-loading-status-dot {
+    animation: none;
+  }
+  .security-loading-bar {
+    background: var(--line);
+  }
+}
+
+/* ─── SecurityTab — sessions list ─────────────────────────────────── */
+.security-session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 4px;
+  /* Stable scroll region — avoids action row being pushed below the fold
+     once session count grows beyond the visible area. */
+  max-height: min(42vh, 360px);
+  overflow-y: auto;
+}
+
+.security-session-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.security-session-row:last-child {
+  border-bottom: none;
+}
+
+.security-session-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.security-session-line-1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.security-session-ua-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.security-session-ua {
   font-size: 10.5px;
-  margin-top: 2px;
+  color: var(--fg-faint);
+  /* CSS truncation — show the full UA on title hover; never pre-truncate to
+     a character count (loses the useful tail differentiator). */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.auth-revoke-btn {
+.security-session-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
   font-size: 11px;
-  padding: 3px 8px;
+  color: var(--fg-mute);
 }
 
-.auth-error {
+.security-session-ip {
+  color: var(--fg);
   font-size: 11px;
+}
+
+.security-session-meta-sep {
+  color: var(--fg-faint);
+}
+
+.security-session-last {
+  color: var(--fg-mute);
+}
+
+/* Destructive-secondary — distinct from neutral `.btn`, but lower weight than
+   the page-level `.btn-danger` (重置驗證器). Use a solid danger-tinted
+   resting bg + saturated failed border + bold failed text so the row-level
+   destructive intent is unmistakable at scan time without needing hover.
+   (R2 / R3 / R4 SEC-LIST-R2-003 / R3-002 / R4-002 carryover.) */
+.security-revoke-btn {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  padding: 4px 12px;
+  min-height: 32px;
+  /* Background-mix on bg-elevated was too dilute against the popover bg (the
+     popover IS bg-elevated). Use a transparent surface with saturated failed
+     foreground + saturated border so the row-level destructive role reads
+     immediately without depending on hover. */
   color: var(--failed);
-  margin-bottom: 8px;
-  word-break: break-word;
+  border: 1.5px solid var(--failed);
+  background: transparent;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.security-revoke-btn:hover {
+  color: var(--accent-fg, #fff);
+  background: var(--failed);
+  border-color: var(--failed);
+}
+.security-revoke-btn:focus-visible {
+  outline: 2px solid var(--failed);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .security-revoke-btn {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
 }
 
-.auth-actions {
+.security-list-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 4px 0 12px;
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.security-list-error-text {
+  flex: 1;
+  color: var(--fg);
+}
+.security-list-error-retry {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+@media (max-width: 480px) {
+  .security-list-error {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .security-list-error-retry {
+    min-height: 40px;
+  }
+}
+
+.security-list-foot {
+  margin: 6px 0 12px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-mute);
+}
+
+.security-actions {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
-/* AddDeviceDialog */
+.security-reset-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.security-reset-sub {
+  font-size: 10.5px;
+  font-weight: 400;
+  opacity: 0.78;
+}
+
+/* ─── AddDeviceDialog — overlay + box ─────────────────────────────── */
 .auth-dialog-overlay {
   position: fixed;
   inset: 0;
@@ -105,59 +976,340 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
-  padding: 18px 20px 16px;
-  width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px 14px;
+  width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Dialog hugs its content height. Loading state reserves the QR plate
+     footprint via .auth-dialog-loading-block min-height so the loading→ready
+     transition does not visibly jump; error state shrinks naturally to its
+     own content. Avoid a fixed dialog min-height — it produced visibly empty
+     lower halves in loading and error captures (R3 ADD-LOAD-R3-002 /
+     sec-add-ready-r3-002 / add-device-error-r3-002). */
+}
+
+@media (max-width: 480px) {
+  .auth-dialog-box {
+    width: min(380px, calc(100vw - 24px));
+    padding: 12px 14px 14px;
+    /* extra safe-area bottom padding on touch viewports */
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+}
+
+.auth-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .auth-dialog-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--fg);
-  margin-bottom: 10px;
+}
+
+.auth-dialog-close {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: -4px -6px;
+  cursor: pointer;
+  color: var(--fg-mute);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  transition: background 120ms ease, color 120ms ease;
+}
+.auth-dialog-close:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+.auth-dialog-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  color: var(--fg);
 }
 
 .auth-dialog-desc {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--fg-mute);
-  line-height: 1.5;
-  margin-bottom: 12px;
+  line-height: 1.55;
 }
 
-.auth-dialog-loading {
-  font-size: 12px;
-  color: var(--fg-faint);
-  text-align: center;
-  padding: 24px;
-}
-
-.auth-dialog-error {
-  font-size: 11px;
-  color: var(--failed);
-  margin-bottom: 10px;
-  word-break: break-word;
-}
-
-/* phase4-2026-05-23-009 — QR codes need a stable light plate so scanners read
-   them regardless of theme. Token tracks light theme bg-elevated; dark theme
-   keeps a forced white plate since QR contrast is non-negotiable. */
-.auth-qr-wrapper {
+/* ─── Loading block ───────────────────────────────────────────────── */
+.auth-dialog-loading-block {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: var(--space-3, 12px);
-  background: var(--qr-plate, #fff);
-  border-radius: var(--radius-control, 6px);
-  margin-bottom: var(--space-3, 12px);
+  gap: 6px;
+  /* Reserve approximately the QR plate footprint so loading→ready does not
+     produce a visible jump. QR plate target is ~268px (240px QR + padding);
+     keep the dialog overall height stable without forcing it to be the full
+     ready-state min. */
+  min-height: 268px;
+  padding: 16px 8px;
+  color: var(--fg-mute);
+  text-align: center;
 }
-@media (max-width: 767.98px) {
-  .auth-qr-wrapper {
-    padding: var(--space-2, 8px);
-    margin-bottom: var(--space-2, 8px);
+
+.auth-dialog-loading-spinner {
+  color: var(--accent);
+  display: inline-flex;
+  margin-bottom: 4px;
+  animation: security-spin 1s linear infinite;
+}
+
+.auth-dialog-loading-title {
+  font-size: 13px;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.auth-dialog-loading-sub {
+  font-size: 11.5px;
+  color: var(--fg-faint);
+}
+
+@keyframes security-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-dialog-loading-spinner {
+    animation: none;
   }
 }
 
+/* ─── Error panel ─────────────────────────────────────────────────── */
+.auth-dialog-error-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  border-radius: 6px;
+}
+
+.auth-dialog-error-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.auth-dialog-error-icon {
+  color: var(--failed);
+  flex-shrink: 0;
+  display: inline-flex;
+  margin-top: 1px;
+}
+
+.auth-dialog-error-text {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--fg);
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.auth-dialog-error-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.auth-dialog-error-close {
+  /* secondary close action inside the error panel — quieter than retry */
+  background: transparent;
+  color: var(--fg-mute);
+  border-color: var(--line);
+  font-weight: 500;
+}
+.auth-dialog-error-close:hover,
+.auth-dialog-error-close:focus-visible {
+  color: var(--fg);
+  background: var(--hover);
+}
+@media (max-width: 480px) {
+  .auth-dialog-error-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .auth-dialog-error-actions .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* ─── QR wrapper ──────────────────────────────────────────────────── */
+.auth-qr-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px;
+  /* QR contrast non-negotiable — light theme uses bg-elevated token; dark
+     theme keeps a forced white plate (per --qr-plate fallback) so scanners
+     read consistently. */
+  background: var(--qr-plate, #fff);
+  border-radius: var(--radius-control, 6px);
+}
+.auth-qr-wrapper svg {
+  display: block;
+  width: clamp(208px, 60vw, 240px);
+  height: auto;
+}
+@media (max-width: 480px) {
+  .auth-qr-wrapper {
+    padding: 10px;
+  }
+  .auth-qr-wrapper svg {
+    width: clamp(208px, 64vw, 240px);
+  }
+}
+
+/* ─── Manual setup disclosure ─────────────────────────────────────── */
+.auth-dialog-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-dialog-manual-toggle {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fg-mute);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  align-self: flex-start;
+  min-height: 32px;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.auth-dialog-manual-toggle:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+.auth-dialog-manual-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  color: var(--fg);
+}
+@media (max-width: 480px) {
+  .auth-dialog-manual-toggle {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+  }
+}
+
+.auth-dialog-manual-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 32%, var(--line));
+  border-radius: 6px;
+}
+
+.auth-dialog-manual-hint {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+}
+
+.auth-dialog-manual-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.auth-dialog-manual-code {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 4px);
+  padding: 6px 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--fg);
+  /* allow easy select-all + drag */
+  user-select: all;
+}
+
+.auth-dialog-manual-copy {
+  font-size: 11.5px;
+  padding: 4px 12px;
+  flex-shrink: 0;
+  min-height: 32px;
+  font-weight: 500;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.auth-dialog-manual-copy.is-copied {
+  background: var(--done-soft);
+  color: var(--done);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+}
+@media (max-width: 480px) {
+  .auth-dialog-manual-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .auth-dialog-manual-code {
+    white-space: normal;
+    word-break: break-all;
+    overflow-x: visible;
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+  .auth-dialog-manual-copy {
+    min-height: 40px;
+    align-self: stretch;
+  }
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────── */
 .auth-dialog-footer {
   display: flex;
   justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.auth-dialog-footer .btn {
+  min-height: 36px;
+}
+.auth-dialog-footer-close-secondary {
+  /* quieter close action in error state — retry already owns visual primacy */
+  background: transparent;
+  color: var(--fg-mute);
+  border-color: var(--line);
+  font-weight: 500;
+}
+.auth-dialog-footer-close-secondary:hover,
+.auth-dialog-footer-close-secondary:focus-visible {
+  color: var(--fg);
+  background: var(--hover);
+}
+@media (max-width: 480px) {
+  .auth-dialog-footer .btn {
+    min-height: 44px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
 }

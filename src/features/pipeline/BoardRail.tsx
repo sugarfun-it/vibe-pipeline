@@ -77,11 +77,17 @@ export const BoardRail = memo(function BoardRail({
     }
   }
 
+  const mergedCount = pipelines.filter((p) => p.state === "merged").length;
   const sectionMenuItems: RailMenuItem[] = [
     {
       key: "cleanup-all-merged-worktrees",
-      label: "清除已合併 worktree",
+      // 「清理」比「清除」語感較不像不可逆,但實際 git worktree remove 仍會動 fs,
+      // 維持 danger 樣式 + confirm dialog;label 保留 worktree 字以利定位實際動作。
+      label: "清理已合併 worktree",
       icon: <TrashIcon />,
+      danger: true,
+      // hint 顯示在 menuitem 末段(focus-overflow-item-hint 會 ellipsis),短句不卡版面
+      disabledReason: mergedCount === 0 ? "目前無已合併" : undefined,
       onClick: () => {
         void handleCleanupAllMergedWorktrees();
       },

@@ -12,6 +12,16 @@
   max-height: 90vh;
 }
 
+/* terminal state(loading / empty / error)— desktop 不撐 1100px,mobile 不吃滿 dvh。
+   避免「整片大白底 + 中間一行字」的視覺浪費(rwd-loading-001 / rwd-empty-001 / visual-empty-001 / error-005 / error-006)。
+   r3:max-height 從 70vh 改成 auto + 內容 fit-content,徹底避免「短內容仍撐高」(rwd-loading-002 / rwd-empty-002 / error-r2-001)。 */
+.diff-modal.drawer--modal.is-terminal-state {
+  max-width: 560px;
+  min-height: 200px;
+  max-height: 70vh;
+  height: auto;
+}
+
 .diff-modal-head {
   display: flex;
   align-items: center;
@@ -44,7 +54,26 @@
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* head 段名(pipeline branch)可 ellipsis;base 永不縮 — 即使 mobile 窄屏 user 也看得到對比對象
+   (rwd-008 / copy-002)。 */
+.diff-modal-branch-head {
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.diff-modal-branch-arrow {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.diff-modal-branch-base {
+  flex-shrink: 0;
   white-space: nowrap;
 }
 .diff-modal-summary {
@@ -114,6 +143,16 @@
   color: var(--fg);
   border-color: var(--line-strong, var(--line));
 }
+/* copy success 不只改字 — 換背景 + 邊 + 字色,sighted user 才看得到成功訊號
+   (copied-visual-001)。已複製字色換 done token,跟 +A token 一致。 */
+.diff-modal-copy.is-copied {
+  background: var(--done-soft);
+  border-color: var(--done);
+  color: var(--done);
+}
+.diff-modal-copy.is-copied:hover {
+  background: var(--done-soft);
+}
 .diff-modal-x:focus-visible,
 .diff-modal-copy:focus-visible,
 .diff-modal-retry:focus-visible,
@@ -137,6 +176,23 @@
   font-size: 13px;
   gap: var(--space-2, 8px);
   min-height: 0;
+}
+/* empty / err 都用 column 排版 — 跟 loading 視覺一致(loading dot + 載入中 一行)
+   後二者多 title + desc + action 入口,避免「孤一行」破碎感(design-empty-001) */
+.diff-modal-empty {
+  flex-direction: column;
+  gap: 10px;
+  color: var(--fg);
+}
+.diff-modal-empty-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.diff-modal-empty-desc {
+  color: var(--fg-mute);
+  max-width: 70%;
+  line-height: 1.5;
+  font-size: 12px;
 }
 .diff-modal-err {
   color: var(--failed);
@@ -163,12 +219,23 @@
 }
 .diff-modal-err-tech-wrap > summary {
   cursor: pointer;
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px dashed var(--line);
   color: var(--fg-mute);
   user-select: none;
   list-style: none;
+  font-size: 11px;
+  transition: background 100ms, color 100ms, border-color 100ms;
+}
+/* 展開後 summary 自己看起來像「已選中」狀態,跟其他 inline UI control 視覺一致(error-r2-002) */
+.diff-modal-err-tech-wrap[open] > summary {
+  background: var(--panel-2);
+  border-style: solid;
+  color: var(--fg);
 }
 .diff-modal-err-tech-wrap > summary::-webkit-details-marker { display: none; }
 .diff-modal-err-tech-wrap > summary:hover { color: var(--fg); background: var(--hover); }
@@ -202,22 +269,24 @@
   background: var(--hover);
   border-color: var(--line-strong, var(--accent));
 }
-.diff-modal-loading-dot {
-  width: 8px;
-  height: 8px;
+/* 真正的 indeterminate spinner — 比單色 pulse dot 傳達「處理中」感更強(interaction-loading-002)。
+   border-top 用 accent token,其餘 muted,旋轉 0.8s。 */
+.diff-modal-loading-spinner {
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--accent);
-  animation: diff-modal-pulse 1s ease-in-out infinite;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  animation: diff-modal-spin 0.8s linear infinite;
 }
-@keyframes diff-modal-pulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.85); }
-  50%      { opacity: 1;   transform: scale(1); }
+@keyframes diff-modal-spin {
+  to { transform: rotate(360deg); }
 }
-/* reduced-motion:停止 pulse,保留靜態圓點(issue diff-modal-006) */
+/* reduced-motion:不轉,留靜態圓環當「載入指示器」(issue diff-modal-006) */
 @media (prefers-reduced-motion: reduce) {
-  .diff-modal-loading-dot {
+  .diff-modal-loading-spinner {
     animation: none;
-    opacity: 1;
+    border-top-color: var(--accent);
   }
 }
 
@@ -411,6 +480,13 @@
     max-height: calc(100dvh - 32px);
     height: calc(100dvh - 32px);
   }
+  /* mobile terminal state:height 跟著內容收(短訊息不再撐成全屏 drawer),
+     一律保留 close + retry tap target(rwd-loading-002 / rwd-empty-002 / error-r2-001) */
+  .diff-modal.drawer--modal.is-terminal-state {
+    height: auto;
+    max-height: min(420px, calc(100dvh - 32px));
+    min-height: 220px;
+  }
 
   /* mobile head 用 grid:第一行 title (含 branch) 佔左、actions(複製 + ✕)永遠固定右上,
      summary 排第二行整列 — 不讓 ✕ 在 flex-wrap 後跑到第二行 (issue diff-modal-007) */
@@ -446,11 +522,16 @@
   }
 
   .diff-modal-files {
-    /* 多檔時用 max-height + 內部捲;單檔 / 少檔 fit-content 即可 */
-    max-height: 132px;
+    /* 多檔時用 max-height + 內部捲;單檔 / 少檔 fit-content 即可。
+       原本 132px 約 3 row,>3 檔時第 4 檔被截但沒提示(rwd-003)。
+       拉到 30dvh 留 ~5-6 row 緩衝,再用 mask 暗示下方有更多。 */
+    max-height: 30dvh;
     border-right: 0;
     border-bottom: 1px solid var(--line);
     align-self: start;
+    /* mask gradient — 內容超過視窗時告訴 user 還有下面(interaction-002 with_diff) */
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
   }
 
   /* 單檔 diff:mobile 把 file nav 整段藏掉,讓 diff content 直接靠 head,

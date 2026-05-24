@@ -1,20 +1,61 @@
 /* AuditTimeline — pipeline 狀態變動歷史 collapsible timeline。
    命名走 audit- prefix(避雷 #1 prototype namespace 殘留)。 */
 
+/* hist-audit-013 / audit-disclosure-hit-target (2026-05-24):
+   button 改 row layout + ≥44px touch target,讓 mobile 觸控容錯符合常見規範。
+   原本只用 background:transparent + padding:0,touch target 過窄(~24px)。 */
 .audit-toggle {
   background: transparent;
   border: 0;
-  padding: 0;
   cursor: pointer;
   color: inherit;
   font: inherit;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-height: 44px;
+  padding: var(--space-2, 8px) 0;
+  width: 100%;
+}
+.audit-toggle-label {
+  flex: 0 0 auto;
 }
 
 .audit-chev {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   width: 12px;
   color: var(--fg-mute);
+  transform: rotate(-90deg);
+  transition: transform 120ms ease;
+}
+.audit-chev[data-open] {
+  transform: rotate(0deg);
+}
+
+/* hist-audit-002 (2026-05-24):collapsed / open 共用 count badge,移除原本 inline style */
+.audit-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-2, 6px);
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--fg-mute);
+  font-weight: 500;
+  line-height: 1;
+}
+/* hist-empty-016 round 4 (2026-05-24):count badge=0(沒紀錄)用 dashed 風格區分有資料 vs 完全空。 */
+.audit-count-badge[data-empty] {
+  background: transparent;
+  border-style: dashed;
+  color: var(--fg-faint);
 }
 
 .audit-list {
@@ -73,4 +114,46 @@
 .audit-detail {
   margin-left: var(--space-2, 6px);
   color: var(--fg-faint);
+}
+
+/* hist-audit-empty-001 (2026-05-24):2-line empty state — 標題正常字重、輔助說明次要色;
+   讓 user 一眼分辨「Pipeline 還沒發生 state change」vs「資料抓失敗」。 */
+.audit-empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  padding: var(--space-3, 12px) 0;
+  align-items: flex-start;
+}
+.audit-empty-title {
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+}
+.audit-empty-hint {
+  color: var(--fg-mute);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* audit-list as ol — 移除預設 list 樣式 */
+.audit-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-1, 4px) 0 0 0;
+}
+
+/* hist-audit-long-002:audit-sort-hint 顯示「共 N 筆 · 最新在上」,
+   不靠 aria-live(避免每展開都唸),倚靠 visible copy 即可。 */
+.audit-sort-hint {
+  color: var(--fg-mute);
+  font-size: 11.5px;
+  margin-bottom: var(--space-1, 4px);
+}
+
+/* hist-audit-002 (2026-05-24):count badge 對焦 keyboard 友善 */
+.audit-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

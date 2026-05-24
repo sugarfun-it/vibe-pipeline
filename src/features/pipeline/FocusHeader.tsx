@@ -81,6 +81,16 @@ export function FocusHeader({
   // 「執行紀錄」drawer 開關(pipeline-level,不在 ticket drawer 內)
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // iter-uiux 2026-05-24 retry — 之前 useFocusPipeline.showMergeBanner 在 merge ticket
+  // 為 running / ready(queued)時不 mount banner(allDone 要求 done===total 而 merge
+  // ticket 仍在跑,讓 ReadyBanner 的 merging variant 變成不可達 dead code)。
+  // 在 header 端 OR 一條 fallback:有 mode=merge 且 status=running/ready 的 ticket
+  // 就強制 mount banner,讓 merging variant 真的能出來。
+  const hasInflightMergeTicket = pipeline.tickets.some(
+    (t) => t.mode === "merge" && (t.status === "running" || t.status === "ready")
+  );
+  const showBanner = showMergeBanner || hasInflightMergeTicket;
+
   return (
     <div className="focus-head fade-up">
       <div className="focus-head-top">
@@ -163,8 +173,18 @@ export function FocusHeader({
             />
           )}
           <div className="focus-head-meta-spacer" />
-          <div className="focus-actions" data-pipeline-state={pipeline.state} data-show-merge-banner={showMergeBanner ? "1" : "0"}>
-            <span className="focus-run-wrap" data-pipeline-state={pipeline.state}>
+          <div
+            className="focus-actions"
+            data-pipeline-state={pipeline.state}
+            data-show-merge-banner={showBanner ? "1" : "0"}
+            data-empty-mode={pipeline.tickets.length === 0 ? "1" : "0"}
+            data-has-active-draft={hasActiveDraft ? "1" : "0"}
+          >
+            <span
+              className="focus-run-wrap"
+              data-pipeline-state={pipeline.state}
+              data-sync-active={syncActive ? "1" : "0"}
+            >
               <RunButton
                 pipeline={pipeline}
                 onRun={onStart}
@@ -200,7 +220,7 @@ export function FocusHeader({
         />
       )}
 
-      {showMergeBanner && (
+      {showBanner && (
         <ReadyBanner
           pipeline={pipeline}
           onMerge={onMerge}

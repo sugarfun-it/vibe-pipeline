@@ -10,14 +10,26 @@ export const STAGE_LABEL: Record<IterStage, string> = {
   done: "結果",
 };
 
-// 顯示 PASS/FAIL/PARTIAL 簡短版,擺在「結果」階段裡。base 走 normalizeVerdict,
-// 這層只負責 UNKNOWN→? 與 PARTIAL→PART 的顯示縮寫。
-// 9px chip 用英文大寫(CJK 在此尺寸難辨識)。
+// TICKET-SG-001 / TICKET-005 / TICKET-SG-006:visible verdict 改本地化(zh-TW)+ 完整動詞語意。
+// 過去用 PASS / FAIL / PART 英文 token 跟整體中文 UI 不一致;這層維持 normalizeVerdict
+// 給 className / aria 用,但顯示文字一律走中文。PART 用 `部分通過` 而非 `部分`,確保 chip 文字
+// 不需依賴 sr-only 才能溝通結果語意(`結果 部分` 易誤讀)。iter-stages 已 flex-wrap,4 字仍能 fit。
 export function fmtVerdict(v: unknown): string {
   const n = normalizeVerdict(v);
-  if (n === "UNKNOWN") return "?";
-  if (n === "PARTIAL") return "PART";
-  return n;
+  if (n === "UNKNOWN") return "未知";
+  if (n === "PARTIAL") return "部分通過";
+  if (n === "PASS") return "通過";
+  if (n === "FAIL") return "失敗";
+  return String(v);
+}
+// 內部 token(class / aria 用)— 保持英文穩定 enum
+function verdictToken(v: unknown): string {
+  const n = normalizeVerdict(v);
+  if (n === "UNKNOWN") return "unknown";
+  if (n === "PARTIAL") return "part";
+  if (n === "PASS") return "pass";
+  if (n === "FAIL") return "fail";
+  return "unknown";
 }
 
 export const IterStages = memo(function IterStages({
@@ -72,16 +84,22 @@ export const IterStages = memo(function IterStages({
         } else if (isCurrent) {
           if (isResult) {
             const v = fmtVerdict(lastVerdict);
+            const tok = verdictToken(lastVerdict);
             const verdictLabel =
-              v === "PASS" ? "通過" :
-              v === "FAIL" ? "未通過" :
-              v === "PART" ? "部分通過" :
+              tok === "pass" ? "通過" :
+              tok === "fail" ? "未通過" :
+              tok === "part" ? "部分通過" :
               "結果未知";
-            mark = { text: v, cls: "is-result-" + v.toLowerCase(), srLabel: verdictLabel };
+            mark = { text: v, cls: "is-result-" + tok, srLabel: verdictLabel };
           } else if (status === "running") {
             mark = { text: "▶", cls: "is-running", srLabel: "執行中" };
           } else if (status === "paused") {
             mark = { text: "⏸", cls: "is-paused", srLabel: "已暫停" };
+          } else if (status === "failed" || status === "failed_iter_limit" || status === "failed_transient") {
+            // TG-404:terminal failed 卡片仍在某個 stage 中段失手時(round 未完成),
+            // current stage 不該繼續使用 active 強調色而沒 mark — 容易被誤讀成「正在跑」。
+            // 改顯 ✕ failure mark + dim 樣式,跟 done/paused 一樣讓 mark 直接溝通結果。
+            mark = { text: "✕", cls: "is-failed-mark", srLabel: "失敗" };
           }
         } else if (isFuture) {
           mark = { text: "?", cls: "is-future-mark", srLabel: "待進行" };

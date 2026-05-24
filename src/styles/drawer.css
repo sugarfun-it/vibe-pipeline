@@ -98,6 +98,12 @@
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* phase4-2026-05-24-cross-G1 — reduced-motion: drop slide-in/translate animation
+   for the drawer + modal entrance; the surface still appears, just without motion. */
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer--modal { animation: none; }
+}
 
 /* ── Header ──────────────────────────────────────────────────── */
 .drawer-head {
@@ -352,10 +358,15 @@
     overflow: hidden;
     z-index: var(--z-modal, 1000);
   }
+  /* phase4-2026-05-24-cross-003 — mobile modal contract now center-aligns by default.
+     Previously align-items: flex-start pinned every modal to the top with blank scrim
+     below; init-popup had to patch this per-feature. Modals that genuinely want top-
+     sheet behavior should opt in via a .drawer-stage--modal-sheet variant (not yet
+     defined; add when first caller needs it). Safe-area inset still applied via
+     padding so content never collides with status bar. */
   .drawer-stage--modal {
-    padding: 16px;
-    align-items: flex-start;
-    padding-top: max(16px, env(safe-area-inset-top));
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    align-items: center;
   }
   .drawer {
     position: fixed;

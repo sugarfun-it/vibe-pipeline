@@ -336,6 +336,19 @@ button.ticket-mode {
   color: var(--paused);
   font-weight: 600;
 }
+/* TG-404:terminal failed 卡片裡 in-progress round 的 current stage 顯 ✕,跟 ⏸/✓/▶ 同層
+   權重 — 用 failed token 表明該 stage 失手,不再讓 active highlight 被誤讀成「正在跑」。
+   配合 .iter-stage.is-active.is-failed 把 chip 主色從 iter 改成 failed 系列,視覺一致。 */
+.iter-stage-mark.is-failed-mark {
+  color: var(--failed);
+  font-weight: 600;
+  opacity: 0.9;
+}
+.ticket.is-failed .iter-stage.is-active {
+  border-color: var(--failed);
+  background: color-mix(in srgb, var(--failed) 12%, transparent);
+  color: var(--fg);
+}
 @keyframes iter-stage-mark-pulse {
   0%, 100% { opacity: 0.4; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.18); }
@@ -381,6 +394,14 @@ html.light .ticket-livelog { background: #1c1916; color: #fbf8f1; border-color: 
   flex: 1; min-width: 180px;
   font-size: 11.5px; color: var(--paused);
 }
+/* TG-402:failed* ticket 也要看得到 reason(原本只在 paused 才 render row);
+   borderTop 用 failed 色,文字也轉成 failed token,跟整卡 is-failed tint 一致。 */
+.ticket-paused-actions.is-failed-reason {
+  border-top-color: color-mix(in srgb, var(--failed) 35%, var(--line));
+}
+.paused-reason.is-failed {
+  color: var(--failed);
+}
 
 /* density compact */
 [data-density="compact"] .ticket { padding: 9px 14px 10px 20px; }
@@ -412,14 +433,50 @@ html.light .ticket-livelog { background: #1c1916; color: #fbf8f1; border-color: 
     grid-column: auto;
     justify-self: end;
   }
-  /* tk-007:窄 viewport 優先保 title + result,description 收到 2 行 */
+  /* TICKET-SG-005:窄 viewport title 改 2 行 clamp(原 nowrap+ellipsis 在中文標題只剩前 7-10 字,
+     使用者看不到關鍵動作詞)。chevron + status pill 仍靠右靠住,因 header grid 是 auto/1fr/auto */
   .ticket-card__header .ticket-title {
-    white-space: nowrap;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+  }
+  /* TG-408:mobile 把 mode chip 從 titleline inline 拆到上面一列,title 才有完整寬度做 2-line clamp。
+     原本「迭代任務 chip + 中文長 title」共擠 1fr column 結果 chip 把 title 推到只剩 50% 寬,
+     失敗系列 status pill 又佔右側 → title 只看得到「把舊」+ `architecture...` ellipsis,使用者
+     完全看不到動作 / 受詞 / 目的地。整個 status pill 結構性重排是 cross-unit Phase 4,但 mode chip
+     stack 是純 ticket-card 本地優化,不動 status pill 位置即可解大半問題。 */
+  .ticket-card__titleline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .ticket-card__titleline > .ticket-mode {
+    align-self: flex-start;
   }
   .ticket-card__description {
     margin-top: 6px;
+  }
+  /* TG-405:terminal multi-round(failed_iter_limit / done multi-round)在 mobile 把整段
+     iter rows 全攤開會吃光首屏 — 對歷史 round row 做密度壓縮(padding / gap / font 一律收緊),
+     不改顯示邏輯(不折疊隱藏),純視覺密度。current in-progress row 跟 summary 保持原尺寸。 */
+  .ticket.is-failed .ticket-iter-row,
+  .ticket.is-done .ticket-iter-row {
+    padding: 5px 8px;
+    gap: 10px;
+    margin-top: 3px;
+    font-size: 11px;
+  }
+  .ticket.is-failed .ticket-iter-row .iter-stage,
+  .ticket.is-done .ticket-iter-row .iter-stage {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+  .ticket.is-failed .ticket-iter-row .iter-meta,
+  .ticket.is-done .ticket-iter-row .iter-meta {
+    font-size: 10px;
   }
 }
 

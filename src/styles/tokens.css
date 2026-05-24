@@ -55,14 +55,21 @@
   --scrim-modal: color-mix(in srgb, #000 55%, transparent);
   --scrim-drawer: color-mix(in srgb, #000 40%, transparent);
 
-  /* phase4-overlay-001 — z-index layering tokens (referenced by drawer/modal/toast layers) */
+  /* phase4-overlay-001 — z-index layering tokens (referenced by drawer/modal/toast layers).
+     phase4-2026-05-24-cross-B4 — modal MUST sit above settings popover so destructive
+     confirms triggered from inside settings (e.g. add-device-dialog, revoke session,
+     reset pipeline) render visibly. Pre-fix --z-modal=1000 < --z-settings=1500 meant
+     mobile confirms were completely hidden and desktop confirms underlapped the popover.
+     Updated layering: z-settings=1500, z-modal=1700 (alertdialog/confirm/diff/sync
+     conflict — must sit above any popover/drawer), z-toast=2200 (auto-dismiss surface
+     stays above modals so error toasts surface). */
   --z-overlay-base: 50;
   --z-popover: 100;
   --z-drawer: 200;
   --z-banner: 300;
-  --z-modal: 1000;
-  --z-settings: 1100;
-  --z-toast: 2000;
+  --z-settings: 1500;
+  --z-modal: 1700;
+  --z-toast: 2200;
 
   /* phase4-cross-006 — canonical spacing scale (consumed by board/drawer/qa/diff/settings) */
   --space-1: 4px;
@@ -92,6 +99,30 @@
   --inverse-fg: #1c1916;
   --on-accent-fg: var(--accent-fg);
 
+  /* phase4-2026-05-24-cross-005 — semantic surface tokens (callout / notice / warning /
+     success / danger / info soft backgrounds). Pre-fix every surface (qa bubble / audit
+     timeline notice / settings inline alert / toast / form-field / empty state / busy
+     hint) used near-identical beige (--panel-2 / --accent-soft / --paused-soft mixed
+     into panel-2) — semantic intent was carried entirely by border tone, not by surface.
+     Callers should pick by semantic role instead of all sharing --panel-2:
+       --bg-callout      neutral notice / info card (qa system bar, audit row, empty state body)
+       --bg-warning-soft amber notice (init busy hint, queued)
+       --bg-success-soft green notice (ready banner, settings update done, copy-success flash)
+       --bg-danger-soft  red alert (confirm warning, settings update error, failed reason)
+       --bg-info-soft    indigo info (sync banner, running iter)
+     Border companions match by name (--*-border) so a callout can opt-in by setting
+     `background: var(--bg-callout); border: 1px solid var(--callout-border);`. */
+  --bg-callout: color-mix(in srgb, var(--fg-mute) 6%, var(--panel-2));
+  --callout-border: var(--line);
+  --bg-warning-soft: color-mix(in srgb, var(--paused) 8%, var(--panel-2));
+  --warning-border: color-mix(in srgb, var(--paused) 40%, var(--line-2));
+  --bg-success-soft: color-mix(in srgb, var(--done) 8%, var(--panel-2));
+  --success-border: color-mix(in srgb, var(--done) 40%, var(--line-2));
+  --bg-danger-soft: var(--failed-soft);
+  --danger-soft-border: color-mix(in srgb, var(--failed) 40%, var(--line-2));
+  --bg-info-soft: color-mix(in srgb, var(--running) 8%, var(--panel-2));
+  --info-border: color-mix(in srgb, var(--running) 40%, var(--line-2));
+
   /* phase4-focus-001 — shared :focus-visible ring tokens */
   --focus-ring-offset: 2px;
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
@@ -104,9 +135,10 @@
 
   /* phase4-2026-05-23-007 — terminology policy (PROJECT_TERMINOLOGY):
      - Visible UI labels: localized zh-Hant (e.g. 「執行」「停止」「合併」「結果」).
-       Verdict labels (PASS/FAIL/PART/UNKNOWN) intentionally stay as ASCII glyph
-       in narrow stage chips (IterStages — 9px Geist Mono); elsewhere they get
-       localized via fmtVerdict (通過 / 未通過 / 部分通過 / 結果未知).
+       Verdict labels are zh-Hant everywhere as of 2026-05-24 (IterStages chip
+       now renders 通過 / 失敗 / 部分通過 / 未知 via fmtVerdict + verdictToken
+       helpers — see src/features/pipeline/IterStages.tsx). Stable ASCII tokens
+       (pass / fail / part / unknown) are kept as className / aria-state keys.
      - Developer tokens (DO NOT translate, ALWAYS in mono font):
        branch names, commit hashes, file paths, CLI subcommands (e.g. `git init`),
        state machine keys (state=ready / state=running / draft / done / split / pending),
@@ -163,7 +195,12 @@ html.light {
   --accent-fg: #ffffff;
   --danger-fg: #ffffff;
   --danger-bg-soft: var(--failed-soft);
-  --danger-border: color-mix(in srgb, var(--failed) 45%, var(--line-2));
+  /* phase4-2026-05-24-cross-A2 — bump danger-border specifically in light theme so a
+     destructive-secondary outline button (e.g. .security-revoke-btn) on a popover
+     --bg-elevated reads clearly red instead of beige. The 45% mix used pre-fix mixed
+     too much --line-2 in; saturate to direct --failed for outline border. soft-bg
+     callsites still use --bg-danger-soft / --failed-soft. */
+  --danger-border: var(--failed);
   --success-fg: #ffffff;
   --status-dark-fg: #1c1916;
 
@@ -230,7 +267,14 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
   background: var(--panel-2);
   transition: background 120ms, border-color 120ms, transform 80ms;
 }
-.btn:hover:not(:disabled) { background: var(--hover); border-color: var(--line-2); }
+/* phase4-2026-05-24-cross-001 — exclude accent variants so primary/danger/queued/accent
+   keep their own brand-tinted hover rule. Pre-fix the global rule (specificity 0,3,0)
+   was overriding .btn-primary etc (0,1,0), washing every primary CTA under the cursor
+   to translucent panel hover bg. Init popup had to patch this per-feature; this is the
+   global root fix. */
+.btn:hover:not(:disabled):not([aria-disabled="true"]):not(.btn-primary):not(.btn-danger):not(.btn-queued):not(.btn-accent) {
+  background: var(--hover); border-color: var(--line-2);
+}
 .btn:active:not(:disabled) { transform: translateY(0.5px); }
 .btn:disabled {
   opacity: 0.45;

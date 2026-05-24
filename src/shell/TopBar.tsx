@@ -34,9 +34,12 @@ export function TopBar({
   const [browseOpen, setBrowseOpen] = useState(false);
   const [browseData, setBrowseData] = useState<api.BrowseResult | null>(null);
   const [browseLoading, setBrowseLoading] = useState(false);
+  // 失敗時保留試過的 path,讓「重試」可以重打同一個 path,而非變成 dead-end(advisor 2026-05-24 r1)
+  const [lastTriedPath, setLastTriedPath] = useState<string | undefined>(undefined);
 
   async function loadBrowse(path?: string) {
     setBrowseLoading(true);
+    setLastTriedPath(path);
     setError(null);
     try {
       const data = await api.browseFolder(path);
@@ -408,9 +411,11 @@ export function TopBar({
                   className="mono browse-current-path"
                   aria-labelledby="browse-path-label"
                   aria-live="polite"
-                  title={browseData?.path ?? "載入中"}
+                  title={browseData?.path ?? lastTriedPath ?? "載入中"}
                 >
-                  {browseData?.path ?? "(載入中…)"}
+                  {/* error 時保留 lastTriedPath,讓 user 知道剛剛試到哪(advisor 2026-05-24:
+                      避免變 "(載入中…)" → 看起來像永遠 loading 的 dead-end) */}
+                  {browseData?.path ?? lastTriedPath ?? "(載入中…)"}
                 </div>
               </div>
               <div className="browse-toolbar" role="toolbar" aria-label="資料夾導覽">
@@ -459,11 +464,32 @@ export function TopBar({
               </div>
               <ul className="browse-list" role="list" aria-label="資料夾內容">
                 {browseLoading ? (
-                  <li className="browse-list-placeholder">載入中…</li>
+                  <li className="browse-list-placeholder browse-list-placeholder--center">
+                    <span aria-hidden className="browse-list-placeholder-spinner" />
+                    <span>載入中…</span>
+                  </li>
+                ) : !browseData && error ? (
+                  // error + no data → 不要顯示一個無意義的 dash;給出明確的「重試」入口
+                  // (advisor 2026-05-24:browse_modal_error 不能變 dead-end)
+                  <li className="browse-list-placeholder browse-list-placeholder--center browse-list-placeholder--error">
+                    <span aria-hidden className="browse-list-placeholder-icon">!</span>
+                    <span>讀取失敗</span>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => void loadBrowse(lastTriedPath)}
+                      disabled={browseLoading}
+                    >
+                      重試
+                    </button>
+                  </li>
                 ) : !browseData ? (
-                  <li className="browse-list-placeholder">—</li>
+                  <li className="browse-list-placeholder browse-list-placeholder--center">—</li>
                 ) : browseData.entries.length === 0 ? (
-                  <li className="browse-list-placeholder">(空資料夾)</li>
+                  <li className="browse-list-placeholder browse-list-placeholder--center">
+                    <span aria-hidden className="browse-list-placeholder-folder"><FolderIcon /></span>
+                    <span>(空資料夾)</span>
+                  </li>
                 ) : (
                   browseData.entries.map((e) => (
                     <li key={e.name} role="listitem">
@@ -549,7 +575,11 @@ function ParallelChip({ running, max }: { running: number; max: number }) {
     >
       <span className="topbar-branch-icon"><PlayIcon /></span>
       {running}/{max}
-      {overload && <span className="parallel-chip-overload">!</span>}
+      {overload && (
+        // visual:用 emoji-style 不依賴(無 emoji),改成色塊 + 文字「超載」
+        // 比舊版 `!` 更明確,a11y 改善:不只靠 color(advisor 2026-05-24)
+        <span className="parallel-chip-overload" aria-hidden>超載</span>
+      )}
     </span>
   );
 }

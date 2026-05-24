@@ -29,6 +29,10 @@
    so they don't push the icon column or collide with the missing-artifact tag. */
 .init-scan-path { color: var(--fg); font-weight: 500; overflow-wrap: anywhere; word-break: break-all; }
 .init-scan-miss { color: var(--fg-mute); }
+/* iter-uiux init-popup.0546 — keep the .git/ chip and its parenthetical reason
+   on one logical wrap unit so narrow viewports don't strand 「需要）」 on its own line. */
+.init-scan-miss-tail { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 2px; }
+.init-scan-miss-note { white-space: nowrap; }
 
 .init-inline-code {
   font-family: var(--font-mono); font-size: 0.93em;
@@ -113,12 +117,12 @@ html.light .init-cmd-text { color: #fbf8f1; }
 .init-tree-wrap--no-top { padding-top: 0; }
 .init-busy-hint {
   margin: 0 var(--space-6, 28px) var(--space-3, 12px);
-  padding: 8px 12px;
-  font-size: 11.5px;
+  padding: 10px 14px;
+  font-size: 12px;
   line-height: 1.55;
-  color: var(--fg-mute);
-  background: var(--panel-2);
-  border: 1px dashed var(--line);
+  color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
   border-radius: var(--radius-control, 6px);
 }
 .init-dim { opacity: 0.65; }
@@ -136,10 +140,42 @@ html.light .init-cmd-text { color: #fbf8f1; }
 }
 
 .init-git-toggle {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
   gap: 8px;
   font-size: 12px;
   color: var(--fg-mute);
   cursor: pointer;
+  line-height: 1.55;
+}
+.init-git-toggle > input { margin-top: 2px; }
+
+/* iter-uiux init-popup.0546 — keep accent bg on hover (override global .btn:hover:not(:disabled))
+   the global rule has higher specificity than .btn-primary so without this scoped guard the
+   primary CTA flips to translucent panel-2 whenever the cursor sits on it (e.g. immediately
+   after click → error rejection). */
+.init-popup-actions .btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* iter-uiux init-popup.0546 — mobile fit-content sizing so the modal hugs its content
+   instead of stretching to full viewport height with blank space below the footer.
+   phase4-2026-05-24-cross-003 — drawer.css mobile @media now align-items: center by
+   default, so the per-stage override here is redundant (kept as no-op insurance
+   in case the global contract drifts again). */
+@media (max-width: 767.98px) {
+  .init-popup-stage .init-card {
+    width: min(100%, calc(100vw - var(--space-4, 16px) * 2));
+    max-height: calc(100dvh - var(--space-6, 24px) * 2);
+    height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .init-popup-stage .init-card > .init-tree-wrap:last-of-type,
+  .init-popup-stage .init-card > .init-busy-hint {
+    flex: 0 0 auto;
+  }
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSystemVersion, triggerSystemUpdate, getHealth, type VersionStatus } from "../../api/system";
 import { ApiError } from "../../api/_client";
-import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon } from "../../ui/icons";
+import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon, SpinnerIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 
@@ -65,9 +65,9 @@ export function UpdateTab() {
 
     const tick = async () => {
       if (Date.now() - startTimeRef.current > HEALTH_POLL_TIMEOUT_MS) {
-        const msg = "等待 backend 回來逾時(3 min)。請手動 reload 頁面。";
-        setPhase({ kind: "error", reason: msg });
-        toast(msg, { variant: "danger" });
+        const reason = "等待 backend 回來逾時（3 min）。請手動 reload 頁面。";
+        setPhase({ kind: "error", reason });
+        toast("更新未完成，請查看更新面板", { variant: "danger" });
         return;
       }
       const ctrl = new AbortController();
@@ -116,18 +116,19 @@ export function UpdateTab() {
       await triggerSystemUpdate();
       startHealthPoll();
     } catch (e) {
-      const msg =
+      const reason =
         e instanceof ApiError
           ? e.message
           : e instanceof Error && e.message
             ? e.message
             : "觸發更新失敗";
-      setPhase({ kind: "error", reason: msg });
-      toast(msg, { variant: "danger" });
+      setPhase({ kind: "error", reason });
+      toast("更新未完成，請查看更新面板", { variant: "danger" });
     }
   }, [toast, startHealthPoll]);
 
   const isUpdating = phase.kind === "starting" || phase.kind === "polling";
+  const isError = phase.kind === "error";
   const isDevBuild = !!version && /^dev-|-dirty$/.test(version.current);
 
   return (
@@ -137,7 +138,7 @@ export function UpdateTab() {
       {loading && !version && <div className="settings-subhint">載入中…</div>}
 
       {version && (
-        <div className="update-tab-body">
+        <div className="update-tab-body" aria-busy={isUpdating || undefined}>
           {/* 狀態摘要 — 不是資料表 */}
           <div className="update-summary">
             <div className="update-summary-headline">
@@ -195,7 +196,7 @@ export function UpdateTab() {
             >
               {loading ? "檢查中…" : "檢查更新"}
             </button>
-            {version.hasUpdate && !isDevBuild && (
+            {version.hasUpdate && !isDevBuild && !isError && (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -205,7 +206,7 @@ export function UpdateTab() {
                 {isUpdating ? "更新中…" : "立即更新"}
               </button>
             )}
-            {isDevBuild && (
+            {isDevBuild && !isError && (
               <button
                 type="button"
                 className="btn"
@@ -223,14 +224,56 @@ export function UpdateTab() {
           </div>
 
           {phase.kind === "polling" && (
-            <div className="update-progress-hint">
-              backend 重啟中,預期 30-60 秒。{phase.afterDown ? "已重新連線,確認版本…" : "等待 backend 下線…"}
+            <div className="update-progress" role="status" aria-live="polite">
+              <SpinnerIcon className="update-progress-spinner" aria-hidden />
+              <div className="update-progress-text">
+                <div className="update-progress-title">backend 重啟中，通常需 30-60 秒</div>
+                <div className="update-progress-sub">
+                  {phase.afterDown ? "已重新連線，正在確認版本…" : "等待 backend 下線…"}
+                </div>
+              </div>
             </div>
           )}
 
           {phase.kind === "done" && (
-            <div className="mono update-success">
-              <CheckIconSm aria-hidden /> 已更新{phase.newTag ? `到 ${phase.newTag}` : ""}
+            <div className="update-success" role="status" aria-live="polite">
+              <CheckIconSm aria-hidden />
+              <div className="update-success-text">
+                <div className="update-success-title">
+                  已更新{phase.newTag ? (
+                    <>
+                      到 <span className="mono update-success-tag">{phase.newTag}</span>
+                    </>
+                  ) : ""}
+                </div>
+                <div className="update-success-sub">重新整理後會載入新版。</div>
+              </div>
+            </div>
+          )}
+
+          {phase.kind === "error" && (
+            <div className="update-error" role="alert" aria-live="assertive">
+              <div className="update-error-title">更新未完成</div>
+              <div className="update-error-reason">{phase.reason}</div>
+              <div className="update-error-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setPhase({ kind: "idle" });
+                    void fetchVersion();
+                  }}
+                >
+                  重新檢查
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => window.location.reload()}
+                >
+                  重新整理頁面
+                </button>
+              </div>
             </div>
           )}
 

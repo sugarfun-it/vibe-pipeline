@@ -330,9 +330,9 @@ export const TicketCard = memo(function TicketCard({
         </div>
       )}
 
-      {isPaused && ticket.reason && (
-        <div className="ticket-paused-actions">
-          <span className="paused-reason">{ticket.reason}</span>
+      {(isPaused || isFailed) && ticket.reason && (
+        <div className={"ticket-paused-actions" + (isFailed ? " is-failed-reason" : "")}>
+          <span className={"paused-reason" + (isFailed ? " is-failed" : "")}>{ticket.reason}</span>
         </div>
       )}
     </div>

@@ -321,15 +321,27 @@
   color: var(--fg-mute);
   max-height: 200px;
   overflow-y: auto;
+  /* iter-uiux 2026-05-24 sync R2 (sync-010):long paths wrap, 不撐爆 modal 寬度導致 actions 跑出 viewport */
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.focus-modal-files li {
+  line-height: 1.45;
+  padding: 1px 0;
 }
 
 /* ─── Misc 小元素 ──────────────────────────────────────────── */
 
 
 .focus-runs-chip {
-  /* 已存在 board.css;這邊保 inline 補的 fontSize:11 + color:fg-mute */
+  /* 已存在 board.css;這邊保 inline 補的 fontSize:11 + color:fg-mute。
+     iter-uiux 2026-05-24:加邊框 + transparent bg → 視覺上跟 state chip / diff chip
+     區別「metadata」而非「status badge」。padding 略收避免撐高 meta-row。 */
   font-size: 11px;
   color: var(--fg-mute);
+  border: 1px solid var(--line);
+  background: transparent;
+  padding-block: 1px;
 }
 
 /* running 狀態停止按鈕 */
@@ -341,6 +353,19 @@
 .run-btn-stop-now:hover {
   background: var(--failed-soft);
   border-color: var(--failed);
+}
+
+/* iter-uiux 2026-05-24 — RunButton disabled-empty 文字對比
+   (`無可執行 ticket` / `無可執行`)。
+   原本走 .btn[aria-disabled] 的全域 opacity / muted color → 在暖色背景上
+   洗白。這裡覆寫 owned 範圍內的 token contrast,保持 disabled 語意但
+   可讀。border 走 line-2 而非 transparent,讓 button shape 在視覺上不
+   消失。 */
+.btn.run-btn-empty[aria-disabled="true"] {
+  color: var(--fg-mute);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  opacity: 1;
 }
 
 /* ─── Mobile(focus header / banner / RunButton 相關)─────── */
@@ -424,6 +449,25 @@
     flex-shrink: 0;
   }
 
+  /* iter-uiux 2026-05-24 retry — syncActive 時 RunButton 是 disabled「同步中」狀態,
+     在 mobile 跟 +新增 ticket / sync-chip 同列搶版面;隱藏 disabled RunButton,
+     sync 狀態由 sync-chip 承擔語意,+新增 ticket 是當下唯一可動主 CTA。
+     sr-only role=status 仍保留,所以 SR 公告不受影響(在 RunButton.tsx 內)。 */
+  .focus-actions .focus-run-wrap[data-sync-active="1"] {
+    display: none;
+  }
+
+  /* iter-uiux 2026-05-24 — empty_pipeline pair:mobile 下 EmptyTickets 已提供中央
+     主 CTA(建第一張 ticket / 接續 QA),header 的 + 新增 ticket / + 接續 QA 跟它重複
+     +擠掉 state chip 行寬。data-empty-mode="1" 時 mobile 隱掉 header 按鈕。
+     2026-05-24 retry — 例外:hasActiveDraft 時 EmptyTickets 顯示「接續 QA」中央 CTA,
+     但 user 第二行 entry 仍需要 header 也有可點按鈕(語意是同樣 primary action,不重複)
+     → data-has-active-draft="1" 時 header 按鈕保留可見,反而是中央 CTA(EmptyTickets)
+     才應該降權,但 EmptyTickets 非本 subagent owned 檔,暫只保留 header 視覺入口。 */
+  .focus-actions[data-empty-mode="1"][data-has-active-draft="0"] .focus-add-ticket {
+    display: none !important;
+  }
+
   /* mobile-focus-004:ReadyBanner merged 變體在 mobile 把 branch desc(branch → base · N commit)
      截成單行 ellipsis,避免長 branch name 換行撐高 banner */
   .banner.banner-merged .banner-desc {
@@ -432,6 +476,20 @@
     text-overflow: ellipsis;
     max-width: 100%;
     min-width: 0;
+  }
+
+  /* iter-uiux 2026-05-24 — ReadyBanner mobile 模式下,若 branch + base + commits 無法
+     一行容下,讓 commit count 自然換行;隱藏 `·` 分隔符,避免 `·` 跑到下一行行首 */
+  .banner-desc .banner-meta-sep {
+    display: none;
+  }
+  .banner-desc .meta-atom + .meta-atom {
+    display: block;
+  }
+  /* 非 merged variant 的 banner desc 不限 single-line,所以也讓 meta-atom block 在 mobile
+     是合理 default;merged variant 仍 ellipsis 一行(上面 rule 覆寫住) */
+  .banner.banner-merged .banner-desc .meta-atom + .meta-atom {
+    display: inline;
   }
   .banner.banner-merged .banner-body {
     min-width: 0;
@@ -453,6 +511,30 @@
   }
   .banner.banner-merged .banner-icon {
     transform: scale(0.85);
+  }
+
+  /* iter-uiux 2026-05-24 retry — ReadyBanner ready / failed variants 在 mobile 下
+     CTA(合併入 main / 重試合併)會把 desc meta(branch → base · N commit)壓到
+     不可讀 ellipsis。改成 mobile 下整個 banner 縱向排列:icon + body 一行,CTA 獨佔下一行
+     full-width,避免擠壓。merged variant 沒 CTA 不受影響;merging variant 同 ready 處理。 */
+  .banner[data-state="ready"],
+  .banner[data-state="failed"],
+  .banner[data-state="merging"] {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .banner[data-state="ready"] .banner-body,
+  .banner[data-state="failed"] .banner-body,
+  .banner[data-state="merging"] .banner-body {
+    flex: 1 1 calc(100% - 44px);
+    min-width: 0;
+  }
+  .banner[data-state="ready"] > .btn,
+  .banner[data-state="failed"] > .btn,
+  .banner[data-state="merging"] > .btn {
+    flex: 0 0 100%;
+    margin-top: 8px;
+    justify-content: center;
   }
 }
 

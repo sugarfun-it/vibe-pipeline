@@ -32,6 +32,7 @@
   gap: 10px;
   height: 100%;
   animation: fadeUp 220ms ease-out both;
+  position: relative;
 }
 .inbox-strip-bell {
   width: 32px; height: 32px;
@@ -46,6 +47,10 @@
 }
 .inbox-strip-bell:hover { background: var(--hover); border-color: var(--accent); color: var(--fg); }
 .inbox-strip-bell.has-unread { border-color: var(--accent); color: var(--accent); }
+.inbox-strip-bell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .inbox-strip-bell-num {
   position: absolute;
   top: -5px;
@@ -60,7 +65,6 @@
   font-weight: 700;
   line-height: 16px;
   text-align: center;
-  letter-spacing: -0.02em;
   box-shadow: 0 0 0 2px var(--bg-elevated);
 }
 .inbox-strip-divider {
@@ -68,7 +72,8 @@
   margin: 2px 0;
 }
 /* strip pip 區整塊當一個觸碰區(<button>),dots 是視覺索引非個別 button。
-   寬一點(40px)+ 各 pip 高 14px 容易 hover/scroll 觸發 */
+   寬一點(40px)+ 各 pip 高 14px 容易 hover/scroll/focus 觸發。
+   empty 狀態:用 .inbox-strip-pips-empty 占位(不渲染 button),避免空 tab target。 */
 .inbox-strip-pips {
   display: flex; flex-direction: column; gap: 4px;
   align-items: center;
@@ -79,32 +84,49 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background 120ms;
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: calc(100% - 80px); /* 留給 bell + divider + INBOX label 空間 */
+  overflow: hidden;
 }
 .inbox-strip-pips:hover {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.inbox-strip-pips:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.inbox-strip-pips-empty {
+  /* 占用 pips 該占的中段空間,讓 INBOX 標籤仍對齊原位置,但不暴露互動 target */
+  flex: 1;
+  min-height: 0;
 }
 .inbox-strip-pip {
   width: 10px; height: 10px;
   border-radius: 50%;
   background: var(--strip-color);
-  opacity: 0.4;
+  opacity: 0.55;
   flex-shrink: 0;
   transition: transform 120ms, opacity 120ms, box-shadow 120ms;
 }
 .inbox-strip-pip.is-unread {
   opacity: 1;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--strip-color) 28%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--strip-color) 35%, transparent);
 }
-/* 滾輪 / hover preview 當下高亮那顆 */
+/* 滾輪 / hover / keyboard preview 當下高亮那顆 */
 .inbox-strip-pip.is-preview {
   opacity: 1;
   transform: scale(1.6);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--strip-color) 40%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--strip-color) 45%, transparent);
 }
 .inbox-strip-overflow {
-  font-size: 9px;
-  color: var(--fg-faint);
+  font-size: 10.5px;
+  color: var(--fg-mute);
   margin-top: 4px;
+  line-height: 1;
+  padding: 1px 3px;
+  letter-spacing: 0;
 }
 
 /* preview popover:portal 到 body,fixed 定位避開 .inbox-col 的 overflow:hidden;
@@ -112,14 +134,19 @@
 .inbox-strip-preview {
   position: fixed;
   transform: translateY(-50%);
-  min-width: 260px;
-  max-width: 320px;
+  min-width: 240px;
+  max-width: 280px;
   padding: 12px 14px;
+  /* 加強層次感:更明顯的 shadow + 微微 backdrop blur,讓 popover 視覺漂浮於下方 page content 之上 */
   background: var(--bg-elevated);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-2, var(--line));
   border-left: 3px solid var(--preview-color, var(--accent));
   border-radius: 8px;
-  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,0.3));
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: var(--z-popover, 1000);
   animation: fadeUp 120ms ease-out both;
   pointer-events: none; /* hover preview 期間不擋滑鼠回到 strip 上 */
@@ -151,18 +178,17 @@
   color: var(--fg-faint);
 }
 
-/* strip 自己需要是 relative,preview popover 才能錨上面 */
-.inbox-strip { position: relative; }
-.inbox-strip-spacer { flex: 1; }
+.inbox-strip-spacer { flex-shrink: 0; min-height: 8px; }
 .inbox-strip-label {
   font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--fg-faint);
-  letter-spacing: 0.18em;
+  font-size: 9.5px;
+  color: var(--fg-mute);
+  letter-spacing: 0;
   writing-mode: vertical-rl;
   text-orientation: mixed;
   padding: 6px 0 8px;
-  opacity: 0.6;
+  opacity: 0.75;
+  flex-shrink: 0;
 }
 /* ─── expanded panel ─── */
 .inbox-panel {
@@ -179,7 +205,6 @@
 }
 .inbox-head h3 {
   margin: 0; font-size: 13.5px; font-weight: 600;
-  letter-spacing: -0.005em;
 }
 .inbox-head-count {
   font-size: 10.5px; padding: 2px 7px;
@@ -188,9 +213,17 @@
   font-weight: 600;
 }
 .inbox-head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
-.inbox-head-actions .icon-btn { width: 26px; height: 26px; }
+.inbox-head-actions .icon-btn { width: 32px; height: 32px; }
+.inbox-collapse-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 .inbox-filter {
+  /* <fieldset> reset:去掉預設 border/margin/padding,維持 inbox 視覺 */
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
   display: flex; gap: 4px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
@@ -200,29 +233,53 @@
 .inbox-filter-btn {
   flex: 1;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-  font-size: 11.5px; padding: 5px 8px;
+  font-size: 11.5px; padding: 6px 8px;
   border-radius: 6px;
   color: var(--fg-mute);
   border: 1px solid transparent;
   background: transparent;
+  cursor: pointer;
   transition: background 120ms, color 120ms, border-color 120ms;
 }
 .inbox-filter-btn.is-active {
-  background: var(--bg-elevated); color: var(--fg);
-  border-color: var(--line-2);
-  font-weight: 500;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  font-weight: 600;
 }
 .inbox-filter-btn:hover:not(.is-active) { background: var(--hover); color: var(--fg); }
+.inbox-filter-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .inbox-filter-count {
   font-family: var(--font-mono);
   font-size: 10px;
-  opacity: 0.65;
+  opacity: 0.75;
+}
+.inbox-filter-btn.is-active .inbox-filter-count {
+  opacity: 1;
 }
 
 .inbox-list {
   flex: 1; min-height: 0;
   overflow-y: auto;
   padding: 4px 8px 16px;
+  /* ul reset — list-style off, margin 0 */
+  list-style: none;
+  margin: 0;
+}
+.inbox-list-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inbox-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  list-style: none;
 }
 
 /* .inbox-section-* 已 dead — panel 改 flat 後不再分組 */
@@ -230,7 +287,7 @@
 .inbox-item {
   position: relative;
   display: flex; flex-direction: column; gap: 4px;
-  padding: 9px 28px 14px 14px;
+  padding: 9px 36px 10px 14px; /* right 留給 X(28px + 8px gap);bottom 給 meta row */
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
@@ -241,16 +298,79 @@
   transition: background 100ms, border-color 100ms;
 }
 .inbox-item:hover { background: var(--hover); }
-.inbox-item.is-block {
-  background: color-mix(in srgb, var(--paused) 7%, transparent);
-  border-color: color-mix(in srgb, var(--paused) 28%, transparent);
+/* focus-visible 走 .inbox-item-open(真正的 button);用 :has 讓 outer card 也顯示 focus state。 */
+.inbox-item:has(.inbox-item-open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
-.inbox-item.is-block:hover { background: color-mix(in srgb, var(--paused) 12%, transparent); }
-.inbox-item.is-muted { opacity: 0.72; }
+/* .inbox-item-open:click-anywhere fill,在最底層;X / actions 在它之上 */
+.inbox-item-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+.inbox-item-open:focus-visible {
+  /* outline 由 parent .inbox-item:has(...) 提供;這層內含 outline 反而會雙描 */
+  outline: none;
+}
+/* 內容元素都浮在 open button 之上;但只有可互動子元素需要 pointer-events */
+.inbox-item-head,
+.inbox-item-sub,
+.inbox-item-meta {
+  position: relative;
+  z-index: 1;
+  pointer-events: none; /* 讓 click 落到底下的 open button */
+}
+.inbox-item-x,
+.inbox-item-action {
+  position: relative;
+  z-index: 2;
+}
+/* 未讀 block:強提示底色與描邊 */
+.inbox-item.is-block.is-unread {
+  background: color-mix(in srgb, var(--paused) 8%, transparent);
+  border-color: color-mix(in srgb, var(--paused) 32%, transparent);
+}
+.inbox-item.is-block.is-unread:hover { background: color-mix(in srgb, var(--paused) 14%, transparent); }
+/* 已讀 block:卡片應低調(避免讀過的 block 仍視覺壓過未讀 item) */
+.inbox-item.is-block:not(.is-unread) {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--paused) 14%, transparent);
+}
+.inbox-item.is-block:not(.is-unread):hover { background: var(--hover); }
+.inbox-item.is-muted { opacity: 0.78; }
 .inbox-item.is-muted:hover { opacity: 1; }
 .inbox-item.is-muted:focus-within { opacity: 1; }
 
-/* 單 dot:同時表 sev(顏色)+ read 狀態(實心/空心)。原本的 icon box + unread-dot 兩個合一。 */
+/* highlight 動畫:focusNotif 後 1.6s 的「you-came-from-here」echo;
+   不留 final halo,讀完後與其他 read item 視覺對齊 */
+.inbox-item.fade-up {
+  animation: inboxItemFlash 1.6s ease-out both;
+}
+@keyframes inboxItemFlash {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--item-color) 50%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--item-color) 50%, transparent); }
+  18%  { box-shadow: 0 0 0 4px color-mix(in srgb, var(--item-color) 28%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--item-color) 38%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent, inset 0 0 0 1px transparent; }
+}
+/* phase4-2026-05-24-cross-G1 — reduced-motion: inbox flash + fade-up animations
+   collapse to non-motion equivalents. Static rest-state still encodes unread via
+   .inbox-item-dot color + .is-unread halo so semantics survive. */
+@media (prefers-reduced-motion: reduce) {
+  .inbox-item.fade-up,
+  .inbox-strip-preview,
+  .inbox-panel { animation: none; }
+}
+
+/* 單 dot:同時表 sev(顏色)+ read 狀態(實心/空心)。 */
 .inbox-item-dot {
   width: 8px; height: 8px;
   border-radius: 50%;
@@ -265,14 +385,13 @@
 }
 .inbox-item-dot.is-read {
   background: transparent;
-  border: 1px solid var(--item-color);
-  opacity: 0.5;
+  border: 1.5px solid var(--item-color);
+  opacity: 0.75;
 }
 .inbox-item-x {
   position: absolute;
-  right: 6px; top: 6px;
-  width: 18px; height: 18px;
-  display: inline-flex;
+  right: 4px; top: 4px;
+  width: 28px; height: 28px;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -280,47 +399,53 @@
   background: transparent;
   color: var(--fg-faint);
   cursor: pointer;
-  border-radius: 4px;
-  opacity: 0;
-  transition: opacity 120ms, background 120ms, color 120ms;
-  pointer-events: none;
+  border-radius: 6px;
+  /* display:none 預設,排除 tab order(避免不可見控件被 Tab 命中) */
+  display: none;
+  transition: background 120ms, color 120ms;
 }
-.inbox-item:hover .inbox-item-x {
-  opacity: 1;
-  pointer-events: auto;
-}
+.inbox-item:hover .inbox-item-x,
 .inbox-item:focus-within .inbox-item-x {
-  opacity: 1;
-  pointer-events: auto;
+  display: inline-flex;
 }
 .inbox-item-x:hover {
   background: var(--panel-2);
   color: var(--fg);
 }
+.inbox-item-x:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
 .inbox-item-x svg { width: 10px; height: 10px; }
 .inbox-item-head {
   display: flex; align-items: flex-start; gap: 9px;
 }
-/* .inbox-item-icon dead — 改用單一 .inbox-item-dot */
 .inbox-item-title {
   flex: 1; min-width: 0;
   font-size: 12.5px;
   color: var(--fg);
   font-weight: 500;
   line-height: 1.4;
-  letter-spacing: -0.005em;
 }
 .inbox-item.is-unread .inbox-item-title { font-weight: 600; }
 .inbox-item.is-muted .inbox-item-title { color: var(--fg-mute); font-weight: 400; }
+/* meta row:ts 在 normal flow,長本地化字串自然 wrap 或佔 row 寬,不再 ellipsis 截斷重要資訊 */
+.inbox-item-meta {
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 17px;
+  margin-top: 2px;
+  min-height: 14px;
+}
 .inbox-item-ts {
-  position: absolute;
-  right: 10px;
-  bottom: 6px;
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--fg-faint);
-  white-space: nowrap;
-  pointer-events: none;
+  line-height: 1.2;
+  /* 長本地化時間(如完整日期 / DE 月名)允許 wrap;不再 nowrap 防水平溢出 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .inbox-item.is-unread .inbox-item-ts { color: var(--accent); }
 /* sub / actions 對齊 title:dot 8px + gap 9px = 17px */
@@ -333,6 +458,8 @@
   display: flex; gap: 6px;
   padding-left: 17px;
   margin-top: 6px;
+  position: relative;
+  z-index: 2;
 }
 .inbox-item:not(.is-block) .inbox-item-actions {
   opacity: 0; transform: translateY(-2px);
@@ -361,9 +488,14 @@
   color: var(--fg);
   background: var(--bg-elevated);
   font-weight: 500;
+  cursor: pointer;
   transition: background 100ms, border-color 100ms;
 }
 .inbox-item-action:hover { background: var(--panel-2); border-color: var(--fg-mute); }
+.inbox-item-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .inbox-item-action.is-primary {
   background: var(--paused);
   color: var(--warning-fg, #1c1208);
@@ -399,11 +531,33 @@
   background: var(--bg);
   flex-shrink: 0;
 }
+/* footer link 用 button reset + 真正 hit area,不再純文字樣 */
 .inbox-foot-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
   color: var(--fg-mute);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
   text-decoration: none;
+  transition: background 100ms, color 100ms;
 }
-.inbox-foot-link:hover { color: var(--fg); }
+.inbox-foot-link:hover { color: var(--fg); background: var(--hover); }
+.inbox-foot-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-foot-link-danger {
+  color: var(--fg-faint);
+}
+.inbox-foot-link-danger:hover {
+  color: var(--failed, var(--paused));
+  background: color-mix(in srgb, var(--failed, var(--paused)) 10%, transparent);
+}
 
 @media (hover: none) {
   .inbox-strip-pip {
@@ -414,9 +568,9 @@
     opacity: 1;
   }
 
+  /* touch:X 預設可見(沒有 hover 可觸發) */
   .inbox-item-x {
-    opacity: 1;
-    pointer-events: auto;
+    display: inline-flex;
   }
 
   .inbox-item:not(.is-block) .inbox-item-actions {

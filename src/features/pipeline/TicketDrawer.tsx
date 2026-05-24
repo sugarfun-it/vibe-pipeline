@@ -47,6 +47,28 @@ export function TicketDrawer({
   // splitPending 是 UI 開關(顯不顯示 inline 確認卡),不是 async pending,因此維持手寫 useState
   const [splitPending, setSplitPending] = useState(false);
   const titleId = useId();
+  const splitConfirmId = useId();
+  const splitConfirmTitleId = useId();
+  const splitConfirmDescId = useId();
+  // 觸發按鈕 ref — 讓 ESC / 取消 收起時把焦點還回原 trigger,維持鍵盤連續性
+  const splitTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const splitCancelRef = useRef<HTMLButtonElement | null>(null);
+  // splitPending true 後把焦點移進確認卡內的「取消」(默認低風險入口),避免鍵盤 / SR
+  // 使用者完全不知道 footer 已換成高風險確認狀態。
+  useEffect(() => {
+    if (splitPending) {
+      // 等下一 frame 等 DOM mount 完
+      requestAnimationFrame(() => {
+        splitCancelRef.current?.focus();
+      });
+    } else {
+      // 收起時若 trigger 仍在 DOM(沒被 isSplitting / status change 摘掉),把焦點還回去
+      const t = splitTriggerRef.current;
+      if (t && document.contains(t)) {
+        requestAnimationFrame(() => t.focus());
+      }
+    }
+  }, [splitPending]);
   // reset / delete:雙擊保護 + 失敗時 caller 自己派 toast(這裡 hook 內 throw,error 不消費也 ok)
   const [resetTicket, { pending: resetPending }] = useAsyncAction(async (id: string) => {
     if (onResetTicket) await onResetTicket(id);
@@ -160,7 +182,7 @@ export function TicketDrawer({
       portal={false}
       initialFocus="close"
       stageClassName="tdrw-stage"
-      surfaceClassName="tdrw-drawer"
+      surfaceClassName={"tdrw-drawer" + (splitPending ? " has-split-confirm" : "")}
     >
         <div className="drawer-head tdrw-head">
           {/* td-003:desktop 顯完整 breadcrumb;mobile 改 single-line context meta */}
@@ -219,12 +241,18 @@ export function TicketDrawer({
               const canToggle =
                 onToggleMode && (ticket.mode === "step" || ticket.mode === "iter") && isModeToggleable(ticket);
               const next: "step" | "iter" = ticket.mode === "iter" ? "step" : "iter";
-              // td-007:iter mode 把 mode label + 上限 / 已跑輪次 合併成單一 chip
+              // td-007:iter mode 把 mode label + 上限 / 已跑輪次 合併成單一 chip。
+              // TDRW-SPEC-001:editable 狀態下(draft/ready + onChangeIterLimit 在),iter 上限交給旁邊的
+              // IterLimitField 顯示,chip 內不再帶「· 上限 N 輪」否則同一資訊出現兩次,使用者不清楚兩處哪個權威。
               const isIter = ticket.mode === "iter";
+              const iterFieldEditable =
+                isIter && !!onChangeIterLimit && (ticket.status === "draft" || ticket.status === "ready");
               const iterSuffix = isIter
                 ? (isDone || ticket.iter
                   ? ` · 已跑 ${iterCurrent}/${iterLimit} 輪`
-                  : ` · 上限 ${iterLimit} 輪`)
+                  : iterFieldEditable
+                    ? ""
+                    : ` · 上限 ${iterLimit} 輪`)
                 : "";
               const baseLabel = `${modeLabel}${iterSuffix}`;
               const className =
@@ -309,26 +337,42 @@ export function TicketDrawer({
               <span className="tdrw-running-label">AI 拆分中…(約 10-30 秒)</span>
             </div>
           ) : splitPending && onSplitTicket && isSplittable(ticket) ? (
-            <div className="tdrw-footer tdrw-split-confirm" role="group" aria-label="AI 拆分確認">
-              <div className="tdrw-split-confirm-title">
-                用 AI 把這張 ticket 拆成多張獨立 ticket?
+            <div
+              id={splitConfirmId}
+              className="tdrw-footer tdrw-split-confirm"
+              role="alertdialog"
+              aria-modal="false"
+              aria-labelledby={splitConfirmTitleId}
+              aria-describedby={splitConfirmDescId}
+            >
+              <div className="tdrw-split-confirm-head">
+                <ScissorsIcon className="tdrw-split-confirm-icon" aria-hidden="true" />
+                <div id={splitConfirmTitleId} className="tdrw-split-confirm-title">
+                  以 AI 拆分並取代這張 ticket
+                </div>
               </div>
-              <div className="tdrw-split-confirm-desc">
-                AI 會分析目前的目標與驗收,拆成數張各自可獨立執行的 ticket,
-                原本這張會被取代(AI 判斷不需拆時則維持原樣)。
-                執行約 10-30 秒,期間 pipeline 暫不可動。
+              <div id={splitConfirmDescId} className="tdrw-split-confirm-desc">
+                原 ticket 會被 AI 產生的新 tickets 取代；若 AI 判斷不需拆分則維持原樣。
+                執行約 10–30 秒,期間 pipeline 暫不可動。
               </div>
               <div className="tdrw-split-confirm-actions">
-                <button type="button" className="tdrw-action" onClick={() => setSplitPending(false)}>
+                <button
+                  ref={splitCancelRef}
+                  type="button"
+                  className="tdrw-action"
+                  onClick={() => setSplitPending(false)}
+                >
                   取消
                 </button>
-                <button type="button" className="tdrw-action tdrw-action-primary"
+                <button
+                  type="button"
+                  className="tdrw-action tdrw-action-danger tdrw-split-confirm-cta"
                   onClick={() => {
                     setSplitPending(false);
                     onSplitTicket(ticket.id);
                   }}
                 >
-                  <ScissorsIcon aria-hidden="true" /> 確認 AI 拆分
+                  <ScissorsIcon aria-hidden="true" /> 拆分並取代原 ticket
                 </button>
               </div>
             </div>
@@ -360,10 +404,14 @@ export function TicketDrawer({
                 )}
                 {onSplitTicket && isSplittable(ticket) && (
                   <button type="button"
+                    ref={splitTriggerRef}
                     className="tdrw-action"
                     onClick={() => setSplitPending(true)}
                     title="點擊後會先顯示確認卡,不會立即拆分"
                     aria-label="AI 拆分,點擊後出現確認步驟"
+                    aria-haspopup="dialog"
+                    aria-controls={splitConfirmId}
+                    aria-expanded={splitPending}
                   >
                     <ScissorsIcon aria-hidden="true" /> AI 拆分…
                   </button>
@@ -429,22 +477,20 @@ function IterLimitField({
   const draftNum = Number(draft);
   const invalid =
     draft === "" || !Number.isFinite(draftNum) || draftNum < 1 || draftNum > 5 || !Number.isInteger(draftNum);
-  // 不自動 clamp:invalid 時還原回前一個有效值,不偷偷存錯誤值。只 valid 才 commit
+  // TD-ITER-INVALID-001:invalid 不再 blur 後靜默還原 — 留在畫面上等使用者改;只有 valid 才 commit。
+  // user 想還原走 Esc(明確操作),不是 click 別處 → 值悄悄變回 5(data-loss surprise)。
   function commit() {
-    if (invalid) {
-      setDraft(String(value));
-      return;
-    }
+    if (invalid) return; // 不還原、不送 API,保留無效畫面等使用者處理
     if (draftNum !== value) onChange?.(ticket.id, draftNum);
   }
   return (
-    <span className="tdrw-iter-limit-wrap">
-      <span style={{ color: "var(--fg-mute)" }}>上限</span>
+    <span className={"tdrw-iter-limit-wrap" + (invalid ? " is-invalid" : "")}>
+      <span className="tdrw-iter-limit-label">上限</span>
       <NumberField
         label="迭代上限輪數"
         labelHidden
         ariaLabel="迭代上限輪數(1 至 5)"
-        title="迭代上限輪數,範圍 1-5。Enter 送出 / Esc 還原"
+        title="迭代上限輪數，範圍 1 至 5。按 Enter 送出，按 Esc 還原"
         min={1}
         max={5}
         value={draft === "" ? "" : Number(draft)}
@@ -462,11 +508,12 @@ function IterLimitField({
             (e.target as HTMLInputElement).blur();
           }
         }}
-        error={invalid ? "請輸入 1-5 的整數,Esc 還原" : undefined}
+        // TD-ITER-INVALID-004:標點全形 + 拆兩句,把 Esc 提示獨立(不擠在驗證訊息裡)
+        error={invalid ? "請輸入 1 至 5 的整數。按 Esc 還原" : undefined}
         fieldClassName="tdrw-iter-limit-field"
         inputClassName={"tdrw-iter-limit" + (invalid ? " is-invalid" : "")}
       />
-      <span style={{ color: "var(--fg-mute)" }}>輪 (1-5)</span>
+      <span className="tdrw-iter-limit-unit">輪（1 至 5）</span>
     </span>
   );
 }
@@ -521,30 +568,19 @@ function CollapsiblePrompt({ text, defaultCollapsed = false }: { text: string; d
   const shouldCollapse = isLong || defaultCollapsed;
   const [expanded, setExpanded] = useState(!shouldCollapse);
   const collapsed = shouldCollapse && !expanded;
-  const ref = useRef<HTMLDivElement | null>(null);
-  // 折疊狀態變動 → 重新把所有 focusable 子元素 tabindex 設成 -1(否則 Tab 會跑到看不見的連結)
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const focusables = root.querySelectorAll<HTMLElement>("a[href], button, input, textarea, select, [tabindex]");
-    focusables.forEach((el) => {
-      if (collapsed) {
-        if (el.dataset.tdrwPrevTabindex === undefined) {
-          el.dataset.tdrwPrevTabindex = el.getAttribute("tabindex") ?? "";
-        }
-        el.setAttribute("tabindex", "-1");
-      } else if (el.dataset.tdrwPrevTabindex !== undefined) {
-        const prev = el.dataset.tdrwPrevTabindex;
-        if (prev === "") el.removeAttribute("tabindex");
-        else el.setAttribute("tabindex", prev);
-        delete el.dataset.tdrwPrevTabindex;
-      }
-    });
-  }, [collapsed, text]);
+  // TDRW-PROMPT-006:改用 inert(被裁切的 overflow 整塊讓 SR + 鍵盤都跳過),
+  // 不再手動 patch tabindex。SR 改靠 .tdrw-prompt-sr-hint 提示「折疊中,可展開查看完整 N 字」。
+  // (舊作法 tabindex=-1 只擋鍵盤,SR 仍會讀全文,造成「看不到但聽到」的不一致)
   return (
     <div className="tdrw-prompt-collapse">
+      {shouldCollapse && collapsed && (
+        <span className="sr-only">
+          提示詞目前為視覺折疊預覽,共 {text.length} 字,可按下「展開全部」查看完整內容。
+        </span>
+      )}
       <div
-        ref={ref}
+        // @ts-expect-error inert is a valid HTML attribute supported by React 19; TS lib may lag
+        inert={collapsed ? "" : undefined}
         className={"tdrw-prompt-md" + (collapsed ? " is-collapsed" : "")}
       >
         <ReactMarkdown>{text}</ReactMarkdown>
@@ -562,7 +598,7 @@ function CollapsiblePrompt({ text, defaultCollapsed = false }: { text: string; d
               : `展開提示詞,共 ${text.length} 字(目前折疊預覽)`
           }
         >
-          {expanded ? "收合" : `展開全部(共 ${text.length} 字)`}
+          {expanded ? "收合" : `展開全部 · 共 ${text.length} 字`}
         </button>
       )}
     </div>
@@ -614,7 +650,7 @@ function IterRounds({ rounds }: { rounds: IterRound[] }) {
                 <div className="tdrw-text">{r.criticFeedback}</div>
               ) : (
                 <div className="tdrw-text tdrw-feedback-empty">
-                  ({n === "PASS" ? "通過,無補充意見" : "(無 feedback)"})
+                  {n === "PASS" ? "（通過，無補充意見）" : "（無 feedback）"}
                 </div>
               )}
             </div>
@@ -626,48 +662,53 @@ function IterRounds({ rounds }: { rounds: IterRound[] }) {
 }
 
 function Commits({ commits }: { commits: CommitRef[] }) {
-  const [copiedHash, setCopiedHash] = useState<string | null>(null);
-  useTimeout(() => setCopiedHash(null), copiedHash ? 1500 : null, [copiedHash]);
+  // TD-COPY-003:用 {hash, nonce} 而不是只存 hash → 同一 hash 連點兩次也能 reset timer + 重播 SR live message
+  const [copied, setCopied] = useState<{ hash: string; nonce: number } | null>(null);
+  useTimeout(() => setCopied(null), copied ? 1500 : null, [copied]);
+  // TD-COPY-004:SR live region 從 button 內抽出來,放在 container 外,避免 aria-hidden / aria-label 動態切換 race
+  const liveMsg = copied ? `已複製完整 commit hash ${copied.hash} 到剪貼簿` : "";
 
   async function copy(hash: string) {
     try {
       await navigator.clipboard.writeText(hash);
-      setCopiedHash(hash);
+      setCopied({ hash, nonce: Date.now() });
     } catch {
       // 部分環境(non-https / older browsers)沒 clipboard API,fallback 暴力 select
       const ta = document.createElement("textarea");
       ta.value = hash;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); setCopiedHash(hash); } catch {}
+      try { document.execCommand("copy"); setCopied({ hash, nonce: Date.now() }); } catch {}
       document.body.removeChild(ta);
     }
   }
 
   return (
     <div className="tdrw-commits">
+      {/* 共用 visually-hidden live region,跟視覺 chip 解耦 — 視覺只負「我複製了哪個」,SR 負完整訊息 */}
+      <span className="sr-only" role="status" aria-live="polite">{liveMsg}</span>
       {commits.map((c) => {
-        const isCopied = copiedHash === c.hash;
+        const isCopied = copied?.hash === c.hash;
         const shortHash = c.hash.slice(0, 7);
         return (
           <div key={c.hash} className="tdrw-commit">
             <button type="button"
               className={"mono tdrw-commit-hash tdrw-commit-hash-btn" + (isCopied ? " is-copied" : "")}
               title={isCopied ? `已複製完整 commit hash:${c.hash}` : `點擊複製完整 commit hash:${c.hash}`}
-              aria-label={`複製 commit hash ${c.hash}${isCopied ? "(已複製)" : ""}`}
+              aria-label={`複製完整 commit hash ${c.hash}`}
               onClick={() => copy(c.hash)}
             >
               {shortHash}
-              {/* 浮層 chip(position:absolute),不擠進 row 寬度,所以不會 shift subject;
-                  user 看到 chip 漂在 hash 旁,1.4s 後消失 */}
+              {/* TD-COPY-001:chip 改錨在 hash button 上方,不再蓋住 hash 文字。
+                  chip 純視覺(aria-hidden),SR 訊息走上面的 .sr-only live region。 */}
               <span
                 className="tdrw-commit-copied"
-                role="status"
-                aria-live="polite"
-                aria-hidden={!isCopied}
+                aria-hidden="true"
                 data-visible={isCopied || undefined}
+                // key on nonce 強制 re-mount → CSS transition / animation 從頭播
+                key={isCopied ? copied!.nonce : "idle"}
               >
-                {isCopied ? "已複製" : ""}
+                已複製完整 hash
               </span>
             </button>
             <span className="tdrw-commit-subject">{c.subject}</span>
