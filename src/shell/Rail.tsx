@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { DotsHorizontalIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { Popover } from "../ui/Popover";
-import { STATE_COLOR } from "../data/pipelines";
+import { STATE_LABEL } from "../data/pipelines";
 import type { Pipeline } from "../types/pipeline";
 import "../features/pipeline/rail.css";
 
@@ -100,7 +100,7 @@ function RailItem({
 }) {
   const done = p.tickets.filter((t) => t.status === "done").length;
   const total = p.tickets.length;
-  const stateText = PIPELINE_STATE_TEXT[p.state] ?? p.state;
+  const stateText = STATE_LABEL[p.state] ?? p.state;
   const secondary = railSecondary(p);
   const fullSecondary = railSecondaryAccessible(p);
   const miniLabel = railMiniLabel(p);
@@ -120,7 +120,15 @@ function RailItem({
       tabIndex={muted ? -1 : undefined}
     >
       <div className="rail-item-row">
-        <span className="rail-state-dot" aria-hidden="true" style={{ background: STATE_COLOR[p.state] }} />
+        <span
+          className={"rail-status-chip" + (p.state === "running" ? " is-running" : "")}
+          data-state={p.state}
+          aria-hidden="true"
+          title={stateText}
+        >
+          <span className="rail-status-chip-dot" />
+          <span>{stateText}</span>
+        </span>
         <span className="rail-item-name" title={p.name}>{p.name}</span>
         {hasDraft && (
           <span className="mono rail-qa-badge" aria-hidden="true" title="進行中 QA">
@@ -160,15 +168,6 @@ function RailItem({
     </button>
   );
 }
-
-const PIPELINE_STATE_TEXT: Record<string, string> = {
-  planning: "規劃中",
-  running: "執行中",
-  paused: "暫停",
-  ready: "可合併",
-  merged: "已合併",
-  failed: "失敗",
-};
 
 // PIPELINES section header 的 ⋯ menu。anchor 量測 / outside / esc / roving focus / flip 走 <Popover>。
 function RailSectionMenu({ items }: { items: RailMenuItem[] }) {

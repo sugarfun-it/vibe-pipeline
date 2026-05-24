@@ -34,6 +34,12 @@ export function CreateCard({
   const [baseOpen, setBaseOpen] = useState(false);
   const [autoMerge, setAutoMerge] = useState(defaultAutoMerge);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!baseList.includes(baseBranch)) {
+      setBaseBranch(defaultBase);
+    }
+  }, [baseList, defaultBase, baseBranch]);
   const cardRef = useRef<HTMLFormElement>(null);
   const baseOpenRef = useRef(baseOpen);
   baseOpenRef.current = baseOpen;
@@ -89,8 +95,10 @@ export function CreateCard({
   return (
     <form className="create-card fade-up" onSubmit={submit} ref={cardRef}>
       <div className="create-card-head">
-        <span className="rail-state-dot" style={{ background: "var(--draft)" }} />
-        <span className="create-card-eyebrow mono" style={{ textTransform: "none" }}>新 pipeline</span>
+        <span className="rail-status-chip" data-state="planning" aria-hidden="true">
+          <span className="rail-status-chip-dot" />
+          <span>新 pipeline</span>
+        </span>
         <span style={{ flex: 1 }} />
         <button type="button" className="create-x" onClick={onCancel} title="取消 (Esc)" aria-label="取消">
           <CloseIcon />
@@ -119,7 +127,7 @@ export function CreateCard({
               ? taken
                 ? "名稱已存在，請換一個。"
                 : showFormatHint
-                ? "首字需英數；可用 a-z、0-9、-、_。"
+                ? "只能使用小寫英文、數字、-、_，且需以小寫英文或數字開頭。"
                 : undefined
               : undefined
           }
@@ -130,7 +138,7 @@ export function CreateCard({
             className="create-field-format-hint"
             hidden={hasError}
           >
-            a-z、0-9、-、_，首字英數
+            a-z、0-9、-、_，首字為小寫英文或數字，最多 {NAME_MAX_LENGTH} 字
           </div>
           <div
             id={counterId}
@@ -139,6 +147,7 @@ export function CreateCard({
               (counterAtLimit ? " is-limit" : counterNearLimit ? " is-near" : "")
             }
             aria-live="polite"
+            aria-label={`名稱長度 ${name.length}／${NAME_MAX_LENGTH}`}
             hidden={!counterNearLimit}
           >
             {name.length}/{NAME_MAX_LENGTH}
@@ -192,9 +201,10 @@ export function CreateCard({
           className="btn btn-primary create-submit"
           disabled={!valid}
           aria-label="建立 pipeline"
+          aria-describedby={hasError ? `${inputId}-desc` : undefined}
         >
           <span>建立</span>
-          <span className="kbd-inline mono">↵</span>
+          {valid && <span className="kbd-inline mono">↵</span>}
         </button>
       </div>
     </form>

@@ -8,7 +8,7 @@
 
 /* override Board's body grid to add a 3rd column for the inbox */
 .notif-root .board-body {
-  grid-template-columns: 240px 1fr var(--inbox-w);
+  grid-template-columns: var(--rail-w) 1fr var(--inbox-w);
   transition: grid-template-columns 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
@@ -98,21 +98,38 @@
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .inbox-strip-pips-empty {
-  /* 占用 pips 該占的中段空間,讓 INBOX 標籤仍對齊原位置,但不暴露互動 target */
+  /* 中段當第二個 expand 觸發區:全寬 button reset,hover/focus 有 subtle 提示 */
   flex: 1;
   min-height: 0;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 4px;
+  transition: background 120ms;
+}
+.inbox-strip-pips-empty:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.inbox-strip-pips-empty:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 .inbox-strip-pip {
-  width: 10px; height: 10px;
+  width: 11px; height: 11px;
   border-radius: 50%;
   background: var(--strip-color);
-  opacity: 0.55;
+  opacity: 0.7;
   flex-shrink: 0;
   transition: transform 120ms, opacity 120ms, box-shadow 120ms;
 }
 .inbox-strip-pip.is-unread {
   opacity: 1;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--strip-color) 35%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--strip-color) 40%, transparent);
 }
 /* 滾輪 / hover / keyboard preview 當下高亮那顆 */
 .inbox-strip-pip.is-preview {
@@ -181,13 +198,13 @@
 .inbox-strip-spacer { flex-shrink: 0; min-height: 8px; }
 .inbox-strip-label {
   font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-size: 10px;
   color: var(--fg-mute);
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  padding: 6px 0 8px;
-  opacity: 0.75;
+  padding: 6px 0 14px;
+  opacity: 0.9;
   flex-shrink: 0;
 }
 /* ─── expanded panel ─── */
@@ -440,8 +457,8 @@
 }
 .inbox-item-ts {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--fg-faint);
+  font-size: 10.5px;
+  color: var(--fg-mute);
   line-height: 1.2;
   /* 長本地化時間(如完整日期 / DE 月名)允許 wrap;不再 nowrap 防水平溢出 */
   word-break: keep-all;
@@ -517,9 +534,9 @@
   width: 36px; height: 36px;
   border-radius: 50%;
   background: var(--panel-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-2, var(--line));
   display: inline-flex; align-items: center; justify-content: center;
-  color: var(--fg-faint);
+  color: var(--fg-mute);
 }
 
 .inbox-foot {

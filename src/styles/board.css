@@ -468,10 +468,11 @@
 }
 
 /* ─── body grid ─── */
+:root { --rail-w: 296px; }
 .board-body {
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: var(--rail-w) 1fr;
 }
 
 /* Landmark wrappers added by AppShell (<nav>/<main>/<aside>) must propagate
@@ -613,9 +614,10 @@
     min-width: 40px;
   }
 
-  /* hide desktop-only context everywhere; centralised */
-  .desktop-only,
-  .topbar-reveal-folder {
+  /* hide desktop-only context everywhere; centralised
+     advisor topbar.active_meta_localhost r1:reveal-folder 在 mobile 改成 icon-only(於 topbar.css 處理),
+     不再強制 hide。此處只保留 .desktop-only。 */
+  .desktop-only {
     display: none !important;
   }
 

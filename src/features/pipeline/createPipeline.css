@@ -11,31 +11,58 @@
 /* Rail-inline create card.
    border 1.5→1px + 8px radius(對齊 .rail-item 8px) + 卸掉 strong shadow,讓 card 在
    rail 列表內讀起來像「升級版 rail-item」而非 modal 浮塊。muted rows 已用
-   pointer-events:none(createPipeline.css:4),不需要 card 再壓視覺。 */
+   pointer-events:none(createPipeline.css:4),不需要 card 再壓視覺。
+   V2 chip:border 改 draft mix(card 跟 head 內 planning chip 色系一致),
+   頂端 2px draft 漸層 bar 是「即將進入 planning」的視覺暗示,focus-within 升 accent。 */
 .create-card {
-  display: flex; flex-direction: column; gap: 9px;
-  padding: 10px 11px 11px;
+  position: relative;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 13px 12px 12px;
   margin: 2px 0 4px;
   background: var(--bg);
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line-2));
+  border: 1px solid color-mix(in srgb, var(--draft) 30%, var(--line-2));
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+  overflow: hidden;
+}
+.create-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--draft) 0%,
+    color-mix(in srgb, var(--draft) 40%, transparent) 60%,
+    transparent 100%);
+  opacity: 0.7;
 }
 .create-card:focus-within {
   border-color: var(--accent);
   box-shadow: 0 1px 4px rgba(0,0,0,0.14);
 }
+.create-card:focus-within::before {
+  background: linear-gradient(90deg,
+    var(--accent) 0%,
+    color-mix(in srgb, var(--accent) 40%, transparent) 60%,
+    transparent 100%);
+  opacity: 1;
+}
 html.light .create-card { background: var(--bg-elevated); }
 .create-card-head {
   display: flex; align-items: center; gap: 6px;
+  margin-top: 1px;
 }
+.create-card-head .rail-status-chip {
+  padding: 2px 8px 2px 7px;
+}
+/* phase4-2026-05-25:create-card-eyebrow legacy — V2 chip 取代,留 class 給可能殘留的 caller */
 .create-card-eyebrow {
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
   color: var(--fg-mute);
 }
-/* 對齊 SettingsPopover 的右上 ✕ 關閉按鈕樣式 */
+/* 縮成跟 chip 同等級的密度,避免關閉鈕視覺壓過 chip */
 .create-x {
-  width: 36px; height: 36px;
+  width: 26px; height: 26px;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0;
   border: none;
@@ -46,12 +73,13 @@ html.light .create-card { background: var(--bg-elevated); }
   transition: background 120ms, color 120ms;
   position: relative;
 }
-/* WCAG 2.5.5 hit-area expansion — invisible 44x44 click target around the 36x36 visual button. */
+.create-x svg { width: 12px; height: 12px; }
+/* WCAG 2.5.5 hit-area expansion — invisible click target around the 26x26 visual button. */
 .create-x::before {
   content: "";
   position: absolute;
-  inset: -4px;
-  border-radius: 8px;
+  inset: -9px;
+  border-radius: 10px;
 }
 .create-x:hover {
   background: var(--hover);
@@ -64,44 +92,16 @@ html.light .create-card { background: var(--bg-elevated); }
   color: var(--fg);
 }
 
-.create-input {
-  display: flex; align-items: center; gap: 0;
-  padding: 6px 8px;
-  background: var(--panel);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-control, 6px);
-  font-size: 12.5px;
-  transition: border-color 120ms, background 120ms, box-shadow 120ms;
-}
-.create-input:hover { border-color: var(--line); }
-/* Match .picker-trigger's rest+focus look — border-color shift, no halo.
-   (.picker-trigger only shows the global focus halo on real keyboard tab via :focus-visible,
-   not on autofocus or mouse click. To keep the two fields visually identical without
-   relying on Chromium's autofocus heuristic, we drop the box-shadow ring here entirely.) */
-.create-input:focus-within { border-color: var(--accent); }
-.create-input.is-error { border-color: var(--failed); background: var(--failed-soft); }
-.create-input.is-error:focus-within { border-color: var(--failed); }
-
-.create-input input {
-  flex: 1; min-width: 0;
-  background: transparent; border: 0; outline: none;
-  font: inherit; color: var(--fg);
-  font-weight: 600;
-  padding: 0; caret-color: var(--accent);
-}
-.create-input-hint {
-  font-size: 9.5px; color: var(--fg-faint);
-  margin-left: 6px; flex-shrink: 0;
-}
-.create-error {
-  font-size: 10px; color: var(--failed);
-  margin-top: -4px;
-}
+/* phase4-2026-05-24 — legacy .create-input{,.is-error,-hint} rules removed.
+   Form-field rendering now goes through TextField + shared .form-input / .form-hint
+   contract (forms.css) plus .create-field-form is-error wrapper. */
 
 .create-field { display: flex; flex-direction: column; gap: 4px; }
-.create-field-label {
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--fg-mute);
+/* V2 chip:label 對齊 PIPELINES section-label 樣式(quieter),跟 chip / mono content 同節奏 */
+.create-field-label,
+.create-card .form-label {
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--fg-faint);
   padding-left: 1px;
 }
 .create-field-desc {
@@ -131,8 +131,8 @@ html.light .create-card { background: var(--bg-elevated); }
 .picker-trigger.is-open { border-color: var(--accent); }
 .picker-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .picker-trigger[aria-invalid="true"] { border-color: var(--failed); }
-.picker-trigger > svg:last-child { color: var(--fg-faint); transition: transform 140ms; }
-.picker-trigger.is-open > svg:last-child { transform: rotate(180deg); }
+.picker-trigger > svg:last-child { color: var(--fg-faint); transition: transform 140ms, color 120ms; }
+.picker-trigger.is-open > svg:last-child { transform: rotate(180deg); color: var(--accent); }
 .picker-hint { color: var(--fg-faint); font-size: 9.5px; }
 
 .picker-menu {
@@ -158,8 +158,12 @@ html.light .create-card { background: var(--bg-elevated); }
 .picker-item.is-active { background: var(--selected); }
 .picker-item-icon { width: 0.75rem; display: inline-flex; }
 .picker-item-hint { font-size: 9.5px; color: var(--fg-faint); margin-left: auto; }
-.picker-item-check { color: var(--accent); display: inline-flex; margin-left: 4px; }
-.picker-item.is-active .picker-item-hint { margin-left: 4px; }
+/* phase4-2026-05-24 — pin selected check to the far right edge of the option row
+   so single-option lists no longer read like inline text. When a hint is present
+   it already grabs the right with margin-left:auto; the check then sits to its
+   right with a 4px gap. */
+.picker-item-check { color: var(--accent); display: inline-flex; margin-left: auto; }
+.picker-item-hint + .picker-item-check { margin-left: 4px; }
 
 /* CreateCard's picker dropdown: bump option density a bit so it doesn't read as a tooltip
    relative to the surrounding form fields. Mobile gets the full a11y bump in the media query below. */
@@ -236,6 +240,26 @@ html.light .create-card { background: var(--bg-elevated); }
   padding-left: 1px;
 }
 .create-field-format-hint[hidden] { display: none; }
+/* phase4-2026-05-24 — name field meta row: hint stretches, counter pinned right.
+   Counter unstyled before this commit; add tabular numeric + state escalation
+   via existing tokens (--paused for is-near, --failed for is-limit). */
+.create-field-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  align-items: start;
+}
+.create-counter {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  padding-right: 1px;
+}
+.create-counter[hidden] { display: none; }
+.create-counter.is-near { color: var(--paused); }
+.create-counter.is-limit { color: var(--failed); font-weight: 600; }
 .kbd-inline {
   font-size: 10px;
   padding: 0 4px;
@@ -287,18 +311,9 @@ html.light .focus-create-empty {
 }
 
 @media (max-width: 767.98px) {
-  .create-input,
   .create-field {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .create-input {
-    gap: 4px;
-  }
-
-  .create-input-hint {
-    margin-left: 0;
   }
 
   /* a11y: 44px minimum touch targets on mobile.
@@ -318,6 +333,11 @@ html.light .focus-create-empty {
     font-size: 13px;
   }
   .create-card .toggle-pill { min-height: 44px; padding: 8px 10px; }
+  .create-card .create-field-name .form-input {
+    min-height: 44px;
+    padding: 10px 10px;
+    font-size: 13px;
+  }
 
   .create-actions { gap: 8px; margin-top: 4px; }
   .create-cancel,

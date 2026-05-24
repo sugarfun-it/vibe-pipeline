@@ -75,7 +75,7 @@
 .rail-item {
   display: flex; flex-direction: column; gap: 6px;
   text-align: left;
-  padding: 9px 10px 10px;
+  padding: 10px 10px 11px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
@@ -92,16 +92,82 @@
   background: var(--selected);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line-2));
 }
-.rail-item.is-active::before {
+/* V2 chip:左 accent bar 拿掉,state chip + is-active 的 bg/border 已足夠表達 selected */
+.rail-item-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+
+/* 通用 dot 視覺 atom — rail item 自己不用了(改 chip),但 CreateCard 等仍用作 eyebrow 前綴 */
+.rail-state-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* 狀態膠囊 — 取代原 7px state-dot。
+   --chip-c 由 [data-state] attribute selector 設色,語意化、無需 inline style。
+   bg/border 用 color-mix 從 --chip-c 衍生,不需另存 STATE_SOFT 字典 */
+.rail-status-chip {
+  --chip-c: var(--fg-mute);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
+  color: var(--chip-c);
+  border: 1px solid color-mix(in srgb, var(--chip-c) 30%, transparent);
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.rail-status-chip[data-state="running"]  { --chip-c: var(--running); }
+.rail-status-chip[data-state="queued"]   { --chip-c: var(--queued); }
+.rail-status-chip[data-state="paused"]   { --chip-c: var(--paused); }
+.rail-status-chip[data-state="ready"]    { --chip-c: var(--done); }
+.rail-status-chip[data-state="merged"]   { --chip-c: var(--fg-faint); }
+.rail-status-chip[data-state="failed"]   { --chip-c: var(--failed); }
+.rail-status-chip[data-state="planning"] { --chip-c: var(--draft); }
+
+.rail-status-chip-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--chip-c);
+  flex-shrink: 0;
+}
+/* 雙層 pulse:dot 自身 scale + ::after 擴散環。比通用 pulseDot 更精緻,
+   讓 running 狀態在 rail 內仍能被一眼抓到 */
+.rail-status-chip.is-running .rail-status-chip-dot {
+  position: relative;
+  animation: chipPulse 1.6s ease-in-out infinite;
+}
+.rail-status-chip.is-running .rail-status-chip-dot::after {
   content: "";
   position: absolute;
-  left: -1px; top: 8px; bottom: 8px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--accent);
+  inset: -2px;
+  border-radius: 50%;
+  border: 1px solid var(--chip-c);
+  opacity: 0;
+  animation: chipPulseRing 1.6s ease-out infinite;
 }
-.rail-item-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
-.rail-state-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+@keyframes chipPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+@keyframes chipPulseRing {
+  0%   { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* active rail-item 內 count chip 對比拉開(bg panel-2 → bg) */
+.rail-item.is-active .rail-item-count {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* creating mode:其他 row 變 muted,chip 跟著淡掉,pulse 停 */
+.rail-item.is-muted .rail-status-chip { opacity: 0.55; }
+.rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot,
+.rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot::after {
+  animation: none;
+}
 /* min-width:0 so flex truncation owns the name column; QA badge + count stay full-width on either side */
 .rail-item-name { flex: 1; min-width: 0; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rail-item.is-active .rail-item-name { font-weight: 600; }
