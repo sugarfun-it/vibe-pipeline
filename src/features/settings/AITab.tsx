@@ -38,10 +38,14 @@ function TaskModelRow({
   return (
     <div className="task-row">
       <div className="task-row-head">
-        <span className="task-row-label">{label}</span>
+        <span className="task-row-label">
+          {label}
+          {hint && <span className="task-row-inline-hint">· {hint}</span>}
+        </span>
         <div className="task-row-selects">
           {showProvider ? (
             <select
+              className="task-row-provider"
               value={provider}
               disabled={disabled}
               aria-label={`${label} provider`}
@@ -57,6 +61,7 @@ function TaskModelRow({
             <span className="task-row-placeholder" aria-hidden />
           )}
           <select
+            className="task-row-model"
             value={model}
             disabled={disabled}
             aria-label={`${label} model`}
@@ -69,6 +74,7 @@ function TaskModelRow({
             ))}
           </select>
           <select
+            className="task-row-effort"
             value={effort}
             disabled={disabled}
             aria-label={`${label} effort`}
@@ -82,7 +88,6 @@ function TaskModelRow({
           </select>
         </div>
       </div>
-      {hint && <div className="task-row-hint">{hint}</div>}
     </div>
   );
 }
