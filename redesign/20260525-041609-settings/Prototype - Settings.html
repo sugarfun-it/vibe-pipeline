@@ -1,0 +1,1555 @@
+<!doctype html>
+<html lang="zh-Hant" class="">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>vibe-pipeline — Settings prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ════════════════════════════════════════════════
+   tokens.css — verbatim from src/styles/tokens.css
+   ════════════════════════════════════════════════ */
+:root {
+  --bg: #0c0e12;
+  --bg-elevated: #14171c;
+  --panel: #161a20;
+  --panel-2: #1c2027;
+  --hover: rgba(232, 228, 217, 0.04);
+  --selected: rgba(216, 162, 90, 0.10);
+  --line: rgba(232, 228, 217, 0.06);
+  --line-2: rgba(232, 228, 217, 0.12);
+  --fg: #e8e3d6;
+  --fg-mute: #8b8475;
+  --fg-faint: #595448;
+  --accent: #d8a25a;
+  --accent-soft: rgba(216, 162, 90, 0.12);
+  --running: #7e94c8;
+  --running-soft: rgba(126, 148, 200, 0.14);
+  --iter: #b099d8;
+  --iter-soft: rgba(176, 153, 216, 0.14);
+  --done: #7eaa7f;
+  --done-soft: rgba(126, 170, 127, 0.14);
+  --failed: #c47b78;
+  --failed-soft: rgba(196, 123, 120, 0.14);
+  --paused: #d8a25a;
+  --paused-soft: rgba(216, 162, 90, 0.14);
+  --queued: #5fb3a8;
+  --queued-soft: rgba(95, 179, 168, 0.14);
+  --draft: #6e6a5e;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --radius-xs: 4px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
+  --control-h: 32px;
+  --control-h-sm: 26px;
+  --control-pad-x: 12px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-md: 0 12px 32px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-lg: 0 32px 80px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-popover: 0 2px 6px rgba(0,0,0,0.35), 0 12px 28px rgba(0,0,0,0.45);
+  --shadow-overlay: var(--shadow-lg);
+  --scrim: color-mix(in srgb, #000 45%, transparent);
+  --scrim-modal: color-mix(in srgb, #000 55%, transparent);
+  --scrim-drawer: color-mix(in srgb, #000 40%, transparent);
+  --z-overlay-base: 50;
+  --z-popover: 100;
+  --z-drawer: 200;
+  --z-banner: 300;
+  --z-settings: 1500;
+  --z-modal: 1700;
+  --z-toast: 2200;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+  --accent-fg: rgba(255,255,255,0.95);
+  --danger-fg: #fff5f3;
+  --danger-bg-soft: var(--failed-soft);
+  --danger-border: color-mix(in srgb, var(--failed) 55%, var(--line-2));
+  --success-fg: #f1faf1;
+  --status-dark-fg: #0c0e12;
+  --warning-fg: #1c1208;
+  --info-fg: #f1f4fa;
+  --banner-success-fg: #0e1f0f;
+  --banner-ready-fg: var(--status-dark-fg);
+  --qa-thinking-fg: var(--fg-mute);
+  --inverse-fg: #1c1916;
+  --on-accent-fg: var(--accent-fg);
+  --bg-callout: color-mix(in srgb, var(--fg-mute) 6%, var(--panel-2));
+  --callout-border: var(--line);
+  --bg-warning-soft: color-mix(in srgb, var(--paused) 8%, var(--panel-2));
+  --warning-border: color-mix(in srgb, var(--paused) 40%, var(--line-2));
+  --bg-success-soft: color-mix(in srgb, var(--done) 8%, var(--panel-2));
+  --success-border: color-mix(in srgb, var(--done) 40%, var(--line-2));
+  --bg-danger-soft: var(--failed-soft);
+  --danger-soft-border: color-mix(in srgb, var(--failed) 40%, var(--line-2));
+  --bg-info-soft: color-mix(in srgb, var(--running) 8%, var(--panel-2));
+  --info-border: color-mix(in srgb, var(--running) 40%, var(--line-2));
+  --focus-ring-offset: 2px;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --qr-plate: #ffffff;
+  --font-ui: "Geist", "Inter Tight", -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+html.light {
+  --bg: #f7f3e8;
+  --bg-elevated: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #faf6ea;
+  --hover: rgba(28, 25, 22, 0.04);
+  --selected: rgba(181, 117, 26, 0.08);
+  --line: rgba(28, 25, 22, 0.07);
+  --line-2: rgba(28, 25, 22, 0.14);
+  --fg: #1c1916;
+  --fg-mute: #6e6658;
+  --fg-faint: #a8a292;
+  --accent: #b5751a;
+  --accent-soft: rgba(181, 117, 26, 0.12);
+  --running: #4a6db0;
+  --running-soft: rgba(74, 109, 176, 0.10);
+  --iter: #7551b8;
+  --iter-soft: rgba(117, 81, 184, 0.10);
+  --done: #3a8a4a;
+  --done-soft: rgba(58, 138, 74, 0.10);
+  --failed: #b04040;
+  --failed-soft: rgba(176, 64, 64, 0.10);
+  --paused: #b5751a;
+  --paused-soft: rgba(181, 117, 26, 0.12);
+  --queued: #2e8a80;
+  --queued-soft: rgba(46, 138, 128, 0.10);
+  --draft: #a8a292;
+  --shadow-sm: 0 1px 2px rgba(28,25,22,0.08);
+  --shadow-md: 0 12px 32px rgba(28,25,22,0.14), 0 2px 6px rgba(28,25,22,0.08);
+  --shadow-lg: 0 32px 80px rgba(28,25,22,0.22), 0 4px 12px rgba(28,25,22,0.12);
+  --shadow-popover: 0 2px 6px rgba(28,25,22,0.10), 0 12px 28px rgba(28,25,22,0.18);
+  --shadow-overlay: var(--shadow-lg);
+  --scrim: color-mix(in srgb, #1c1916 35%, transparent);
+  --scrim-modal: color-mix(in srgb, #1c1916 45%, transparent);
+  --scrim-drawer: color-mix(in srgb, #1c1916 30%, transparent);
+  --accent-fg: #ffffff;
+  --danger-fg: #ffffff;
+  --danger-bg-soft: var(--failed-soft);
+  --danger-border: var(--failed);
+  --success-fg: #ffffff;
+  --status-dark-fg: #1c1916;
+  --warning-fg: #1c1208;
+  --info-fg: #ffffff;
+  --banner-success-fg: #0e1f0f;
+  --banner-ready-fg: var(--status-dark-fg);
+  --qa-thinking-fg: var(--fg-mute);
+  --inverse-fg: #ffffff;
+  --on-accent-fg: var(--accent-fg);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --qr-plate: #ffffff;
+}
+* { box-sizing: border-box; }
+html, body, #root {
+  margin: 0; height: 100%;
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-ui); font-size: 13.5px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+::selection { background: var(--accent-soft); }
+.mono { font-family: var(--font-mono); font-feature-settings: "ss01", "cv11"; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--panel-2); color: var(--fg-mute);
+  border: 1px solid var(--line); white-space: nowrap; flex-shrink: 0;
+}
+.icon-btn {
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px; color: var(--fg-mute); transition: background 120ms, color 120ms;
+}
+.icon-btn:hover { background: var(--hover); color: var(--fg); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: var(--control-h, 32px);
+  padding: 6px 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+  border: 1px solid var(--line-2); color: var(--fg);
+  background: var(--panel-2);
+  transition: background 120ms, border-color 120ms, transform 80ms;
+}
+.btn:hover:not(:disabled):not([aria-disabled="true"]):not(.btn-primary):not(.btn-danger):not(.btn-queued):not(.btn-accent) {
+  background: var(--hover); border-color: var(--line-2);
+}
+.btn:active:not(:disabled) { transform: translateY(0.5px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; color: var(--fg-faint); }
+.btn-primary {
+  background: var(--accent); color: rgba(255,255,255,0.95); border-color: var(--accent);
+  font-weight: 500;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--fg-mute); }
+.btn-ghost:hover { background: var(--hover); color: var(--fg); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 280ms ease-out both; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ════════════════════════════════════════════════
+   forms.css — verbatim from src/ui/forms/forms.css
+   ════════════════════════════════════════════════ */
+.form-field {
+  display: flex; flex-direction: column;
+  gap: var(--space-1, 4px); width: 100%;
+}
+.form-label {
+  font-size: 12.5px; font-weight: 500; color: var(--fg);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.form-label .req { color: var(--failed); font-weight: 600; }
+.form-input {
+  width: 100%;
+  min-height: var(--control-h, 32px);
+  padding: 6px var(--control-pad-x, 12px);
+  font-family: var(--font-ui); font-size: 13px;
+  color: var(--fg); background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.form-input::placeholder { color: var(--fg-faint); }
+.form-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.form-input[aria-invalid="true"] { border-color: var(--failed); }
+.form-input:disabled, .form-input[aria-disabled="true"] {
+  opacity: 0.55; cursor: not-allowed; background: var(--panel);
+}
+.form-hint { font-size: 11px; color: var(--fg-mute); line-height: 1.5; word-break: break-word; }
+.form-hint--error { color: var(--failed); }
+.form-label--sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ════════════════════════════════════════════════
+   board.css slice — toggle-pill + vp-chip + btn-danger
+   ════════════════════════════════════════════════ */
+.vp-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 22px; padding: 2px 7px;
+  border-radius: var(--radius-xs, 4px);
+  font: 500 11px/1.4 var(--font-mono);
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--fg-mute); white-space: nowrap; flex-shrink: 0;
+}
+.vp-chip--success { color: var(--done); border-color: color-mix(in srgb, var(--done) 40%, var(--line-2)); background: color-mix(in srgb, var(--done) 12%, transparent); }
+.vp-chip--warning { color: var(--paused); border-color: color-mix(in srgb, var(--paused) 40%, var(--line-2)); background: color-mix(in srgb, var(--paused) 12%, transparent); }
+.vp-chip--danger  { color: var(--failed); border-color: color-mix(in srgb, var(--failed) 40%, var(--line-2)); background: color-mix(in srgb, var(--failed) 12%, transparent); }
+.vp-chip--info    { color: var(--iter); border-color: color-mix(in srgb, var(--iter) 40%, var(--line-2)); background: color-mix(in srgb, var(--iter) 12%, transparent); }
+.btn-danger {
+  background: var(--failed); color: var(--danger-fg, #fff); border-color: var(--failed);
+}
+.btn-danger:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--failed) 85%, #000);
+  border-color: color-mix(in srgb, var(--failed) 85%, #000);
+}
+.toggle-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+  padding: 0 var(--control-pad-x, 12px);
+  min-height: var(--control-h, 32px);
+  border-radius: 7px;
+  border: 1px solid var(--line-2); background: var(--panel-2);
+  color: var(--fg-mute); cursor: pointer; white-space: nowrap;
+  transition: background 120ms, border-color 120ms, color 120ms;
+  user-select: none;
+}
+.toggle-pill:hover { background: var(--hover); border-color: var(--accent); }
+.toggle-pill.is-on { color: var(--done); border-color: var(--done); background: color-mix(in srgb, var(--done) 12%, transparent); }
+.toggle-pill input[type="checkbox"] {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+.toggle-pill-track {
+  display: inline-block; position: relative;
+  width: 26px; height: 14px; border-radius: 999px;
+  background: var(--line); transition: background 120ms; flex-shrink: 0;
+}
+.toggle-pill.is-on .toggle-pill-track { background: var(--done); }
+.toggle-pill-thumb {
+  position: absolute; top: 1px; left: 1px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--bg-elevated);
+  transition: left 140ms;
+}
+.toggle-pill.is-on .toggle-pill-thumb { left: 13px; }
+.toggle-pill input[type="checkbox"]:focus-visible + .toggle-pill-track {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.toggle-pill.is-disabled, .toggle-pill[aria-disabled="true"], .toggle-pill:disabled {
+  opacity: 0.55; cursor: not-allowed; pointer-events: auto;
+}
+@media (pointer: coarse) {
+  .toggle-pill { min-height: 40px; }
+}
+
+/* ════════════════════════════════════════════════
+   picker slice — from createPipeline.css
+   ════════════════════════════════════════════════ */
+.picker { position: relative; }
+.picker-trigger {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%;
+  min-height: var(--control-h-sm, 26px);
+  padding: 4px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
+  font-size: 11.5px; color: var(--fg);
+  transition: border-color 100ms, background 100ms, box-shadow 120ms;
+  text-align: left;
+}
+.picker-trigger:hover { border-color: var(--line-2); background: var(--panel-2); }
+.picker-trigger.is-open { border-color: var(--accent); }
+.picker-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.picker-trigger > svg:last-child { color: var(--fg-faint); transition: transform 140ms, color 120ms; }
+.picker-trigger.is-open > svg:last-child { transform: rotate(180deg); color: var(--accent); }
+.picker-hint { color: var(--fg-faint); font-size: 9.5px; }
+.picker-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  z-index: 1600;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.picker-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 7px; border-radius: 4px;
+  font-size: 11.5px; color: var(--fg);
+  text-align: left; background: transparent; position: relative;
+  width: 100%;
+}
+.picker-item:hover { background: var(--hover); }
+.picker-item.is-active { background: var(--selected); }
+.picker-item-icon { width: 0.75rem; display: inline-flex; }
+.picker-item-hint { font-size: 9.5px; color: var(--fg-faint); margin-left: auto; }
+.picker-item-check { color: var(--accent); display: inline-flex; margin-left: auto; }
+.picker-item-hint + .picker-item-check { margin-left: 4px; }
+
+/* ════════════════════════════════════════════════
+   SettingsPopover.css — verbatim from src/features/settings/SettingsPopover.css
+   ════════════════════════════════════════════════ */
+.settings-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 80px);
+  overflow-x: hidden; overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-popover, 0 2px 6px rgba(0,0,0,0.06), 0 12px 28px rgba(0,0,0,0.12));
+  padding: 14px 16px 12px;
+  z-index: var(--z-settings, 1500);
+  font-size: 13px;
+}
+.settings-popover-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  position: absolute; top: 4px; right: 4px;
+  width: 32px; height: 32px; padding: 0;
+  border: none; border-radius: 4px;
+  background: transparent; color: var(--fg-mute);
+  cursor: pointer; z-index: 2;
+}
+.settings-popover-close:hover,
+.settings-popover-close:focus-visible {
+  background: var(--hover); color: var(--fg); outline: none;
+}
+.settings-popover-tabs {
+  display: flex; align-items: center; gap: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-popover-tab {
+  padding: 7px 12px; margin-bottom: -1px;
+  background: transparent; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--fg-mute);
+  font-size: 12.5px; font-weight: 500;
+  cursor: pointer; transition: color 120ms;
+}
+.settings-popover-tab.is-active {
+  border-bottom-color: var(--accent);
+  color: var(--fg); font-weight: 600;
+}
+.settings-popover-tab:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px;
+}
+.settings-popover-tabs-spacer { flex: 1; }
+.settings-popover-saved {
+  color: var(--done);
+  background: var(--done-soft);
+  border-color: var(--done-soft);
+  margin-bottom: 6px;
+  transition: opacity 350ms ease;
+}
+.settings-popover-saved.is-fading { opacity: 0; }
+.picker-menu[role="listbox"] { z-index: 1600; }
+
+:root {
+  --settings-label-col: 136px;
+  --settings-row-gap: 10px;
+}
+.settings-field-row {
+  display: grid;
+  grid-template-columns: minmax(136px, var(--settings-label-col)) minmax(0, 1fr);
+  align-items: start;
+  gap: 4px var(--settings-row-gap);
+  margin-bottom: 6px;
+}
+.settings-field-label {
+  display: block; margin-top: 6px; margin-bottom: 4px;
+  font-weight: 500; line-height: 1.3;
+  white-space: normal; word-break: break-word;
+}
+.settings-input {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel); color: var(--fg);
+  font-size: 13px;
+}
+.settings-input--w-narrow { width: 64px; }
+.settings-input--w-mid { width: 100px; }
+.settings-input--w-full { width: 100%; box-sizing: border-box; }
+.settings-popover .settings-form-field { width: auto; flex: 0 0 auto; }
+.settings-form-field--narrow .form-input { width: 64px; }
+.settings-form-field--mid .form-input { width: 100px; }
+.settings-subhint {
+  font-size: 12px; color: var(--fg-mute); line-height: 1.5;
+  padding-left: calc(var(--settings-label-col) + var(--settings-row-gap));
+  margin-bottom: 10px;
+}
+.settings-subhint-mobile { display: none; }
+.settings-subhint--error { color: var(--failed); }
+.settings-field-status {
+  font-size: 12px; color: var(--fg-mute);
+  font-style: normal; font-weight: 500;
+  white-space: nowrap;
+}
+.settings-section-title {
+  font-size: 12.5px; color: var(--fg);
+  font-weight: 700; margin-bottom: 12px; letter-spacing: 0.01em;
+}
+.settings-inline-unit {
+  font-size: 11px; color: var(--fg-faint);
+  white-space: nowrap; flex: 0 0 auto;
+}
+.settings-field-controls {
+  display: flex; align-items: center;
+  flex-wrap: nowrap; gap: 8px; min-width: 0;
+}
+.settings-field-controls > .settings-input--w-full {
+  flex: 1 1 auto; min-width: 0;
+}
+.settings-error {
+  font-size: 11px; color: var(--failed); margin-bottom: 8px; word-break: break-word;
+}
+.settings-field-row--tight { margin-bottom: 4px; }
+.settings-field-row--tight .toggle-pill { width: fit-content; max-width: 100%; }
+
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) {
+  color: var(--fg); border-color: var(--line);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]):hover {
+  border-color: var(--accent);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) .toggle-pill-track {
+  background: var(--line-2); border: 1px solid var(--line);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) .toggle-pill-thumb {
+  background: var(--bg-elevated); box-shadow: 0 0 0 1px var(--line);
+  top: 0; left: 0;
+}
+.settings-popover .toggle-pill.is-on .toggle-pill-thumb { box-shadow: none; }
+
+.push-action-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.push-toggle-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.push-hint { font-size: 12px; color: var(--fg-mute); line-height: 1.5; margin-bottom: 8px; }
+.push-blocked-badge {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--failed) 12%, transparent);
+  color: var(--failed);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  font-size: 11.5px; font-weight: 500; white-space: nowrap;
+}
+.push-hint--inline { margin: 0; }
+.push-hint-list { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
+.push-events-grid {
+  margin-top: 14px; margin-left: 12px; padding-left: 12px;
+  border-left: 2px solid var(--line);
+  width: fit-content; align-items: stretch;
+}
+.settings-popover .toggle-pill.is-disabled { opacity: 0.55; cursor: not-allowed; }
+.push-section { display: flex; flex-direction: column; gap: 10px; }
+.push-state {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px; border-radius: 6px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  font-size: 12.5px; line-height: 1.5;
+  width: 100%; box-sizing: border-box;
+}
+.push-state-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.push-state-title { font-weight: 600; color: var(--fg); font-size: 13px; }
+.push-state-sub { color: var(--fg-mute); font-size: 12px; word-break: break-word; }
+.push-state-steps {
+  margin: 4px 0 0; padding-left: 18px;
+  display: flex; flex-direction: column; gap: 4px;
+  color: var(--fg-mute); font-size: 12px;
+}
+.push-state-steps strong { color: var(--fg); font-weight: 600; }
+.push-state-badge {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px;
+  border-radius: 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  background: color-mix(in srgb, var(--fg-mute) 14%, transparent);
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
+}
+.push-state--neutral { border-color: var(--line); }
+.push-state--info {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.push-state--ok {
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+  background: color-mix(in srgb, var(--done) 8%, transparent);
+}
+.push-state--ok .push-state-badge--ok {
+  background: color-mix(in srgb, var(--done) 18%, transparent);
+  color: var(--done);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+}
+.push-state--error {
+  border-color: color-mix(in srgb, var(--failed) 45%, var(--line));
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+}
+.push-state--error .push-state-badge {
+  background: color-mix(in srgb, var(--failed) 14%, transparent);
+  color: var(--failed);
+  border-color: color-mix(in srgb, var(--failed) 45%, var(--line));
+}
+
+.settings-popover .push-events-grid .toggle-pill {
+  font-size: 12px; padding: 4px 10px;
+  background: transparent; border-color: transparent;
+}
+.settings-popover .push-events-grid .toggle-pill:hover { background: var(--hover); border-color: transparent; }
+.settings-popover .push-events-grid .toggle-pill.is-on {
+  background: transparent; color: var(--fg); border-color: transparent;
+}
+.settings-popover .push-events-grid .toggle-pill.is-on .toggle-pill-track {
+  background: color-mix(in srgb, var(--done) 80%, transparent);
+}
+.push-events-grid { border-left-color: color-mix(in srgb, var(--line) 60%, transparent); }
+
+@media (max-width: 640px) {
+  .push-state { max-width: 100%; }
+  .push-events-grid {
+    width: auto; max-width: 100%;
+    display: flex; flex-wrap: wrap;
+    gap: 4px 2px; margin-left: 8px; padding-left: 8px;
+  }
+  .settings-popover .push-events-grid .toggle-pill { width: auto; padding: 4px 8px; }
+}
+
+:root {
+  --task-w-provider: 80px;
+  --task-w-model: 138px;
+  --task-w-effort: 84px;
+}
+.task-row { display: flex; flex-direction: column; gap: 2px; }
+.task-row-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px; align-items: center;
+}
+.task-row-label {
+  font-size: 12px; color: var(--fg); min-width: 0;
+  overflow: visible; text-overflow: clip;
+  white-space: normal; line-height: 1.3;
+}
+.task-row-selects {
+  display: grid;
+  grid-template-columns: var(--task-w-provider) var(--task-w-model) var(--task-w-effort);
+  column-gap: 8px;
+}
+.task-row-selects > select {
+  padding: 3px 4px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--panel); color: var(--fg);
+  font-size: 11.5px; font-family: var(--font-mono); box-sizing: border-box;
+}
+.task-row-hint { font-size: 12px; color: var(--fg-mute); line-height: 1.45; }
+.task-row-placeholder { width: var(--task-w-provider); }
+
+/* ─── Update tab ─── */
+.update-tab-body { display: flex; flex-direction: column; gap: 8px; }
+.update-version-line { font-size: 13px; line-height: 1.4; }
+.update-summary {
+  display: flex; flex-direction: column;
+  gap: var(--space-1, 4px);
+  margin-bottom: var(--space-3, 12px);
+}
+.update-summary-headline {
+  display: inline-flex; align-items: center;
+  gap: var(--space-2, 8px); flex-wrap: wrap;
+}
+.update-summary-sub {
+  font-size: 12.5px; color: var(--fg-mute);
+  display: inline-flex; align-items: center;
+  gap: var(--space-1, 4px); flex-wrap: wrap;
+}
+.update-summary-sep { color: var(--fg-faint); }
+.update-summary-sub--error { color: var(--failed); }
+.update-version-current {
+  color: var(--fg); font-weight: 700;
+  font-size: 18px; letter-spacing: -0.01em;
+  word-break: break-all;
+  overflow-wrap: anywhere; min-width: 0;
+}
+.update-version-latest {
+  color: var(--fg); font-weight: 500;
+  overflow-wrap: anywhere; min-width: 0;
+}
+.update-version-latest--accent { color: var(--accent); font-weight: 700; }
+.update-last-checked { font-size: 12px; color: var(--fg-mute); margin-top: 6px; }
+@media (max-width: 480px) {
+  .update-action-row {
+    flex-direction: column; align-items: stretch;
+    gap: var(--space-2, 8px);
+  }
+  .update-action-row .btn { width: 100%; }
+  .update-action-row .btn-primary { order: -1; }
+  .update-error-actions { flex-direction: column; align-items: stretch; }
+  .update-error-actions .btn { width: 100%; }
+}
+.update-dev-hint {
+  font-size: 12px; color: var(--fg); line-height: 1.5;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 4px;
+}
+.update-release-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 4px; border-radius: 4px;
+  color: var(--accent); font-size: 12px;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.update-release-link:hover { text-decoration: underline; }
+.update-action-row { align-items: center; }
+.update-progress {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel-2, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 6px; font-size: 12.5px; line-height: 1.5;
+}
+.update-progress-spinner { color: var(--accent); flex: 0 0 auto; margin-top: 2px; }
+.update-progress-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.update-progress-title { color: var(--fg); font-weight: 500; }
+.update-progress-sub { color: var(--fg-mute); }
+.update-success {
+  display: flex; align-items: flex-start; gap: 8px;
+  color: var(--done); background: var(--done-soft);
+  padding: 10px 12px; border-radius: 6px;
+  font-size: 12.5px; line-height: 1.5;
+}
+.update-success-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.update-success-title { font-weight: 500; color: var(--done); }
+.update-success-tag { color: var(--done); font-weight: 700; overflow-wrap: anywhere; }
+.update-success-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.update-error {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--failed) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  border-radius: 6px; font-size: 12.5px; line-height: 1.5;
+}
+.update-error-title { color: var(--failed); font-weight: 600; }
+.update-error-reason { color: var(--fg); word-break: break-word; }
+.update-error-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.update-action-row .btn:disabled, .update-action-row .btn[aria-disabled="true"] {
+  color: var(--fg-mute); opacity: 0.85;
+}
+.update-action-row .btn:not(:disabled):not([aria-disabled="true"]):not(.btn-primary):not(.btn-danger) {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--fg) 25%, var(--line));
+}
+.update-action-row .btn:not(:disabled):not([aria-disabled="true"]):not(.btn-primary):not(.btn-danger):hover {
+  border-color: color-mix(in srgb, var(--fg) 45%, var(--line));
+}
+
+.settings-tab-content { display: flex; flex-direction: column; }
+.task-group {
+  display: flex; flex-direction: column;
+  padding: 10px; border-radius: 8px;
+}
+.task-group + .task-group { margin-top: 10px; }
+.task-group--primary { background: var(--panel); border: 1px solid var(--line); }
+.task-group--secondary { background: transparent; border: 1px dashed var(--line); }
+.task-group-hint { font-size: 12px; color: var(--fg-mute); line-height: 1.5; margin-bottom: 8px; }
+.settings-popover-task-grid { display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-width: 767px) {
+  .settings-popover { box-sizing: border-box; }
+  .settings-popover *, .settings-popover *::before, .settings-popover *::after { box-sizing: border-box; }
+  .settings-popover {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
+    transform: none !important;
+    width: 100vw !important; min-width: 0 !important; max-width: 100vw !important;
+    height: 100vh !important; height: 100dvh !important;
+    max-height: 100vh !important; max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 52px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+    overflow-x: hidden !important; overflow-y: auto !important;
+  }
+  .settings-popover-tabs {
+    margin-left: -16px; margin-right: -16px;
+    padding-left: 16px; padding-right: 16px;
+  }
+  .settings-popover select, .settings-popover input, .settings-popover button { max-width: 100%; }
+  .settings-popover select, .settings-popover input { min-width: 0; }
+  .task-row {
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "label hint" "selects selects";
+    align-items: baseline; column-gap: 8px; row-gap: 6px;
+  }
+  .task-row-head { display: contents; }
+  .task-row-label { grid-area: label; white-space: normal; }
+  .task-row-hint { grid-area: hint; }
+  .task-row-selects {
+    grid-area: selects;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 6px; width: 100%;
+  }
+  .task-row-selects > select {
+    width: 100% !important; min-width: 0;
+    min-height: 40px; padding-top: 8px; padding-bottom: 8px;
+  }
+  .task-row-selects:has(.task-row-placeholder) { grid-template-columns: 2fr 1fr; }
+  .task-row-selects > .task-row-placeholder { display: none; }
+  .settings-popover-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; top: 10px; right: 12px;
+    width: 32px; height: 32px; padding: 0;
+    border: none; border-radius: 6px;
+    background: transparent; color: var(--fg-mute);
+    cursor: pointer; z-index: 2;
+  }
+  .settings-field-row {
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: var(--space-2, 6px); margin-bottom: var(--space-2, 6px);
+  }
+  .settings-field-label { margin-bottom: 0; font-size: 13px; }
+  .settings-field-controls { flex-wrap: wrap; row-gap: 4px; width: 100%; min-width: 0; }
+  .settings-field-controls > .settings-input, .settings-field-controls > .picker-select { min-height: 40px; }
+  .settings-popover .form-input, .settings-popover .picker-trigger {
+    min-height: 40px; padding-top: 8px; padding-bottom: 8px;
+  }
+  .settings-input--w-narrow, .settings-input--w-mid { width: 96px; min-width: 0; }
+  .settings-inline-unit { flex-basis: auto; margin-left: 0; white-space: nowrap; }
+  .settings-subhint {
+    margin-left: 0; padding-left: 0;
+    margin-top: var(--space-2, 6px); margin-bottom: var(--space-3, 10px);
+    font-size: 13px; line-height: 1.45;
+  }
+  .settings-subhint-desktop { display: none; }
+  .settings-subhint-mobile { display: block; }
+  .settings-field-row--tight .toggle-pill {
+    width: 100%; justify-content: flex-start;
+    flex-wrap: wrap; white-space: normal;
+    text-align: left; line-height: 1.35; padding: 8px 12px;
+  }
+}
+
+/* ════════════════════════════════════════════════
+   prototype chrome — fake topbar + theme toggle
+   ════════════════════════════════════════════════ */
+.proto-topbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 44px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center;
+  padding: 0 12px 0 16px;
+  z-index: 30;
+}
+.proto-topbar-brand {
+  font-weight: 600; font-size: 13px;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+.proto-topbar-spacer { flex: 1; }
+.proto-anchor { position: relative; }
+.proto-gear {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px; color: var(--fg-mute);
+  transition: background 120ms, color 120ms;
+}
+.proto-gear:hover, .proto-gear.is-open {
+  background: var(--hover); color: var(--accent);
+}
+.proto-stage {
+  padding-top: 44px; min-height: 100vh;
+  background:
+    radial-gradient(rgba(232,228,217,0.05) 1px, transparent 1.5px) 0 0 / 22px 22px,
+    var(--bg);
+}
+html.light .proto-stage {
+  background:
+    radial-gradient(rgba(28,25,22,0.06) 1px, transparent 1.5px) 0 0 / 22px 22px,
+    var(--bg);
+}
+.proto-controls {
+  position: fixed; left: 16px; bottom: 16px;
+  z-index: 60; display: flex; gap: 8px;
+}
+.proto-controls .btn {
+  background: var(--panel); border-color: var(--line-2);
+  font-size: 11.5px; box-shadow: var(--shadow-md);
+}
+.proto-scrim {
+  position: fixed; inset: 44px 0 0 0;
+  background: rgba(0,0,0,0.22);
+  z-index: 25;
+  animation: fadeUp 180ms ease-out;
+}
+html.light .proto-scrim { background: rgba(28,25,22,0.12); }
+@media (max-width: 767px) {
+  .proto-scrim { inset: 0; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState: useSt, useRef: useRf, useEffect: useEf, useId: useId_ } = React;
+
+/* ─── icons ─── */
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>);
+}
+function XIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>);
+}
+function CheckSm() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 12.5 5.5 5.5L20 6" />
+    </svg>);
+}
+function CaretDown() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>);
+}
+function BranchIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="6" r="2.4" /><circle cx="6" cy="18" r="2.4" /><circle cx="18" cy="9" r="2.4" />
+      <path d="M6 8.4v7.2M8 6h4a4 4 0 0 1 4 4v.6" />
+    </svg>);
+}
+function ArrowUpIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>);
+}
+function ExternalLinkIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 3h6v6M10 14 21 3M21 14v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7" />
+    </svg>);
+}
+
+/* ─── shared bits ─── */
+function NumberField({ value, onChange, min, max, step, fieldClassName, inputClassName, labelLabel }) {
+  return (
+    <div className={"form-field" + (fieldClassName ? " " + fieldClassName : "")}>
+      <label className="form-label form-label--sr"><span>{labelLabel}</span></label>
+      <input
+        type="number" inputMode="numeric"
+        className={"form-input" + (inputClassName ? " " + inputClassName : "")}
+        value={value} min={min} max={max} step={step}
+        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+      />
+    </div>);
+}
+
+function PickerTrigger({ icon, label, mono, open, onClick }) {
+  return (
+    <div className="picker">
+      <button type="button"
+        className={"picker-trigger" + (open ? " is-open" : "")}
+        onClick={onClick}>
+        {icon}
+        <span className={mono ? "mono" : ""}>{label}</span>
+        <span style={{ flex: 1 }} />
+        <CaretDown />
+      </button>
+    </div>);
+}
+
+function Toggle({ on, onChange, label, mono }) {
+  return (
+    <label className={"toggle-pill" + (mono ? " mono" : "") + (on ? " is-on" : "")}>
+      <input type="checkbox" checked={on} onChange={(e) => onChange && onChange(e.target.checked)} />
+      <span className="toggle-pill-track" aria-hidden><span className="toggle-pill-thumb" /></span>
+      {label}
+    </label>);
+}
+
+function SavedChip({ visible, fading }) {
+  if (!visible) return null;
+  return (
+    <span className={"chip settings-popover-saved" + (fading ? " is-fading" : "")}>
+      已儲存 <CheckSm />
+    </span>);
+}
+
+/* ════════════════════════════════════════════════
+   ProjectTab — mirrors src/features/settings/ProjectTab.tsx
+   ════════════════════════════════════════════════ */
+function ProjectTab({ notifySaved }) {
+  const [parallel, setParallel] = useSt(2);
+  const [baseBranch, setBaseBranch] = useSt("main");
+  const [costLimit, setCostLimit] = useSt("0");
+  const [autoMerge, setAutoMerge] = useSt(false);
+  const [pickerOpen, setPickerOpen] = useSt(false);
+  const ping = () => notifySaved && notifySaved();
+
+  return (
+    <div className="settings-tab-content">
+      <div className="task-group task-group--primary">
+        <div className="settings-field-row">
+          <span className="settings-field-label" id="proj-max-parallel-label">平行上限</span>
+          <div className="settings-field-controls">
+            <NumberField
+              labelLabel="平行上限"
+              fieldClassName="settings-form-field settings-form-field--narrow"
+              inputClassName="mono"
+              value={parallel} min={1} max={8} step={1}
+              onChange={(v) => { setParallel(v === "" ? 1 : Math.max(1, Math.min(8, Math.floor(v)))); ping(); }} />
+            <span className="mono settings-inline-unit">1–8 條</span>
+          </div>
+        </div>
+        <div className="settings-subhint">達到上限後，新執行會排隊，前一個完成後自動開始。</div>
+
+        <div className="settings-field-row">
+          <label className="settings-field-label" htmlFor="proj-base-branch">基礎分支</label>
+          <div className="settings-field-controls">
+            <PickerTrigger
+              icon={<span className="mono" style={{ color: "var(--fg-mute)", display: "inline-flex" }}><BranchIcon /></span>}
+              label={baseBranch} mono open={pickerOpen}
+              onClick={() => { setPickerOpen(!pickerOpen); }} />
+          </div>
+        </div>
+        <div className="settings-subhint">新 pipeline 預設從此 branch 建立。</div>
+
+        <div className="settings-field-row">
+          <span className="settings-field-label" id="proj-cost-limit-label">單次成本上限</span>
+          <div className="settings-field-controls">
+            <NumberField
+              labelLabel="單條 pipeline 成本上限"
+              fieldClassName="settings-form-field settings-form-field--mid"
+              inputClassName="mono"
+              value={costLimit === "" ? "" : Number(costLimit)} min={0} step={0.01}
+              onChange={(v) => { setCostLimit(v === "" ? "" : String(v)); ping(); }} />
+            <span className="mono settings-inline-unit">USD</span>
+          </div>
+        </div>
+        <div className="settings-subhint settings-subhint-desktop">每條 pipeline 的成本上限，0 代表不限制。超過時只阻止該 pipeline 的下一次執行，不影響其他 pipeline。</div>
+        <div className="settings-subhint settings-subhint-mobile">每條 pipeline 的上限，0 代表不限制。超過時只阻止下一次執行。</div>
+
+        <div className="settings-field-row settings-field-row--tight">
+          <span className="settings-field-label">自動合併</span>
+          <Toggle on={autoMerge} onChange={(v) => { setAutoMerge(v); ping(); }} label="新 pipeline 預設啟用" />
+        </div>
+        <div className="settings-subhint">每條 pipeline 仍可個別覆寫此設定。</div>
+      </div>
+    </div>);
+}
+
+/* ════════════════════════════════════════════════
+   AITab — mirrors src/features/settings/AITab.tsx
+   ════════════════════════════════════════════════ */
+const TASK_CLASS_LABELS = {
+  qa: "QA Spec",
+  split: "Ticket Split",
+  runner: "Main Agent",
+  executor: "Executor",
+  critic: "Critic",
+  merge: "Merge Agent",
+};
+const TASK_CLASS_HINTS = {
+  qa: "規格收斂",
+  split: "大任務拆分 Ticket",
+  runner: "任務執行主 Agent",
+  executor: "執行AI(改 code)",
+  critic: "審核AI(判 PASS/FAIL)",
+  merge: "合併衝突解決",
+};
+// verbatim from shared/types.ts:44-69
+const PROVIDERS = ["claude", "codex"];
+const MODELS_BY_PROVIDER = {
+  claude: [
+    "claude-opus-4-7",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+    "claude-opus-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-6",
+  ],
+  codex: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.2"],
+};
+const EFFORTS_BY_PROVIDER = {
+  claude: ["low", "medium", "high", "xhigh", "max"],
+  codex: ["minimal", "low", "medium", "high"],
+};
+const defaultModelForProvider = (p) => MODELS_BY_PROVIDER[p][0];
+const defaultEffortForProvider = (p) => EFFORTS_BY_PROVIDER[p][1] ?? EFFORTS_BY_PROVIDER[p][0];
+const modelsForProvider = (p) => MODELS_BY_PROVIDER[p];
+const effortsForProvider = (p) => EFFORTS_BY_PROVIDER[p];
+
+function TaskModelRow({ label, hint, provider, model, effort, showProvider, onChange }) {
+  return (
+    <div className="task-row">
+      <div className="task-row-head">
+        <span className="task-row-label">{label}</span>
+        <div className="task-row-selects">
+          {showProvider ? (
+            <select value={provider} aria-label={label + " provider"}
+              onChange={(e) => onChange({ provider: e.target.value })}>
+              {PROVIDERS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          ) : (
+            <span className="task-row-placeholder" aria-hidden />
+          )}
+          <select value={model} aria-label={label + " model"}
+            onChange={(e) => onChange({ model: e.target.value })}>
+            {modelsForProvider(provider).map((m) => (
+              <option key={m} value={m}>{m.replace(/^claude-/, "")}</option>
+            ))}
+          </select>
+          <select value={effort} aria-label={label + " effort"}
+            onChange={(e) => onChange({ effort: e.target.value })}>
+            {effortsForProvider(provider).map((eff) => (
+              <option key={eff} value={eff}>{eff}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {hint && <div className="task-row-hint">{hint}</div>}
+    </div>);
+}
+
+function AITab({ notifySaved }) {
+  // defaults follow defaultModelForProvider / defaultEffortForProvider
+  const mk = (p) => ({ provider: p, model: defaultModelForProvider(p), effort: defaultEffortForProvider(p) });
+  const [cfg, setCfg] = useSt({
+    qa: mk("claude"), split: mk("claude"), runner: mk("claude"),
+    executor: mk("claude"), critic: mk("claude"), merge: mk("claude"),
+  });
+  function patch(tc, p) {
+    setCfg((s) => {
+      // provider 切換時 model/effort 重置為新 provider 的預設,避免 cross-provider invalid value
+      if (p.provider && p.provider !== s[tc].provider) {
+        return { ...s, [tc]: mk(p.provider) };
+      }
+      return { ...s, [tc]: { ...s[tc], ...p } };
+    });
+    notifySaved && notifySaved();
+  }
+  return (
+    <div className="settings-tab-content">
+      <div className="task-group task-group--primary">
+        <div className="settings-section-title">全域 provider / model 設定</div>
+        <div className="settings-popover-task-grid">
+          {["qa", "split", "runner"].map((tc) => (
+            <TaskModelRow key={tc} label={TASK_CLASS_LABELS[tc]} hint={TASK_CLASS_HINTS[tc]}
+              provider={cfg[tc].provider} model={cfg[tc].model} effort={cfg[tc].effort}
+              showProvider onChange={(p) => patch(tc, p)} />
+          ))}
+        </div>
+      </div>
+      <div className="task-group task-group--secondary">
+        <div className="settings-section-title">執行階段 Agent</div>
+        <div className="task-group-hint">
+          <ArrowUpIcon aria-hidden /> 為了加快速度和節省 Token，預設跟隨上方 Main Agent 設定。
+        </div>
+        <div className="settings-popover-task-grid">
+          {["executor", "critic", "merge"].map((tc) => (
+            <TaskModelRow key={tc} label={TASK_CLASS_LABELS[tc]} hint={TASK_CLASS_HINTS[tc]}
+              provider={cfg[tc].provider} model={cfg[tc].model} effort={cfg[tc].effort}
+              onChange={(p) => patch(tc, p)} />
+          ))}
+        </div>
+      </div>
+    </div>);
+}
+
+/* ════════════════════════════════════════════════
+   NotificationsTab — mirrors src/features/settings/NotificationsTab.tsx
+   ════════════════════════════════════════════════ */
+const PUSH_EVENT_LABELS = [
+  { key: "ticket_done", label: "Ticket 完成" },
+  { key: "ticket_failed", label: "Ticket 失敗" },
+  { key: "pipeline_paused", label: "Pipeline 暫停需回應" },
+  { key: "pipeline_ready", label: "Pipeline 跑完" },
+  { key: "auto_merge_conflict", label: "衝突交由 AI 處理" },
+];
+
+// PushStateBlock — all 6 branches (loading wrap + 5 kinds) verbatim from NotificationsTab.tsx
+function PushStateBlock({ state, loading }) {
+  if (loading) {
+    return (
+      <div className="push-state push-state--info" role="status" aria-live="polite">
+        <div className="push-state-title">處理中…</div>
+        <div className="push-state-sub">正在更新此裝置的推播設定，請稍候。</div>
+      </div>);
+  }
+  if (state === "checking") {
+    return (
+      <div className="push-state push-state--info" role="status" aria-live="polite">
+        <div className="push-state-title">檢查推播支援中…</div>
+        <div className="push-state-sub">正在確認此瀏覽器是否支援 Web Push。</div>
+      </div>);
+  }
+  if (state === "unsupported") {
+    return (
+      <div className="push-state push-state--error" role="status" aria-live="polite">
+        <div className="push-state-head">
+          <span className="push-state-badge">不支援</span>
+          <div className="push-state-title">此瀏覽器不支援 Web Push</div>
+        </div>
+        <div className="push-state-sub">可改用桌面 Chrome / Edge / Firefox，或將本站安裝為 App 後再嘗試啟用。</div>
+      </div>);
+  }
+  if (state === "denied") {
+    return (
+      <div className="push-state push-state--error" role="status" aria-live="polite">
+        <div className="push-state-head">
+          <span className="push-state-badge">已封鎖</span>
+          <div className="push-state-title">已被瀏覽器封鎖</div>
+        </div>
+        <div className="push-state-sub">請先在瀏覽器解除封鎖，再回此頁啟用推播：</div>
+        <ul className="push-state-steps">
+          <li><strong>Chrome / Edge</strong>：點網址列左側的鎖頭或調整圖示 → 網站設定 → 通知 → 改為「允許」。</li>
+          <li><strong>Safari</strong>：「Safari → 設定 → 網站 → 通知」找到本站並改為「允許」。</li>
+          <li>解除後重新整理此頁，再回到此設定啟用。</li>
+        </ul>
+      </div>);
+  }
+  if (state === "default") {
+    return (
+      <div className="push-state push-state--neutral" role="status" aria-live="polite">
+        <div className="push-state-title">尚未啟用</div>
+        <div className="push-state-sub">開啟後可選擇接收哪些事件。瀏覽器會先詢問通知權限。</div>
+      </div>);
+  }
+  if (state === "granted") {
+    return (
+      <div className="push-state push-state--ok" role="status" aria-live="polite">
+        <div className="push-state-head">
+          <span className="push-state-badge push-state-badge--ok">已啟用</span>
+          <div className="push-state-title">已啟用此裝置的推播</div>
+        </div>
+        <div className="push-state-sub">下方可選擇要接收哪些事件，變更會自動儲存。</div>
+      </div>);
+  }
+  return null;
+}
+
+// InstallAppSection — 3 branches verbatim from NotificationsTab.tsx
+function InstallAppSection({ installState, busy }) {
+  // installState: "installed" | "canInstall" | "unavailable"
+  return (
+    <>
+      <div className="settings-section-title">安裝為 App</div>
+      {installState === "canInstall" && (
+        <div className="push-action-row">
+          <button type="button" className="btn" disabled={busy}>
+            {busy ? "處理中…" : "安裝 App"}
+          </button>
+        </div>
+      )}
+      <div className="push-hint push-hint--inline">
+        {installState === "installed" ? (
+          "已安裝，直接從 App 圖示開啟即可。"
+        ) : installState === "canInstall" ? (
+          "安裝後可全螢幕、推播更穩。"
+        ) : (
+          <>
+            此瀏覽器未提供安裝按鈕。可能已安裝過，或需從瀏覽器手動安裝：
+            <ul className="push-hint-list">
+              <li>Chrome / Edge：點網址列右側的安裝圖示（⊕）。</li>
+              <li>iOS Safari：點下方「分享」→「加入主畫面」。</li>
+            </ul>
+          </>
+        )}
+      </div>
+    </>);
+}
+
+function NotificationsTab({ notifySaved }) {
+  // 改 useSt 初值就能看其他 state。完整 5 個 push state + 3 個 install state 都在 JSX 內。
+  const [state, setState] = useSt("granted");      // "checking" | "unsupported" | "denied" | "default" | "granted"
+  const [loading, setLoading] = useSt(false);
+  const [installState, setInstallState] = useSt("canInstall"); // "installed" | "canInstall" | "unavailable"
+  const [events, setEvents] = useSt({
+    ticket_done: true, ticket_failed: true,
+    pipeline_paused: true, pipeline_ready: false,
+    auto_merge_conflict: true,
+  });
+  const enabled = state === "granted";
+  const disabled = state !== "default" && state !== "granted" || loading;
+
+  return (
+    <div className="settings-tab-content">
+      <div className="task-group task-group--primary">
+        <div className="settings-section-title">推播通知</div>
+        <div className="push-section">
+          <div className="push-toggle-row">
+            <label className={
+              "toggle-pill mono" + (enabled ? " is-on" : "") + (disabled ? " is-disabled" : "")
+            } aria-disabled={disabled || undefined}>
+              <input type="checkbox" role="switch" checked={enabled} disabled={disabled}
+                onChange={(e) => {
+                  setState(e.target.checked ? "granted" : "default");
+                  notifySaved && notifySaved();
+                }} />
+              <span className="toggle-pill-track" aria-hidden><span className="toggle-pill-thumb" /></span>
+              {enabled ? "推播通知已啟用" : loading ? "處理中…" : "啟用推播通知"}
+            </label>
+          </div>
+          <PushStateBlock state={state} loading={loading} />
+          {enabled && (
+            <div className="settings-popover-task-grid push-events-grid" aria-label="推播事件">
+              {PUSH_EVENT_LABELS.map((item) => {
+                const on = events[item.key];
+                return (
+                  <label key={item.key} className={"toggle-pill mono" + (on ? " is-on" : "")}>
+                    <input type="checkbox" role="switch" checked={on}
+                      onChange={(e) => {
+                        setEvents((s) => ({ ...s, [item.key]: e.target.checked }));
+                        notifySaved && notifySaved();
+                      }} />
+                    <span className="toggle-pill-track" aria-hidden><span className="toggle-pill-thumb" /></span>
+                    {item.label}
+                  </label>);
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="task-group task-group--primary">
+        <InstallAppSection installState={installState} busy={false} />
+      </div>
+    </div>);
+}
+
+/* ════════════════════════════════════════════════
+   UpdateTab — mirrors src/features/settings/UpdateTab.tsx
+   ════════════════════════════════════════════════ */
+function Spinner() {
+  return (
+    <svg className="update-progress-spinner spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M21 12a9 9 0 1 1-6.2-8.55" />
+    </svg>);
+}
+
+function UpdateTab({ notifySaved }) {
+  // 改 useSt 初值看其他 state。完整 5 個 phase + dev-build / no-latest 分支都在 JSX。
+  const [phase, setPhase] = useSt("idle"); // "idle" | "starting" | "polling" | "done" | "error"
+  const [pollingSub, setPollingSub] = useSt("down"); // "before-down" | "down" | "reconnecting"
+  const [errorReason, setErrorReason] = useSt("系統更新後超過 3 分鐘仍未恢復連線。請重新整理頁面，或稍後再檢查。");
+  const current = "v0.42.1";
+  const latest = { tag: "v0.43.0", url: "#" }; // 設 null 看「無法取得發行版資訊」
+  const hasUpdate = !!latest && current !== latest.tag;
+  const isDevBuild = /^dev-|-dirty$/.test(current);
+  const loading = false;
+  const isUpdating = phase === "starting" || phase === "polling";
+  const isError = phase === "error";
+
+  function onApply() {
+    setPhase("starting");
+    setTimeout(() => { setPhase("polling"); setPollingSub("before-down"); }, 600);
+    setTimeout(() => setPollingSub("down"), 1500);
+    setTimeout(() => setPollingSub("reconnecting"), 2400);
+    setTimeout(() => setPhase("done"), 3000);
+  }
+
+  return (
+    <div className="task-group task-group--primary">
+      <div className="settings-section-title">應用版本</div>
+      <div className="update-tab-body" aria-busy={isUpdating || undefined}>
+        <div className="update-summary">
+          <div className="update-summary-headline">
+            <span className="mono update-version-current" title={current}>{current}</span>
+            {!hasUpdate && !isDevBuild && latest && (
+              <span className="vp-chip vp-chip--success">已是最新</span>
+            )}
+            {hasUpdate && !isDevBuild && (
+              <span className="vp-chip vp-chip--info">有新 release</span>
+            )}
+          </div>
+          {latest ? (
+            <div className="update-summary-sub">
+              最新發行版{" "}
+              <span className={"mono update-version-latest" + (hasUpdate ? " update-version-latest--accent" : "")}>
+                {latest.tag}
+              </span>
+              <span className="update-summary-sep" aria-hidden>·</span>
+              <a href={latest.url} target="_blank" rel="noopener noreferrer"
+                className="update-release-link" aria-label="開啟發行說明（新視窗）">
+                發行說明 <ExternalLinkIcon aria-hidden />
+              </a>
+            </div>
+          ) : (
+            <div className="update-summary-sub update-summary-sub--error">
+              無法取得發行版資訊
+            </div>
+          )}
+        </div>
+
+        {isDevBuild && (
+          <div className="update-dev-hint" role="note">
+            偵測到開發版（dev / dirty build），通常已含未發佈變更。「立即更新」會切回最新正式 release。
+          </div>
+        )}
+
+        <div className="push-action-row update-action-row">
+          {!isError && (
+            <button type="button" className="btn"
+              onClick={() => notifySaved && notifySaved()}
+              disabled={loading || isUpdating}>
+              {loading ? "檢查中…" : "檢查更新"}
+            </button>
+          )}
+          {hasUpdate && !isDevBuild && !isError && (
+            <button type="button" className="btn btn-primary"
+              onClick={onApply} disabled={isUpdating}>
+              {phase === "starting" ? "啟動中…"
+                : phase === "polling" ? "更新中…"
+                : "立即更新"}
+            </button>
+          )}
+          {isDevBuild && !isError && (
+            <button type="button" className="btn"
+              onClick={onApply} disabled={isUpdating}
+              title="切回最新正式 release（會覆蓋目前 dev / dirty build）">
+              {phase === "starting" ? "啟動中…"
+                : phase === "polling" ? "更新中…"
+                : "切回正式 release"}
+            </button>
+          )}
+        </div>
+
+        <div className="update-last-checked">上次檢查：剛剛</div>
+
+        {phase === "starting" && (
+          <div className="update-progress" role="status" aria-live="polite">
+            <Spinner />
+            <div className="update-progress-text">
+              <div className="update-progress-title">啟動更新中…</div>
+              <div className="update-progress-sub">已送出更新指令，等待 backend 接手。</div>
+            </div>
+          </div>
+        )}
+
+        {phase === "polling" && (
+          <div className="update-progress" role="status" aria-live="polite">
+            <Spinner />
+            <div className="update-progress-text">
+              <div className="update-progress-title">backend 重啟中，通常需 30-60 秒</div>
+              <div className="update-progress-sub">
+                {pollingSub === "before-down"
+                  ? "等待 backend 下線…（更新流程預期會短暫離線）"
+                  : pollingSub === "down"
+                    ? "backend 暫時離線中，持續確認回應…"
+                    : "已重新連線，正在確認版本…"}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {phase === "done" && (
+          <div className="update-success" role="status" aria-live="polite">
+            <CheckSm aria-hidden />
+            <div className="update-success-text">
+              <div className="update-success-title">
+                已更新到 <span className="mono update-success-tag">{latest ? latest.tag : ""}</span>，重新整理頁面後生效。
+              </div>
+              <div className="update-success-actions">
+                <button type="button" className="btn btn-primary"
+                  onClick={() => setPhase("idle")}>重新整理頁面</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {phase === "error" && (
+          <div className="update-error" role="alert" aria-live="assertive">
+            <div className="update-error-title">更新未完成</div>
+            <div className="update-error-reason">{errorReason}</div>
+            <div className="update-error-actions">
+              <button type="button" className="btn btn-primary"
+                onClick={() => setPhase("idle")}>重新整理頁面</button>
+              <button type="button" className="btn"
+                onClick={() => setPhase("idle")}>重新檢查連線</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>);
+}
+
+/* ════════════════════════════════════════════════
+   SettingsPopover root — mirrors src/features/settings/SettingsPopover.tsx
+   ════════════════════════════════════════════════ */
+const TABS = [
+  { key: "project",       label: "專案",    Comp: ProjectTab },
+  { key: "ai",            label: "AI 任務", Comp: AITab },
+  { key: "notifications", label: "通知",    Comp: NotificationsTab },
+  { key: "update",        label: "更新",    Comp: UpdateTab },
+];
+
+function SettingsPopover({ onClose }) {
+  const [active, setActive] = useSt("project");
+  const [savedVisible, setSavedVisible] = useSt(false);
+  const [savedFading, setSavedFading] = useSt(false);
+  const timerRef = useRf(null);
+
+  function notifySaved() {
+    setSavedVisible(true); setSavedFading(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setSavedFading(true), 2400);
+    setTimeout(() => { setSavedVisible(false); setSavedFading(false); }, 3200);
+  }
+  function onTabKey(e, idx) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    e.preventDefault();
+    const len = TABS.length;
+    let next = idx;
+    if (e.key === "ArrowLeft") next = (idx - 1 + len) % len;
+    else if (e.key === "ArrowRight") next = (idx + 1) % len;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = len - 1;
+    setActive(TABS[next].key);
+  }
+
+  const ActiveComp = TABS.find((t) => t.key === active).Comp;
+
+  return (
+    <div className="settings-popover" role="dialog" aria-label="設定">
+      <button type="button" className="settings-popover-close"
+        onClick={onClose} aria-label="關閉設定" title="關閉">
+        <XIcon />
+      </button>
+      <div className="settings-popover-tabs" role="tablist" aria-label="設定分頁">
+        {TABS.map((t, idx) => {
+          const isActive = active === t.key;
+          return (
+            <button key={t.key} type="button" role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => setActive(t.key)}
+              onKeyDown={(e) => onTabKey(e, idx)}
+              className={"settings-popover-tab" + (isActive ? " is-active" : "")}>
+              {t.label}
+            </button>);
+        })}
+        <span className="settings-popover-tabs-spacer" />
+        <SavedChip visible={savedVisible} fading={savedFading} />
+      </div>
+      <ActiveComp notifySaved={notifySaved} />
+    </div>);
+}
+
+/* ════════════════════════════════════════════════
+   App shell — fake topbar with gear anchor + theme toggle
+   ════════════════════════════════════════════════ */
+function App() {
+  const [dark, setDark] = useSt(true);
+  const [open, setOpen] = useSt(true);
+  useEf(() => {
+    document.documentElement.classList.toggle("light", !dark);
+  }, [dark]);
+  return (
+    <>
+      <div className="proto-topbar">
+        <span className="proto-topbar-brand">vibe-pipeline</span>
+        <span className="proto-topbar-spacer" />
+        <div className="proto-anchor">
+          <button type="button"
+            className={"proto-gear" + (open ? " is-open" : "")}
+            onClick={() => setOpen((o) => !o)}
+            aria-label="設定" aria-expanded={open}>
+            <GearIcon />
+          </button>
+          {open && <SettingsPopover onClose={() => setOpen(false)} />}
+        </div>
+      </div>
+      {open && <div className="proto-scrim" onClick={() => setOpen(false)} />}
+      <div className="proto-stage" />
+      <div className="proto-controls">
+        <button className="btn" onClick={() => setDark((d) => !d)}>
+          {dark ? "切換淺色" : "切換深色"}
+        </button>
+        {!open && (
+          <button className="btn" onClick={() => setOpen(true)}>重新開啟設定</button>
+        )}
+      </div>
+    </>);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,690 @@
+/* ============================================================================
+   FocusColumn Redesign — V1 Refined (full-screen)
+   Overlay on top of focuscolumn.css. Same DOM, polished chrome.
+   ============================================================================ */
+
+/* ─── base ───────────────────────────────────────────────────────── */
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  overflow: hidden;
+}
+
+#root, .fc-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── top bar (scenario picker) ──────────────────────────────────── */
+
+.fc-app-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+  border-bottom: 1px solid var(--line);
+  min-height: 44px;
+}
+.fc-app-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg-mute);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.fc-app-brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.fc-app-brand-text {
+  font-weight: 600;
+  color: var(--fg);
+}
+.fc-app-brand-sep { color: var(--fg-faint); }
+.fc-app-brand-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.fc-app-presets {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  justify-content: flex-end;
+}
+.fc-app-presets::-webkit-scrollbar { display: none; }
+.fc-app-preset {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-mute);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.fc-app-preset:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg);
+}
+.fc-app-preset.is-active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--fg);
+}
+
+/* ─── body layout (focus fills viewport) ─────────────────────────── */
+
+.fc-app-body {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+}
+.fc-app-body .focus {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+/* ============================================================================
+   V1 · Refined — same DOM as source, polished chrome
+   ============================================================================ */
+
+.fc--refined .focus {
+  padding: 20px 24px 24px;
+}
+
+/* ─── Header redesign: title row pins actions top-right, meta row below ─── */
+
+.fc--refined .focus-head {
+  margin-bottom: 18px;
+}
+.fc--refined .focus-head-top {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+/* Title row: stays on one line, gives space for absolutely-positioned actions */
+.fc--refined .focus-head-title-row {
+  flex-wrap: nowrap;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding-right: 280px; /* room for actions block + overflow ⋯ */
+  min-height: 34px;
+}
+.fc--refined .focus-head-title-spacer { flex: 1 1 auto; }
+.fc--refined .focus-title {
+  font-size: 22px;
+  letter-spacing: -0.022em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.fc--refined .focus-title-edit {
+  min-width: 0;
+}
+.fc--refined .focus-title-edit-btn {
+  opacity: 0.5;
+  transition: opacity 100ms ease;
+}
+.fc--refined .focus-head-title-row:hover .focus-title-edit-btn {
+  opacity: 1;
+}
+
+/* Title rename mode — borderless underline input + ghost icon buttons */
+.fc--refined .focus-title-edit:has(.focus-title-input) {
+  gap: 4px;
+}
+.fc--refined .focus-title-input {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  font-family: var(--font-mono);
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0;
+  padding: 0 2px 2px;
+  outline: none;
+  min-width: 220px;
+  width: auto;
+  caret-color: var(--accent);
+  transition: border-color 100ms ease;
+}
+.fc--refined .focus-title-input::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.fc--refined .focus-title-input.is-invalid {
+  border-bottom-color: var(--failed);
+  color: var(--failed);
+}
+
+/* Confirm / cancel — small inline icon buttons, no big chunky block */
+.fc--refined .focus-title-edit-confirm,
+.fc--refined .focus-title-edit-cancel {
+  background: transparent;
+  border: 0;
+  padding: 4px 6px;
+  min-height: 26px;
+  border-radius: 4px;
+  color: var(--fg-mute);
+  font-size: 0;  /* hides any text in the button */
+  transition: background 100ms ease, color 100ms ease;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+.fc--refined .focus-title-edit-confirm svg,
+.fc--refined .focus-title-edit-cancel svg {
+  width: 14px;
+  height: 14px;
+}
+.fc--refined .focus-title-edit-confirm {
+  color: var(--accent);
+}
+.fc--refined .focus-title-edit-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.fc--refined .focus-title-edit-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.fc--refined .focus-title-edit-cancel:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+/* Inline error hint */
+.fc--refined .focus-title-edit > [role="status"] {
+  font-size: 10.5px !important;
+  color: var(--failed) !important;
+  align-self: flex-end !important;
+  margin-bottom: 4px !important;
+}
+
+/* Pull Actions out of meta-row visually into title row's right edge */
+.fc--refined .focus-actions {
+  position: absolute;
+  top: 0;
+  right: 44px;  /* leave 44px for overflow ⋯ on its right */
+  height: 34px;
+  margin-left: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  z-index: 2;
+}
+
+/* Pin Overflow ⋯ to the very right, sitting next to the actions cluster */
+.fc--refined .focus-overflow {
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  z-index: 3;
+}
+.fc--refined .focus-actions .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Meta row: monospace strip below title, single line, chips compress */
+.fc--refined .focus-head-meta-row {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  padding-right: 0;
+  overflow: hidden;
+}
+.fc--refined .focus-head-meta-spacer { display: none; }
+
+/* State indicator — state-colored capsule pill.
+   Source sets `background: stateColor` inline on the .dot child; we stretch
+   that .dot to fill the chip as a tinted backdrop, so the state's color
+   actually "paints" the chip without us needing JSX-level access. */
+.fc--refined .focus-head-meta-row > .chip-state {
+  position: relative;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 3px 12px 3px 12px !important;
+  border-radius: 999px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg) !important;
+  flex-shrink: 0;
+  overflow: hidden;
+  z-index: 0;
+  isolation: isolate;
+}
+.fc--refined .focus-head-meta-row > .chip-state .dot {
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: inherit !important;
+  opacity: 0.18;
+  z-index: -1;
+  /* background inherits from source's inline state color */
+}
+.fc--refined .focus-head-meta-row > .chip-state::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.fc--refined .focus-head-meta-row > .chip-state .dot.pulse {
+  animation: chipStatePulse 1.8s ease-in-out infinite;
+}
+@keyframes chipStatePulse {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.34; }
+}
+.fc--refined .focus-head-meta-row > .focus-count,
+.fc--refined .focus-head-meta-row > .chip:not(.chip-state),
+.fc--refined .focus-head-meta-row > .sync-chip {
+  background: transparent;
+  border: 0;
+  padding: 0 10px;
+  color: var(--fg-mute);
+  font-size: 11px;
+  border-radius: 0;
+  position: relative;
+  min-height: auto;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc--refined .focus-head-meta-row > .focus-count::before,
+.fc--refined .focus-head-meta-row > .chip:not(.chip-state)::before,
+.fc--refined .focus-head-meta-row > .sync-chip::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-faint);
+  opacity: 0.6;
+}
+
+/* Hover affordance on interactive chips */
+.fc--refined .focus-diff-chip,
+.fc--refined .sync-chip {
+  cursor: pointer;
+  transition: color 100ms ease;
+}
+.fc--refined .focus-diff-chip:hover,
+.fc--refined .sync-chip:hover {
+  color: var(--fg);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Diff chip parts */
+.fc--refined .focus-diff-added { color: var(--done); }
+.fc--refined .focus-diff-deleted { color: var(--failed); }
+.fc--refined .focus-diff-sep { margin: 0 3px; }
+.fc--refined .focus-diff-files { color: var(--fg-faint); margin-left: 4px; }
+
+/* Sync chip colored variants — small inline */
+.fc--refined .sync-chip.sync-chip-conflict { color: var(--accent); }
+.fc--refined .sync-chip.sync-chip-failed { color: var(--failed); }
+.fc--refined .sync-chip.sync-chip-done { color: var(--done); }
+.fc--refined .sync-chip.sync-chip-busy { color: var(--queued); }
+.fc--refined .sync-chip-icon {
+  background: transparent;
+  border: 0;
+  padding: 1px 4px;
+  margin-left: 4px;
+  color: currentColor;
+  opacity: 0.7;
+}
+.fc--refined .sync-chip-icon:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
+
+/* Run button — primary accent for ▶ 執行 / ▶ 繼續 */
+.fc--refined .focus-actions .btn-primary {
+  padding: 5px 14px;
+  font-size: 12px;
+  min-height: 30px;
+}
+.fc--refined .focus-actions .btn-danger {
+  padding: 5px 14px;
+  font-size: 12px;
+  min-height: 30px;
+}
+.fc--refined .focus-actions .btn-accent,
+.fc--refined .focus-actions .focus-add-ticket {
+  padding: 5px 12px;
+  font-size: 12px;
+  min-height: 30px;
+}
+
+/* Overflow ⋯ stays in title row right end (sits before the absolute actions) */
+.fc--refined .focus-overflow > .btn {
+  padding: 4px 8px;
+  min-height: 30px;
+  color: var(--fg-mute);
+}
+.fc--refined .focus-overflow > .btn:hover { color: var(--fg); }
+
+/* ─ ticket card ──────────────────────────────────────────────────── */
+
+.fc--refined .focus-list { gap: 8px; }
+.fc--refined .ticket {
+  padding: 13px 16px 14px 18px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  transition: background 100ms ease, border-color 100ms ease;
+}
+.fc--refined .ticket.is-clickable:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+.fc--refined .ticket-band {
+  width: 3px;
+  left: 6px;
+  top: 12px;
+  bottom: 12px;
+  opacity: 0.85;
+  border-radius: 2px;
+}
+.fc--refined .ticket.is-running .ticket-band {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--running) 18%, transparent);
+}
+
+.fc--refined .ticket-num {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  width: 24px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.fc--refined .ticket-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+/* Mode chip — outline pill */
+.fc--refined .ticket-mode {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--fg-mute);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+.fc--refined .ticket-mode.is-iter {
+  border-color: color-mix(in srgb, var(--iter) 45%, transparent);
+  color: var(--iter);
+  background: transparent;
+}
+
+/* Status pill — dot + text, no bg */
+.fc--refined .status-pill {
+  background: transparent;
+  padding: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+}
+.fc--refined .ticket-card__chevron { opacity: 0.5; }
+
+.fc--refined .ticket-goal {
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+}
+
+/* Round rows — inline single-line per round, simple flex */
+.fc--refined .ticket-iter {
+  border: 0;
+  background: transparent;
+  padding: 4px 0 0;
+  margin-top: 4px;
+  gap: 10px;
+  font-size: 10.5px;
+}
+.fc--refined .ticket-iter-row {
+  margin-top: 4px;
+  align-items: center;
+  display: flex;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel-2) 40%, transparent);
+}
+.fc--refined .ticket-iter-row + .ticket-iter-row {
+  margin-top: 4px;
+}
+
+/* Single-row variant — step / merge tickets with no round number */
+.fc--refined .ticket-iter-row--single {
+  padding: 0;
+}
+
+.fc--refined .iter-stage {
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.fc--refined .iter-round-num {
+  font-size: 10px;
+  min-width: 44px;
+  font-weight: 500;
+  color: var(--fg-mute);
+}
+.fc--refined .iter-meta {
+  margin-left: auto;
+  font-size: 9.5px;
+  color: var(--fg-faint);
+}
+.fc--refined .ticket-iter-summary {
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.75;
+  color: var(--fg-mute);
+  border-top: 0;
+  padding-top: 0;
+  text-align: right;
+}
+
+/* Live log */
+.fc--refined .ticket-livelog {
+  font-size: 10.5px;
+  padding: 5px 9px;
+  margin-top: 6px;
+  background: color-mix(in srgb, var(--running) 8%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--running) 22%, var(--line-2));
+  border-radius: 5px;
+}
+
+/* Light mode — light cream log with running-blue tint, dark text */
+html.light .fc--refined .ticket-livelog {
+  background: color-mix(in srgb, var(--running) 5%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--running) 28%, var(--line));
+  color: var(--fg);
+}
+html.light .fc--refined .livelog-cursor {
+  color: var(--running);
+}
+
+/* Paused / failed reason */
+.fc--refined .ticket-paused-actions {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line-2);
+}
+.fc--refined .paused-reason { font-size: 11px; color: var(--paused); }
+.fc--refined .paused-reason.is-failed { color: var(--failed); }
+
+/* ─ banner (refined) ─────────────────────────────────────────────── */
+
+.fc--refined .banner {
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+.fc--refined .banner-title { font-size: 12.5px; font-weight: 600; }
+.fc--refined .banner-desc { font-size: 10.5px; letter-spacing: 0.01em; }
+
+/* ─ empty (refined) ──────────────────────────────────────────────── */
+
+.fc--refined .focus-empty { padding: 48px 12px; }
+.fc--refined .focus-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.fc--refined .focus-empty-desc {
+  font-size: 12px;
+  color: var(--fg-mute);
+  max-width: 360px;
+}
+
+/* ============================================================================
+   RWD — compress at narrow widths
+   Breakpoints target the .fc-app-body content (no rail), so they map directly
+   to viewport width.
+   ============================================================================ */
+
+/* < 920px : tighten padding, narrow the action gap */
+@media (max-width: 919.98px) {
+  .fc--refined .focus { padding: 16px 18px 18px; }
+  .fc--refined .focus-head-title-row { padding-right: 240px; gap: 8px; min-height: 32px; }
+  .fc--refined .focus-actions { right: 38px; gap: 4px; height: 32px; }
+  .fc--refined .focus-overflow { height: 32px; }
+  .fc--refined .focus-actions .btn { padding: 4px 10px; font-size: 11.5px; min-height: 28px; }
+  .fc--refined .focus-overflow > .btn { padding: 4px 6px; min-height: 28px; }
+  .fc--refined .focus-title { font-size: 19px; }
+}
+
+/* < 720px : drop the absolute-pinned actions + overflow back into flow */
+@media (max-width: 719.98px) {
+  .fc--refined .focus { padding: 14px 14px 16px; }
+  .fc--refined .focus-head { margin-bottom: 12px; }
+  .fc--refined .focus-head-title-row { padding-right: 0; min-height: 0; }
+  .fc--refined .focus-actions {
+    position: static;
+    transform: none;
+    height: auto;
+    right: auto;
+    margin-left: auto !important;
+    order: 99;
+    flex: 0 0 100%;
+    justify-content: flex-end;
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+  }
+  .fc--refined .focus-overflow {
+    position: static !important;
+    height: auto;
+    right: auto;
+  }
+  .fc--refined .focus-head-meta-row {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .fc--refined .focus-runs-chip { display: none; }
+  .fc--refined .focus-title { font-size: 18px; }
+  .fc-app-bar { padding: 6px 12px; gap: 8px; }
+  .fc-app-brand-sub { display: none; }
+}
+
+/* < 540px : compact ticket card — wrap title under #num + mode chip,
+   collapse iter rows */
+@media (max-width: 539.98px) {
+  .fc--refined .focus { padding: 12px 10px 14px; }
+  .fc--refined .ticket { padding: 11px 12px 12px 14px; border-radius: 8px; }
+  .fc--refined .ticket-band { left: 4px; top: 10px; bottom: 10px; }
+
+  /* Title line stacks: [num] [mode] / title underneath both */
+  .fc--refined .ticket-card__header { flex-wrap: wrap; row-gap: 4px; }
+  .fc--refined .ticket-card__titleline { flex-basis: 100%; min-width: 0; }
+  .fc--refined .ticket-card__trailing { margin-left: auto; }
+  .fc--refined .ticket-title { font-size: 13px; line-height: 1.35; }
+  .fc--refined .ticket-num { font-size: 10px; width: 22px; }
+
+  /* Iter rows — round-num + meta single-line, stages-row wraps */
+  .fc--refined .ticket-iter-row {
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+  .fc--refined .iter-stages { flex-wrap: wrap; }
+  .fc--refined .iter-meta { margin-left: auto; }
+
+  .fc--refined .ticket-goal { font-size: 11.5px; }
+  .fc--refined .ticket-livelog { font-size: 10px; padding: 4px 7px; }
+
+  /* Header further compressed */
+  .fc--refined .focus-title { font-size: 17px; }
+  .fc--refined .focus-head-meta-row {
+    font-size: 10.5px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+  .fc--refined .focus-head-meta-row::-webkit-scrollbar { display: none; }
+  .fc--refined .focus-head-meta-row > .focus-count,
+  .fc--refined .focus-head-meta-row > .chip:not(.chip-state),
+  .fc--refined .focus-head-meta-row > .sync-chip { padding: 0 8px; }
+
+  /* Top bar — let scenarios wrap, brand shrinks */
+  .fc-app-bar { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px; }
+  .fc-app-presets { margin-left: 0; justify-content: flex-start; }
+  .fc-app-brand-sep { display: none; }
+}

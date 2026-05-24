@@ -1,0 +1,1805 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>InboxColumn — vibe-pipeline reverse handoff prototype</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+/* ============================================================================
+ * InboxColumn — CSS SSOT(verbatim source 連接)
+ *
+ * 來源(verbatim,不挑 snippet):
+ *   1. src/styles/tokens.css   — tokens + .mono / .icon-btn / .sr-only / .pulse / .blink / .fade-up / scrollbar
+ *   2. src/styles/board.css    — .board-body grid + landmark 子 layout(供 .inbox-col 卡進 grid 第 3 欄)
+ *   3. src/styles/notif.css    — notif-root inbox 寬度 token + InboxColumn 全部樣式(strip + panel + item + preview popover)
+ *
+ * 凡同 selector 重複定義,後出現的覆寫前者(同 cascade,跟 source 一致)。
+ * proto-* 樣式(demo shell / mock chrome / demo panel)由本檔末段獨立提供。
+ * ========================================================================= */
+
+/* ─── 1. tokens.css ──────────────────────────────────────────────────────── */
+
+:root {
+  /* dark (default) */
+  --bg: #0c0e12;
+  --bg-elevated: #14171c;
+  --panel: #161a20;
+  --panel-2: #1c2027;
+  --hover: rgba(232, 228, 217, 0.04);
+  --selected: rgba(216, 162, 90, 0.10);
+  --line: rgba(232, 228, 217, 0.06);
+  --line-2: rgba(232, 228, 217, 0.12);
+
+  --fg: #e8e3d6;
+  --fg-mute: #8b8475;
+  --fg-faint: #595448;
+
+  --accent: #d8a25a;
+  --accent-soft: rgba(216, 162, 90, 0.12);
+
+  --running: #7e94c8;
+  --running-soft: rgba(126, 148, 200, 0.14);
+  --iter: #b099d8;
+  --iter-soft: rgba(176, 153, 216, 0.14);
+  --done: #7eaa7f;
+  --done-soft: rgba(126, 170, 127, 0.14);
+  --failed: #c47b78;
+  --failed-soft: rgba(196, 123, 120, 0.14);
+  --paused: #d8a25a;
+  --paused-soft: rgba(216, 162, 90, 0.14);
+  --queued: #5fb3a8;
+  --queued-soft: rgba(95, 179, 168, 0.14);
+  --draft: #6e6a5e;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --radius-xs: 4px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
+  --control-h: 32px;
+  --control-h-sm: 26px;
+  --control-pad-x: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-md: 0 12px 32px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-lg: 0 32px 80px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-popover: 0 2px 6px rgba(0,0,0,0.35), 0 12px 28px rgba(0,0,0,0.45);
+  --shadow-overlay: var(--shadow-lg);
+  --scrim: color-mix(in srgb, #000 45%, transparent);
+  --scrim-modal: color-mix(in srgb, #000 55%, transparent);
+  --scrim-drawer: color-mix(in srgb, #000 40%, transparent);
+
+  --z-overlay-base: 50;
+  --z-popover: 100;
+  --z-drawer: 200;
+  --z-banner: 300;
+  --z-settings: 1500;
+  --z-modal: 1700;
+  --z-toast: 2200;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --accent-fg: rgba(255,255,255,0.95);
+  --danger-fg: #fff5f3;
+  --danger-bg-soft: var(--failed-soft);
+  --danger-border: color-mix(in srgb, var(--failed) 55%, var(--line-2));
+  --success-fg: #f1faf1;
+  --status-dark-fg: #0c0e12;
+
+  --warning-fg: #1c1208;
+  --info-fg: #f1f4fa;
+  --banner-success-fg: #0e1f0f;
+  --banner-ready-fg: var(--status-dark-fg);
+  --qa-thinking-fg: var(--fg-mute);
+  --inverse-fg: #1c1916;
+  --on-accent-fg: var(--accent-fg);
+
+  --bg-callout: color-mix(in srgb, var(--fg-mute) 6%, var(--panel-2));
+  --callout-border: var(--line);
+  --bg-warning-soft: color-mix(in srgb, var(--paused) 8%, var(--panel-2));
+  --warning-border: color-mix(in srgb, var(--paused) 40%, var(--line-2));
+  --bg-success-soft: color-mix(in srgb, var(--done) 8%, var(--panel-2));
+  --success-border: color-mix(in srgb, var(--done) 40%, var(--line-2));
+  --bg-danger-soft: var(--failed-soft);
+  --danger-soft-border: color-mix(in srgb, var(--failed) 40%, var(--line-2));
+  --bg-info-soft: color-mix(in srgb, var(--running) 8%, var(--panel-2));
+  --info-border: color-mix(in srgb, var(--running) 40%, var(--line-2));
+
+  --focus-ring-offset: 2px;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  --qr-plate: #ffffff;
+
+  --font-ui: "Geist", "Inter Tight", -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+
+html.light {
+  --bg: #f7f3e8;
+  --bg-elevated: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #faf6ea;
+  --hover: rgba(28, 25, 22, 0.04);
+  --selected: rgba(181, 117, 26, 0.08);
+  --line: rgba(28, 25, 22, 0.07);
+  --line-2: rgba(28, 25, 22, 0.14);
+
+  --fg: #1c1916;
+  --fg-mute: #6e6658;
+  --fg-faint: #a8a292;
+
+  --accent: #b5751a;
+  --accent-soft: rgba(181, 117, 26, 0.12);
+
+  --running: #4a6db0;
+  --running-soft: rgba(74, 109, 176, 0.10);
+  --iter: #7551b8;
+  --iter-soft: rgba(117, 81, 184, 0.10);
+  --done: #3a8a4a;
+  --done-soft: rgba(58, 138, 74, 0.10);
+  --failed: #b04040;
+  --failed-soft: rgba(176, 64, 64, 0.10);
+  --paused: #b5751a;
+  --paused-soft: rgba(181, 117, 26, 0.12);
+  --queued: #2e8a80;
+  --queued-soft: rgba(46, 138, 128, 0.10);
+  --draft: #a8a292;
+
+  --shadow-sm: 0 1px 2px rgba(28,25,22,0.08);
+  --shadow-md: 0 12px 32px rgba(28,25,22,0.14), 0 2px 6px rgba(28,25,22,0.08);
+  --shadow-lg: 0 32px 80px rgba(28,25,22,0.22), 0 4px 12px rgba(28,25,22,0.12);
+  --shadow-popover: 0 2px 6px rgba(28,25,22,0.10), 0 12px 28px rgba(28,25,22,0.18);
+  --shadow-overlay: var(--shadow-lg);
+  --scrim: color-mix(in srgb, #1c1916 35%, transparent);
+  --scrim-modal: color-mix(in srgb, #1c1916 45%, transparent);
+  --scrim-drawer: color-mix(in srgb, #1c1916 30%, transparent);
+
+  --accent-fg: #ffffff;
+  --danger-fg: #ffffff;
+  --danger-bg-soft: var(--failed-soft);
+  --danger-border: var(--failed);
+  --success-fg: #ffffff;
+  --status-dark-fg: #1c1916;
+
+  --warning-fg: #1c1208;
+  --info-fg: #ffffff;
+  --banner-success-fg: #0e1f0f;
+  --banner-ready-fg: var(--status-dark-fg);
+  --qa-thinking-fg: var(--fg-mute);
+  --inverse-fg: #ffffff;
+  --on-accent-fg: var(--accent-fg);
+
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  --qr-plate: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+::selection { background: var(--accent-soft); }
+
+.mono { font-family: var(--font-mono); font-feature-settings: "ss01", "cv11"; }
+
+.icon-btn {
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px; color: var(--fg-mute); transition: background 120ms, color 120ms;
+}
+.icon-btn:hover { background: var(--hover); color: var(--fg); }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+}
+.pulse { animation: pulseDot 1.6s ease-in-out infinite; }
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+.blink { animation: blink 1.1s steps(2) infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+  .pulse { animation: none; opacity: 0.85; }
+  .blink { animation: none; opacity: 0.85; }
+  .fade-up { animation: none; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 280ms ease-out both; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ─── 2. board.css(只取 inbox-col 卡進 board grid 需要的部分)──────────── */
+
+.board-body {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+.board-body > nav,
+.board-body > main,
+.board-body > aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.board-body > nav > .rail,
+.board-body > main > .focus,
+.board-body > aside > .inbox-col {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* ─── 3. notif.css(verbatim 全檔)──────────────────────────────────────── */
+
+.notif-root {
+  --inbox-w: 320px;
+}
+.notif-root.is-inbox-collapsed { --inbox-w: 52px; }
+.notif-root.is-inbox-hidden { --inbox-w: 0px; }
+
+.notif-root .board-body {
+  grid-template-columns: 240px 1fr var(--inbox-w);
+  transition: grid-template-columns 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.inbox-col {
+  border-left: 1px solid var(--line);
+  background: var(--bg-elevated);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+}
+.notif-root.is-inbox-hidden .inbox-col { display: none; }
+
+.inbox-strip {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 0 12px;
+  gap: 10px;
+  height: 100%;
+  animation: fadeUp 220ms ease-out both;
+  position: relative;
+}
+.inbox-strip-bell {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  position: relative;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.inbox-strip-bell:hover { background: var(--hover); border-color: var(--accent); color: var(--fg); }
+.inbox-strip-bell.has-unread { border-color: var(--accent); color: var(--accent); }
+.inbox-strip-bell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-strip-bell-num {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--bg-elevated);
+}
+.inbox-strip-divider {
+  width: 18px; height: 1px; background: var(--line);
+  margin: 2px 0;
+}
+.inbox-strip-pips {
+  display: flex; flex-direction: column; gap: 4px;
+  align-items: center;
+  width: 40px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 120ms;
+  flex-shrink: 1;
+  min-height: 0;
+  max-height: calc(100% - 80px);
+  overflow: hidden;
+}
+.inbox-strip-pips:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.inbox-strip-pips:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.inbox-strip-pips-empty {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 4px;
+  transition: background 120ms;
+}
+.inbox-strip-pips-empty:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.inbox-strip-pips-empty:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.inbox-strip-pip {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--strip-color);
+  opacity: 0.7;
+  flex-shrink: 0;
+  transition: transform 120ms, opacity 120ms, box-shadow 120ms;
+}
+.inbox-strip-pip.is-unread {
+  opacity: 1;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--strip-color) 40%, transparent);
+}
+.inbox-strip-pip.is-preview {
+  opacity: 1;
+  transform: scale(1.6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--strip-color) 45%, transparent);
+}
+.inbox-strip-overflow {
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  margin-top: 4px;
+  line-height: 1;
+  padding: 1px 3px;
+  letter-spacing: 0;
+}
+
+.inbox-strip-preview {
+  position: fixed;
+  transform: translateY(-50%);
+  min-width: 240px;
+  max-width: 280px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2, var(--line));
+  border-left: 3px solid var(--preview-color, var(--accent));
+  border-radius: 8px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: var(--z-popover, 1000);
+  animation: fadeUp 120ms ease-out both;
+  pointer-events: none;
+}
+.inbox-strip-preview-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 6px;
+}
+.inbox-strip-preview-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--preview-color, var(--accent));
+}
+.inbox-strip-preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  word-break: break-word;
+}
+.inbox-strip-preview-sub {
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+.inbox-strip-preview-meta {
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+
+.inbox-strip-spacer { flex-shrink: 0; min-height: 8px; }
+.inbox-strip-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-mute);
+  letter-spacing: 0.04em;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 6px 0 14px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.inbox-panel {
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+  animation: fadeUp 220ms ease-out both;
+}
+
+.inbox-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 12px 11px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.inbox-head h3 {
+  margin: 0; font-size: 13.5px; font-weight: 600;
+}
+.inbox-head-count {
+  font-size: 10.5px; padding: 2px 7px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 4px;
+  font-weight: 600;
+}
+.inbox-head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.inbox-head-actions .icon-btn { width: 32px; height: 32px; }
+.inbox-collapse-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.inbox-filter {
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+  display: flex; gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.inbox-filter-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  font-size: 11.5px; padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--fg-mute);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.inbox-filter-btn.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  font-weight: 600;
+}
+.inbox-filter-btn:hover:not(.is-active) { background: var(--hover); color: var(--fg); }
+.inbox-filter-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-filter-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  opacity: 0.75;
+}
+.inbox-filter-btn.is-active .inbox-filter-count {
+  opacity: 1;
+}
+
+.inbox-list {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 16px;
+  list-style: none;
+  margin: 0;
+}
+.inbox-list-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inbox-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  list-style: none;
+}
+
+.inbox-item {
+  position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 9px 36px 10px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.inbox-item:hover { background: var(--hover); }
+.inbox-item:has(.inbox-item-open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.inbox-item-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+.inbox-item-open:focus-visible {
+  outline: none;
+}
+.inbox-item-head,
+.inbox-item-sub,
+.inbox-item-meta {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.inbox-item-x,
+.inbox-item-action {
+  position: relative;
+  z-index: 2;
+}
+.inbox-item.is-block.is-unread {
+  background: color-mix(in srgb, var(--paused) 8%, transparent);
+  border-color: color-mix(in srgb, var(--paused) 32%, transparent);
+}
+.inbox-item.is-block.is-unread:hover { background: color-mix(in srgb, var(--paused) 14%, transparent); }
+.inbox-item.is-block:not(.is-unread) {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--paused) 14%, transparent);
+}
+.inbox-item.is-block:not(.is-unread):hover { background: var(--hover); }
+.inbox-item.is-muted { opacity: 0.78; }
+.inbox-item.is-muted:hover { opacity: 1; }
+.inbox-item.is-muted:focus-within { opacity: 1; }
+
+.inbox-item.fade-up {
+  animation: inboxItemFlash 1.6s ease-out both;
+}
+@keyframes inboxItemFlash {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--item-color) 50%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--item-color) 50%, transparent); }
+  18%  { box-shadow: 0 0 0 4px color-mix(in srgb, var(--item-color) 28%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--item-color) 38%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent, inset 0 0 0 1px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inbox-item.fade-up,
+  .inbox-strip-preview,
+  .inbox-panel { animation: none; }
+}
+
+.inbox-item-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin-top: 5px;
+  transition: background 120ms, border-color 120ms, opacity 120ms;
+}
+.inbox-item-dot.is-unread {
+  background: var(--item-color);
+  border: 1px solid var(--item-color);
+}
+.inbox-item-dot.is-read {
+  background: transparent;
+  border: 1.5px solid var(--item-color);
+  opacity: 0.75;
+}
+.inbox-item-x {
+  position: absolute;
+  right: 4px; top: 4px;
+  width: 28px; height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+  border-radius: 6px;
+  display: none;
+  transition: background 120ms, color 120ms;
+}
+.inbox-item:hover .inbox-item-x,
+.inbox-item:focus-within .inbox-item-x {
+  display: inline-flex;
+}
+.inbox-item-x:hover {
+  background: var(--panel-2);
+  color: var(--fg);
+}
+.inbox-item-x:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.inbox-item-x svg { width: 10px; height: 10px; }
+.inbox-item-head {
+  display: flex; align-items: flex-start; gap: 9px;
+}
+.inbox-item-title {
+  flex: 1; min-width: 0;
+  font-size: 12.5px;
+  color: var(--fg);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.inbox-item.is-unread .inbox-item-title { font-weight: 600; }
+.inbox-item.is-muted .inbox-item-title { color: var(--fg-mute); font-weight: 400; }
+.inbox-item-meta {
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 17px;
+  margin-top: 2px;
+  min-height: 14px;
+}
+.inbox-item-ts {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  line-height: 1.2;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.inbox-item.is-unread .inbox-item-ts { color: var(--accent); }
+.inbox-item-sub {
+  font-size: 11px; color: var(--fg-mute);
+  padding-left: 17px;
+  line-height: 1.4;
+}
+.inbox-item-actions {
+  display: flex; gap: 6px;
+  padding-left: 17px;
+  margin-top: 6px;
+  position: relative;
+  z-index: 2;
+}
+.inbox-item:not(.is-block) .inbox-item-actions {
+  opacity: 0; transform: translateY(-2px);
+  transition: opacity 140ms, transform 140ms;
+  max-height: 0;
+  pointer-events: none;
+  margin-top: 0;
+  overflow: hidden;
+}
+.inbox-item:not(.is-block):hover .inbox-item-actions {
+  opacity: 1; transform: translateY(0);
+  max-height: 50px; margin-top: 6px;
+  pointer-events: auto;
+}
+.inbox-item:not(.is-block):focus-within .inbox-item-actions {
+  opacity: 1; transform: translateY(0);
+  max-height: 50px; margin-top: 6px;
+  pointer-events: auto;
+}
+
+.inbox-item-action {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--line-2);
+  color: var(--fg);
+  background: var(--bg-elevated);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.inbox-item-action:hover { background: var(--panel-2); border-color: var(--fg-mute); }
+.inbox-item-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-item-action.is-primary {
+  background: var(--paused);
+  color: var(--warning-fg, #1c1208);
+  border-color: var(--paused);
+}
+.inbox-item-action.is-primary:hover { filter: brightness(1.1); }
+.inbox-item-action.is-primary-info {
+  background: var(--done); border-color: var(--done); color: var(--banner-success-fg, #0e1f0f);
+}
+.inbox-item-action.is-primary-info:hover { filter: brightness(1.1); }
+
+.inbox-empty {
+  padding: 60px 24px; text-align: center;
+  color: var(--fg-faint);
+  font-size: 12.5px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.inbox-empty-icon {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2, var(--line));
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-mute);
+}
+
+.inbox-foot {
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px;
+  color: var(--fg-faint);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.inbox-foot-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 100ms, color 100ms;
+}
+.inbox-foot-link:hover { color: var(--fg); background: var(--hover); }
+.inbox-foot-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-foot-link-danger {
+  color: var(--fg-faint);
+}
+.inbox-foot-link-danger:hover {
+  color: var(--failed, var(--paused));
+  background: color-mix(in srgb, var(--failed, var(--paused)) 10%, transparent);
+}
+
+@media (hover: none) {
+  .inbox-strip-pip {
+    opacity: 1;
+  }
+
+  .inbox-item.is-muted {
+    opacity: 1;
+  }
+
+  .inbox-item-x {
+    display: inline-flex;
+  }
+
+  .inbox-item:not(.is-block) .inbox-item-actions {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 50px;
+    margin-top: 6px;
+    pointer-events: auto;
+  }
+}
+
+/* ─── prototype demo chrome(僅 demo HTML 預覽用,不在 source code)────── */
+
+.proto-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+.proto-topbar {
+  flex-shrink: 0;
+  height: 46px;
+  display: flex; align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.proto-topbar-brand { color: var(--accent); font-weight: 600; }
+.proto-topbar-sep { color: var(--fg-faint); }
+.proto-topbar-pipeline { color: var(--fg); }
+
+.proto-rail {
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--line);
+  padding: 16px 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.proto-rail-title {
+  font-size: 11px;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 8px 6px;
+}
+.proto-rail-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 9px; border-radius: 6px;
+  font-size: 12.5px; color: var(--fg-mute);
+  cursor: pointer;
+}
+.proto-rail-item.active { color: var(--fg); background: var(--selected); }
+.proto-rail-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.proto-main-placeholder {
+  padding: 40px;
+  color: var(--fg-mute);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.proto-main-placeholder h2 { font-size: 16px; color: var(--fg); margin: 0 0 12px; }
+.proto-main-placeholder code {
+  font-family: var(--font-mono); font-size: 11.5px;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--panel-2); color: var(--accent);
+}
+
+.proto-demo-panel {
+  position: fixed;
+  left: 16px; bottom: 16px;
+  width: 340px; max-height: 86vh;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--fg);
+  box-shadow: var(--shadow-lg);
+  z-index: 9999;
+}
+.proto-demo-panel h4 {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-mute);
+}
+.proto-demo-panel h4:first-of-type { margin-top: 0; }
+.proto-demo-panel label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.proto-demo-panel select {
+  font: inherit; font-size: 11.5px;
+  padding: 4px 6px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  color: var(--fg);
+  width: 100%;
+}
+.proto-demo-panel hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 10px 0;
+}
+.proto-mini-btn {
+  font: inherit; font-size: 11.5px;
+  padding: 4px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.proto-mini-btn:hover { background: var(--hover); border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+/* ============================================================================
+ * InboxColumn — JSX(verbatim 對齊 src/features/notifications/InboxColumn.tsx
+ * className / DOM 結構;icons 內聯展開以避免外部 import)
+ * ========================================================================= */
+
+const { useEffect, useRef, useState, useMemo } = React;
+const { createPortal } = ReactDOM;
+
+// ─── icons(verbatim from src/ui/icons.tsx)──────────────────────────────
+
+function BellIcon(p) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M6 8a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7Z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+function ChevronRightIcon(p) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" {...p}>
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
+}
+function CloseIcon(p) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" {...p}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+function InboxEmptyIcon(p) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="m4 12 5 5 11-11" />
+    </svg>
+  );
+}
+
+// ─── dictionaries(verbatim from src/data/notifications.ts + shared/types.ts)
+
+const SEV_COLOR = {
+  block: "var(--paused)",
+  info: "var(--done)",
+  muted: "var(--fg-faint)",
+};
+
+const SEV_TEXT = {
+  block: "阻斷",
+  info: "資訊",
+  muted: "一般",
+};
+
+const NOTIF_EVENTS = {
+  project_init: { sev: "muted", phase: "stub-first", label: "Project 初始化完成" },
+  pipeline_created: { sev: "muted", phase: "stub-first", label: "Pipeline 建立" },
+  pipeline_deleted: { sev: "muted", phase: "stub-first", label: "Pipeline 刪除" },
+  pipeline_renamed: { sev: "muted", phase: "stub-first", label: "Pipeline 改名" },
+  ticket_added: { sev: "muted", phase: "stub-first", label: "Ticket 加入" },
+  ticket_removed: { sev: "muted", phase: "stub-first", label: "Ticket 移除" },
+  ticket_status_changed: { sev: "muted", phase: "stub-first", label: "Ticket 狀態變更" },
+  pipeline_started: { sev: "muted", phase: "P2", label: "Pipeline 開始運行" },
+  pipeline_queued: { sev: "muted", phase: "P2", label: "Pipeline 已排隊" },
+  pipeline_paused: { sev: "info", phase: "P2", label: "Pipeline 已暫停" },
+  ticket_started: { sev: "muted", phase: "P2", label: "Ticket 開始跑" },
+  iter_critic_pass: { sev: "info", phase: "P2", label: "Iteration critic pass" },
+  iter_critic_fail: { sev: "muted", phase: "P2", label: "Iteration critic fail(連續 N 次升 block)" },
+  ticket_done: { sev: "info", phase: "P2", label: "Ticket done" },
+  ticket_failed: { sev: "block", phase: "P2", label: "Ticket failed" },
+  pipeline_ready_to_merge: { sev: "info", phase: "P2", label: "Pipeline ready to merge" },
+  merge_started: { sev: "muted", phase: "P2", label: "AI 合併開始" },
+  merge_blocked: { sev: "block", phase: "P2", label: "AI 合併失敗,需處理" },
+  pipeline_auto_merge_started: { sev: "info", phase: "P2", label: "Pipeline 自動合併已觸發" },
+  pipeline_merged: { sev: "info", phase: "P2", label: "Pipeline merge 完成" },
+  pipeline_merge_cleanup_failed: { sev: "info", phase: "P2", label: "Merge 後 worktree 清理失敗" },
+  pipeline_failed: { sev: "block", phase: "P2", label: "Pipeline failed" },
+  budget_warn: { sev: "info", phase: "P2", label: "Budget 80% 警告" },
+  budget_hard_cap: { sev: "block", phase: "P2", label: "Budget 硬上限" },
+  pipeline_blocked_budget: { sev: "block", phase: "P2", label: "Pipeline 被預算上限擋下" },
+  runner_stall: { sev: "block", phase: "P2", label: "Runner 卡住" },
+  runner_crash: { sev: "block", phase: "P2", label: "Runner crash" },
+  sync_started: { sev: "muted", phase: "P2", label: "同步已啟動" },
+  sync_conflict: { sev: "block", phase: "P2", label: "同步遇衝突,等 user 決定" },
+  sync_succeeded: { sev: "info", phase: "P2", label: "同步完成" },
+  sync_failed: { sev: "block", phase: "P2", label: "同步失敗" },
+  skill_candidate: { sev: "info", phase: "P3", label: "新 SKILL 候選" },
+  cross_pipeline_pattern: { sev: "info", phase: "P3", label: "跨 pipeline 模式偵測" },
+  scheduler_fired: { sev: "muted", phase: "P3", label: "排程觸發" },
+  frontend_action_failed: { sev: "block", phase: "P2", label: "前端動作失敗" },
+  frontend_action_warn: { sev: "info", phase: "P2", label: "前端動作警告" },
+  frontend_action_info: { sev: "muted", phase: "P2", label: "前端動作紀錄" },
+  system_updating: { sev: "info", phase: "P2", label: "系統更新中(backend 即將重啟)" },
+};
+
+// ─── InboxColumn(verbatim from src/features/notifications/InboxColumn.tsx)──
+
+function InboxColumn(props) {
+  if (props.state === "hidden") return null;
+  if (props.state === "collapsed") {
+    return (
+      <aside className="inbox-col" aria-label="通知欄已收合" id="inbox-aside">
+        <InboxStrip
+          items={props.items}
+          unreadCount={props.unreadCount}
+          onExpand={() => props.setState("expanded")}
+          onItemClick={props.onItemClick}
+        />
+      </aside>
+    );
+  }
+  return (
+    <aside className="inbox-col" aria-label="通知欄已展開" id="inbox-aside">
+      <InboxPanel {...props} onCollapse={() => props.setState("collapsed")} />
+    </aside>
+  );
+}
+
+function InboxStrip({ items, unreadCount, onExpand, onItemClick }) {
+  const SHOW = 12;
+  const visible = items.slice(0, SHOW);
+  const overflow = Math.max(0, items.length - SHOW);
+  const hasItems = visible.length > 0;
+
+  const [previewIdx, setPreviewIdx] = useState(null);
+  const pipsRef = useRef(null);
+  const [previewPos, setPreviewPos] = useState(null);
+  useEffect(() => {
+    if (previewIdx === null) {
+      setPreviewPos(null);
+      return;
+    }
+    const el = pipsRef.current;
+    if (!el) return;
+    const dot = el.querySelectorAll(".inbox-strip-pip")[previewIdx];
+    const pipsRect = el.getBoundingClientRect();
+    const dotRect = dot?.getBoundingClientRect();
+    setPreviewPos({
+      top: dotRect ? dotRect.top + dotRect.height / 2 : pipsRect.top + pipsRect.height / 2,
+      right: window.innerWidth - pipsRect.left + 8,
+    });
+  }, [previewIdx]);
+
+  useEffect(() => {
+    const el = pipsRef.current;
+    if (!el) return;
+    function onWheel(e) {
+      if (visible.length === 0) return;
+      e.preventDefault();
+      const dir = e.deltaY > 0 ? 1 : -1;
+      setPreviewIdx((prev) => {
+        const cur = prev ?? 0;
+        const next = cur + dir;
+        if (next < 0) return 0;
+        if (next >= visible.length) return visible.length - 1;
+        return next;
+      });
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [visible.length]);
+
+  const previewItem = previewIdx !== null ? visible[previewIdx] : null;
+
+  const pipsAriaLabel = (() => {
+    if (!hasItems) return "通知列表(目前 0 則)";
+    const parts = [];
+    parts.push(`通知列表,${items.length} 則`);
+    if (unreadCount > 0) parts.push(`${unreadCount} 未讀`);
+    if (overflow > 0) parts.push(`顯示前 ${SHOW},另有 ${overflow} 則`);
+    if (previewItem) {
+      parts.push(
+        `目前預覽 ${(previewIdx ?? 0) + 1}/${visible.length}:` +
+          `${SEV_TEXT[previewItem.sev] ?? ""}通知「${previewItem.title}」` +
+          (previewItem.unread ? ",未讀" : ""),
+      );
+    }
+    return parts.join(",");
+  })();
+
+  const isCoarsePointer = () => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(pointer: coarse)").matches;
+  };
+
+  return (
+    <div className="inbox-strip">
+      <button
+        type="button"
+        className={"inbox-strip-bell" + (unreadCount > 0 ? " has-unread" : "")}
+        onClick={(e) => {
+          e.stopPropagation();
+          onExpand();
+        }}
+        title={unreadCount > 0 ? `展開通知(${unreadCount} 未讀)` : "展開通知"}
+        aria-label={unreadCount > 0 ? `展開通知,${unreadCount} 未讀` : "展開通知"}
+        aria-expanded={false}
+        aria-controls="inbox-aside"
+      >
+        <BellIcon />
+        {unreadCount > 0 && (
+          <span className="inbox-strip-bell-num mono" aria-hidden="true">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+      <div className="inbox-strip-divider"></div>
+
+      {hasItems ? (
+        <button
+          ref={pipsRef}
+          type="button"
+          className="inbox-strip-pips"
+          onMouseEnter={() => {
+            if (typeof window !== "undefined" && window.matchMedia &&
+                window.matchMedia("(hover: none)").matches) return;
+            setPreviewIdx(0);
+          }}
+          onMouseLeave={() => setPreviewIdx(null)}
+          onFocus={() => {
+            if (typeof window !== "undefined" && window.matchMedia &&
+                window.matchMedia("(hover: none)").matches) return;
+            if (visible.length > 0) setPreviewIdx(0);
+          }}
+          onBlur={() => setPreviewIdx(null)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setPreviewIdx((p) => Math.min(visible.length - 1, (p ?? -1) + 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setPreviewIdx((p) => Math.max(0, (p ?? visible.length) - 1));
+            } else if (e.key === "Home") {
+              e.preventDefault();
+              setPreviewIdx(0);
+            } else if (e.key === "End") {
+              e.preventDefault();
+              setPreviewIdx(visible.length - 1);
+            } else if (e.key === "Escape") {
+              setPreviewIdx(null);
+              e.currentTarget.blur();
+            } else if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              const idx = previewIdx ?? 0;
+              const it = visible[idx];
+              if (it) onItemClick(it.id, it.pipelineId);
+            }
+          }}
+          onClick={() => {
+            if (previewItem) {
+              onItemClick(previewItem.id, previewItem.pipelineId);
+            } else if (isCoarsePointer()) {
+              onExpand();
+            } else if (visible.length > 0) {
+              onItemClick(visible[0].id, visible[0].pipelineId);
+            } else {
+              onExpand();
+            }
+          }}
+          title={
+            previewItem
+              ? "點擊跳該 pipeline · 滾輪 / 方向鍵切換"
+              : "hover / focus 預覽 · 滾輪 / 方向鍵切換 · 點擊跳"
+          }
+          aria-label={pipsAriaLabel}
+          aria-describedby={previewItem ? "inbox-strip-preview-live" : undefined}
+        >
+          {visible.map((it, i) => (
+            <span
+              key={it.id}
+              className={
+                "inbox-strip-pip" +
+                (it.unread ? " is-unread" : "") +
+                " is-" + it.sev +
+                (i === previewIdx ? " is-preview" : "")
+              }
+              style={{ "--strip-color": SEV_COLOR[it.sev] }}
+              aria-hidden="true"
+            />
+          ))}
+          {overflow > 0 && (
+            <span className="inbox-strip-overflow mono" aria-hidden="true">
+              +{overflow}
+            </span>
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="inbox-strip-pips-empty"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
+          title="展開通知"
+          aria-label="展開通知"
+        />
+      )}
+
+      <div className="inbox-strip-spacer"></div>
+      <div className="inbox-strip-label" aria-hidden="true">通知</div>
+
+      {previewItem && previewPos && createPortal(
+        <div
+          id="inbox-strip-preview-live"
+          role="status"
+          aria-live="polite"
+          className="inbox-strip-preview"
+          style={{
+            "--preview-color": SEV_COLOR[previewItem.sev],
+            top: previewPos.top,
+            right: previewPos.right,
+          }}
+        >
+          <div className="inbox-strip-preview-head">
+            <span className={"inbox-strip-preview-dot is-" + previewItem.sev} />
+            <span className="inbox-strip-preview-title">{previewItem.title}</span>
+          </div>
+          {previewItem.sub && (
+            <div className="inbox-strip-preview-sub">{previewItem.sub}</div>
+          )}
+          <div className="inbox-strip-preview-meta mono">
+            {previewItem.ts} · {previewIdx + 1}/{visible.length}
+            {previewItem.unread ? " · 未讀" : ""}
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function InboxPanel({
+  items, filter, setFilter, unreadCount, highlightId, onCollapse,
+  onMarkRead, onDismiss, onMarkAllRead, onDismissAll, onItemClick,
+}) {
+  const filtered = items.filter((it) => {
+    if (filter === "unread") return !!it.unread;
+    if (filter === "blocking") return it.sev === "block";
+    return true;
+  });
+
+  const blockCount = items.filter((i) => i.sev === "block").length;
+  const highlightItem = highlightId ? items.find((i) => i.id === highlightId) : null;
+
+  return (
+    <div className="inbox-panel">
+      <div className="inbox-head">
+        <h3>通知</h3>
+        {unreadCount > 0 && <span className="inbox-head-count mono">{unreadCount} 未讀</span>}
+        <div className="inbox-head-actions">
+          <button
+            type="button"
+            className="icon-btn inbox-collapse-btn"
+            title="收合通知"
+            onClick={onCollapse}
+            aria-label="收合通知欄"
+          >
+            <ChevronRightIcon />
+          </button>
+        </div>
+      </div>
+
+      <fieldset className="inbox-filter" aria-label="通知篩選">
+        {[
+          ["all", "全部", items.length],
+          ["unread", "未讀", unreadCount],
+          ["blocking", "阻斷", blockCount],
+        ].map(([key, label, count]) => (
+          <button type="button"
+            key={key}
+            className={"inbox-filter-btn" + (filter === key ? " is-active" : "")}
+            onClick={() => setFilter(key)}
+            aria-pressed={filter === key}
+            aria-label={`${label}通知 篩選,${count} 則${filter === key ? ",目前選取" : ""}`}
+          >
+            {label}
+            <span className="inbox-filter-count mono" aria-hidden="true">{count}</span>
+          </button>
+        ))}
+      </fieldset>
+
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {highlightItem ? `已開啟通知：「${highlightItem.title}」` : ""}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="inbox-list inbox-list-empty" role="status" aria-live="polite">
+          <div className="inbox-empty">
+            <div className="inbox-empty-icon">
+              <InboxEmptyIcon />
+            </div>
+            <div>
+              {items.length === 0
+                ? "目前沒有通知"
+                : filter === "unread"
+                  ? "都看過了"
+                  : filter === "blocking"
+                    ? "沒有阻斷類通知"
+                    : "目前沒有通知"}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ul
+          className="inbox-list"
+          aria-label={`通知列表,共 ${filtered.length} 則${
+            filter === "all" ? "" : `(已套用「${filter === "unread" ? "未讀" : "阻斷"}」篩選)`
+          }`}
+        >
+          {filtered.map((it) => (
+            <li key={it.id} className="inbox-list-item">
+              <InboxItem
+                item={it}
+                highlight={highlightId === it.id}
+                onMarkRead={onMarkRead}
+                onDismiss={onDismiss}
+                onClick={() => onItemClick(it.id, it.pipelineId)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="inbox-foot">
+        <span>共 {items.length} 則通知{unreadCount > 0 ? ` · ${unreadCount} 未讀` : ""}</span>
+        <span style={{ flex: 1 }} />
+        {items.length > 0 && unreadCount > 0 && (
+          <button type="button"
+            className="inbox-foot-link"
+            onClick={(e) => {
+              e.preventDefault();
+              onMarkAllRead();
+            }}
+            aria-label={`全部標為已讀(${unreadCount} 則)`}
+          >
+            全部標為已讀
+          </button>
+        )}
+        {items.length > 0 && (
+          <button type="button"
+            className="inbox-foot-link inbox-foot-link-danger"
+            title="清除所有通知"
+            onClick={(e) => {
+              e.preventDefault();
+              onDismissAll();
+            }}
+            aria-label={`清除全部通知(${items.length} 則)`}
+          >
+            清除全部通知
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InboxItem({ item, highlight, onMarkRead, onDismiss, onClick }) {
+  void onMarkRead;
+  const c = SEV_COLOR[item.sev];
+  const ariaLabel = (() => {
+    const parts = [];
+    parts.push(item.unread ? "未讀" : "已讀");
+    parts.push(`${SEV_TEXT[item.sev] ?? ""}通知`);
+    parts.push(`標題:「${item.title}」`);
+    if (item.sub) parts.push(`說明:${item.sub}`);
+    parts.push(`時間:${item.ts}`);
+    return parts.join("。");
+  })();
+  return (
+    <article
+      className={"inbox-item is-" + item.sev + (item.unread ? " is-unread" : "") + (highlight ? " fade-up" : "")}
+      style={{ "--item-color": c }}
+    >
+      <button
+        type="button"
+        className="inbox-item-open"
+        onClick={onClick}
+        aria-label={`開啟${ariaLabel}相關 pipeline`}
+      />
+      <button type="button"
+        className="inbox-item-x"
+        title="移除"
+        aria-label={`移除通知「${item.title}」`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDismiss(item.id);
+        }}
+      >
+        <CloseIcon />
+      </button>
+      <div className="inbox-item-head">
+        <span className={"inbox-item-dot" + (item.unread ? " is-unread" : " is-read")} aria-hidden="true" />
+        <span className="inbox-item-title">{item.title}</span>
+      </div>
+      <div className="inbox-item-sub">{item.sub}</div>
+      <div className="inbox-item-meta">
+        <span className="inbox-item-ts mono">{item.ts}</span>
+      </div>
+      {(item.primary || item.secondary) && (
+        <div className="inbox-item-actions">
+          {item.secondary && (
+            <button type="button"
+              className="inbox-item-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkRead(item.id);
+              }}
+            >
+              {item.secondary.label}
+            </button>
+          )}
+          {item.primary && (
+            <button type="button"
+              className={
+                "inbox-item-action" +
+                (item.primary.kind === "block"
+                  ? " is-primary"
+                  : item.primary.kind === "info"
+                  ? " is-primary-info"
+                  : "")
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+            >
+              {item.primary.label}
+            </button>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+// ─── fixtures(43 NotifEventType × 3 sev,涵蓋 read/unread/blocking + actions)
+
+function mkItem(type, idx, override) {
+  override = override || {};
+  const meta = NOTIF_EVENTS[type];
+  const sev = override.sev != null ? override.sev : meta.sev;
+  const base = {
+    id: `${type}-${idx}`,
+    type,
+    sev,
+    title: meta.label,
+    sub: TYPE_SUB[type] || "",
+    ts: TYPE_TS[idx % TYPE_TS.length],
+    unread: true,
+    pipelineId: `pl-${type.slice(0, 6)}-${idx}`,
+  };
+  return Object.assign(base, override);
+}
+
+const TYPE_SUB = {
+  project_init: "已於 ~/projects/vibe-pipeline 完成初始化",
+  pipeline_created: "feat-ui-refresh · 4 ticket",
+  pipeline_deleted: "feat-experimental-rail 已從 pipelines/ 移除",
+  pipeline_renamed: "old-name → feat-token-cleanup",
+  ticket_added: "T-014 加到 feat-ui-refresh",
+  ticket_removed: "T-009 已從 chore-tokens 移除",
+  ticket_status_changed: "T-008 從 doing → review",
+  pipeline_started: "feat-ui-refresh · runner 開始於 14:32",
+  pipeline_queued: "排隊位置 2 / 4 · 等前一條釋出 worktree",
+  pipeline_paused: "feat-ui-refresh 已暫停 · 12 分鐘前",
+  ticket_started: "T-013 開始,iter mode,critic budget 6 輪",
+  iter_critic_pass: "T-013 critic ✓ 1/3 sample passed,進 done",
+  iter_critic_fail: "T-013 連續 3 輪 critic fail · 升為 block",
+  ticket_done: "T-013 完成 · 7 min 21 s · $0.142",
+  ticket_failed: "T-011 doer 拋 exception · stderr 已存 .runtime/last-stderr.log",
+  pipeline_ready_to_merge: "feat-ui-refresh 4/4 done · 等 merge",
+  merge_started: "AI 合併 feat-ui-refresh → main · attempt 1/3",
+  merge_blocked: "feat-ui-refresh 三輪 AI 合併皆 conflict 失敗,需 user 介入",
+  pipeline_auto_merge_started: "autoMerge=on · 條件達成,自動 merge 已排入",
+  pipeline_merged: "feat-ui-refresh ✓ 合併 main · 47 commit",
+  pipeline_merge_cleanup_failed: "Worktree pipeline/feat-ui-refresh 移除失敗 (EBUSY)",
+  pipeline_failed: "feat-ui-refresh runner 已停 · 最後 ticket T-011 failed",
+  budget_warn: "feat-ui-refresh 已用 $1.68 / $2.00 (84%)",
+  budget_hard_cap: "feat-ui-refresh 觸及 $2.00 上限 · runner 已停",
+  pipeline_blocked_budget: "本日總 budget $5 已耗盡 · 5 條 pipeline 入 queue",
+  runner_stall: "feat-ui-refresh runner 連續 4 min 無 stdout · pid 18342",
+  runner_crash: "feat-ui-refresh runner exit 137 · OOM kill",
+  sync_started: "feat-ui-refresh 同步 base=main 啟動",
+  sync_conflict: "src/styles/tokens.css 3 處衝突 · 等 user 選擇",
+  sync_succeeded: "feat-ui-refresh fast-forward 至 base@a3f7b1",
+  sync_failed: "merge 過程 git wedge,需手動清 .git/MERGE_HEAD",
+  skill_candidate: "skills/iter-uiux 提案 staged · 待 review",
+  cross_pipeline_pattern: "3 條 pipeline 都改了 src/ui/Toast.tsx · 建議萃 SKILL",
+  scheduler_fired: "scheduler: daily-housekeeping 已執行 (07:00)",
+  frontend_action_failed: "Delete pipeline → DELETE /api/pipelines/x 回 500",
+  frontend_action_warn: "QA 寫入時 disk 已 92% 滿",
+  frontend_action_info: "Theme 切換為 dark",
+  system_updating: "自動更新 1.4.2 → 1.4.3 · 預計重啟 8s",
+};
+
+const TYPE_TS = ["剛剛", "1 分鐘前", "3 分鐘前", "12 分鐘前", "32 分鐘前", "1 小時前", "3 小時前", "今天 09:14", "今天 07:00", "昨天 22:31", "2 天前", "2026-05-23 14:32"];
+
+const SCENARIOS = {
+  "full-43": {
+    label: "全 43 種 NotifEventType(混 sev,半數未讀)",
+    build: () => Object.keys(NOTIF_EVENTS).map((t, i) => mkItem(t, i, {
+      unread: i % 2 === 0,
+      primary: NOTIF_EVENTS[t].sev === "block" && i % 2 === 0
+        ? { label: "處理", kind: "block" }
+        : NOTIF_EVENTS[t].sev === "info" && i % 5 === 0
+        ? { label: "查看", kind: "info" }
+        : undefined,
+      secondary: i % 3 === 0 ? { label: "已讀" } : undefined,
+    })),
+  },
+  "only-blocking": {
+    label: "只剩 block(全未讀,全有 primary action)",
+    build: () => {
+      const blockTypes = Object.keys(NOTIF_EVENTS).filter((t) => NOTIF_EVENTS[t].sev === "block");
+      return blockTypes.map((t, i) => mkItem(t, i, {
+        unread: true,
+        primary: { label: t === "sync_conflict" ? "選擇" : t === "merge_blocked" ? "處理" : t === "budget_hard_cap" ? "提額" : "處理", kind: "block" },
+      }));
+    },
+  },
+  "only-info": {
+    label: "只 info(混 read/unread)",
+    build: () => {
+      const infoTypes = Object.keys(NOTIF_EVENTS).filter((t) => NOTIF_EVENTS[t].sev === "info");
+      return infoTypes.map((t, i) => mkItem(t, i, {
+        unread: i % 2 === 0,
+        primary: i === 0 ? { label: "查看", kind: "info" } : undefined,
+        secondary: i === 1 ? { label: "已讀" } : undefined,
+      }));
+    },
+  },
+  "only-muted": {
+    label: "只 muted activity log(全已讀)",
+    build: () => {
+      const mutedTypes = Object.keys(NOTIF_EVENTS).filter((t) => NOTIF_EVENTS[t].sev === "muted");
+      return mutedTypes.map((t, i) => mkItem(t, i, { unread: false }));
+    },
+  },
+  "mixed-some-unread": {
+    label: "9 則 mixed:1 block-unread / 2 info / 6 muted",
+    build: () => [
+      mkItem("ticket_failed", 0, { unread: true, primary: { label: "查看 stderr", kind: "block" }, secondary: { label: "已讀" } }),
+      mkItem("ticket_done", 1, { unread: true, primary: { label: "看 diff", kind: "info" } }),
+      mkItem("iter_critic_pass", 2, { unread: false }),
+      mkItem("ticket_started", 3, { unread: false }),
+      mkItem("pipeline_created", 4, { unread: false }),
+      mkItem("ticket_status_changed", 5, { unread: false }),
+      mkItem("ticket_added", 6, { unread: false }),
+      mkItem("frontend_action_info", 7, { unread: false }),
+      mkItem("project_init", 8, { unread: false }),
+    ],
+  },
+  "empty": {
+    label: "完全空 inbox",
+    build: () => [],
+  },
+  "empty-unread-filter-active": {
+    label: "有 items 但 filter=unread 時無命中(走「都看過了」)",
+    build: () => [
+      mkItem("ticket_done", 0, { unread: false }),
+      mkItem("ticket_started", 1, { unread: false }),
+      mkItem("pipeline_merged", 2, { unread: false }),
+    ],
+  },
+  "long-titles": {
+    label: "極長 title / sub(測 wrap / clamp)",
+    build: () => [
+      {
+        id: "long-1", type: "merge_blocked", sev: "block", unread: true,
+        title: "AI 合併 feat-very-long-pipeline-name-that-keeps-going-and-going-into-the-void-without-mercy 連續三輪皆衝突,等使用者人工處理",
+        sub: "Conflict 集中在 src/features/very/deeply/nested/path/Component.tsx 的 importMap 區段;另外 src/styles/tokens.css 也有 3 處衝突,可能跟最近的 design token rename pull-request 撞到",
+        ts: "1 小時前(2026-05-25 13:14 UTC)",
+        pipelineId: "pl-long-1",
+        primary: { label: "進入 SyncConflictModal 選擇處理方式", kind: "block" },
+        secondary: { label: "稍後處理 / 標為已讀" },
+      },
+      mkItem("sync_conflict", 1, { unread: true, primary: { label: "選擇", kind: "block" } }),
+      mkItem("ticket_done", 2, { unread: false }),
+    ],
+  },
+};
+
+// ─── DemoApp(Phase 4 demo controls)─────────────────────────────────────
+
+function DemoApp() {
+  const [theme, setTheme] = useState("dark");
+  const [density, setDensity] = useState("normal");
+  const [state, setState] = useState("expanded");
+  const [filter, setFilter] = useState("all");
+  const [scenarioKey, setScenarioKey] = useState("full-43");
+  const [highlightId, setHighlightId] = useState("");
+
+  const baseItems = useMemo(() => SCENARIOS[scenarioKey].build(), [scenarioKey]);
+  const [localItems, setLocalItems] = useState(baseItems);
+  useEffect(() => { setLocalItems(baseItems); }, [baseItems]);
+
+  useEffect(() => {
+    document.documentElement.className = theme === "light" ? "light" : "";
+    document.documentElement.setAttribute("data-density", density);
+  }, [theme, density]);
+
+  const unreadCount = localItems.filter((i) => i.unread).length;
+
+  const onMarkRead = (id) => {
+    setLocalItems((items) => items.map((it) => it.id === id ? { ...it, unread: false } : it));
+  };
+  const onDismiss = (id) => {
+    setLocalItems((items) => items.filter((it) => it.id !== id));
+  };
+  const onMarkAllRead = () => {
+    setLocalItems((items) => items.map((it) => ({ ...it, unread: false })));
+  };
+  const onDismissAll = () => {
+    setLocalItems([]);
+  };
+  const onItemClick = (id, pipelineId) => {
+    console.log("[demo] item click", id, pipelineId);
+    onMarkRead(id);
+    setHighlightId(id);
+  };
+
+  const highlightOptions = useMemo(() => [
+    { value: "", label: "(none)" },
+    ...localItems.map((it) => ({ value: it.id, label: `${it.id} · ${it.title.slice(0, 28)}…` })),
+  ], [localItems]);
+
+  const notifRootClass =
+    "notif-root" +
+    (state === "collapsed" ? " is-inbox-collapsed" : "") +
+    (state === "hidden" ? " is-inbox-hidden" : "");
+
+  return (
+    <div className={"proto-shell " + notifRootClass}>
+      <div className="proto-topbar">
+        <span className="proto-topbar-brand mono">vibe-pipeline</span>
+        <span className="proto-topbar-sep">/</span>
+        <span className="proto-topbar-pipeline">feat-ui-refresh</span>
+      </div>
+      <div className="board-body">
+        <nav>
+          <aside className="proto-rail">
+            <div className="proto-rail-title">PROJECT</div>
+            <div className="proto-rail-item active">
+              <span className="proto-rail-dot" style={{ background: "var(--accent)" }} />
+              <span>vibe-pipeline</span>
+            </div>
+            <div className="proto-rail-title" style={{ marginTop: 18 }}>PIPELINES</div>
+            <div className="proto-rail-item active">
+              <span className="proto-rail-dot" style={{ background: "var(--running)" }} />
+              <span>feat-ui-refresh</span>
+            </div>
+            <div className="proto-rail-item">
+              <span className="proto-rail-dot" style={{ background: "var(--done)" }} />
+              <span>hotfix-toast-z</span>
+            </div>
+            <div className="proto-rail-item">
+              <span className="proto-rail-dot" style={{ background: "var(--draft)" }} />
+              <span>chore-tokens</span>
+            </div>
+          </aside>
+        </nav>
+        <main>
+          <div className="proto-main-placeholder">
+            <h2>FocusColumn（mock 視覺脈絡）</h2>
+            <p>右側為 <code>InboxColumn</code> 的 prototype。透過右下 demo panel 切換 state / filter / scenario。</p>
+            <p style={{ marginTop: 18, fontSize: 12, color: "var(--fg-faint)" }}>
+              .notif-root class 套用 <code>{notifRootClass}</code>,grid 第 3 欄寬 = <code>--inbox-w</code>
+            </p>
+          </div>
+        </main>
+        <aside>
+          <InboxColumn
+            items={localItems}
+            filter={filter}
+            setFilter={setFilter}
+            unreadCount={unreadCount}
+            highlightId={highlightId || null}
+            state={state}
+            setState={setState}
+            onMarkRead={onMarkRead}
+            onDismiss={onDismiss}
+            onMarkAllRead={onMarkAllRead}
+            onDismissAll={onDismissAll}
+            onItemClick={onItemClick}
+          />
+        </aside>
+      </div>
+
+      <div className="proto-demo-panel">
+        <h4>Theme</h4>
+        <label><input type="radio" name="theme" checked={theme === "dark"} onChange={() => setTheme("dark")} /> dark</label>
+        <label><input type="radio" name="theme" checked={theme === "light"} onChange={() => setTheme("light")} /> light</label>
+
+        <h4>density(data-density attr;notif.css 本身未引用,留作 design 端擴充)</h4>
+        <label><input type="radio" name="density" checked={density === "normal"} onChange={() => setDensity("normal")} /> normal</label>
+        <label><input type="radio" name="density" checked={density === "compact"} onChange={() => setDensity("compact")} /> compact</label>
+
+        <h4>InboxState(3)</h4>
+        <label><input type="radio" name="state" checked={state === "expanded"} onChange={() => setState("expanded")} /> expanded</label>
+        <label><input type="radio" name="state" checked={state === "collapsed"} onChange={() => setState("collapsed")} /> collapsed(strip)</label>
+        <label><input type="radio" name="state" checked={state === "hidden"} onChange={() => setState("hidden")} /> hidden</label>
+
+        <h4>InboxFilter(3)— 僅 expanded 生效</h4>
+        <label><input type="radio" name="filter" checked={filter === "all"} onChange={() => setFilter("all")} /> all</label>
+        <label><input type="radio" name="filter" checked={filter === "unread"} onChange={() => setFilter("unread")} /> unread</label>
+        <label><input type="radio" name="filter" checked={filter === "blocking"} onChange={() => setFilter("blocking")} /> blocking</label>
+
+        <h4>scenario(8)</h4>
+        <select value={scenarioKey} onChange={(e) => setScenarioKey(e.target.value)}>
+          {Object.entries(SCENARIOS).map(([k, v]) => (
+            <option key={k} value={k}>{k} — {v.label}</option>
+          ))}
+        </select>
+
+        <h4>highlightId(focusNotif 後的 fade-up flash)</h4>
+        <select value={highlightId} onChange={(e) => setHighlightId(e.target.value)}>
+          {highlightOptions.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+
+        <h4>actions</h4>
+        <label><button type="button" className="proto-mini-btn" onClick={() => setLocalItems(baseItems)}>reset scenario fixtures</button></label>
+        <label><button type="button" className="proto-mini-btn" onClick={onMarkAllRead}>mark all read</button></label>
+        <label><button type="button" className="proto-mini-btn" onClick={onDismissAll}>dismiss all</button></label>
+
+        <hr />
+        <div style={{ fontSize: 10.5, color: "var(--fg-faint)", lineHeight: 1.6 }}>
+          unreadCount = <span className="mono">{unreadCount}</span>
+          {" · "}items = <span className="mono">{localItems.length}</span>
+          {" · "}filtered = <span className="mono">{
+            localItems.filter((it) => filter === "all" ? true : filter === "unread" ? !!it.unread : it.sev === "block").length
+          }</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<DemoApp />);
+</script>
+</body>
+</html>

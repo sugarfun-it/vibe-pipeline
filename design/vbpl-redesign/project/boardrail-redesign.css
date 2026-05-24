@@ -1,0 +1,373 @@
+/* ============================================================================
+   BoardRail Redesign · V2 (status chip) — full version
+   Overrides boardrail.css. Only the rail-item internals change; the chrome,
+   create-card, picker, confirm-dialog, form-field all stay original.
+   ============================================================================ */
+
+/* ─── preview shell ─────────────────────────────────────────────────── */
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  color: var(--fg);
+  background: var(--bg);
+}
+
+.preview-shell {
+  display: grid;
+  grid-template-columns: 296px 1fr;
+  height: 100vh;
+  background: var(--bg);
+}
+.preview-rail-host {
+  border-right: 1px solid var(--line);
+  background: var(--bg-elevated);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.preview-rail-host .rail { border-right: 0; flex: 1; min-height: 0; }
+
+.preview-stage-fill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  background:
+    linear-gradient(var(--line-2) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, var(--line-2) 1px, transparent 1px) 0 0 / 32px 32px,
+    var(--bg);
+  background-blend-mode: normal;
+  position: relative;
+}
+.preview-stage-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, var(--bg) 90%);
+  pointer-events: none;
+}
+.preview-stage-fill > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--fg-mute);
+}
+.preview-stage-fill > span::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ─── V2 RailItem · status chip ─────────────────────────────────────── */
+
+.rail--v2chip .rail-item {
+  padding: 10px 10px 11px;
+  gap: 7px;
+}
+.rail--v2chip .rail-item.is-active::before { display: none; }
+.rail--v2chip .rail-item.is-active {
+  background: var(--selected);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-2));
+}
+.rail--v2chip .rail-item-row { gap: 7px; align-items: center; }
+
+.rail--v2chip .rail-state-dot { display: none; }
+
+.rail-status-chip {
+  --chip-c: var(--fg-mute);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
+  color: var(--chip-c);
+  border: 1px solid color-mix(in srgb, var(--chip-c) 30%, transparent);
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+}
+.rail-status-chip[data-state="running"]  { --chip-c: var(--running); }
+.rail-status-chip[data-state="paused"]   { --chip-c: var(--paused); }
+.rail-status-chip[data-state="ready"]    { --chip-c: var(--done); }
+.rail-status-chip[data-state="merged"]   { --chip-c: var(--fg-faint); }
+.rail-status-chip[data-state="failed"]   { --chip-c: var(--failed); }
+.rail-status-chip[data-state="planning"] { --chip-c: var(--draft); }
+
+.rail-status-chip-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--chip-c);
+  flex-shrink: 0;
+}
+.rail-status-chip.is-running .rail-status-chip-dot {
+  position: relative;
+  animation: chipPulse 1.6s ease-in-out infinite;
+}
+.rail-status-chip.is-running .rail-status-chip-dot::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1px solid var(--chip-c);
+  opacity: 0;
+  animation: chipPulseRing 1.6s ease-out infinite;
+}
+@keyframes chipPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+@keyframes chipPulseRing {
+  0%   { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.rail--v2chip .rail-item-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.003em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rail--v2chip .rail-item.is-active .rail-item-name { font-weight: 600; color: var(--fg); }
+
+.rail--v2chip .rail-item-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  letter-spacing: 0;
+}
+.rail--v2chip .rail-item.is-active .rail-item-count {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.rail--v2chip .rail-mini {
+  height: 3px;
+  gap: 2px;
+  opacity: 0.55;
+  margin-top: 1px;
+}
+.rail--v2chip .rail-mini-cell { border-radius: 2px; }
+.rail--v2chip .rail-item:hover .rail-mini { opacity: 0.85; }
+.rail--v2chip .rail-item.is-active .rail-mini { opacity: 1; }
+
+.rail--v2chip .rail-item-meta {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+}
+.rail--v2chip .rail-item.is-active .rail-item-meta { color: var(--fg-mute); }
+
+/* QA badge — keep visible but quiet next to the chip */
+.rail--v2chip .rail-qa-badge {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 3px;
+}
+
+/* When a row is muted (creating mode), fade chip too */
+.rail--v2chip .rail-item.is-muted .rail-status-chip { opacity: 0.55; }
+.rail--v2chip .rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot { animation: none; }
+.rail--v2chip .rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot::after { animation: none; }
+
+/* ─── V2 CreateCard polish ──────────────────────────────────────────── */
+
+.rail--v2chip .create-card {
+  position: relative;
+  padding: 13px 12px 12px;
+  gap: 10px;
+  border-color: color-mix(in srgb, var(--draft) 30%, var(--line-2));
+  overflow: hidden;
+}
+.rail--v2chip .create-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--draft) 0%,
+    color-mix(in srgb, var(--draft) 40%, transparent) 60%,
+    transparent 100%);
+  opacity: 0.7;
+}
+.rail--v2chip .create-card:focus-within {
+  border-color: var(--accent);
+}
+.rail--v2chip .create-card:focus-within::before {
+  background: linear-gradient(90deg,
+    var(--accent) 0%,
+    color-mix(in srgb, var(--accent) 40%, transparent) 60%,
+    transparent 100%);
+  opacity: 1;
+}
+.rail--v2chip .create-card-head {
+  gap: 6px;
+  align-items: center;
+  margin-top: 1px;
+}
+.rail--v2chip .create-card-head .rail-status-chip {
+  font-size: 10.5px;
+  padding: 2px 8px 2px 7px;
+}
+
+/* labels — quieter, matches rail-section-label */
+.rail--v2chip .create-field-label,
+.rail--v2chip .form-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+/* close button — smaller in desktop preview, match the chip's footprint */
+.rail--v2chip .create-x {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+.rail--v2chip .create-x svg { width: 12px; height: 12px; }
+
+/* ─── demo panel ────────────────────────────────────────────────────── */
+
+.demo-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 296px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  padding: 14px 14px 16px;
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+  color: var(--fg);
+}
+.demo-panel h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+}
+.demo-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.demo-row label {
+  font-size: 11px;
+  color: var(--fg-mute);
+  font-weight: 500;
+}
+.demo-row select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.demo-row select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.demo-row-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.demo-row-inline label {
+  flex: 1;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.demo-row-inline input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.demo-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 2px 0;
+}
+
+/* ─── toast surface ─────────────────────────────────────────────────── */
+
+.toast-host {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 9000;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  padding: 7px 13px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  animation: toastIn 0.22s ease-out;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  max-width: 380px;
+}
+.toast.is-info {
+  background: var(--bg-info-soft, var(--panel-2));
+  border-color: color-mix(in srgb, var(--running) 30%, var(--line-2));
+}
+.toast.is-error {
+  background: var(--failed-soft);
+  color: var(--failed);
+  border-color: var(--danger-border);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
