@@ -137,10 +137,23 @@
    when user inspects after click. Mouse users see no ring at rest; keyboard
    users still see the ring on Tab focus. Neutral --fg-mute avoids competing
    with red danger (prior r3 fix 005/009). */
+/* iter-uiux-2026-05-24 confirm-dialog.standard r2 std-focus-ring —
+   keep neutral --fg-mute(避免跟 danger 紅鬥色),但加 2px box-shadow
+   白色 inset 當對比 spacer,讓 outline 在 beige cancel / brown primary 都看得清。 */
 .confirm-card .btn:focus-visible {
   outline: 2px solid var(--fg-mute);
   outline-offset: 2px;
-  box-shadow: none;
+  box-shadow: 0 0 0 1px var(--panel, #fff);
+}
+/* iter-uiux-2026-05-24 confirm-dialog.danger r1 danger-cancel-autofocus-visible —
+   danger 模式 cancel 是 autoFocus,但 :focus-visible 在 click-driven 開啟時不亮,
+   user 看不到「Enter 不會誤觸發 confirm」的視覺保證。靠 React 端額外加
+   `.confirm-cancel--autofocused` class(只 danger 套),CSS 用 :focus 強制亮 ring;
+   non-danger 仍只在 keyboard 後亮(:focus-visible)。 */
+.confirm-card .confirm-cancel--autofocused:focus {
+  outline: 2px solid var(--fg-mute);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--panel, #fff);
 }
 .btn-danger {
   background: var(--failed);
@@ -150,11 +163,20 @@
 .btn-danger:hover {
   filter: brightness(1.08);
 }
+/* iter-uiux-2026-05-24 confirm-dialog.standard r2 std-chip-strengthen —
+   原本 font-size:10px + opacity:0.7 chip 視覺像裝飾符,讀不出是按鍵提示。
+   套上 panel-2 背景 + 細邊框,明顯成「鍵盤按鍵」chip;字級略升、opacity 拿掉
+   讓對比達 a11y minimum,但 inline 仍保持輕量。 */
 .kbd-inline {
   font-family: var(--font-mono);
-  font-size: 10px;
-  opacity: 0.7;
-  margin-left: 6px;
+  font-size: 11px;
+  line-height: 1;
+  margin-left: 8px;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs, 4px);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--fg-mute);
 }
 @media (max-width: 767.98px) {
   .confirm-card.drawer--modal {
@@ -168,7 +190,10 @@
   }
   .confirm-cancel,
   .confirm-actions .btn {
-    flex: 1 1 auto;
+    /* iter-uiux-2026-05-24 confirm-dialog.standard r1 std-mobile-even —
+       mobile 兩按鈕等寬,避免「取消」窄小、primary 變寬的視覺失衡;
+       primary 仍靠 btn-primary 顏色強調,不用寬度差別。 */
+    flex: 1 1 0;
     min-width: 0;
     white-space: normal;
     word-break: break-word;

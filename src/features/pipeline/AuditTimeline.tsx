@@ -108,7 +108,7 @@ export function AuditTimeline({
           {entries && entries.length > 0 && (
             <>
               <div className="audit-sort-hint">
-                共 {entries.length} 筆 · 最新在上
+                共 {entries.length} 筆 · 依時間由新到舊
               </div>
               <ol className="audit-list" role="list">
                 {entries.map((e, i) => (

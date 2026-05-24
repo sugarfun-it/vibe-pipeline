@@ -134,3 +134,18 @@ These files are cross-cutting / non-UI; never edit during this skill's iteration
 - Anything outside `src/` except `.iter-uiux/**`
 
 Project navigation uses `?project=<hash>` URL param. Vibe-pipeline's own hash is `b2dda010` (use for any unit needing a real project selected outside the `fixture00` mock fixture).
+
+## Capture viewport (override base default)
+
+User's monitor is 2560×1440 with Windows display scaling at 125%. Browser effective CSS viewport is therefore `2560 / 1.25 = 2048` CSS pixels wide. Capturing at the raw monitor resolution (`viewport: 2560×1440`) produces screenshots showing MORE layout room than the user actually sees, so codex's RWD / visual-density judgements drift from the real user experience.
+
+Override base default in `.iter-uiux/capture.mjs`:
+
+```javascript
+const VIEWPORTS = [
+  { tag: "desktop", width: 2048, height: 1152, isMobile: false },  // 2560×1440 @ 125% scaling
+  { tag: "mobile",  width: 390,  height: 844,  isMobile: true },   // base default
+];
+```
+
+Mobile viewport stays at base default. If user's hardware / scaling changes, update `width`/`height` here AND in `.iter-uiux/result.json` `environment.viewports[]` for that run.

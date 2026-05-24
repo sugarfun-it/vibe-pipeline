@@ -466,8 +466,9 @@
   color: var(--accent);
 }
 .diff-line.is-meta .diff-line-text {
-  color: var(--fg-faint);
-  opacity: 0.85;
+  /* meta(diff --git / index / --- / +++)是 diff 結構訊息不是裝飾 — 之前 fg-faint+0.85 在 mobile 幾乎不可讀
+     (visual-001)。改 fg-mute 拿到正常 mute 對比、移除 opacity 衰減。 */
+  color: var(--fg-mute);
 }
 .diff-line.is-context .diff-line-text {
   color: var(--fg-mute);

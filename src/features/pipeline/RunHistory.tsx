@@ -27,20 +27,8 @@ const visuallyHidden: CSSProperties = {
 };
 
 // RH-011:stdout / stderr 在 h4 旁的 mono badge — implementation 來源字串退一格,user 視覺主體留中文
-const detailTagStyle: CSSProperties = {
-  display: "inline-block",
-  marginLeft: 6,
-  padding: "1px 5px",
-  borderRadius: 3,
-  fontFamily: "var(--font-mono)",
-  fontSize: 10,
-  fontWeight: 500,
-  color: "var(--fg-faint)",
-  background: "var(--panel-2)",
-  border: "1px solid var(--line)",
-  textTransform: "lowercase",
-  letterSpacing: "0.04em",
-};
+// HD-RUN-EXP-008 round 1 (2026-05-25):detailTagStyle 從 inline object 改成 .tdrw-run-detail-tag class
+//   (token / dark mode / state 都好管),JSX 端拿掉 style 注入。
 
 export function RunHistory({
   projectHash,
@@ -113,14 +101,18 @@ export function RunHistory({
     );
   }
   if (runs.length === 0) {
-    // history-empty-001 / 003 / 004 / 006 / 007 / 010 / 012 (2026-05-24):
-    //   2 段 empty-state(標題 + 說明)+ 行動 CTA(關閉抽屜 = 把焦點放回上方執行按鈕,
-    //   不再死路);copy 全中文不混 raw English「runner」/「state change」。
+    // history-empty-001 / 003 / 004 / 006 / 007 / 010 / 012 (2026-05-24)
+    // + HD-EMPTY-002 / 003 / 004 round 1 (2026-05-25):
+    //   - CTA「關閉並回 pipeline 執行」會被誤讀成「按了會跑 pipeline」,
+    //     改成中性、忠實的「關閉執行紀錄」。
+    //   - 全形括弧、語句斷句重排,降低 mobile 擁擠感。
+    //   - 靜態 empty block 不再 role=status / aria-live(會跟 drawer dialog
+    //     + topAudit 重複播報);只在 dialog 內當一般內容。
     return (
-      <div className="rh-empty-state" role="status" aria-live="polite">
+      <div className="rh-empty-state">
         <div className="rh-empty-title">這個 pipeline 還沒被執行過</div>
         <div className="rh-empty-hint">
-          這裡會列出每次「執行」之後 runner 留下的紀錄(耗時、成本、結果)。目前還沒有任何一筆。
+          這裡會列出每次執行後 runner 留下的紀錄,包含耗時、成本與結果。目前還沒有任何一筆。
         </div>
         {onCloseDrawer && (
           <div className="rh-empty-actions">
@@ -129,7 +121,7 @@ export function RunHistory({
               className="btn rh-empty-cta"
               onClick={onCloseDrawer}
             >
-              關閉並回 pipeline 執行
+              關閉執行紀錄
             </button>
           </div>
         )}
@@ -164,14 +156,11 @@ export function RunHistory({
               {summary.totalCost != null ? `$${summary.totalCost.toFixed(2)}` : "—"}
             </strong>
             {/* RH-007 (2026-05-24):mobile 沒 hover 看不到 title — 把「部分」做成 visible 註解,
-                跟 strong 同 row,語意明確且 SR / 觸控都能取得 */}
+                跟 strong 同 row,語意明確且 SR / 觸控都能取得
+                HD-CODEX-004 round 1 (2026-05-25):從 inline style 改成 .tdrw-run-meta-partial class,
+                  token / dark mode 一致管理。 */}
             {summary.costPartial && (
-              <span
-                className="tdrw-run-meta-label"
-                style={{ color: "var(--fg-faint)" }}
-              >
-                (部分)
-              </span>
+              <span className="tdrw-run-meta-partial">(部分)</span>
             )}
           </span>
         </div>
@@ -259,7 +248,10 @@ function RunCard({
   const toggleAria = `${open ? "收合" : "展開"} ${fmtTime(run.startedAt)} 的執行明細(${outcomeLabel}・${exitText})`;
   // RH-002 (2026-05-24):chevron 在 mobile 上 affordance 偏弱 — 加個 visible 短 label 提示展開動作,
   //   user 一眼知道整個 head 可點開看詳情(stdout / stderr / session id)
-  const toggleHint = open ? "收合" : "展開";
+  // HIST-RUN-001 round 1 (2026-05-25):卡片下方 meta(時間/成本/權杖/執行器/Ticket 進度)
+  //   已 always-visible,通用「展開」會讓 user 覺得「我已經看到全部了還能展什麼」。
+  //   改更具體:展開後實際多 sessionId + 原始輸出(stdout) + stderr,所以 hint = 「查看輸出」/「收合輸出」。
+  const toggleHint = open ? "收合輸出" : "查看輸出";
   return (
     <div className={"tdrw-run-card" + (ok ? "" : " is-fail")}>
       <button type="button"
@@ -344,8 +336,10 @@ function RunCard({
         </span>
       </button>
       <div className="tdrw-run-meta">
+        {/* HIST-RUN-005 round 1 (2026-05-25):同畫面已有「最後變動於」(top summary)、「總時間」(summary),
+            這欄是「單次 run 的耗時」,語意要區分清楚不被誤讀為時刻 — 改 label「耗時」。 */}
         <span className="tdrw-run-meta-item">
-          <span className="tdrw-run-meta-label">時間</span>
+          <span className="tdrw-run-meta-label">耗時</span>
           <strong>{dur}</strong>
         </span>
         {!isCodex && (
@@ -440,9 +434,7 @@ function RunCard({
               <section className="tdrw-run-detail-section">
                 <h4 className="tdrw-run-detail-label">
                   原始輸出{" "}
-                  <span className="tdrw-run-detail-tag" style={detailTagStyle}>
-                    stdout
-                  </span>
+                  <span className="tdrw-run-detail-tag">stdout</span>
                 </h4>
                 <StdoutBlock text={detail.stdout || ""} />
               </section>
@@ -450,9 +442,7 @@ function RunCard({
                 <section className="tdrw-run-detail-section">
                   <h4 className="tdrw-run-detail-label">
                     錯誤輸出{" "}
-                    <span className="tdrw-run-detail-tag" style={detailTagStyle}>
-                      stderr
-                    </span>
+                    <span className="tdrw-run-detail-tag">stderr</span>
                   </h4>
                   <CopyableBlock text={detail.stderr} copyAriaLabel="複製錯誤輸出" />
                 </section>
@@ -603,11 +593,17 @@ const TICKET_STATUS_LABELS: Record<string, string> = {
 function renderResult(raw: string): JSX.Element {
   // domain term(ticket / pipeline / commit / Runner)保留英文,不翻中文。
   // 只翻 PASS→通過、merge→合併 等動作/結果詞。
+  // HIST-RUN-003 round 1 (2026-05-25):補幾個常見 token(commit→個 commit、可 merge→可合併、
+  //   pipeline.狀態→pipeline 狀態、單獨 PASS/FAIL),統一中文標點(半形逗號→全形;半形冒號→全形)。
   let s = raw;
   s = s.replace(/全\s*PASS/gi, "全數通過");
   // 「3 commit」→「3 個 commit」(個量詞)
   s = s.replace(/(\d+)\s*commit(?![=:\-])/gi, "$1 個 commit");
-  // 半形逗號接非空白 → 後面補半形空格(東亞排版常見)
+  // 可 merge / 能 merge → 可合併
+  s = s.replace(/可\s*merge/gi, "可合併");
+  // pipeline.狀態 / pipeline.state.X → pipeline 狀態(避免中文裡夾半形句點看起來像錯字)
+  s = s.replace(/pipeline\.狀態/g, "pipeline 狀態");
+  // 半形逗號 / 冒號 → 全形(已是 zh 句子內;state=key=value 內保留半形)
   s = s.replace(/,(?=\S)/g, ", ");
   // 同時把舊 state token 透過 localizeResult 翻 zh-TW
   s = localizeResult(s);
@@ -628,11 +624,30 @@ function renderResult(raw: string): JSX.Element {
 
 function localizeResult(raw: string): string {
   let s = raw;
-  // state=ready → 狀態:可合併
+  // HIST-RUN-003 round 1 (2026-05-25):collapsed 卡片直接用 localizeResult,
+  //   把 i18n 替換邏輯(全 PASS、commit、可 merge、pipeline.狀態)都搬到這層,
+  //   不再只在 expanded renderResult() 才有,確保 head 顯示就是中文。
+  s = s.replace(/全\s*PASS/gi, "全數通過");
+  s = s.replace(/(\d+)\s*commit(?![=:\-])/gi, "$1 個 commit");
+  s = s.replace(/可\s*merge/gi, "可合併");
+  s = s.replace(/,(?=\S)/g, ", ");
+  // state=ready → 狀態:可合併 — 先做這條,下一條才能 catch 「pipeline.狀態」
   s = s.replace(/state=([a-z_]+)/gi, (_, k: string) => {
     const lc = k.toLowerCase();
     return STATE_LABELS[lc] != null ? `狀態:${STATE_LABELS[lc]}` : `state=${k}`;
   });
+  // pipeline.狀態 → pipeline 狀態(state= 替換完才會看到「pipeline.狀態」);避免中文裡夾半形句點
+  s = s.replace(/pipeline\.狀態/g, "pipeline 狀態");
+  // HD-RUN-EXP-003 / 007 round 1 (2026-05-25):
+  //   raw 常見「state=ready, 可 merge」這種 runner 自然語句,被 localize 後變
+  //   「狀態:可合併, 可合併」(同 token 連續出現兩次)。最後 pass 一次去重 +
+  //   半形逗號補空格(英文 commit/ticket 與中文交界處 spacing)。
+  s = s.replace(/(可合併)\s*[,，、]\s*可合併/g, "$1");
+  s = s.replace(/, (?=[一-鿿])/g, ",");
+  s = s.replace(/, (?=[一-鿿])/g, ","); // 兩次保險,連續 case
+  // 中文後緊接英文 token 補一個半形空格(中英排版常規:「全數通過 3」→「全數通過 3」、「3 commit」→「3 commit」)
+  s = s.replace(/([一-鿿])(\d|[A-Za-z])/g, "$1 $2");
+  s = s.replace(/(\d|[A-Za-z])([一-鿿])/g, "$1 $2");
   // draft→done → 草稿→完成(全形 → 也支援)
   s = s.replace(/([a-z_]+)\s*(?:→|->)\s*([a-z_]+)/gi, (m, fromK: string, toK: string) => {
     const f = fromK.toLowerCase();

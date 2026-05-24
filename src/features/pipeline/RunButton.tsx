@@ -85,23 +85,28 @@ export function RunButton({
   // sync 進行中:其餘狀態 RunButton 鎖死,避免 user 誤觸發 runner 撞 worktree
   // 用 aria-disabled + onClick noop 取代 native `disabled`,讓 keyboard / SR 仍可 focus 看到 helper text
   // 同步播報走 button 同層 sibling 的 role=status span,不放 button 上(避免 dual semantics)
+  //
+  // iter-uiux 2026-05-25 focus-column.sync_active r1:
+  // - copy 對齊 sync chip 用語(「助理處理中」)避免 header 一列出現兩種術語(原本「同步中」)。
+  //   accessible name 同步改成「助理處理中 — <reason>」。
+  // - 加 run-btn-sync-busy class 走 owned focus.css,降低與 sync chip 的視覺重複/避免跟 primary CTA 競爭。
   if (syncActive) {
     const reason = "同步收尾後可執行 ticket";
     return (
       <>
         <button
           type="button"
-          className="btn"
+          className="btn run-btn-sync-busy"
           aria-disabled="true"
-          aria-label={`同步中 — ${reason}`}
+          aria-label={`助理處理中 — ${reason}`}
           title={reason}
         >
           <span className="qadr-thinking-dots" aria-hidden="true">
             <span /><span /><span />
           </span>{" "}
-          同步中
+          助理處理中
         </button>
-        <span className="sr-only" role="status" aria-live="polite">同步中</span>
+        <span className="sr-only" role="status" aria-live="polite">助理處理中</span>
       </>
     );
   }
@@ -165,7 +170,7 @@ export function RunButton({
             title={reason}
             >
             <span className="run-btn-empty-label-full" aria-hidden="true">無可執行 ticket</span>
-            <span className="run-btn-empty-label-short" aria-hidden="true">無可執行</span>
+            <span className="run-btn-empty-label-short" aria-hidden="true">無 ticket</span>
           </button>
         );
       }

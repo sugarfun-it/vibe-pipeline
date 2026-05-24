@@ -402,9 +402,8 @@
    不搶 RunHistory 主體 spotlight。 */
 .pipeline-history-top-summary {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2, 8px);
+  flex-direction: column;
+  gap: var(--space-1, 4px);
   padding: var(--space-2, 8px) var(--space-3, 12px);
   border: 1px solid var(--line);
   border-radius: var(--radius-card, 8px);
@@ -412,6 +411,17 @@
   color: var(--fg-mute);
   font-size: 12.5px;
   margin-bottom: var(--space-3, 12px);
+}
+/* HD-EMPTY-009 round 2:每行 = 一個 flex row,允許 inline wrap 但 separator 不會跑到行首,
+   wrap 後 punctuation 仍 inline 跟前段;mobile 窄寬下兩 line 直接分頂下排列即可。 */
+.pipeline-history-top-summary-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1, 4px) var(--space-2, 8px);
+}
+.pipeline-history-top-summary-line-meta {
+  color: var(--fg-mute);
 }
 .pipeline-history-top-summary-label {
   color: var(--fg-faint);
@@ -421,7 +431,6 @@
   font-weight: 500;
 }
 .pipeline-history-top-summary-sep {
-  margin-right: var(--space-1, 4px);
   color: var(--fg-faint);
 }
 .pipeline-history-top-summary-reason {
@@ -735,7 +744,10 @@
   color: var(--failed);
 }
 
-/* hist-001:ticket 進度列改 grid:label max-content,內容 1fr 換行承接,不再讓「度」孤立到下一行 */
+/* hist-001:ticket 進度列改 grid:label max-content,內容 1fr 換行承接,不再讓「度」孤立到下一行
+   HIST-RUN-002 round 1 (2026-05-25):mobile 下 2-col grid 讓第 2 個 diff item 從第二行右半開始,
+     形成 hanging indent,讀感像兩欄殘段。改成 column-flex(label 一行 + 每 item 一行 badge),
+     desktop 寬欄維持 inline grid 不變。 */
 .tdrw-run-meta-ticket-diff {
   flex: 1 0 100%;
   display: grid;
@@ -761,6 +773,25 @@
   align-items: center;
   white-space: nowrap;
 }
+@media (max-width: 540px) {
+  .tdrw-run-meta-ticket-diff {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1, 4px);
+  }
+  .tdrw-run-meta-ticket-diff-list {
+    flex-direction: column;
+    gap: var(--space-1, 4px);
+    align-items: flex-start;
+  }
+  .tdrw-run-meta-ticket-diff-item {
+    padding: 2px 6px;
+    border-radius: var(--radius-chip, 6px);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    font-size: 11.5px;
+  }
+}
 
 /* 失敗原因 truncate — JSON 整段 dump 進來時不撐爆 row;原文走 title attribute */
 .tdrw-run-meta-fail {
@@ -784,6 +815,13 @@
   color: var(--fg-mute);
   font-size: 11px;
   font-weight: 500;
+}
+/* HD-CODEX-004 round 1 (2026-05-25):summary cost「(部分)」 class 化,
+   未來 hover / focus / icon affordance 都附在此 class 上 */
+.tdrw-run-meta-partial {
+  font-size: 11.5px;
+  color: var(--fg-faint);
+  margin-left: 4px;
 }
 .tdrw-run-detail {
   border-top: 1px solid var(--line);
@@ -823,10 +861,31 @@
   font-size: 11.5px;
   line-height: 1.55;
   color: var(--fg);
-  white-space: pre-wrap;
-  word-break: break-word;
+  /* HD-RUN-EXP-001 round 1 (2026-05-25):mobile word-break:break-word 把 JSON 整段切到很細,
+     讀感跟複製檢視都差。改 white-space: pre + overflow-x: auto,讓 stdout 保持
+     原始 JSON 行結構,可橫向捲動。mobile/desktop 都 apply,desktop 也受益。
+     max-height 仍 cap,避免 1 個 run 吃光抽屜高度。 */
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
   max-height: 300px;
   overflow: auto;
+}
+/* HD-RUN-EXP-008 round 1 (2026-05-25):stdout / stderr tag 從 inline style 移到 class,
+   一致管理 token,dark theme + state 都好擴充。 */
+.tdrw-run-detail-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-faint);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
 }
 .tdrw-run-pre.is-oneline {
   max-height: none;
@@ -857,8 +916,16 @@
 @media (max-width: 767.98px) {
   /* phase4-2026-05-23-004 — single disclosure affordance per viewport.
      Mobile: chevron is enough (rotating, head-wide click target); hide the
-     redundant "收合/展開" text label that was competing for hierarchy. */
-  .tdrw-run-head-hint { display: none; }
+     redundant "收合/展開" text label that was competing for hierarchy.
+     HIST-RUN-001 round 2 (2026-05-25):chevron 旋轉在 mobile 太細,且 collapsed 卡片
+       meta 已 always-visible(時間/成本/權杖/執行器/Ticket diff),user 不知道展開後實際
+       多看到什麼。把 hint 留在 mobile,字級壓到 10.5px / 弱色,當作「展開後會多哪些」的
+       明示 affordance(「查看輸出」/「收合輸出」)。 */
+  .tdrw-run-head-hint {
+    display: inline-block;
+    font-size: 10.5px;
+    color: var(--fg-faint);
+  }
   .tdrw-run-head {
     gap: 8px;
     padding: 8px 10px;

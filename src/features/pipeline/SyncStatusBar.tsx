@@ -29,15 +29,20 @@ export function SyncStatusBar({
   // 沒 syncJob → 顯示 fallback「落後 N · 同步」按鈕(或不顯示)
   if (!j) {
     if (behindFallback === null || behindFallback <= 0) return null;
+    const baseLabel = pipeline.baseBranch || "base";
+    const ariaLabel = pipelineBusy
+      ? `落後 ${baseLabel} ${behindFallback} 個 commit。同步功能停用中:pipeline 執行中,需等停止或 ready 才能同步`
+      : `落後 ${baseLabel} ${behindFallback} 個 commit。按下開始同步:先嘗試 git merge,衝突才呼叫助理`;
     return (
       <button
         type="button"
         className="sync-chip"
         title={
           pipelineBusy
-            ? `落後 ${pipeline.baseBranch || "base"} ${behindFallback} 個 commit(pipeline 在跑,等停止後或 ready 才能同步)`
-            : `落後 ${pipeline.baseBranch || "base"} ${behindFallback} 個 commit · 點擊先試合併,衝突才呼叫助理`
+            ? `落後 ${baseLabel} ${behindFallback} 個 commit(pipeline 在跑,等停止後或 ready 才能同步)`
+            : `落後 ${baseLabel} ${behindFallback} 個 commit · 點擊先試合併,衝突才呼叫助理`
         }
+        aria-label={ariaLabel}
         disabled={pipelineBusy}
         onClick={onStart}
       >
@@ -49,12 +54,14 @@ export function SyncStatusBar({
 
   // 有 syncJob → 依 state 渲染。busy / 結果類 chip 加 role+aria-live,讓螢幕閱讀器知道狀態改變
   if (j.state === "merging") {
+    const baseLabel = pipeline.baseBranch || "base";
     return (
       <span
         className="sync-chip sync-chip-busy"
         role="status"
         aria-live="polite"
-        title={`合併 ${pipeline.baseBranch || "base"} 進行中(落後 ${j.behindCount} 個 commit)`}
+        aria-label={`正在合併 ${baseLabel},落後 ${j.behindCount} 個 commit,同步中`}
+        title={`合併 ${baseLabel} 進行中(落後 ${j.behindCount} 個 commit)`}
       >
         <span className="sync-thinking-dots" aria-hidden>
           <span /><span /><span />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import "../../styles/drawer.css";
 import "./qa.css";
 import type { Draft, TicketSpec } from "../../api/qa";
@@ -98,6 +98,7 @@ export function QADrawer({
 
   // 未送出文字確認用 in-drawer 彈窗(不用 window.confirm,避免破壞抽屜視覺一致)
   const [pendingClose, setPendingClose] = useState(false);
+  const pendingCancelBtnRef = useRef<HTMLButtonElement>(null);
   const requestClose = () => {
     if (composerTextRef.current.trim().length > 0) {
       setPendingClose(true);
@@ -105,6 +106,25 @@ export function QADrawer({
     }
     onClose();
   };
+  // pendingClose:把焦點推到「繼續編輯」(預設安全動作 = 留下);
+  // 同時 ESC 在 pending 期間視為「繼續編輯」(避免 ESC 再次 requestClose 進無限迴圈)
+  useEffect(() => {
+    if (!pendingClose) return;
+    const id = requestAnimationFrame(() => {
+      pendingCancelBtnRef.current?.focus({ preventScroll: true });
+    });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setPendingClose(false);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [pendingClose]);
 
   return (
     <Overlay
@@ -182,6 +202,7 @@ export function QADrawer({
             </p>
             <div className="qadr-close-confirm-actions">
               <button
+                ref={pendingCancelBtnRef}
                 type="button"
                 className="btn"
                 onClick={() => setPendingClose(false)}
@@ -217,12 +238,12 @@ export function QADrawer({
           <>
             {/* spec 5/5 齊但 user 在 chat(被 override 或 backend complete=false)→ 顯示「回最終預覽」橫條 */}
             {specComplete && !showReview && (
-              <div
-                className="qadr-spec-ready-bar"
-                role="status"
-                aria-live="polite"
-              >
-                <span className="qadr-spec-ready-bar-text">
+              <div className="qadr-spec-ready-bar">
+                <span
+                  className="qadr-spec-ready-bar-text"
+                  role="status"
+                  aria-live="polite"
+                >
                   規格已備齊，可隨時送出建立需求單。
                 </span>
                 <button
@@ -231,12 +252,22 @@ export function QADrawer({
                   onClick={() => setViewOverride("review")}
                   disabled={busy}
                 >
+                  查看最終預覽
                   <ArrowRightIcon aria-hidden focusable="false" />
-                  回最終預覽
                 </button>
               </div>
             )}
-            <div className="drawer-body qadr-body" ref={transcriptRef}>
+            <div
+              className="drawer-body qadr-body"
+              ref={transcriptRef}
+              aria-busy={
+                (!draft && busy) ||
+                (draft &&
+                  (busy || draft.turns[draft.turns.length - 1]?.role === "user"))
+                  ? true
+                  : undefined
+              }
+            >
               {!draft && busy && (
                 <div className="qadr-bootstrap" role="status" aria-live="polite">
                   <ThinkingDots />
@@ -297,7 +328,12 @@ export function QADrawer({
                       />
                     )}
                     {showThinking && (
-                      <div className="qadr-loading mono">
+                      <div
+                        className="qadr-loading"
+                        role="status"
+                        aria-live="polite"
+                        id="qadr-thinking-status"
+                      >
                         <span>助理思考中</span>
                         <ThinkingDots />
                       </div>
@@ -321,12 +357,26 @@ export function QADrawer({
                   });
                   if (missing.length === 0) return null;
                   const filled = FIELD_LABELS.length - missing.length;
+                  const labels = missing.map((m) => m.label);
+                  const srSentence = `規格已完成 ${filled} / ${FIELD_LABELS.length}，待補：${labels.join("、")}。`;
                   return (
-                    <div className="qadr-progress mono" role="status" aria-live="polite">
-                      <span>規格 {filled}/{FIELD_LABELS.length} · 還差</span>
-                      {missing.map((m) => (
-                        <span key={m.key} className="qadr-progress-missing">
+                    <div
+                      className="qadr-progress mono"
+                      role="status"
+                      aria-live="polite"
+                      aria-label={srSentence}
+                    >
+                      <span aria-hidden="true">
+                        規格 {filled}/{FIELD_LABELS.length} · 待補
+                      </span>
+                      {missing.map((m, i) => (
+                        <span
+                          key={m.key}
+                          className="qadr-progress-missing"
+                          aria-hidden="true"
+                        >
                           {m.label}
+                          {i < missing.length - 1 ? "" : ""}
                         </span>
                       ))}
                     </div>
@@ -407,7 +457,8 @@ function SpecChecklist({ spec }: { spec: Partial<TicketSpec> | null }) {
     setExpanded((cur) => (cur === key ? null : key));
   }
 
-  const panelId = "qadr-chip-panel";
+  const baseId = useId();
+  const panelId = `${baseId}-chip-panel`;
   return (
     <div className="qadr-checklist">
       <div
@@ -429,9 +480,8 @@ function SpecChecklist({ spec }: { spec: Partial<TicketSpec> | null }) {
               }
               title={`${f.label}・${isFilled ? "已填" : "未填"}`}
               aria-label={`${f.label}（${isFilled ? "已填" : "未填"}）`}
-              aria-pressed={isOpen}
               aria-expanded={isOpen}
-              aria-controls={panelId}
+              aria-controls={isOpen ? panelId : undefined}
               onClick={() => toggle(f.key)}
             >
               <span className="qadr-chip-dot" aria-hidden />
@@ -536,18 +586,24 @@ function InlineMultiSelect({
   }
 
   return (
-    <div className="qadr-inline-multi">
+    <div
+      className="qadr-inline-multi"
+      role="group"
+      aria-label="多選回覆"
+      aria-describedby={statusId}
+    >
       <div
         className="qadr-options qadr-options-multi"
         role="group"
         aria-label="多選回覆選項"
-        aria-describedby={statusId}
       >
         {options.map((o, i) => {
           const checked = picked.has(i);
+          // role=checkbox on a native <button> 已具備 Enter/Space activation;
+          // 再加 onKeyDown handler 會 double-toggle。只留 onClick 即可。
           return (
             <button
-              key={o}
+              key={`${i}-${o}`}
               type="button"
               role="checkbox"
               aria-checked={checked}
@@ -555,12 +611,6 @@ function InlineMultiSelect({
                 "btn qadr-option qadr-option-multi" + (checked ? " is-picked" : "")
               }
               onClick={() => toggle(i)}
-              onKeyDown={(e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  toggle(i);
-                }
-              }}
               disabled={busy}
             >
               <span className="qadr-option-check" aria-hidden>
@@ -575,7 +625,7 @@ function InlineMultiSelect({
         id={statusId}
         role="status"
         aria-live="polite"
-        className="qadr-multi-status mono"
+        className="qadr-multi-status"
       >
         {picked.size === 0 ? "尚未選擇任何選項" : `已選 ${picked.size} 項`}
       </div>
@@ -676,9 +726,10 @@ function Composer({
           id={taId}
           className="qadr-input qadr-input-multiline"
           value={text}
-          placeholder="描述要建立的需求單內容…"
+          placeholder={busy ? "助理回覆後即可繼續補充…" : "描述要建立的需求單內容…"}
           rows={1}
           aria-label="描述要建立的需求單內容"
+          aria-describedby={busy ? "qadr-thinking-status" : undefined}
           onChange={(e) => {
             setText(e.target.value);
             onTextChange?.(e.target.value);
@@ -718,7 +769,7 @@ function Composer({
           type="button"
           title="放棄當前草稿，本次對話不會保留"
         >
-          取消草稿
+          捨棄草稿
         </button>
         <div className="qadr-composer-hint mono" aria-hidden="true">
           Enter 送出 · Shift+Enter 換行
@@ -753,7 +804,7 @@ function SpecReview({
 
   return (
     <div className="qadr-spec">
-      <div className="qadr-spec-head mono">最終預覽 — 微調後送出建立需求單。</div>
+      <div className="qadr-spec-head">最終預覽 — 微調後送出建立需求單。</div>
       {hasSplit && (
         <section
           className="qadr-split-proposal"
@@ -785,6 +836,7 @@ function SpecReview({
                 type="checkbox"
                 checked={useSplit}
                 onChange={(e) => setUseSplit(e.target.checked)}
+                aria-describedby="qadr-split-outcome"
               />
               <span>
                 <strong>送出時拆成 {splitInto!.length} 張獨立需求單</strong>
@@ -793,6 +845,16 @@ function SpecReview({
                 </span>
               </span>
             </label>
+            <div
+              id="qadr-split-outcome"
+              className="qadr-split-outcome"
+              role="status"
+              aria-live="polite"
+            >
+              {useSplit
+                ? `目前送出會建立 ${splitInto!.length} 張獨立需求單。`
+                : "目前送出會建立 1 張合併需求單（以下方 spec 為準）。"}
+            </div>
           </div>
         </section>
       )}
@@ -829,11 +891,16 @@ function SpecReview({
           onChange={(e) => setEdited({ ...edited, prompt: e.target.value })}
         />
       </Field>
-      <Field label="模式">
-        <div className="qadr-choice-row">
+      <Field label="模式" htmlId="qadr-mode-group">
+        <div
+          className="qadr-choice-row"
+          role="radiogroup"
+          aria-labelledby="qadr-mode-group-label"
+        >
           <label className="qadr-radio-label">
             <input
               type="radio"
+              name="qadr-mode"
               checked={edited.mode === "iter"}
               onChange={() => setEdited({ ...edited, mode: "iter" })}
             />
@@ -842,6 +909,7 @@ function SpecReview({
           <label className="qadr-radio-label">
             <input
               type="radio"
+              name="qadr-mode"
               checked={edited.mode === "step"}
               onChange={() => setEdited({ ...edited, mode: "step" })}
             />
@@ -864,11 +932,16 @@ function SpecReview({
               }}
             />
           </Field>
-          <Field label="達上限後">
-            <div className="qadr-choice-row">
+          <Field label="達上限後" htmlId="qadr-stoplimit-group">
+            <div
+              className="qadr-choice-row"
+              role="radiogroup"
+              aria-labelledby="qadr-stoplimit-group-label"
+            >
               <label className="qadr-radio-label">
                 <input
                   type="radio"
+                  name="qadr-iter-stop"
                   checked={(edited.iterStopAtLimit ?? true) === true}
                   onChange={() => setEdited({ ...edited, iterStopAtLimit: true })}
                 />
@@ -877,10 +950,11 @@ function SpecReview({
               <label className="qadr-radio-label">
                 <input
                   type="radio"
+                  name="qadr-iter-stop"
                   checked={(edited.iterStopAtLimit ?? true) === false}
                   onChange={() => setEdited({ ...edited, iterStopAtLimit: false })}
                 />
-                標 failed,跳下一張
+                標記為失敗，跳下一張
               </label>
             </div>
           </Field>
@@ -888,7 +962,7 @@ function SpecReview({
       )}
       <div className="qadr-spec-actions">
         <button type="button" className="btn" onClick={onCancel} disabled={busy}>
-          取消草稿
+          捨棄草稿
         </button>
         {onResumeChat && (
           <button
@@ -912,6 +986,8 @@ function SpecReview({
             </>
           ) : useSplit && hasSplit ? (
             `送出建立 ${splitInto!.length} 張需求單`
+          ) : hasSplit ? (
+            "送出建立 1 張合併需求單"
           ) : (
             "送出建立需求單"
           )}
@@ -921,10 +997,23 @@ function SpecReview({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlId,
+  children,
+}: {
+  label: string;
+  htmlId?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="qadr-field">
-      <div className="qadr-field-label mono">{label}</div>
+      <div
+        className="qadr-field-label"
+        id={htmlId ? `${htmlId}-label` : undefined}
+      >
+        {label}
+      </div>
       {children}
     </div>
   );

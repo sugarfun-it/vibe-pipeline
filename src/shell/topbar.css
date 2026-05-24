@@ -75,8 +75,19 @@
 .proj-menu-item > svg:first-child { color: var(--fg-mute); flex-shrink: 0; }
 .proj-menu-item-text { flex: 1; min-width: 0; }
 .proj-menu-item-name { font-size: 12.5px; font-weight: 500; }
-.proj-menu-item-path { font-size: 10.5px; color: var(--fg-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.proj-menu-item-meta { font-size: 10px; color: var(--fg-faint); margin-left: auto; flex-shrink: 0; }
+.proj-menu-item.is-active .proj-menu-item-name { font-weight: 600; }
+/* path / meta 字級拉到 11.5-12px,避免落入接近不可讀區間 — advisor topbar-r1 */
+.proj-menu-item-path { font-size: 11.5px; color: var(--fg-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-menu-item-meta {
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  line-height: 1.2;
+}
 /* ✓ 跟 .proj-menu-remove(X)用同樣 absolute right:6px 對齊;active row 沒 X(disabled+opacity:0),
    ✓ 出現在原本 X 的視覺位置;hover 非 active row 時 X 出現也在同位置 → 兩 icon 完美對齊。 */
 .proj-menu-check {
@@ -159,17 +170,28 @@
   .topbar-spacer {
     display: none;
   }
-  /* topbar-active-meta(branch chip + 開啟資料夾)mobile 仍 inline,不收進 overflow */
+  /* topbar-active-meta(branch chip + 開啟資料夾)mobile 仍 inline,不收進 overflow
+     flex-shrink:0 + 確保 reveal chip 可見(advisor topbar.active_meta_localhost r1:
+     proj-trigger 在 mobile 是 flex:1 1 auto 會把這個 cluster 擠到 0 寬,要顯式保留空間) */
   .topbar-active-meta {
     gap: 6px;
+    flex-shrink: 0;
   }
   .topbar-active-meta .chip {
     padding: 3px 7px;
     font-size: 11px;
   }
-  /* 「開啟專案資料夾」在手機沒有 file explorer,直接隱藏 */
+  /* 「開啟專案資料夾」在 mobile 上:不直接隱藏(會吃掉 isLocalHost 時唯一的 file explorer 入口
+     — advisor topbar.active_meta_localhost r1),改成 icon-only 節省寬度。
+     文字 hidden,圖示保留,aria-label / title 不變。
+     用 !important 抵銷舊版的 display:none 殘留(若有) */
   .topbar-reveal-folder {
-    display: none !important;
+    display: inline-flex !important;
+    padding: 6px 8px;
+    flex-shrink: 0;
+  }
+  .topbar-reveal-folder > span {
+    display: none;
   }
   /* 內容少不需要 overflow menu — 全部 inline 顯示 */
   .topbar-overflow-mobile-items {
@@ -245,8 +267,23 @@
   opacity: 0.6;
 }
 
+/* 空狀態 — 用一般 body 樣式而非 section label,語意上是 status / help */
+.proj-menu-empty {
+  padding: 10px 10px 6px;
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.45;
+}
+
 .proj-menu-shortcut {
   margin-left: auto;
+}
+
+/* touch / coarse pointer:鍵盤快捷字片無實際用途,隱藏避免吃寬 */
+@media (hover: none), (pointer: coarse) {
+  .proj-menu-shortcut {
+    display: none;
+  }
 }
 
 .proj-menu-error {
@@ -295,10 +332,11 @@
   opacity: 1;
 }
 
-/* touch / coarse pointer:X 永遠顯示(沒有 hover affordance,不能藏)*/
+/* touch / coarse pointer:X 永遠顯示(沒有 hover affordance,不能藏)
+   advisor topbar-r1:把 opacity 拉到 1,touch 用戶才有可靠的移除入口 */
 @media (hover: none), (pointer: coarse) {
   .proj-menu-remove:not(:disabled) {
-    opacity: 0.7;
+    opacity: 1;
   }
 }
 
@@ -331,6 +369,18 @@
 .browse-modal-card {
   max-width: 600px;
   width: 100%;
+  /* mobile vertical 防止 actions 被推出視窗;list 內部 scroll(advisor browse-loading-r1) */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+  min-height: 0;
+}
+
+.browse-modal-card .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 標題列 + 右上 X 關閉按鈕(modal a11y 標準:可見的 close affordance) */
@@ -378,8 +428,9 @@
   padding: 9px 12px;
   background: var(--panel-2, var(--bg));
   border: 1px solid var(--line);
-  border-left: 2px solid var(--accent);
   border-radius: 6px;
+  /* 用中性 line-2 而非 accent — accent 留給真正可點 / 焦點(advisor browse-loaded-r1) */
+  border-left: 2px solid var(--line-2, var(--line));
 }
 
 .browse-path-label {
@@ -400,12 +451,48 @@
   min-width: 0;
 }
 
+/* loading 狀態 — value 改成 mute 顏色 + italic,避免看起來像真實 path
+   (advisor browse-loading-r1) */
+.browse-current-path.is-loading {
+  color: var(--fg-faint);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* error 狀態的 path 欄 — 用 mute 顏色標示「尚未取得位置」,跟 loading 區分
+   (advisor browse-error-r1) */
+.browse-current-path.is-error-path {
+  color: var(--fg-faint);
+  font-style: italic;
+  font-weight: 400;
+}
+
 .browse-toolbar {
   display: flex;
   gap: 6px;
   margin-bottom: 10px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+/* coarse pointer / touch:統一 ≥ 44px 觸控目標(advisor browse-loaded r2:
+   不要混用 36/40/44,iOS HIG / Material 都建議 44px 起跳)。modal 內所有可點控件,
+   含 close、toolbar 導覽、drive chip、entry row、footer btn,全部對齊。 */
+@media (hover: none), (pointer: coarse) {
+  .browse-toolbar .btn,
+  .browse-drive-btn,
+  .browse-modal-card .modal-actions .btn {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .browse-modal-close {
+    width: 44px;
+    height: 44px;
+  }
+  .browse-entry {
+    min-height: 44px;
+  }
 }
 
 /* 把磁碟分組視覺收緊,避免和導覽 btn 混為同一群 */
@@ -437,7 +524,9 @@
 
 /* list 容器:`<ul role="list">` 變語意化,reset 預設 padding/margin */
 .browse-list {
-  height: 280px;
+  flex: 1 1 auto;
+  min-height: 200px;
+  max-height: 360px;
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -449,6 +538,12 @@
 
 .browse-list > li {
   display: block;
+}
+
+/* placeholder li 必須 override block display 才能 flex 置中
+   (advisor browse-loading-r1) */
+.browse-list > li.browse-list-placeholder--center {
+  display: flex;
 }
 
 .browse-list-placeholder {
@@ -465,7 +560,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 200px;
+  /* 佔滿 .browse-list 整個高度,避免 loading / empty / error 文字偏左上看起來像沒置中
+     (advisor topbar browse-loading-r1) */
+  min-height: 100%;
+  height: 100%;
   padding: 24px;
 }
 
@@ -515,11 +613,28 @@
 }
 
 /* error placeholder 的「重試」鍵:不從外部 .btn 變數覆寫,
-   直接用 sm 變體(現有 button-sm 沒有,自己 inline 小一點) */
+   直接用 sm 變體(現有 button-sm 沒有,自己 inline 小一點)
+   advisor browse-error-r1:retry 升 primary,讓它比 disabled 主按鈕更顯眼 */
 .browse-list-placeholder--error .btn {
-  padding: 4px 12px;
-  font-size: 12px;
-  margin-top: 4px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+
+/* error placeholder 的 title + detail:title 為錯誤摘要,detail 為原始錯誤訊息
+   合進同一塊,避免 footer 重複(advisor browse-error-r1) */
+.browse-list-placeholder-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.browse-list-placeholder-detail {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  max-width: 360px;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .browse-entry {
@@ -544,6 +659,8 @@
 
 .browse-entry:hover:not(:disabled) {
   background: var(--hover, rgba(0, 0, 0, 0.04));
+  /* 加 inset accent indicator,強化 row 是可點(advisor browse-loaded-r1) */
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .browse-entry:focus-visible {
@@ -552,7 +669,13 @@
 }
 
 .browse-entry-name {
-  word-break: break-all;
+  /* 單行 ellipsis,避免長 folder 名 break-all 把 row 撐高
+     (advisor browse-loaded-r1);full name 仍在 aria-label */
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .browse-error {

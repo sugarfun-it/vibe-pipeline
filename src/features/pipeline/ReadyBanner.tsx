@@ -157,11 +157,13 @@ export function ReadyBanner({
               title: isRetry
                 ? `重試合併 ${pipeline.branch} → ${baseBranch}?`
                 : `合併 ${pipeline.branch} → ${baseBranch}?`,
+              // iter-uiux-2026-05-24 confirm-dialog.standard r1 std-i18n-punct —
+              // 描述句內 ASCII `;` `,` 改全形「；」「，」,跟整體繁中文案排版對齊。
               description: isRetry
                 ? `將清除上次失敗紀錄並重新嘗試合併。\n\n` +
-                  `若上次因工作區有未提交變更而失敗,請先 commit 或 stash 再重試,否則會再次失敗。`
-                : `會先嘗試一般合併;若遇到衝突,系統會自動由 AI 協助解決。\n\n` +
-                  `多數情況下會直接成功,不需要進一步操作。`,
+                  `若上次因工作區有未提交變更而失敗，請先 commit 或 stash 再重試，否則會再次失敗。`
+                : `會先嘗試一般合併；若遇到衝突，系統會自動由 AI 協助解決。\n\n` +
+                  `多數情況下會直接成功，不需要進一步操作。`,
               confirmLabel: isRetry ? "重試合併" : `合併入 ${baseBranch}`,
             });
             if (ok) {

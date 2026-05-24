@@ -106,7 +106,7 @@ html.light .init-cmd-text { color: #fbf8f1; }
 
 /* Overlay primitive 已提供 scrim + 置中(drawer-stage--modal),這裡只調 init popup 的寬度 */
 .init-popup-stage .init-card {
-  width: min(440px, calc(100vw - var(--space-6, 24px) * 2));
+  width: min(560px, calc(100vw - var(--space-6, 24px) * 2));
 }
 
 /* phase4-2026-05-23-008 — move InitPopup.tsx inline styles into named classes */

@@ -260,10 +260,12 @@ export function TopBar({
             autoFocusFirstItem={false}
             manageRovingFocus={false}
           >
-              <div className="proj-menu-label mono">最近專案</div>
+              {recents.length > 0 && (
+                <div className="proj-menu-label">最近專案</div>
+              )}
               {recents.length === 0 && (
-                <div className="proj-menu-label mono proj-menu-label--empty">
-                  (還沒開過任何專案)
+                <div className="proj-menu-empty" role="status">
+                  尚未開過任何專案
                 </div>
               )}
               {recents.map((p) => {
@@ -280,7 +282,7 @@ export function TopBar({
                         <div className="proj-menu-item-name">{p.name}</div>
                         <div className="proj-menu-item-path mono">{p.path}</div>
                       </div>
-                      <span className="proj-menu-item-meta mono">
+                      <span className="proj-menu-item-meta">
                         {p.hasInit ? "已初始化" : "未初始化"}
                       </span>
                       {isActive && (
@@ -289,20 +291,24 @@ export function TopBar({
                         </span>
                       )}
                     </button>
-                    <button
-                      type="button"
-                      className="proj-menu-remove"
-                      onClick={() => removeRecentEntry(p)}
-                      disabled={busy || isActive}
-                      title={isActive ? "目前使用中的專案不能從清單移除" : "從最近專案清單移除（不刪檔）"}
-                      aria-label={isActive ? "目前使用中，不能移除" : `從最近專案移除 ${p.name}`}
-                    >
-                      <CloseIcon />
-                    </button>
+                    {/* active row 不 render remove button — ✓ 與 X 互斥使用同一個右側 slot,
+                        避免兩個 absolute 元素疊在同位置造成槽位語意 / 回歸風險(advisor topbar-r1) */}
+                    {!isActive && (
+                      <button
+                        type="button"
+                        className="proj-menu-remove"
+                        onClick={() => removeRecentEntry(p)}
+                        disabled={busy}
+                        title="從最近專案清單移除（不刪檔）"
+                        aria-label={`從最近專案移除 ${p.name}`}
+                      >
+                        <CloseIcon />
+                      </button>
+                    )}
                   </div>
                 );
               })}
-              <div className="proj-menu-divider" />
+              {recents.length > 0 && <div className="proj-menu-divider" />}
               <button
                 type="button"
                 className="proj-menu-item proj-menu-item-action"
@@ -408,14 +414,15 @@ export function TopBar({
               <div className="browse-path-row">
                 <span className="browse-path-label" id="browse-path-label">目前位置</span>
                 <div
-                  className="mono browse-current-path"
+                  className={"mono browse-current-path" + (!browseData && !lastTriedPath && !error ? " is-loading" : "") + (!browseData && error ? " is-error-path" : "")}
                   aria-labelledby="browse-path-label"
                   aria-live="polite"
-                  title={browseData?.path ?? lastTriedPath ?? "載入中"}
+                  title={browseData?.path ?? lastTriedPath ?? (error ? "尚未取得位置" : "正在讀取資料夾")}
                 >
-                  {/* error 時保留 lastTriedPath,讓 user 知道剛剛試到哪(advisor 2026-05-24:
-                      避免變 "(載入中…)" → 看起來像永遠 loading 的 dead-end) */}
-                  {browseData?.path ?? lastTriedPath ?? "(載入中…)"}
+                  {/* 三段:loaded(顯示 path) / first-load error(顯示 "尚未取得位置") /
+                      retry-after-known-path error(顯示 lastTriedPath) / loading(italic).
+                      advisor browse-error-r1:錯誤狀態不能還顯示 "正在讀取資料夾…" loading copy */}
+                  {browseData?.path ?? lastTriedPath ?? (error ? "尚未取得位置" : "正在讀取資料夾…")}
                 </div>
               </div>
               <div className="browse-toolbar" role="toolbar" aria-label="資料夾導覽">
@@ -471,12 +478,14 @@ export function TopBar({
                 ) : !browseData && error ? (
                   // error + no data → 不要顯示一個無意義的 dash;給出明確的「重試」入口
                   // (advisor 2026-05-24:browse_modal_error 不能變 dead-end)
+                  // r2: 合併 footer error msg 進 placeholder 內,單一錯誤區塊
                   <li className="browse-list-placeholder browse-list-placeholder--center browse-list-placeholder--error">
                     <span aria-hidden className="browse-list-placeholder-icon">!</span>
-                    <span>讀取失敗</span>
+                    <span className="browse-list-placeholder-title">讀取失敗</span>
+                    <span className="browse-list-placeholder-detail">{error}</span>
                     <button
                       type="button"
-                      className="btn"
+                      className="btn btn-primary"
                       onClick={() => void loadBrowse(lastTriedPath)}
                       disabled={browseLoading}
                     >
@@ -511,7 +520,9 @@ export function TopBar({
                   ))
                 )}
               </ul>
-              {error && (
+              {/* footer error only when error 但仍有 browseData(stale data 警告);
+                  全失敗(無 data) 已合進中央 placeholder,不重複(advisor browse-error-r1) */}
+              {error && browseData && (
                 <div className="browse-error" role="alert">{error}</div>
               )}
             </div>

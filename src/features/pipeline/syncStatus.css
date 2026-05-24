@@ -30,6 +30,22 @@
   opacity: 0.45;
   box-shadow: none;
 }
+/* iter-uiux 2026-05-25 sync R1 (sync-status-bar-focus-001):button chip 需 visible focus ring,
+   不能只靠 :hover。:active 仍保留 translateY 微動。 */
+.sync-chip:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+/* iter-uiux 2026-05-25 sync R2 (sync-status-bar-touch-002):touch target 用真實 box 高度
+   ≥40px(改 padding,min-height),不再靠 ::before pseudo-element(跨瀏覽器 hit testing 不穩)。
+   只在 coarse pointer 生效;desktop fine pointer 仍維持原 28px 高度視覺一致。 */
+@media (pointer: coarse) {
+  button.sync-chip {
+    min-height: 40px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}
 .sync-chip .sync-chip-arrow {
   font-size: 13px;
   line-height: 1;
@@ -135,4 +151,12 @@
 @keyframes sync-thinking-dot {
   0%, 60%, 100% { opacity: 0.4; transform: scale(1); }
   30%           { opacity: 1;   transform: scale(1.25); }
+}
+/* iter-uiux 2026-05-25 sync R1 (sync-merging-a11y-motion):reduced-motion 偏好下停動畫,
+   仍保留三點輪廓(穩定 opacity)讓視覺仍識別到 busy。 */
+@media (prefers-reduced-motion: reduce) {
+  .sync-thinking-dots span {
+    animation: none;
+    opacity: 0.85;
+  }
 }

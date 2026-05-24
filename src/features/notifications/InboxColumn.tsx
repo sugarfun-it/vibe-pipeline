@@ -30,7 +30,7 @@ export function InboxColumn(props: Common) {
   if (props.state === "hidden") return null;
   if (props.state === "collapsed") {
     return (
-      <aside className="inbox-col" aria-label="Inbox 已收合">
+      <aside className="inbox-col" aria-label="通知欄已收合" id="inbox-aside">
         <InboxStrip
           items={props.items}
           unreadCount={props.unreadCount}
@@ -41,7 +41,7 @@ export function InboxColumn(props: Common) {
     );
   }
   return (
-    <aside className="inbox-col" aria-label="Inbox 已展開">
+    <aside className="inbox-col" aria-label="通知欄已展開" id="inbox-aside">
       <InboxPanel {...props} onCollapse={() => props.setState("collapsed")} />
     </aside>
   );
@@ -142,9 +142,10 @@ function InboxStrip({
           e.stopPropagation();
           onExpand();
         }}
-        title={unreadCount > 0 ? `展開 Inbox(${unreadCount} 未讀)` : "展開 Inbox"}
-        aria-label={unreadCount > 0 ? `展開 Inbox,${unreadCount} 未讀` : "展開 Inbox"}
+        title={unreadCount > 0 ? `展開通知(${unreadCount} 未讀)` : "展開通知"}
+        aria-label={unreadCount > 0 ? `展開通知,${unreadCount} 未讀` : "展開通知"}
         aria-expanded={false}
+        aria-controls="inbox-aside"
       >
         <BellIcon />
         {unreadCount > 0 && (
@@ -242,12 +243,21 @@ function InboxStrip({
           )}
         </button>
       ) : (
-        // empty strip:不 render pips button,只留 bell + 底部 INBOX label
-        <div className="inbox-strip-pips-empty" aria-hidden="true"></div>
+        // empty strip:整塊中段當第二個 expand 觸發區(避免 52px 寬只有 bell 一顆能點)
+        <button
+          type="button"
+          className="inbox-strip-pips-empty"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand();
+          }}
+          title="展開通知"
+          aria-label="展開通知"
+        />
       )}
 
       <div className="inbox-strip-spacer"></div>
-      <div className="inbox-strip-label" aria-hidden="true">INBOX</div>
+      <div className="inbox-strip-label" aria-hidden="true">通知</div>
 
       {previewItem && previewPos && createPortal(
         <div
@@ -304,15 +314,15 @@ function InboxPanel({
   return (
     <div className="inbox-panel">
       <div className="inbox-head">
-        <h3>Inbox</h3>
+        <h3>通知</h3>
         {unreadCount > 0 && <span className="inbox-head-count mono">{unreadCount} 未讀</span>}
         <div className="inbox-head-actions">
           <button
             type="button"
             className="icon-btn inbox-collapse-btn"
-            title="收合 Inbox"
+            title="收合通知"
             onClick={onCollapse}
-            aria-label="收合 Inbox 通知欄"
+            aria-label="收合通知欄"
           >
             <ChevronRightIcon />
           </button>
@@ -335,7 +345,7 @@ function InboxPanel({
             aria-label={`${label}通知 篩選,${count} 則${filter === key ? ",目前選取" : ""}`}
           >
             {label}
-            {count > 0 && <span className="inbox-filter-count mono" aria-hidden="true">{count}</span>}
+            <span className="inbox-filter-count mono" aria-hidden="true">{count}</span>
           </button>
         ))}
       </fieldset>
@@ -346,7 +356,7 @@ function InboxPanel({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="inbox-list inbox-list-empty">
+        <div className="inbox-list inbox-list-empty" role="status" aria-live="polite">
           <div className="inbox-empty">
             <div className="inbox-empty-icon">
               <InboxEmptyIcon />
@@ -435,10 +445,10 @@ function InboxItem({
     const parts: string[] = [];
     parts.push(item.unread ? "未讀" : "已讀");
     parts.push(`${SEV_TEXT[item.sev] ?? ""}通知`);
-    parts.push(`「${item.title}」`);
-    if (item.sub) parts.push(item.sub);
-    parts.push(item.ts);
-    return parts.join(",");
+    parts.push(`標題:「${item.title}」`);
+    if (item.sub) parts.push(`說明:${item.sub}`);
+    parts.push(`時間:${item.ts}`);
+    return parts.join("。");
   })();
   // Structural fix: card 是 <article>(無 role),主開啟動作改成獨立的 .inbox-item-open <button>
   // 用 absolute inset:0 覆蓋整張卡作為 "click-anywhere" hit area;X / actions 是兄弟 <button>

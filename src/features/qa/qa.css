@@ -60,6 +60,12 @@
 }
 .qadr-chip.is-expanded {
   border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
+  color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.qadr-chip.is-filled.is-expanded {
+  background: color-mix(in srgb, var(--accent) 14%, var(--done-soft));
   color: var(--accent);
 }
 .qadr-chip-dot {
@@ -93,9 +99,7 @@
   gap: 4px;
 }
 .qadr-chip-panel-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 11px;
   color: var(--accent);
   font-weight: 600;
 }
@@ -169,6 +173,12 @@
     padding-inline: var(--space-4, 16px);
     font-size: 12.5px;
   }
+  /* checklist chip 是 disclosure 控制,但密度高;觸控裝置抬到 32px min-height
+     (drawer-head 內密集排,完全 44px 會撐爆 row,32 是 touch-friendly 折衷) */
+  .qadr-chip {
+    min-height: 32px;
+    padding: 6px 10px;
+  }
 }
 .qadr-bubble-role {
   display: block;
@@ -216,7 +226,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2, 8px);
-  min-height: 220px;
+  min-height: 100%;
   padding: var(--space-5, 20px);
   color: var(--fg-mute);
   text-align: center;
@@ -281,12 +291,17 @@
 }
 .qadr-progress-missing {
   font-size: 10px;
-  padding: 1px 6px;
-  background: var(--paused-soft, color-mix(in srgb, var(--paused) 14%, transparent));
+  padding: 1px 4px;
+  background: transparent;
   color: var(--paused);
-  border: 1px solid color-mix(in srgb, var(--paused) 28%, transparent);
-  border-radius: 3px;
+  border: 0;
+  border-radius: 0;
   letter-spacing: 0.04em;
+}
+.qadr-progress-missing + .qadr-progress-missing::before {
+  content: "、";
+  color: var(--fg-faint);
+  margin-right: 2px;
 }
 
 .qadr-composer {
@@ -385,6 +400,16 @@
     padding-inline: var(--space-4, 16px);
     align-self: stretch;
   }
+  /* composer send button (icon-only) — touch-target 至少 44×44,
+     textarea min-height 同步抬高,讓 align-items:stretch 兩邊都 ≥44 */
+  .qadr-send {
+    min-width: 44px;
+    width: 44px;
+    min-height: 44px;
+  }
+  .qadr-input-multiline {
+    min-height: 44px;
+  }
 }
 .qadr-composer-row {
   display: flex;
@@ -457,10 +482,16 @@
   border: 1px solid var(--line-2);
   background: var(--bg);
   color: var(--fg);
+  transition: border-color 120ms, box-shadow 120ms;
 }
-.qadr-input:focus {
+.qadr-input:hover {
+  border-color: var(--line-3, var(--fg-faint));
+}
+.qadr-input:focus,
+.qadr-input:focus-visible {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 .qadr-composer-row .qadr-input {
   flex: 1;
@@ -524,7 +555,7 @@
   gap: var(--space-3, 12px);
 }
 .qadr-spec-head {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--fg-mute);
   margin-bottom: 4px;
 }
@@ -534,10 +565,10 @@
   gap: 4px;
 }
 .qadr-field-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fg-faint);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--fg-mute);
 }
 .qadr-spec-actions {
   display: flex;
@@ -558,6 +589,12 @@
     background: var(--panel-2);
     border-top: 1px solid var(--line);
     flex-wrap: wrap;
+  }
+  /* prompt textarea (rows=10) 在 mobile 太高,把後面 mode / iter-limit / actions 推到無法 reach。
+     收到合理高度;user 仍可手動 resize 拉大。 */
+  .qadr-field .qadr-textarea {
+    min-height: 80px;
+    max-height: 40vh;
   }
 }
 
@@ -793,6 +830,14 @@
   font-size: 11.5px;
   color: var(--fg-mute);
   margin-top: 2px;
+}
+.qadr-split-outcome {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 /* chat_progress mobile:progress row + composer + cancel row + hint 都擠在 sticky footer,

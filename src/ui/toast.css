@@ -37,9 +37,10 @@ html.light {
 .toast-stage {
   position: fixed;
   /* --toast-stage-right defaults to clear the right inbox strip (~52px collapsed)
-     + 12px gap. Overridable per shell layout (codex toast-stack-006 / danger-010). */
+     + 12px gap. --toast-stage-bottom lets screens with a bottom action bar push
+     the stage above their fixed bar (codex toast-success-r2-stage-overlap). */
   right: calc(var(--toast-stage-right, 64px) + env(safe-area-inset-right, 0px));
-  bottom: calc(var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--toast-stage-bottom, var(--space-4, 16px)) + env(safe-area-inset-bottom, 0px));
   left: auto;
   display: flex;
   flex-direction: column;
@@ -95,6 +96,24 @@ html.light {
 .toast.toast-exit {
   animation: toastOut 180ms ease-in both;
 }
+
+/* Non-color status cue alongside the variant tint / stripe — text glyph keeps
+   the primitive icon-library-free (codex toast-success-r2-noncolor-status). */
+.toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  color: currentColor;
+}
+.toast-icon-info { background: color-mix(in srgb, var(--toast-info-fg) 18%, transparent); }
 
 .toast-message {
   flex: 1 1 200px;
@@ -162,9 +181,9 @@ html.light {
 }
 
 .toast-success {
-  border-color: color-mix(in srgb, var(--done) 55%, var(--line-2));
-  background: color-mix(in srgb, var(--done) 14%, var(--bg-elevated));
-  color: var(--toast-success-fg);
+  border-color: color-mix(in srgb, var(--done) 40%, var(--line-2));
+  background: color-mix(in srgb, var(--done) 8%, var(--bg-elevated));
+  color: var(--fg);
 }
 .toast-success::before { background: var(--toast-success-stripe); }
 .toast-success .toast-action {
@@ -182,9 +201,9 @@ html.light {
 }
 
 .toast-warning {
-  border-color: color-mix(in srgb, var(--paused) 55%, var(--line-2));
-  background: color-mix(in srgb, var(--paused) 16%, var(--bg-elevated));
-  color: var(--toast-warning-fg);
+  border-color: color-mix(in srgb, var(--paused) 40%, var(--line-2));
+  background: color-mix(in srgb, var(--paused) 10%, var(--bg-elevated));
+  color: var(--fg);
 }
 .toast-warning::before { background: var(--toast-warning-stripe); }
 .toast-warning .toast-action {
@@ -203,8 +222,8 @@ html.light {
 
 .toast-danger {
   border-color: var(--danger-border);
-  background: color-mix(in srgb, var(--failed) 22%, var(--bg-elevated));
-  color: var(--toast-danger-fg);
+  background: color-mix(in srgb, var(--failed) 12%, var(--bg-elevated));
+  color: var(--fg);
 }
 .toast-danger::before { background: var(--toast-danger-stripe); }
 .toast-danger .toast-action {
@@ -227,37 +246,49 @@ html.light {
   .toast-stage {
     right: calc(var(--space-3, 12px) + env(safe-area-inset-right, 0px));
     left: calc(var(--space-3, 12px) + env(safe-area-inset-left, 0px));
-    bottom: calc(var(--space-3, 12px) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--toast-stage-bottom, var(--space-3, 12px)) + env(safe-area-inset-bottom, 0px));
     align-items: stretch;
     max-width: none;
   }
+  /* Default mobile: keep icon + message + close on one row so message-only toasts
+     stay compact (codex toast-success-r2-mobile-empty-action-row). Column layout
+     reserved for toasts that carry an action via .toast-has-action. */
   .toast {
-    /* Force vertical layout on mobile so message gets a clean full-width row
-       and the action row anchors below it (codex toast-danger-002). */
     width: 100%;
     min-width: 0;
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: var(--space-2, 8px);
-    padding: 12px 14px 12px 16px;
+    padding: 10px 12px 10px 14px;
   }
   .toast .toast-message {
     flex: 1 1 auto;
   }
   .toast .toast-actions {
-    margin-left: 0;
-    align-self: flex-end;
+    margin-left: auto;
+    align-self: center;
     gap: var(--space-2, 8px);
   }
-  /* Bigger tap targets on mobile (codex toast-danger-006) */
+  /* Action-bearing toast: stack message above action row for tap comfort. */
+  .toast.toast-has-action {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 14px 12px 16px;
+  }
+  .toast.toast-has-action .toast-actions {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+  /* Bigger tap targets on mobile (codex toast-danger-006 / r2-close-target).
+     44x44 satisfies WCAG 2.5.5 / iOS HIG / Material touch target. */
   .toast .toast-action {
-    height: 40px;
+    height: 44px;
     padding: 0 14px;
     font-size: 13.5px;
   }
   .toast-close {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     font-size: 20px;
   }
 }

@@ -3,12 +3,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Desktop: bias the content stack upward so the instruction visually connects
-     to the top-bar control it references, instead of floating in the middle of
-     a tall canvas. */
-  justify-content: flex-start;
+  /* Desktop: vertically center the empty-state stack so a tall canvas doesn't
+     leave a dead lower half. The upward arrow chip carries the topbar pointer,
+     so we no longer need to bias the stack toward the top. */
+  justify-content: center;
   gap: var(--space-3, 12px);
-  padding: clamp(48px, 12vh, 120px) var(--space-6, 24px) var(--space-6, 24px);
+  padding: clamp(48px, 8vh, 96px) var(--space-6, 24px) clamp(48px, 8vh, 96px);
   color: var(--fg-mute);
   position: relative;
 }
@@ -32,9 +32,8 @@
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
 }
 
 /* Modifier kept as an explicit hook so callers can opt out of the chip-above

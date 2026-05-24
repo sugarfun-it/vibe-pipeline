@@ -83,7 +83,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       {state && (
         <Overlay
-          role="alertdialog"
+          // iter-uiux-2026-05-24 confirm-dialog.standard r1 — `alertdialog` 預留給
+          // 真正破壞性 / 緊急中斷流程(danger=true);非 danger 改用 `dialog`,
+          // 避免 SR 把單純的「合併入 master」當緊急 alert 念出。
+          role={state.danger ? "alertdialog" : "dialog"}
           // danger 模式下 scrim click / ESC 不誤關(避免誤觸毀資料);非 danger 直接 cancel。
           onRequestClose={() => { if (!state.danger) close("cancel"); }}
           labelledBy={titleId}
@@ -114,7 +117,14 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           <div className="confirm-actions">
             <button
               type="button"
-              className="btn confirm-cancel"
+              className={
+                "btn confirm-cancel" +
+                // iter-uiux-2026-05-24 confirm-dialog.danger r1 danger-autofocus-visible —
+                // 加 class 而非靠 [autofocus] attribute(React autoFocus 不一定寫 DOM attr),
+                // CSS 用 .confirm-cancel--autofocused 顯式套 focus ring,讓 click 開啟
+                // danger dialog 時 user 立刻看到「現在 focus 在取消」。
+                (state.danger ? " confirm-cancel--autofocused" : "")
+              }
               onClick={() => close("cancel")}
               // biome-ignore lint/a11y/noAutofocus: 為了在 danger confirm 上預設 focus 取消按鈕,降低誤觸風險
               autoFocus={state.danger}

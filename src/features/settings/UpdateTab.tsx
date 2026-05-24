@@ -8,7 +8,7 @@ import { useAsyncAction } from "../../hooks/useAsyncAction";
 type UpdatingPhase =
   | { kind: "idle" }
   | { kind: "starting" }
-  | { kind: "polling"; afterDown: boolean }
+  | { kind: "polling"; afterDown: boolean; lastTickOk: boolean }
   | { kind: "done"; newTag: string | null }
   | { kind: "error"; reason: string };
 
@@ -61,13 +61,14 @@ export function UpdateTab() {
 
   const startHealthPoll = useCallback(() => {
     startTimeRef.current = Date.now();
-    setPhase({ kind: "polling", afterDown: false });
+    let localAfterDown = false;
+    setPhase({ kind: "polling", afterDown: false, lastTickOk: true });
 
     const tick = async () => {
       if (Date.now() - startTimeRef.current > HEALTH_POLL_TIMEOUT_MS) {
-        const reason = "等待 backend 回來逾時（3 min）。請手動 reload 頁面。";
+        const reason = "系統更新後超過 3 分鐘仍未恢復連線。請重新整理頁面，或稍後再檢查。";
         setPhase({ kind: "error", reason });
-        toast("更新未完成，請查看更新面板", { variant: "danger" });
+        // 不發 toast：錯誤已在 panel 內以 role=alert 持久呈現,toast 會與 panel 重複播報。
         return;
       }
       const ctrl = new AbortController();
@@ -79,20 +80,12 @@ export function UpdateTab() {
       } catch {
         okThisTick = false;
       }
-      let shouldFinalize = false;
-      setPhase((prev) => {
-        if (prev.kind !== "polling") return prev;
-        if (!okThisTick) {
-          // backend 還沒回來 → 進 afterDown 狀態(預期會發生:backend exit + install 跑)
-          return { ...prev, afterDown: true };
-        }
-        // backend 回來了
-        if (prev.afterDown) {
-          shouldFinalize = true;
-        }
-        return prev;
-      });
-      if (shouldFinalize) {
+      // 用 local 變數追 afterDown，避免靠 setState updater closure 判 finalize(race)
+      if (!okThisTick) {
+        localAfterDown = true;
+        setPhase((prev) => (prev.kind === "polling" ? { ...prev, afterDown: true, lastTickOk: false } : prev));
+      } else if (localAfterDown) {
+        // backend 回來了 → finalize
         try {
           const v = await getSystemVersion();
           setVersion(v);
@@ -101,6 +94,9 @@ export function UpdateTab() {
           setPhase({ kind: "done", newTag: null });
         }
         return;
+      } else {
+        // 還沒 down 過,health 仍 ok → 純更新 lastTickOk
+        setPhase((prev) => (prev.kind === "polling" ? { ...prev, lastTickOk: true } : prev));
       }
       pollTimerRef.current = setTimeout(() => {
         void tick();
@@ -123,9 +119,9 @@ export function UpdateTab() {
             ? e.message
             : "觸發更新失敗";
       setPhase({ kind: "error", reason });
-      toast("更新未完成，請查看更新面板", { variant: "danger" });
+      // 同 timeout：錯誤已 in-panel,不重複 toast。
     }
-  }, [toast, startHealthPoll]);
+  }, [startHealthPoll]);
 
   const isUpdating = phase.kind === "starting" || phase.kind === "polling";
   const isError = phase.kind === "error";
@@ -139,7 +135,7 @@ export function UpdateTab() {
 
       {version && (
         <div className="update-tab-body" aria-busy={isUpdating || undefined}>
-          {/* 狀態摘要 — 不是資料表 */}
+          {/* 狀態摘要 — 不是資料表;非 live region(避免與下方 phase block 的 status 重複播報) */}
           <div className="update-summary">
             <div className="update-summary-headline">
               <span className="mono update-version-current" title={version.current}>
@@ -154,7 +150,7 @@ export function UpdateTab() {
             </div>
             {version.latest ? (
               <div className="update-summary-sub">
-                最新 release{" "}
+                最新發行版{" "}
                 <span
                   className={
                     "mono update-version-latest" +
@@ -169,14 +165,14 @@ export function UpdateTab() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="update-release-link"
-                  aria-label="開啟 release notes（新視窗）"
+                  aria-label="開啟發行說明（新視窗）"
                 >
-                  release notes <ExternalLinkIcon aria-hidden />
+                  發行說明 <ExternalLinkIcon aria-hidden />
                 </a>
               </div>
             ) : (
               <div className="update-summary-sub update-summary-sub--error">
-                無法取得 release 資訊
+                無法取得發行版資訊
               </div>
             )}
           </div>
@@ -188,14 +184,16 @@ export function UpdateTab() {
           )}
 
           <div className="push-action-row update-action-row">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void fetchVersion()}
-              disabled={loading || isUpdating}
-            >
-              {loading ? "檢查中…" : "檢查更新"}
-            </button>
+            {!isError && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => void fetchVersion()}
+                disabled={loading || isUpdating}
+              >
+                {loading ? "檢查中…" : "檢查更新"}
+              </button>
+            )}
             {version.hasUpdate && !isDevBuild && !isError && (
               <button
                 type="button"
@@ -203,7 +201,11 @@ export function UpdateTab() {
                 onClick={() => void onApply()}
                 disabled={isUpdating}
               >
-                {isUpdating ? "更新中…" : "立即更新"}
+                {phase.kind === "starting"
+                  ? "啟動中…"
+                  : phase.kind === "polling"
+                    ? "更新中…"
+                    : "立即更新"}
               </button>
             )}
             {isDevBuild && !isError && (
@@ -214,7 +216,11 @@ export function UpdateTab() {
                 disabled={isUpdating}
                 title="切回最新正式 release（會覆蓋目前 dev / dirty build）"
               >
-                {isUpdating ? "更新中…" : "切回正式 release"}
+                {phase.kind === "starting"
+                  ? "啟動中…"
+                  : phase.kind === "polling"
+                    ? "更新中…"
+                    : "切回正式 release"}
               </button>
             )}
           </div>
@@ -223,13 +229,29 @@ export function UpdateTab() {
             上次檢查：{formatLastChecked(lastCheckedAt)}
           </div>
 
+          {phase.kind === "starting" && (
+            <div className="update-progress" role="status" aria-live="polite">
+              <SpinnerIcon className="update-progress-spinner" aria-hidden />
+              <div className="update-progress-text">
+                <div className="update-progress-title">啟動更新中…</div>
+                <div className="update-progress-sub">
+                  已送出更新指令，等待 backend 接手。
+                </div>
+              </div>
+            </div>
+          )}
+
           {phase.kind === "polling" && (
             <div className="update-progress" role="status" aria-live="polite">
               <SpinnerIcon className="update-progress-spinner" aria-hidden />
               <div className="update-progress-text">
                 <div className="update-progress-title">backend 重啟中，通常需 30-60 秒</div>
                 <div className="update-progress-sub">
-                  {phase.afterDown ? "已重新連線，正在確認版本…" : "等待 backend 下線…"}
+                  {!phase.afterDown
+                    ? "等待 backend 下線…（更新流程預期會短暫離線）"
+                    : !phase.lastTickOk
+                      ? "backend 暫時離線中，持續確認回應…"
+                      : "已重新連線，正在確認版本…"}
                 </div>
               </div>
             </div>
@@ -244,9 +266,17 @@ export function UpdateTab() {
                     <>
                       到 <span className="mono update-success-tag">{phase.newTag}</span>
                     </>
-                  ) : ""}
+                  ) : ""}，重新整理頁面後生效。
                 </div>
-                <div className="update-success-sub">重新整理後會載入新版。</div>
+                <div className="update-success-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => window.location.reload()}
+                  >
+                    重新整理頁面
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -258,20 +288,20 @@ export function UpdateTab() {
               <div className="update-error-actions">
                 <button
                   type="button"
+                  className="btn btn-primary"
+                  onClick={() => window.location.reload()}
+                >
+                  重新整理頁面
+                </button>
+                <button
+                  type="button"
                   className="btn"
                   onClick={() => {
                     setPhase({ kind: "idle" });
                     void fetchVersion();
                   }}
                 >
-                  重新檢查
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => window.location.reload()}
-                >
-                  重新整理頁面
+                  重新檢查連線
                 </button>
               </div>
             </div>

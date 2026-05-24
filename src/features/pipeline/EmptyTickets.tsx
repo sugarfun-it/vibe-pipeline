@@ -9,19 +9,22 @@ export function EmptyTickets({
 }) {
   return (
     <div className="focus-empty">
-      <div className="focus-empty-title">
+      <h2 className="focus-empty-title">
         {hasActiveDraft ? "有一張 ticket 在 QA 中" : "還沒任何 ticket"}
-      </div>
+      </h2>
       <div className="focus-empty-desc">
         {hasActiveDraft
-          ? "之前開了 QA 但沒收尾,點下方按鈕接續對話。"
-          : "用「+ ticket」開 QA drawer,跟 AI 對話收斂出 goal / acceptance / prompt,完成後加進 pipeline。"}
+          ? "之前開了 QA 但還沒收尾，按「接續 QA」繼續對話。"
+          : "用上方「+ 新增 ticket」開始跟 AI 對話,一起整理目標、驗收條件與提示詞,完成後加入 pipeline。"}
       </div>
       <button type="button"
-        className="btn btn-primary focus-empty-cta"
+        className={
+          "btn focus-empty-cta " +
+          (hasActiveDraft ? "btn-accent" : "btn-primary")
+        }
         onClick={onAddTicket}
       >
-        <PlusIcon /> {hasActiveDraft ? "接續 QA" : "建第一張 ticket"}
+        <PlusIcon aria-hidden="true" /> {hasActiveDraft ? "接續 QA" : "新增第一張 ticket"}
       </button>
     </div>
   );

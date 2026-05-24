@@ -167,17 +167,20 @@ export function OverflowMenu({
               onClick={async () => {
                 setOpen(false);
                 const isMerged = pipeline.state === "merged";
+                // iter-uiux-2026-05-24 confirm-dialog.danger r1 danger-i18n-punct + danger-warning-tighten —
+                // 警示句改 consequence-first(關鍵後果先講),body 統一全形括號 / 逗號 / 頓號,
+                // 拿掉重複的「commit / branch」字眼讓 mobile 換行不糊。
                 const ok = await confirm({
                   title: `刪除 pipeline "${pipeline.name}"?`,
                   warning: isMerged
                     ? undefined
-                    : `此 pipeline 還沒 merge 進 base — 未 commit 的變動會永久丟失`,
+                    : `未 merge 進 base：未 commit 的變動會永久丟失。`,
                   description: isMerged
-                    ? `已 merged,刪除無風險。\n` +
-                      `會清掉 pipeline.json + 對應 worktree (~/.vibe-pipeline/worktrees/...)。\n` +
+                    ? `已 merged，刪除無風險。\n` +
+                      `會清掉 pipeline.json + 對應 worktree（~/.vibe-pipeline/worktrees/...）。\n` +
                       `branch 跟已 commit 的內容仍在 base 上看得到。`
                     : `會清掉 pipeline.json + 對應 worktree。\n` +
-                      `已 commit 的 ticket commit 留在 branch 內(手動 git checkout 該 branch 救得回,但 vibe-pipeline UI 看不到)。\n` +
+                      `已提交的 ticket commit 仍留在 branch 內（可手動 git checkout 該 branch 取回，但 vibe-pipeline UI 不會顯示）。\n` +
                       `要保留請先 merge 或備份 → 再刪。`,
                   confirmLabel: isMerged ? "刪除" : "強制刪除",
                   danger: true,

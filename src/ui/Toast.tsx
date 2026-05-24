@@ -209,6 +209,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<ToastContextValue>(() => ({ toast, dismiss }), [toast, dismiss]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (window as unknown as { __vpToast?: ToastContextValue }).__vpToast = value;
+    return () => {
+      const w = window as unknown as { __vpToast?: ToastContextValue };
+      if (w.__vpToast === value) delete w.__vpToast;
+    };
+  }, [value]);
+
   return (
     <Ctx.Provider value={value}>
       {children}
@@ -279,17 +288,34 @@ function ToastStageInternal({
   );
 }
 
+const VARIANT_ICON: Record<ToastVariant, string> = {
+  success: "✓",
+  warning: "!",
+  danger: "!",
+  info: "i",
+};
+
+const VARIANT_SR: Record<ToastVariant, string> = {
+  success: "成功",
+  warning: "警告",
+  danger: "錯誤",
+  info: "訊息",
+};
+
 function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {
   const assertive = item.variant === "warning" || item.variant === "danger";
   const role = assertive ? "alert" : "status";
   const live = assertive ? "assertive" : "polite";
+  const hasAction = Boolean(item.action);
   return (
     <div
-      className={"toast toast-" + item.variant + (item.exiting ? " toast-exit" : "")}
+      className={"toast toast-" + item.variant + (item.exiting ? " toast-exit" : "") + (hasAction ? " toast-has-action" : "")}
       role={role}
       aria-live={live}
       aria-atomic="true"
     >
+      <span className={"toast-icon toast-icon-" + item.variant} aria-hidden="true">{VARIANT_ICON[item.variant]}</span>
+      <span className="sr-only">{VARIANT_SR[item.variant]}:</span>
       <div className="toast-message">{item.message}</div>
       <div className="toast-actions">
         {item.action && (
@@ -306,7 +332,7 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
         <button
           type="button"
           className="toast-close"
-          aria-label="關閉通知"
+          aria-label={"關閉" + VARIANT_SR[item.variant] + "通知"}
           onClick={() => onDismiss(item.id)}
         >
           ×
