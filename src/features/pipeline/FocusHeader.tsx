@@ -163,15 +163,17 @@ export function FocusHeader({
             />
           )}
           <div className="focus-head-meta-spacer" />
-          <div className="focus-actions">
-            <RunButton
-              pipeline={pipeline}
-              onRun={onStart}
-              onStop={onStop}
-              spawning={spawning}
-              queuePosition={queuePosition}
-              syncActive={syncActive}
-            />
+          <div className="focus-actions" data-pipeline-state={pipeline.state} data-show-merge-banner={showMergeBanner ? "1" : "0"}>
+            <span className="focus-run-wrap" data-pipeline-state={pipeline.state}>
+              <RunButton
+                pipeline={pipeline}
+                onRun={onStart}
+                onStop={onStop}
+                spawning={spawning}
+                queuePosition={queuePosition}
+                syncActive={syncActive}
+              />
+            </span>
             {/* + ticket 視覺強度三檔:
                 - 0 ticket / 接續 QA → btn-primary(橘底白字,當下唯一主動作)
                 - 有 ticket → btn-accent(橘邊橘字 soft bg,次要 CTA 但仍顯眼) */}

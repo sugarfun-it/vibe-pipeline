@@ -312,11 +312,11 @@ export function ProjectTab({
             {fieldErrors.default_base_branch}
           </div>
         ) : (
-          <div className="settings-subhint">新 pipeline 預設從這個 branch 切。</div>
+          <div className="settings-subhint">新 pipeline 預設從此 branch 建立。</div>
         )}
 
         <div className="settings-field-row">
-          <span className="settings-field-label" id="proj-cost-limit-label">單條 pipeline 成本上限</span>
+          <span className="settings-field-label" id="proj-cost-limit-label">單次成本上限</span>
           <div className="settings-field-controls">
             <NumberField
               label="單條 pipeline 成本上限"
@@ -354,8 +354,8 @@ export function ProjectTab({
           </div>
         ) : (
           <>
-            <div className="settings-subhint settings-subhint-desktop">0 代表不限制。超過後，只會阻止該 pipeline 的下一次執行，不影響其他 pipeline。</div>
-            <div className="settings-subhint settings-subhint-mobile">0 代表不限制。超過後只阻止該 pipeline 的下一次執行。</div>
+            <div className="settings-subhint settings-subhint-desktop">每條 pipeline 的成本上限,0 代表不限制。超過時只阻止該 pipeline 的下一次執行,不影響其他 pipeline。</div>
+            <div className="settings-subhint settings-subhint-mobile">每條 pipeline 的上限,0 代表不限制。超過時只阻止下一次執行。</div>
           </>
         )}
 
@@ -398,7 +398,7 @@ export function ProjectTab({
             {fieldErrors.auto_merge}
           </div>
         ) : (
-          <div className="settings-subhint">每條 pipeline 也可單獨切換。</div>
+          <div className="settings-subhint">每條 pipeline 仍可個別覆寫此設定。</div>
         )}
       </div>
     </div>

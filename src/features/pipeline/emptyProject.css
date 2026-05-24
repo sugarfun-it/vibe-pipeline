@@ -25,6 +25,16 @@
   opacity: 0.85;
 }
 
+/* phase4-2026-05-23-003 — in-flow modifier replaces inline style overrides
+   (position/transform/left/top/margin) so callers don't bypass token governance. */
+.empty-project-topbar-hint--in-flow {
+  position: static;
+  transform: none;
+  left: auto;
+  top: auto;
+  margin-bottom: var(--space-1, 4px);
+}
+
 .empty-project-topbar-arrow {
   font-size: 18px;
   line-height: 1;
@@ -52,4 +62,14 @@
   line-height: 1.6;
   max-width: 380px;
   text-align: center;
+  /* phase4-2026-05-23-003 — long localized strings (e.g. en-US 約 1.5x zh) need
+     to wrap cleanly at any character without overflowing the centered column. */
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 479.98px) {
+  .empty-project-hint {
+    max-width: calc(100vw - 48px);
+    padding: 0 var(--space-3, 12px);
+  }
 }

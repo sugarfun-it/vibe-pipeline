@@ -28,10 +28,7 @@ export function EmptyProject({
       aria-describedby="empty-project-hint"
     >
       {pointToTopBar && (
-        <div
-          className="empty-project-topbar-hint"
-          style={{ position: "static", transform: "none", left: "auto", top: "auto", marginBottom: 4 }}
-        >
+        <div className="empty-project-topbar-hint empty-project-topbar-hint--in-flow">
           <span className="empty-project-topbar-arrow" aria-hidden="true"><ArrowUpIcon /></span>
           <span>{topBarHint}</span>
         </div>

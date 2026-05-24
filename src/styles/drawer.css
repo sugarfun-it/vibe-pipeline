@@ -35,11 +35,13 @@
 }
 
 /* ── Scrim ───────────────────────────────────────────────────── */
+/* phase4-2026-05-23-001 — desktop scrim drops backdrop-filter (smeared board
+   feedback); blur kept only when the stage takes the full viewport (mobile,
+   modal). Per-component override forbidden; flip the data-blur attribute on
+   .drawer-stage if a specific surface needs blur back. */
 .drawer-scrim {
   position: absolute; inset: 0;
   background: var(--scrim-drawer);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
   z-index: 1;
   width: 100%; height: 100%;
   border: 0;
@@ -48,6 +50,12 @@
 }
 .drawer-stage--modal > .drawer-scrim {
   background: var(--scrim-modal);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.drawer-stage[data-blur="1"] > .drawer-scrim {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 /* ── Surface: drawer (right-side) ────────────────────────────── */
@@ -328,6 +336,12 @@
 
 /* ── Mobile (unified single breakpoint) ──────────────────────── */
 @media (max-width: 767.98px) {
+  /* phase4-2026-05-23-001 — on mobile the drawer takes the full viewport, so
+     scrim blur improves focus instead of smearing context. */
+  .drawer-scrim {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
   /* Drawer variant: full-screen take-over above board-mobile-tabs (z-banner 300) */
   .drawer-stage {
     position: fixed;

@@ -19,6 +19,9 @@ export function InitPopup({
   const { toast } = useToast();
   const [alsoGitInit, setAlsoGitInit] = useState(true);
   const titleId = useId();
+  const scanId = useId();
+  const descId = useId();
+  const busyHintId = useId();
 
   const [autoInit, { pending: busy }] = useAsyncAction(async () => {
     try {
@@ -42,35 +45,38 @@ export function InitPopup({
       role="dialog"
       onRequestClose={busy ? () => {} : onDismiss}
       labelledBy={titleId}
+      describedBy={`${scanId} ${descId}${busy ? ` ${busyHintId}` : ""}`}
       stageClassName="drawer-stage--modal init-popup-stage"
       surfaceClassName="init-card fade-up"
       initialFocus="first"
     >
-      <div className="init-scan">
+      <div className="init-scan" id={scanId}>
         <div className="init-scan-icon">
           <FolderQuestionIcon />
         </div>
         <div className="init-scan-text mono">
           <div className="init-scan-status">
-            <span style={{ opacity: 0.65 }}>這個專案還沒初始化</span>
+            <span className="init-dim">這個專案還沒初始化</span>
           </div>
           <div className="init-scan-path">{project.path}</div>
           <div className="init-scan-miss">
-            <span style={{ color: "var(--accent)", display: "inline-flex" }} aria-hidden><CloseIcon /></span>{" "}
+            <span className="init-icon-accent" aria-hidden><CloseIcon /></span>{" "}
             找不到 <code className="init-inline-code">.vibe-pipeline/</code>
           </div>
           {!project.hasGit && (
             <div className="init-scan-miss">
-              <span style={{ color: "var(--accent)", display: "inline-flex" }} aria-hidden><CloseIcon /></span>{" "}
-              找不到 <code className="init-inline-code">.git/</code>(runner 階段需要)
+              <span className="init-icon-accent" aria-hidden><CloseIcon /></span>{" "}
+              找不到 <code className="init-inline-code">.git/</code>（runner 階段需要）
             </div>
           )}
         </div>
       </div>
 
       <div className="init-body">
-        <h1 id={titleId} className="init-title">要在這個專案初始化 vibe-pipeline 嗎?</h1>
-        <p className="init-desc">
+        <h1 id={titleId} className="init-title">
+          要在這個專案初始化 <span className="init-h1-nowrap">vibe-pipeline</span> 嗎?
+        </h1>
+        <p id={descId} className="init-desc">
           在 <code className="init-inline-code">{project.name}</code> 底下建立 <code className="init-inline-code">.vibe-pipeline/</code> 和必須的專案層級設定。
         </p>
       </div>
@@ -89,13 +95,13 @@ export function InitPopup({
           <div className="init-tree-row">
             <span className="init-tree-line">└──</span>
             <span className="init-tree-name">pipelines/</span>
-            <span className="init-tree-cmt">每條一檔,tickets 內嵌</span>
+            <span className="init-tree-cmt">每條一檔，tickets 內嵌</span>
           </div>
         </div>
       </div>
 
       {!project.hasGit && (
-        <div className="init-tree-wrap" style={{ paddingTop: 0 }}>
+        <div className="init-tree-wrap init-tree-wrap--no-top">
           <label className="mono init-git-toggle">
             <input
               type="checkbox"
@@ -103,18 +109,36 @@ export function InitPopup({
               onChange={(e) => setAlsoGitInit(e.target.checked)}
               disabled={busy}
             />
-            <span>順便跑 <code className="init-inline-code">git init</code>(產 main branch,空 repo)</span>
+            <span>順便跑 <code className="init-inline-code">git init</code>（建立空 repo，預設 branch 為 main）</span>
           </label>
         </div>
       )}
 
-      <div className="init-foot">
+      {busy && (
+        <p
+          id={busyHintId}
+          className="mono init-busy-hint"
+          role="status"
+          aria-live="polite"
+        >
+          建立中…若超過 30 秒沒回應，請保留此視窗並檢查 backend log（失敗會以 toast 顯示）。
+        </p>
+      )}
+
+      <div className="init-foot" aria-busy={busy || undefined}>
         <button type="button" className="btn" onClick={onDismiss} disabled={busy}>
           稍後再說
         </button>
         <span className="init-foot-spacer" />
         <div className="init-popup-actions">
-          <button type="button" className="btn btn-primary" onClick={autoInit} disabled={busy}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={autoInit}
+            disabled={busy}
+            aria-busy={busy || undefined}
+            aria-live="polite"
+          >
             {busy ? (
               <>
                 <SpinnerIcon /> 建立中…

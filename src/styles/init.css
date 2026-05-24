@@ -25,7 +25,9 @@
 }
 .init-scan-text { font-size: 11.5px; line-height: 1.65; color: var(--fg-mute); flex: 1; min-width: 0; }
 .init-scan-status { display: flex; align-items: center; gap: 6px; }
-.init-scan-path { color: var(--fg); font-weight: 500; }
+/* phase4-2026-05-23-002 — long Windows paths need to wrap at any character
+   so they don't push the icon column or collide with the missing-artifact tag. */
+.init-scan-path { color: var(--fg); font-weight: 500; overflow-wrap: anywhere; word-break: break-all; }
 .init-scan-miss { color: var(--fg-mute); }
 
 .init-inline-code {
@@ -69,8 +71,20 @@ html.light .init-cmd-text { color: #fbf8f1; }
 }
 .init-tree-row {
   padding-left: 14px;
-  display: grid; grid-template-columns: 28px 130px 1fr; gap: 4px;
+  display: grid; grid-template-columns: 28px minmax(100px, 130px) minmax(0, 1fr); gap: 4px;
   align-items: baseline;
+}
+/* phase4-2026-05-23-002 — under 480px the third column has no room; stack the
+   comment under the name so the tree still reads. */
+@media (max-width: 479.98px) {
+  .init-tree-row {
+    grid-template-columns: 22px minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .init-tree-glyph { grid-column: 1; grid-row: 1 / span 2; }
+  .init-tree-name { grid-column: 2; grid-row: 1; }
+  .init-tree-cmt { grid-column: 2; grid-row: 2; padding-left: 4px; }
+  .init-tree-line { display: none; }
 }
 .init-tree-glyph { color: var(--accent); margin-right: 6px; }
 .init-tree-line { color: var(--fg-faint); }
@@ -88,8 +102,26 @@ html.light .init-cmd-text { color: #fbf8f1; }
 
 /* Overlay primitive 已提供 scrim + 置中(drawer-stage--modal),這裡只調 init popup 的寬度 */
 .init-popup-stage .init-card {
-  width: 440px;
+  width: min(440px, calc(100vw - var(--space-6, 24px) * 2));
 }
+
+/* phase4-2026-05-23-008 — move InitPopup.tsx inline styles into named classes */
+.init-h1-nowrap { white-space: nowrap; }
+.init-icon-mute { color: var(--fg-mute); }
+.init-icon-faint { color: var(--fg-faint); display: inline-flex; align-items: center; }
+.init-icon-accent { color: var(--accent); display: inline-flex; }
+.init-tree-wrap--no-top { padding-top: 0; }
+.init-busy-hint {
+  margin: 0 var(--space-6, 28px) var(--space-3, 12px);
+  padding: 8px 12px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--fg-mute);
+  background: var(--panel-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-control, 6px);
+}
+.init-dim { opacity: 0.65; }
 .init-popup-actions {
   display: flex; gap: 10px; align-items: center;
 }

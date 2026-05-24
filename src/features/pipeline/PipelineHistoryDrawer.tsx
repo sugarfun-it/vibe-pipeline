@@ -22,6 +22,7 @@ export function PipelineHistoryDrawer({
   onClose: () => void;
 }) {
   const titleId = useId();
+  const descId = useId();
 
   // Body scroll lock(Overlay 不做,因為各 overlay 對 body 鎖法可能差異 — 例如 modal 不一定要鎖)
   useEffect(() => {
@@ -37,6 +38,7 @@ export function PipelineHistoryDrawer({
       role="dialog"
       onRequestClose={onClose}
       labelledBy={titleId}
+      describedBy={descId}
       portal
       stageClassName="tdrw-stage"
       surfaceClassName="tdrw-drawer"
@@ -60,8 +62,8 @@ export function PipelineHistoryDrawer({
         <div className="drawer-titlerow">
           <div className="drawer-title" id={titleId}>執行紀錄</div>
         </div>
-        <div className="drawer-meta mono">
-          {pipelineBranch} · 此 Pipeline 的所有 Runner 執行紀錄
+        <div className="drawer-meta mono" id={descId}>
+          {pipelineBranch} · 全部 Runner
         </div>
       </div>
       <div className="drawer-body">

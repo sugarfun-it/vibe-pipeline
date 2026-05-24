@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { Pipeline, PipelineState } from "../../types/pipeline";
 import { HourglassIcon, PlayIcon, StopIcon } from "../../ui/icons";
 
@@ -10,9 +9,14 @@ import { HourglassIcon, PlayIcon, StopIcon } from "../../ui/icons";
 // 2. queued button 顯示順位 + 「· 取消」明示 click 行為(避免單 button 兩 mental model);用 aria-label 明示動作避免誤點
 // 3. running 永遠保留「停止」可用 — sync / spawn 訊號不擋它,否則 runner 跑壞時 user 無從中斷
 // 3a. queued 也永遠保留「取消」可用(不擋 sync / spawn)— 取消排隊不碰 worktree,user 隨時能離場
-// 4. disabled 的原因不只靠 native title(touch/keyboard/SR 不可靠),用 visually-hidden span + aria-describedby 補
-// 4a. busy 變體(同步中 / 啟動中)加 role=status + aria-live=polite,SR 在文字轉換時主動播報
+// 4. disabled 的原因走 aria-label(整段「狀態 — reason」)+ native title(sighted hover tooltip),不重複 aria-describedby
+//    — codex 指出 aria-label 已含 reason 時再 aria-describedby 會被 SR 念兩次,反而冗。
+// 4a. busy 變體(同步中 / 啟動中)在 button 旁掛 visually-hidden `<span role="status" aria-live="polite">` 發 SR 公告,
+//     不在 button 本體加 role=status — 否則同節點 button + status 雙語意,部分 SR 不再唸成按鈕,鍵盤 user 也撞「focusable status」
 // 5. icon SVG(PlayIcon / StopIcon / HourglassIcon)用 aria-hidden 包,SR 只念 verb / 狀態文字
+// 5a. disabled 變體用 aria-label 取代 visible label 算 accessible name(disabled-empty 兩個 visible span 都 aria-hidden),
+//     避免 mobile/desktop display:none 切換造成不同瀏覽器 accessible-name 計算不一致
+// 5b. disabled 視覺:加 inline `cursor: not-allowed`(non-owned CSS 無法動 .btn[aria-disabled])避免誤認可點
 // 6. planning / ready / merged 收斂到單一 verb「執行」— state 差異看 Rail badge,button 不重複
 //
 // Phase 4 待整理(non-owned files):
@@ -39,20 +43,8 @@ export function RunButton({
   const s = pipeline.state as PipelineState;
   const noTickets = pipeline.tickets.length === 0;
 
-  // 視覺隱藏 helper(SR 用):title 不可靠(touch / keyboard / 螢幕閱讀器),
-  // 但目前 owned scope 只有 RunButton.tsx + 不允許動 styles/。先 inline style,
-  // 等 Phase 4 收斂到共用 .sr-only class。
-  const srOnly: CSSProperties = {
-    position: "absolute",
-    width: 1,
-    height: 1,
-    padding: 0,
-    margin: -1,
-    overflow: "hidden",
-    clip: "rect(0,0,0,0)",
-    whiteSpace: "nowrap",
-    border: 0,
-  };
+  // phase4-2026-05-23-005 — 改用 tokens.css 全域 .sr-only utility class,
+  // 不再 inline CSSProperties。class 內容跟舊 srOnly 同。
 
   // running 狀態優先 — 即使 sync / spawn 同時觸發也要保留「停止」可用,
   // 否則 user 在 runner 跑壞時無法緊急中斷。
@@ -81,10 +73,9 @@ export function RunButton({
     return (
       <button
         type="button"
-        className="btn"
+        className="btn btn-queued"
         onClick={() => onStop?.(pipeline.id)}
         aria-label={ariaLabel}
-        style={{ color: "var(--queued)", borderColor: "var(--queued)" }}
       >
         <HourglassIcon aria-hidden="true" /> {posLabel} · 取消
       </button>
@@ -93,53 +84,51 @@ export function RunButton({
 
   // sync 進行中:其餘狀態 RunButton 鎖死,避免 user 誤觸發 runner 撞 worktree
   // 用 aria-disabled + onClick noop 取代 native `disabled`,讓 keyboard / SR 仍可 focus 看到 helper text
-  // role=status + aria-live=polite:SR 在 「執行」→「同步中」轉換時主動播報
+  // 同步播報走 button 同層 sibling 的 role=status span,不放 button 上(避免 dual semantics)
   if (syncActive) {
     const reason = "同步收尾後可執行 ticket";
-    const helpId = `run-btn-sync-help-${pipeline.id}`;
     return (
-      <button
-        type="button"
-        className="btn"
-        aria-disabled="true"
-        aria-describedby={helpId}
-        role="status"
-        aria-live="polite"
-        title={reason}
-      >
-        <span className="qadr-thinking-dots" aria-hidden="true">
-          <span /><span /><span />
-        </span>{" "}
-        同步中
-        <span style={srOnly} id={helpId}>{reason}</span>
-      </button>
+      <>
+        <button
+          type="button"
+          className="btn"
+          aria-disabled="true"
+          aria-label={`同步中 — ${reason}`}
+          title={reason}
+        >
+          <span className="qadr-thinking-dots" aria-hidden="true">
+            <span /><span /><span />
+          </span>{" "}
+          同步中
+        </button>
+        <span className="sr-only" role="status" aria-live="polite">同步中</span>
+      </>
     );
   }
 
   // spawning 期間統一顯「啟動中…」覆蓋掉原本的「開始/繼續/重試」狀態
-  // 同 syncActive:role=status + aria-live=polite 讓 SR 主動播報啟動轉換
+  // 同 syncActive:播報走 sibling role=status span,不放 button 上
   if (
     spawning &&
     (s === "planning" || s === "paused" || s === "failed" || s === "ready" || s === "merged")
   ) {
     const reason = "啟動 runner(約 1-5 秒)";
-    const helpId = `run-btn-spawn-help-${pipeline.id}`;
     return (
-      <button
-        type="button"
-        className="btn"
-        aria-disabled="true"
-        aria-describedby={helpId}
-        role="status"
-        aria-live="polite"
-        title={reason}
-      >
-        <span className="qadr-thinking-dots" aria-hidden="true">
-          <span /><span /><span />
-        </span>{" "}
-        啟動中
-        <span style={srOnly} id={helpId}>{reason}</span>
-      </button>
+      <>
+        <button
+          type="button"
+          className="btn"
+          aria-disabled="true"
+          aria-label={`啟動中 — ${reason}`}
+          title={reason}
+        >
+          <span className="qadr-thinking-dots" aria-hidden="true">
+            <span /><span /><span />
+          </span>{" "}
+          啟動中
+        </button>
+        <span className="sr-only" role="status" aria-live="polite">啟動中</span>
+      </>
     );
   }
 
@@ -163,7 +152,6 @@ export function RunButton({
         const reason = noTickets
           ? "上方「+ 新增 ticket」開 QA 建第一張"
           : "目前 ticket 都已完成或永久失敗;新增或修復 ticket 後即可執行";
-        const helpId = `run-btn-empty-help-${pipeline.id}`;
         // aria-disabled (而非 native disabled)讓 keyboard 仍可 focus 看 helper text
         return (
           <button
@@ -173,12 +161,11 @@ export function RunButton({
               (s === "merged" ? " run-btn-empty-merged" : "")
             }
             aria-disabled="true"
-            aria-describedby={helpId}
+            aria-label={`無可執行 ticket — ${reason}`}
             title={reason}
-          >
-            <span className="run-btn-empty-label-full">無可執行 ticket</span>
-            <span className="run-btn-empty-label-short" aria-hidden>無可執行</span>
-            <span style={srOnly} id={helpId}>{reason}</span>
+            >
+            <span className="run-btn-empty-label-full" aria-hidden="true">無可執行 ticket</span>
+            <span className="run-btn-empty-label-short" aria-hidden="true">無可執行</span>
           </button>
         );
       }

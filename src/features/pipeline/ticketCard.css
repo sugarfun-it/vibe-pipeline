@@ -6,8 +6,9 @@
   padding: 12px 16px 14px 22px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  transition: border-color 120ms, background 120ms, transform 120ms;
+  /* TICKET-009:外層卡片 radius 對齊 design system 卡片 8px(內層 ticket-iter 跟著降到 6px) */
+  border-radius: 8px;
+  transition: border-color 120ms, background 120ms, transform 120ms, box-shadow 120ms;
   animation: fadeUp 280ms ease-out both;
   /* tk-001c:content indent token — header num 欄寬 + header grid gap;sub/goal/progress/iter-row 等
      ticket 內容類 row 全部 margin-left 引用同一個值,避免 num 左緣與內容欄左緣產生多條 indent。 */
@@ -22,6 +23,18 @@
   background: var(--hover);
 }
 .ticket.is-clickable:hover .ticket-card__chevron { color: var(--fg); transform: translateX(2px); }
+/* TICKET-008:active(pressed)狀態 — 按下時微微下沉 + 邊框收緊,讓點擊回饋更明確 */
+.ticket.is-clickable:active {
+  transform: translateY(0.5px);
+  border-color: var(--accent);
+  background: var(--hover);
+}
+/* TICKET-002:keyboard focus 顯示 ring — 對齊 design system 強對比,light/dark 都看得到 */
+.ticket.is-clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
 .ticket.is-paused { border-color: color-mix(in srgb, var(--paused) 35%, var(--line-2)); }
 .ticket.is-draft { opacity: 0.6; }
 .ticket.is-draft:hover { opacity: 1; }
@@ -63,8 +76,9 @@
 }
 
 .ticket-band {
+  /* TICKET-011:band 從 3px 加寬到 4px,跟 status-tinted 背景拉開區隔(低對比螢幕也看得清狀態色) */
   position: absolute; left: 0; top: 8px; bottom: 8px;
-  width: 3px; border-radius: 2px;
+  width: 4px; border-radius: 2px;
 }
 
 .ticket-row {
@@ -118,7 +132,8 @@
 .ticket-title {
   flex: 1; font-size: 13.5px; font-weight: 500;
   color: var(--fg);
-  letter-spacing: -0.005em;
+  /* TICKET-010:remove negative letter-spacing;13.5px CJK 不需要再壓字距 */
+  letter-spacing: 0;
   min-width: 0;
   /* 中英混合 + 全形括弧 / 「/」沒空白時 browser 不知斷行,title 撐爆 row 蓋住 chip */
   overflow-wrap: anywhere;
@@ -186,13 +201,15 @@ button.ticket-mode {
   margin-top: 10px;
   margin-left: var(--ticket-content-indent);
   padding: 8px 10px;
-  border-radius: 7px;
+  /* TICKET-009:內層 panel radius 6px,跟外層 ticket 8px 成 2px 階梯 */
+  border-radius: 6px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   font-size: 11.5px;
   flex-wrap: wrap;
 }
-.iter-stages { display: flex; align-items: center; gap: 5px; }
+/* TICKET-003:stage chain 允許 wrap;narrow mobile + 長 verdict label 不再 overflow */
+.iter-stages { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .iter-stage {
   position: relative;
   display: inline-flex;
@@ -205,7 +222,8 @@ button.ticket-mode {
   color: var(--fg-faint);
   background: transparent;
 }
-.iter-stage.is-past { color: var(--fg-mute); border-color: var(--line-2); background: var(--panel); }
+/* TICKET-004:past 階段 chip 視覺降噪 — border 去掉(用內襯 panel-2 區隔),only active/error 保留邊框 */
+.iter-stage.is-past { color: var(--fg-mute); border-color: transparent; background: var(--panel); }
 .iter-stage.is-active {
   color: var(--fg); border-color: var(--iter);
   background: var(--iter-soft);

@@ -131,7 +131,7 @@ export function DiffModal({
     >
         <div className="drawer-head diff-modal-head">
           <div className="diff-modal-title">
-            <span id={titleId}>差異</span>
+            <span id={titleId} className="diff-modal-title-label">差異總覽</span>
             <span id={branchId} className="diff-modal-branch mono" title={`${pipelineBranch} → ${baseBranch}`}>
               {pipelineBranch} <span aria-hidden><ArrowRightIcon /></span> {baseBranch}
             </span>
@@ -152,6 +152,7 @@ export function DiffModal({
               <button
                 type="button"
                 className="diff-modal-copy"
+                aria-live="polite"
                 onClick={() => {
                   // 直接複製 server 回傳的原始 git diff,維持完整可貼回 patch 工具
                   if (!diff?.raw) return;
@@ -176,9 +177,9 @@ export function DiffModal({
                   }
                 }}
                 title="複製原始 diff"
-                aria-label={copied ? "已複製 diff" : "複製原始 diff 到剪貼簿"}
+                aria-label={copied ? "已複製差異" : "複製原始差異到剪貼簿"}
               >
-                {copied ? "已複製" : "複製 diff"}
+                {copied ? "已複製" : "複製差異"}
               </button>
             )}
             <button
@@ -216,7 +217,11 @@ export function DiffModal({
           <div className="diff-modal-empty">沒有改動。</div>
         )}
         {diff && diff.files.length > 0 && (
-          <div className="diff-modal-body">
+          <div
+            className={
+              "diff-modal-body" + (diff.files.length === 1 ? " is-single-file" : "")
+            }
+          >
             <nav className="diff-modal-files" aria-label="檔案清單">
               {diff.files.map((f) => {
                 const isActive = activeFile === f.path;

@@ -1,3 +1,4 @@
+import { useId, useState } from "react";
 import { CheckCircleIcon, MergeIcon, SpinnerIcon, WarnIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import type { Pipeline } from "../../types/pipeline";
@@ -7,9 +8,10 @@ type BannerVariant = "ready" | "merged" | "merging" | "failed";
 const M = {
   merged: (base: string) => `已合併入 ${base}`,
   failedWithRetry: "合併失敗 — 修正 working tree 後重試",
-  failedNoAction: "合併失敗 — 請先修正 working tree",
-  merging: "正在合併,處理衝突中",
-  ready: (base: string) => `所有 ticket 都完成 — 可以合併進 ${base}`,
+  failedNoAction: "合併失敗 — 請至執行紀錄查看錯誤並修正 working tree",
+  merging: "正在合併，處理衝突中",
+  mergeQueued: "合併已排入佇列，即將開始",
+  ready: "所有 ticket 已完成",
   commits: (n: number) => `${n} 個 commit`,
 };
 
@@ -21,6 +23,9 @@ export function ReadyBanner({
   onMerge?: (id: string) => void;
 }) {
   const confirm = useConfirm();
+  const [pending, setPending] = useState(false);
+  const titleId = useId();
+  const descId = useId();
   const commitCount = pipeline.tickets.reduce(
     (sum, t) => sum + (t.commits?.length ?? 0),
     0
@@ -35,10 +40,15 @@ export function ReadyBanner({
         t.status === "failed_transient" ||
         t.status === "paused")
   );
-  const mergingTicket = pipeline.tickets.find(
-    (t) => t.mode === "merge" && (t.status === "ready" || t.status === "running")
+  const runningMergeTicket = pipeline.tickets.find(
+    (t) => t.mode === "merge" && t.status === "running"
   );
+  const queuedMergeTicket = pipeline.tickets.find(
+    (t) => t.mode === "merge" && t.status === "ready"
+  );
+  const mergingTicket = runningMergeTicket || queuedMergeTicket;
   const isMerging = !!mergingTicket && !isMerged;
+  const isQueued = !runningMergeTicket && !!queuedMergeTicket && !isMerged;
 
   const variant: BannerVariant = isMerged
     ? "merged"
@@ -76,8 +86,10 @@ export function ReadyBanner({
         ? M.failedWithRetry
         : M.failedNoAction
       : variant === "merging"
-      ? M.merging
-      : M.ready(baseBranch);
+      ? isQueued
+        ? M.mergeQueued
+        : M.merging
+      : M.ready;
 
   const liveRole =
     variant === "failed"
@@ -92,6 +104,12 @@ export function ReadyBanner({
       ? "polite"
       : undefined;
   const showButton = !!onMerge && (variant === "ready" || variant === "failed");
+  const buttonLabel =
+    variant === "failed" ? "重試合併" : `合併入 ${baseBranch}`;
+  const buttonAriaLabel =
+    variant === "failed"
+      ? `重試合併 pipeline ${pipeline.branch} 進 ${baseBranch}`
+      : `合併 pipeline ${pipeline.branch} 進 ${baseBranch}`;
 
   return (
     <div
@@ -99,23 +117,38 @@ export function ReadyBanner({
       data-state={variant}
       role={liveRole}
       aria-live={ariaLive}
-      aria-label={variant === "merged" || variant === "ready" ? title : undefined}
-      aria-busy={variant === "merging" ? true : undefined}
+      aria-labelledby={
+        variant === "merged" || variant === "ready" ? titleId : undefined
+      }
+      aria-describedby={
+        variant === "merged" || variant === "ready" ? descId : undefined
+      }
+      aria-busy={variant === "merging" && !isQueued ? true : undefined}
     >
       <span className="banner-icon" aria-hidden="true" style={{ color: iconColor }}>
         <Icon />
       </span>
       <div className="banner-body">
-        <div className="banner-title">{title}</div>
-        <div className="banner-desc mono">
-          {pipeline.branch} → {baseBranch} · {M.commits(commitCount)}
+        <div className="banner-title" id={titleId}>
+          {title}
+        </div>
+        {/* phase4-2026-05-23-010 — meta-row utility: atomic tokens stay together,
+            row wraps at separators when viewport gets narrow */}
+        <div className="banner-desc mono meta-row" id={descId}>
+          <span className="meta-atom">{pipeline.branch} → {baseBranch}</span>
+          <span className="meta-sep" aria-hidden="true">·</span>
+          <span className="meta-atom">{M.commits(commitCount)}</span>
         </div>
       </div>
       {showButton && (
         <button
           type="button"
           className="btn btn-primary"
+          disabled={pending}
+          aria-disabled={pending || undefined}
+          aria-label={buttonAriaLabel}
           onClick={async () => {
+            if (pending) return;
             const isRetry = variant === "failed";
             const ok = await confirm({
               title: isRetry
@@ -128,10 +161,17 @@ export function ReadyBanner({
                   `多數情況下會直接成功,不需要進一步操作。`,
               confirmLabel: isRetry ? "重試合併" : `合併入 ${baseBranch}`,
             });
-            if (ok) onMerge?.(pipeline.id);
+            if (ok) {
+              setPending(true);
+              try {
+                await onMerge?.(pipeline.id);
+              } finally {
+                setPending(false);
+              }
+            }
           }}
         >
-          <MergeIcon /> {variant === "failed" ? "重試合併" : `合併入 ${baseBranch}`}
+          <MergeIcon /> {buttonLabel}
         </button>
       )}
     </div>

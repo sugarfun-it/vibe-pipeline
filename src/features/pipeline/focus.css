@@ -39,6 +39,25 @@
   gap: 8px;
   flex-shrink: 0;
 }
+.focus-run-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+/* FC-003 / FC-009:desktop 也統一 — ready / merged + showMergeBanner 時隱藏 disabled
+   「無可執行 ticket」。ReadyBanner 已是當下唯一 primary CTA,header 的 disabled run
+   button 跨斷點都是冗餘。視覺一致避免 desktop/mobile 兩種版型。 */
+.focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="ready"],
+.focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
+  display: none;
+}
+/* FC-006: 單 ticket / 短內容時整欄拉滿太空曠 — 給 inner 元素統一 max-width,
+   ticket list、banner、ticket card 對齊;header 兩列因 spacer 推右側,自然填滿欄寬。 */
+.focus-head,
+.focus-list,
+.focus .banner {
+  max-width: var(--focus-content-max, 1080px);
+  width: 100%;
+}
 /* runs / 累積成本 chip:pipeline header 上 quick glance,完整明細在 OverflowMenu「執行紀錄」 drawer */
 .focus-title {
   margin: 0;
@@ -386,6 +405,23 @@
      主動作只剩「+ 新增 ticket」,不要再讓 disabled 跟它競爭視覺權重 */
   .run-btn-empty.run-btn-empty-merged {
     display: none !important;
+  }
+
+  /* FC-002:ready(merge-ready)pipeline 在 mobile 也隱藏 disabled 「無可執行」—
+     showMergeBanner 已提供「合併入 main」CTA,header 內 disabled button 形同重複 +
+     讓 +ticket 主動作視覺權重被稀釋。透過 .focus-run-wrap[data-pipeline-state="ready"] 鎖定。 */
+  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="ready"],
+  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
+    display: none !important;
+  }
+
+  /* FC-003:mobile header actions 統一一條 row + 對齊,不被 chip flex-wrap 切斷,
+     primary CTA 永遠靠右、視覺權重一致 */
+  .focus-actions {
+    margin-left: auto;
+  }
+  .focus-actions .btn {
+    flex-shrink: 0;
   }
 
   /* mobile-focus-004:ReadyBanner merged 變體在 mobile 把 branch desc(branch → base · N commit)

@@ -98,19 +98,30 @@
 }
 
 /* ─── Field row(Project tab + 通用)─────────────────────────── */
+/* sp-r2-003 / 006: label allow wrap; hint align under control column via shared label-col token */
+
+:root {
+  --settings-label-col: 152px;
+  --settings-row-gap: 10px;
+}
 
 .settings-field-row {
   display: grid;
-  grid-template-columns: minmax(136px, 152px) minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: minmax(136px, var(--settings-label-col)) minmax(0, 1fr);
+  align-items: start;
+  gap: 4px var(--settings-row-gap);
   margin-bottom: 6px;
 }
 
 .settings-field-label {
   display: block;
+  margin-top: 6px;
   margin-bottom: 4px;
   font-weight: 500;
+  line-height: 1.3;
+  /* sp-r2-006:長 label 允許 wrap,不撐爆 label column */
+  white-space: normal;
+  word-break: break-word;
 }
 
 .settings-input {
@@ -132,11 +143,12 @@
 .settings-form-field--narrow .form-input { width: 64px; }
 .settings-form-field--mid .form-input { width: 100px; }
 
+/* sp-r2-003:hint 對齊 control 欄;用 label-col token + gap 計算 padding,避免 magic 162px */
 .settings-subhint {
   font-size: 12px;
   color: var(--fg-mute);
   line-height: 1.5;
-  margin-left: 162px;
+  padding-left: calc(var(--settings-label-col) + var(--settings-row-gap));
   margin-bottom: 10px;
 }
 
@@ -205,6 +217,35 @@
 .settings-field-row--tight .toggle-pill {
   width: fit-content;
   max-width: 100%;
+}
+
+/* sp-r2-001 / r3:settings-popover scope 內 off-state toggle 不該看起來像 disabled。
+   - track 深色化 + 加 border
+   - thumb 加 outline,跟 disabled (opacity 0.55) 拉開
+   - label 字色拉到 var(--fg)(原 toggle-pill 預設 fg-mute 太淡)
+   - off 狀態 hover 加 accent border 強化「可點」感
+   on-state 沿用全域 --done 規則。 */
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) {
+  color: var(--fg);
+  border-color: var(--line);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]):hover {
+  border-color: var(--accent);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) .toggle-pill-track {
+  background: var(--line-2);
+  border: 1px solid var(--line);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) .toggle-pill-thumb {
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--line);
+  /* track 加 border 後 thumb 視覺再上移 1px 對齊 */
+  top: 0;
+  left: 0;
+}
+.settings-popover .toggle-pill.is-on .toggle-pill-thumb {
+  /* 保險:on 狀態仍用原規則,不被 above 規則 override */
+  box-shadow: none;
 }
 
 .push-action-row {
@@ -589,10 +630,19 @@
     max-height: 100vh !important;
     max-height: 100dvh !important;
     margin: 0 !important;
-    padding: 14px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    /* sp-r2-002:mobile 把 close button 騰出獨立 row(top:10 + 32px + gap = 52px),不再跟 tabs 搶水平節奏 */
+    padding: 52px 16px calc(12px + env(safe-area-inset-bottom)) !important;
     border-radius: 0 !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
+  }
+
+  /* sp-r2-002:mobile tab underline 撐滿可視寬度,close button 已被 padding-top 推離 tab row */
+  .settings-popover-tabs {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .settings-popover select,
@@ -645,9 +695,13 @@
     min-width: 0;
   }
 
-  /* placeholder span 永遠撐第一欄(對齊 group 1 跟 group 2 的 model/effort 位置)— mobile 也不隱 */
-  .task-row-placeholder {
-    width: auto;
+  /* sp-r2-ai-001:mobile 沒 provider 的 task row(Executor/Critic/Merge)讓 model + effort 撐滿,
+     不再保留第一欄空白。靠 :has() 偵測 row 是否含 placeholder。 */
+  .task-row-selects:has(.task-row-placeholder) {
+    grid-template-columns: 2fr 1fr;
+  }
+  .task-row-selects > .task-row-placeholder {
+    display: none;
   }
 
   /* 右上關閉 icon — mobile 全螢幕,需要明顯的關閉入口 */
@@ -720,6 +774,7 @@
 
   .settings-subhint {
     margin-left: 0;
+    padding-left: 0;
     margin-top: var(--space-2, 6px);
     margin-bottom: var(--space-3, 10px);
     font-size: 13px;

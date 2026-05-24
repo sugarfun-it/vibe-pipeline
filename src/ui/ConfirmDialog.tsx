@@ -7,6 +7,10 @@ import "./confirmDialog.css";
 export type ConfirmOptions = {
   title: string;
   description?: string;
+  // phase4-2026-05-23-012 — rich description slot for destructive flows that
+  // need a structured body (semantic list / mono detail / bullets). Caller
+  // owns the markup; ConfirmDialog still wires aria-describedby.
+  descriptionRich?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
@@ -33,20 +37,30 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Enter = confirm(非 danger);Enter 在 textarea 略過。
-  // ESC / Tab trap / scrim 由 Overlay 處理(scrim 在 danger 模式下 onRequestClose 內擋掉)。
+  // ESC = cancel(包含 danger:破壞性確認禁掉 scrim 誤觸,但 ESC 是無歧義的取消信號,
+  // a11y 不能擋,否則變 keyboard trap。Overlay 的 onRequestClose 會替 scrim 擋,
+  // ESC 走我們這條優先處理)。Tab trap 仍由 Overlay 接手。
   useEffect(() => {
     if (!state) return;
     function onKey(e: KeyboardEvent) {
       if (!state) return;
-      if (e.key !== "Enter" || state.danger) return;
       const target = e.target as HTMLElement | null;
+      if (e.key === "Escape") {
+        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        state.resolve("cancel");
+        setState(null);
+        return;
+      }
+      if (e.key !== "Enter" || state.danger) return;
       if (target && target.tagName === "TEXTAREA") return;
       e.preventDefault();
       state.resolve("confirm");
       setState(null);
     }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
   }, [state]);
 
   function close(r: ConfirmResult) {
@@ -56,7 +70,12 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   }
 
   const describedBy = state
-    ? [state.warning ? warnId : null, state.description ? descId : null].filter(Boolean).join(" ") || undefined
+    ? [
+        state.warning ? warnId : null,
+        state.description || state.descriptionRich ? descId : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || undefined
     : undefined;
 
   return (
@@ -82,8 +101,10 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               <span className="confirm-warning-text">{state.warning}</span>
             </div>
           )}
-          {state.description && (
-            <div id={descId} className="confirm-desc">{state.description}</div>
+          {(state.descriptionRich || state.description) && (
+            <div id={descId} className="confirm-desc">
+              {state.descriptionRich ?? state.description}
+            </div>
           )}
           <div className="confirm-actions">
             <button

@@ -130,12 +130,20 @@ export function RunHistory({
                 : undefined
             }
           >
-            <span className="tdrw-run-meta-label">
-              總成本{summary.costPartial ? "(部分)" : ""}
-            </span>
+            <span className="tdrw-run-meta-label">總成本</span>
             <strong>
               {summary.totalCost != null ? `$${summary.totalCost.toFixed(2)}` : "—"}
             </strong>
+            {/* RH-007 (2026-05-24):mobile 沒 hover 看不到 title — 把「部分」做成 visible 註解,
+                跟 strong 同 row,語意明確且 SR / 觸控都能取得 */}
+            {summary.costPartial && (
+              <span
+                className="tdrw-run-meta-label"
+                style={{ color: "var(--fg-faint)" }}
+              >
+                (部分)
+              </span>
+            )}
           </span>
         </div>
       )}
@@ -194,8 +202,11 @@ function RunCard({
 
   const ok = run.exitCode === 0;
   // RH-005 / RH-016:exit X → 退出碼 X(原本 chip 同時混 zh / en「成功 · EXIT 0」現在改「成功 · 退出碼 0」)
+  // RH-003 (2026-05-24):成功狀態 chip 不再顯「退出碼 0」雜訊 — 每筆都是 0 反而降低掃讀效率;
+  //   退出碼仍保留在 title / aria-label 給 dev 取用。失敗時 chip 顯示退出碼(對診斷有意義)。
   const exitText = run.exitCode != null ? `退出碼 ${run.exitCode}` : "退出碼 ?";
   const outcomeLabel = ok ? "成功" : "失敗";
+  const chipText = ok ? outcomeLabel : `${outcomeLabel} · ${exitText}`;
   const cost = run.costUsd != null ? `$${run.costUsd.toFixed(2)}` : "—";
   const dur = run.durationMs != null ? fmtDuration(run.durationMs) : "—";
   const turns = run.numTurns != null ? `${run.numTurns}` : "—";
@@ -216,7 +227,10 @@ function RunCard({
     : "—";
   // RH-006:provider chip 全文不能只塞 title(touch 看不到、SR 不可靠)— 同字串塞進可見內容的 aria-label,
   //         然後在 chip 外另放 sr-only 隱藏 span 給 SR 唸完整(visible chip 仍 ellipsis 防爆版)
-  const toggleAria = `${open ? "收合" : "展開"} ${fmtTime(run.startedAt)} 的執行明細(${outcomeLabel})`;
+  const toggleAria = `${open ? "收合" : "展開"} ${fmtTime(run.startedAt)} 的執行明細(${outcomeLabel}・${exitText})`;
+  // RH-002 (2026-05-24):chevron 在 mobile 上 affordance 偏弱 — 加個 visible 短 label 提示展開動作,
+  //   user 一眼知道整個 head 可點開看詳情(stdout / stderr / session id)
+  const toggleHint = open ? "收合" : "展開";
   return (
     <div className={"tdrw-run-card" + (ok ? "" : " is-fail")}>
       <button type="button"
@@ -227,6 +241,18 @@ function RunCard({
         aria-controls={detailId}
         aria-label={toggleAria}
         title={open ? "收合此執行紀錄" : "展開此執行紀錄"}
+        // RH-011 (2026-05-24):mobile 上 chev / title / hint 之前在 .tdrw-run-head 的 grid (auto auto 1fr auto)
+        //   下因為加新 hint span 排不進原軌而 wrap 成破碎多行。強制改 3-column grid:
+        //     col1=chev 固定寬 / col2=title 1fr 內部自由 wrap / col3=hint 固定寬
+        //   inline style 蓋過 ticketDrawer.css 對應 .tdrw-run-head 的 grid 設定(同 selector,
+        //   但 inline 比 class 高優先序),保證 mobile 不會把 chev 推到第二行。
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto minmax(0, 1fr) auto",
+          alignItems: "center",
+          columnGap: "8px",
+          width: "100%",
+        }}
       >
         {/* hist-010:chevron 仍 aria-hidden,但配 sr-only 文字補強「收合 / 展開」狀態給 SR */}
         <span style={visuallyHidden}>{open ? "收合" : "展開"}</span>
@@ -250,16 +276,43 @@ function RunCard({
             data-state={ok ? "success" : "failed"}
             title={`${outcomeLabel} · ${exitText}`}
           >
-            {outcomeLabel} · {exitText}
+            {chipText}
           </span>
           {run.result && (
             // RH-013 / RH-017:visible 段做已知 state token 對應(state=ready / state=running / draft→done 等),
             //                 完整 raw 仍在 title 內保留給 dev / debug 取用,並有 sr-only 全文供 SR
-            <span className="tdrw-run-result" title={run.result}>
+            // RH-012 (2026-05-24):mobile 下 result 在窄欄 nowrap+ellipsis 會截在 'rea...' 之類的英 fragment,
+            //   破壞 zh 觀感且看不到 state 字眼。改 2-line clamp 讓內容換行兩行,超出再 ellipsis;
+            //   full text 仍在 title 給 hover / dev 取用。
+            <span
+              className="tdrw-run-result"
+              title={run.result}
+              style={{
+                whiteSpace: "normal",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
               {localizeResult(run.result)}
             </span>
           )}
         </div>
+        {/* RH-002 / RH-011 (2026-05-24) / phase4-2026-05-23-004:visible toggle hint
+            在 desktop 顯示(避免 chevron 弱 affordance);mobile 整 head 已經明顯可點,
+            chevron 旋轉 + sr-only 「收合/展開」 已足夠,hide visible text 避免雙重疊 affordance。 */}
+        <span
+          aria-hidden="true"
+          className="tdrw-run-head-hint"
+          style={{
+            fontSize: 11,
+            color: "var(--fg-faint)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {toggleHint}
+        </span>
       </button>
       <div className="tdrw-run-meta">
         <span className="tdrw-run-meta-item">

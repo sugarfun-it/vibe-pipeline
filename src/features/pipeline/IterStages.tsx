@@ -66,20 +66,25 @@ export const IterStages = memo(function IterStages({
         const isFuture = i > idx;
         const isResult = s === "✓"; // 結果階段
         // 結果階段的內容:past 用 ✓、current 顯示 verdict(critic 已收尾)、future 用 ?
-        let mark: { text: string; cls: string } | null = null;
+        let mark: { text: string; cls: string; srLabel?: string } | null = null;
         if (isPast) {
-          mark = { text: "✓", cls: "is-past-mark" };
+          mark = { text: "✓", cls: "is-past-mark", srLabel: "完成" };
         } else if (isCurrent) {
           if (isResult) {
             const v = fmtVerdict(lastVerdict);
-            mark = { text: v, cls: "is-result-" + v.toLowerCase() };
+            const verdictLabel =
+              v === "PASS" ? "通過" :
+              v === "FAIL" ? "未通過" :
+              v === "PART" ? "部分通過" :
+              "結果未知";
+            mark = { text: v, cls: "is-result-" + v.toLowerCase(), srLabel: verdictLabel };
           } else if (status === "running") {
-            mark = { text: "▶", cls: "is-running" };
+            mark = { text: "▶", cls: "is-running", srLabel: "執行中" };
           } else if (status === "paused") {
-            mark = { text: "⏸", cls: "is-paused" };
+            mark = { text: "⏸", cls: "is-paused", srLabel: "已暫停" };
           }
         } else if (isFuture) {
-          mark = { text: "?", cls: "is-future-mark" };
+          mark = { text: "?", cls: "is-future-mark", srLabel: "待進行" };
         }
         return (
           <span key={s} style={{ display: "contents" }}>
@@ -94,9 +99,14 @@ export const IterStages = memo(function IterStages({
             >
               {STAGE_LABEL[s]}
               {mark && (
-                <span className={"iter-stage-mark " + mark.cls} aria-hidden>
-                  {mark.text}
-                </span>
+                <>
+                  <span className={"iter-stage-mark " + mark.cls} aria-hidden>
+                    {mark.text}
+                  </span>
+                  {mark.srLabel && (
+                    <span className="sr-only">{` ${mark.srLabel}`}</span>
+                  )}
+                </>
               )}
             </span>
             {i < stages.length - 1 && <span aria-hidden className="iter-stage-arrow"><ArrowRightIcon /></span>}

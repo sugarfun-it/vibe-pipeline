@@ -96,6 +96,9 @@ export const TicketCard = memo(function TicketCard({
     : isPaused
     ? `第 ${iterCurrentLabel} 輪 · 已暫停 · 已耗時 ${fmtElapsed(elapsed)}`
     : `第 ${iterCurrentLabel} 輪 · 已耗時 ${fmtElapsed(elapsed)}`;
+  // TICKET-006:單輪 terminal ticket 的 round row 已經帶 elapsed,summary 重複「共 1 輪 · 總耗時」純資訊冗餘 → 隱藏
+  const completedRoundCount = rs.filter((r) => isRoundComplete(r)).length;
+  const hideSummary = isTerminal && completedRoundCount <= 1 && rs.length <= 1;
   // 完整 accessible name:#NN <title>,<mode>,<state>(+iter 摘要 / paused reason / liveLog)
   // 給 SR user 跟 sighted user 同等資訊密度(原本只有 status,丟失了 mode、goal、進度、暫停原因)
   const ariaLabelParts: string[] = [];
@@ -112,7 +115,8 @@ export const TicketCard = memo(function TicketCard({
       ariaLabelParts.push(summaryText);
     }
     if (isPaused && ticket.reason) ariaLabelParts.push(`暫停原因:${ticket.reason}`);
-    if (isRunning && ticket.liveLog) ariaLabelParts.push(`即時日誌:${ticket.liveLog}`);
+    // TICKET-012:liveLog 是高頻 polite live region,已在自己 element 上 announce;
+    // 從 card-level ariaLabel 拿掉避免 focus 時整段重複念出 + log 更新時雙重 announce
   }
   const ariaLabel = onClick ? ariaLabelParts.join("，") : undefined;
 
@@ -280,9 +284,11 @@ export const TicketCard = memo(function TicketCard({
                 />
               </div>
             )}
-            <div className="ticket-iter-summary mono">
-              {summaryText}
-            </div>
+            {!hideSummary && (
+              <div className="ticket-iter-summary mono">
+                {summaryText}
+              </div>
+            )}
           </>
         );
       })()}

@@ -74,24 +74,29 @@ Any of these → flag as Phase 4 candidate, do NOT edit:
 
 ### Runbook (subagent executes)
 
-1. Capture default-state screenshot via `node .iter-uiux/capture.mjs <nav_url> <screenshots_dir>/round1-default.png 1440x900 '<prep_steps>'`.
-2. If screenshot is blank: retry once with 500ms extra wait. Still blank → write blocker stub to `changelog_out`, return `status: blocked`.
+1. Capture default-state via dual-viewport script: `node .iter-uiux/capture.mjs <nav_url> <screenshots_dir>/round1-default '<prep_steps>'` — produces 4 files: `round1-default-desktop-viewport.png` / `round1-default-desktop-fullpage.png` / `round1-default-mobile-viewport.png` / `round1-default-mobile-fullpage.png`. The `<outBase>` arg does NOT carry width/view suffix.
+2. If any screenshot is blank: retry once with 500ms extra wait. Still blank → write blocker stub to `changelog_out`, return `status: blocked`.
 3. Read every owned file fully.
-4. Build advisor prompt (see global `references/codex-prompt.md` § Advisor mode). Save to `.iter-uiux/units/<unit>.r1.prompt.txt`.
-5. Run codex:
+4. Build advisor prompt (see global `references/codex-prompt.md` § Advisor mode). MUST include `ATTACHED VIEWPORTS: desktop + mobile` line. Save to `.iter-uiux/units/<unit>.r1.prompt.txt`.
+5. Run codex with all 4 images attached:
    ```
-   codex exec --sandbox read-only -i <screenshots_dir>/round1-default.png -- "$(cat .iter-uiux/units/<unit>.r1.prompt.txt)" > .iter-uiux/units/<unit>.r1.out.json 2>&1
+   codex exec --sandbox read-only \
+     -i <screenshots_dir>/round1-default-desktop-viewport.png \
+     -i <screenshots_dir>/round1-default-desktop-fullpage.png \
+     -i <screenshots_dir>/round1-default-mobile-viewport.png \
+     -i <screenshots_dir>/round1-default-mobile-fullpage.png \
+     -- "$(cat .iter-uiux/units/<unit>.r1.prompt.txt)" > .iter-uiux/units/<unit>.r1.out.json 2>&1
    ```
 6. Parse JSON. On failure → one corrective re-prompt; still fail → blocked.
 7. If `done: true`: write changelog, exit `converged`.
 8. Otherwise apply fixes (round N action):
    - For each issue with `suggested_fix`: if its touched files ⊆ `owned_files` → Edit. Otherwise record in `mapping_notes` as `deferred_phase4: <files>` and skip the edit.
-   - For each `need_more` of kind `screenshot`/`state`: capture additional screenshot(s).
+   - For each `need_more` of kind `screenshot`/`state`: capture additional screenshot(s) — same dual-viewport script, e.g. `round1-pressed`, `round1-with_long_copy`.
    - For each `need_more` of kind `source`/`flow`: include the requested content in next prompt as `extra_data`.
-9. Compute `git diff -- <owned_files>` → save to `.iter-uiux/units/<unit>.rN.diff`.
-10. Recapture all tracked states for round N.
-11. Build reviewer prompt (see global codex-prompt.md § Reviewer mode). Embed prior JSON, diff, mapping_notes, extra_data. Save to `.iter-uiux/units/<unit>.rN.prompt.txt`.
-12. Run codex with all relevant screenshots attached via repeated `-i`.
+9. Compute `git diff -- <owned_files>` → save to `.iter-uiux/units/<unit>.rN.diff`. NOTE: with HMR-mode anchor URL (vite dev 5173), no rebuild step needed — vite serves edited source directly on next goto.
+10. Recapture all tracked states for round N — dual-viewport (4 images per state).
+11. Build reviewer prompt (see global codex-prompt.md § Reviewer mode). Embed prior JSON, diff, mapping_notes, extra_data. Include `ATTACHED VIEWPORTS: desktop + mobile`. Save to `.iter-uiux/units/<unit>.rN.prompt.txt`.
+12. Run codex with all relevant screenshots attached via repeated `-i` (4 per state × N states).
 13. Parse. If `done: true` → write changelog, exit `converged`.
 14. **Anti-loop**: after each reviewer round ≥ 2, sort current `issues[]` by `id`, JSON-stringify; compare with previous reviewer's. Byte-identical → write "Forced convergence" line, exit `forced`.
 15. **Hard cap**: round 5 reviewer not done → write "Stopped at round 5 (diverged)", exit `diverged`.

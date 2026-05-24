@@ -5,10 +5,10 @@ import type { Draft, TicketSpec } from "../../api/qa";
 import { ArrowRightIcon, CheckIconSm } from "../../ui/icons";
 import { Overlay } from "../../ui/Overlay";
 
-const FIRST_AI_MESSAGE = "描述需求、完成標準與限制條件，我會整理成 ticket 規格。";
+const FIRST_AI_MESSAGE = "描述需求、完成標準與限制條件，我會整理成需求單規格。";
 const FIRST_AI_OPTIONS = [
   "建立功能需求",
-  "整理 bug ticket",
+  "整理錯誤回報",
   "盤點可建立的需求單",
 ];
 
@@ -33,6 +33,7 @@ export function QADrawer({
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const composerTextRef = useRef<string>("");
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const titleId = "qadr-title";
 
   // View override:user 顯式選擇要看哪個視圖,蓋過 draft.complete 自動切的邏輯。
@@ -44,26 +45,55 @@ export function QADrawer({
   useEffect(() => {
     setViewOverride(null);
   }, [draft?.draftId]);
+
   const specComplete = isSpecComplete(draft?.spec ?? null);
   // 最終 review 視圖條件:spec 5/5 齊,且(override="review" 或 draft.complete=true 且未 override="chat")
   const showReview =
     specComplete &&
     (viewOverride === "review" || (draft?.complete === true && viewOverride !== "chat"));
   const hasAnyTurn = (draft?.turns.length ?? 0) > 0;
+
+  // a11y:對話建立流程開場焦點應落在輸入區,而不是「關閉」按鈕。
+  // Overlay initialFocus="root" 後立即把焦點推給 composer textarea(若 draft 已存在且非 review 視圖)。
+  // 切草稿 / 切視圖會再觸發。restoreFocus 由 Overlay 卸載時負責還給 opener。
+  useEffect(() => {
+    if (!draft) return;
+    if (showReview) return;
+    const id = requestAnimationFrame(() => {
+      composerInputRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [draft?.draftId, showReview]);
   // 空狀態:剛開 drawer 還沒任何對話 — 不顯示一排灰色 checklist,避免把首次體驗變成「驗證失敗」表
   const showChecklist = !!draft && (hasAnyTurn || specComplete);
 
-  // turns 增加 / 切回 chat 視圖時自動 scroll 到底。
+  // turns 增加 / 切回 chat 視圖時自動 scroll 到底,但首次掛載一律 anchor 頂(welcome bubble 完整可見),
+  // 避免 mid-bubble 卡在 body 頂端產生視覺切斷感。user 想看歷史末段自己捲;新 turn 之後跟著黏底
   // showReview=true 期間 transcriptRef 沒掛(SpecReview 渲染);切回 chat 後新 ref 掛上才 scroll
+  const prevTurnsLenRef = useRef<number>(-1);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: draftId 變(切草稿)reset
+  useEffect(() => {
+    prevTurnsLenRef.current = -1;
+  }, [draft?.draftId]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: turns.length / showReview 是觸發訊號
   useEffect(() => {
     if (showReview) return;
-    // 等 React commit 把 chat DOM 掛上去 + 內容 layout 完
+    const turnsLen = draft?.turns.length ?? 0;
+    const prev = prevTurnsLenRef.current;
+    prevTurnsLenRef.current = turnsLen;
     const id = requestAnimationFrame(() => {
-      transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight });
+      const el = transcriptRef.current;
+      if (!el) return;
+      // 首次掛載(prev===-1):一律 scroll 頂,welcome bubble 完整 + 後面對話展開狀讓 user 自己捲
+      // 後續 turn 增加(prev≥0 且 turnsLen>prev):scroll 到底跟著新訊息(chat 慣例)
+      if (prev === -1) {
+        el.scrollTo({ top: 0 });
+        return;
+      }
+      if (turnsLen > prev) el.scrollTo({ top: el.scrollHeight });
     });
     return () => cancelAnimationFrame(id);
-  }, [draft?.turns.length, showReview]);
+  }, [draft?.turns.length, draft?.draftId, showReview]);
 
   // 未送出文字確認用 in-drawer 彈窗(不用 window.confirm,避免破壞抽屜視覺一致)
   const [pendingClose, setPendingClose] = useState(false);
@@ -81,7 +111,7 @@ export function QADrawer({
       onRequestClose={requestClose}
       labelledBy={titleId}
       portal={false}
-      initialFocus="close"
+      initialFocus="root"
       surfaceRef={drawerRef}
       stageClassName="qadr-stage"
       surfaceClassName="qadr-drawer"
@@ -102,7 +132,7 @@ export function QADrawer({
               title={hasAnyTurn ? "關閉並保留草稿（下次可接續）" : "關閉並取消空白草稿"}
               aria-label={hasAnyTurn ? "關閉並保留草稿" : "關閉並取消空白草稿"}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" focusable="false">
                 <path d="M6 6l12 12M18 6 6 18" />
               </svg>
             </button>
@@ -122,8 +152,12 @@ export function QADrawer({
             {draft && (
               <>
                 <span className="sep">·</span>
-                <span style={{ opacity: 0.55 }} title={`draftId: ${draft.draftId}`}>
-                  草稿 #{draft.draftId.slice(0, 6)}
+                <span
+                  className="qadr-draft-status"
+                  title={`draftId: ${draft.draftId}`}
+                  aria-label={hasAnyTurn ? "草稿已自動保留,關閉後可接續" : "尚未對話,關閉會自動取消空白草稿"}
+                >
+                  {hasAnyTurn ? "草稿已自動保留" : "空白草稿"}
                 </span>
               </>
             )}
@@ -216,18 +250,27 @@ export function QADrawer({
                   <>
                     <Bubble kind="ai" message={FIRST_AI_MESSAGE} />
                     {emptyTurns && (
-                      <div className="qadr-suggestions" aria-label="建議的開場回覆">
-                        {FIRST_AI_OPTIONS.map((o) => (
-                          <button
-                            type="button"
-                            key={o}
-                            className="vp-chip vp-chip--action qadr-suggestion"
-                            onClick={() => onSendTurn(o)}
-                            disabled={busy}
-                          >
-                            {o}
-                          </button>
-                        ))}
+                      <div className="qadr-empty-starter">
+                        <div className="qadr-starter-label" id="qadr-starter-label">
+                          快速起點（可直接點選，或在下方輸入自訂內容）
+                        </div>
+                        <div
+                          className="qadr-suggestions"
+                          role="group"
+                          aria-labelledby="qadr-starter-label"
+                        >
+                          {FIRST_AI_OPTIONS.map((o) => (
+                            <button
+                              type="button"
+                              key={o}
+                              className="vp-chip vp-chip--action qadr-suggestion"
+                              onClick={() => onSendTurn(o)}
+                              disabled={busy}
+                            >
+                              {o}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {draft.turns.map((t) => (
@@ -235,7 +278,7 @@ export function QADrawer({
                     ))}
                     {showThinking && (
                       <div className="qadr-loading mono">
-                        <span>AI 思考中</span>
+                        <span>助理思考中</span>
                         <ThinkingDots />
                       </div>
                     )}
@@ -286,6 +329,7 @@ export function QADrawer({
                     onTextChange={(v) => {
                       composerTextRef.current = v;
                     }}
+                    inputRef={composerInputRef}
                   />
                 );
               })()}
@@ -416,7 +460,7 @@ function ThinkingDots() {
 function Bubble({ kind, message }: { kind: "user" | "ai"; message: string }) {
   return (
     <div className={"qadr-bubble qadr-bubble-" + kind}>
-      <div className="qadr-bubble-role mono">{kind === "user" ? "你" : "AI"}</div>
+      <div className="qadr-bubble-role mono">{kind === "user" ? "你" : "助理"}</div>
       <div className="qadr-bubble-msg">{message}</div>
     </div>
   );
@@ -429,6 +473,7 @@ function Composer({
   onSend,
   onCancel,
   onTextChange,
+  inputRef,
 }: {
   options: string[];
   optionsMode?: "single" | "multi";
@@ -436,10 +481,15 @@ function Composer({
   onSend: (msg: string) => void;
   onCancel: () => void;
   onTextChange?: (text: string) => void;
+  inputRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
 }) {
   const [text, setText] = useState("");
   const [picked, setPicked] = useState<Set<number>>(new Set());
-  const taRef = useRef<HTMLTextAreaElement>(null);
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  const setTaRef = (el: HTMLTextAreaElement | null) => {
+    taRef.current = el;
+    if (inputRef) inputRef.current = el;
+  };
   const taId = "qadr-composer-textarea";
 
   // reset multi selection when options change (new AI turn)
@@ -540,7 +590,7 @@ function Composer({
           描述要建立的需求單內容
         </label>
         <textarea
-          ref={taRef}
+          ref={setTaRef}
           id={taId}
           className="qadr-input qadr-input-multiline"
           value={text}
@@ -573,7 +623,7 @@ function Composer({
           title={!text.trim() ? "輸入內容後可送出（Enter）" : "送出（Enter）"}
           aria-label="送出訊息"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
             <path d="M5 12h14M13 5l7 7-7 7" />
           </svg>
         </button>

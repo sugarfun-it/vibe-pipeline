@@ -328,7 +328,7 @@ export function TicketDrawer({
                     onSplitTicket(ticket.id);
                   }}
                 >
-                  <ScissorsIcon /> 確認 AI 拆分
+                  <ScissorsIcon aria-hidden="true" /> 確認 AI 拆分
                 </button>
               </div>
             </div>
@@ -355,7 +355,7 @@ export function TicketDrawer({
                       await resetTicket(ticket.id);
                     }}
                   >
-                    <RefreshIcon /> 重開 ticket
+                    <RefreshIcon aria-hidden="true" /> 重開 ticket
                   </button>
                 )}
                 {onSplitTicket && isSplittable(ticket) && (
@@ -365,7 +365,7 @@ export function TicketDrawer({
                     title="點擊後會先顯示確認卡,不會立即拆分"
                     aria-label="AI 拆分,點擊後出現確認步驟"
                   >
-                    <ScissorsIcon /> AI 拆分…
+                    <ScissorsIcon aria-hidden="true" /> AI 拆分…
                   </button>
                 )}
               </div>
@@ -391,7 +391,7 @@ export function TicketDrawer({
                     await deleteTicket(ticket.id);
                   }}
                 >
-                  <TrashIcon />
+                  <TrashIcon aria-hidden="true" />
                   <span className="tdrw-delete-icon-label">刪除</span>
                 </button>
               )}

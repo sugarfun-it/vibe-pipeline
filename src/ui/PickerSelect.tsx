@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { CheckIconSm } from "./icons";
 import { Popover } from "./Popover";
+// phase4-2026-05-23-008 — pull in shared form-hint / form-hint--error styles
+import "./forms/forms.css";
 
 export type PickerOption = {
   id: string;
@@ -22,6 +24,12 @@ export type PickerSelectProps = {
   ariaLabel?: string;
   placeholder?: string;
   id?: string;
+  // phase4-2026-05-23-008 — field-level hint / error rendered below trigger
+  // (mirrors NumberField API: error wins over hint, aria-describedby wires
+  // whichever is shown). Caller decides label markup; this prop is for the
+  // helper line under the control.
+  fieldHint?: ReactNode;
+  fieldError?: ReactNode;
 };
 
 export function PickerSelect({
@@ -36,6 +44,8 @@ export function PickerSelect({
   ariaLabel,
   placeholder,
   id: idProp,
+  fieldHint,
+  fieldError,
 }: PickerSelectProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -195,6 +205,9 @@ export function PickerSelect({
   const current = options.find((o) => o.id === value);
   const activeId = open && options[activeIndex] ? `${baseId}-opt-${activeIndex}` : undefined;
   const labelText = current?.label ?? placeholder ?? "";
+  // phase4-2026-05-23-008 — describedby wires field-level hint / error
+  const describedId = fieldError || fieldHint ? `${baseId}-desc` : undefined;
+  const describedText = fieldError ?? fieldHint;
 
   return (
     <div className={"picker vp-field" + (inert ? " is-inert" : "")}>
@@ -215,6 +228,8 @@ export function PickerSelect({
         aria-controls={open ? listboxId : undefined}
         aria-label={ariaLabel}
         aria-readonly={readOnly || undefined}
+        aria-invalid={fieldError ? true : undefined}
+        aria-describedby={describedId}
       >
         {icon}
         <span className={current?.mono ? "mono" : ""}>{labelText}</span>
@@ -288,6 +303,11 @@ export function PickerSelect({
           )}
         </div>
       </Popover>
+      {describedText !== undefined && describedText !== null && describedText !== "" && (
+        <div id={describedId} className={"form-hint" + (fieldError ? " form-hint--error" : "")}>
+          {describedText}
+        </div>
+      )}
     </div>
   );
 }

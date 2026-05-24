@@ -91,7 +91,21 @@
 .proj-menu-item-action:hover { color: var(--fg); }
 
 /* ─── Topbar right + overflow menu ─── */
-.topbar-right { display: flex; align-items: center; gap: 6px; }
+.topbar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.topbar-right > * { flex-shrink: 0; }
+
+/* topbar 內 .icon-btn 加 :focus-visible ring(全域 ring 沒涵蓋 .icon-btn — advisor topbar-002)
+   + hover/focus background 強化 affordance(advisor topbar-001 — mobile 也通用) */
+.topbar .icon-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 2px var(--bg), 0 0 0 4px var(--accent));
+}
+
+/* parallel-chip 視覺上更明確是 status(非 button)— 不加 hover background,
+   只保留現有 color 變化;cursor 維持 default(span)。advisor topbar-006 */
+.parallel-chip {
+  cursor: default;
+}
 .topbar-overflow {
   position: relative;
   display: inline-flex;
@@ -128,6 +142,13 @@
 
 /* ─── Mobile(topbar / proj menu)─── */
 @media (max-width: 767.98px) {
+  /* mobile icon-btn 升級為 ≥40x40 touch target(advisor topbar-001 — WCAG 2.5.5) */
+  .topbar .icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+  }
+
   .topbar {
     gap: 8px;
     padding: 0 10px;
@@ -166,17 +187,22 @@
   }
 
   .proj-switcher {
+    flex: 1 1 auto;
     min-width: 0;
+    display: flex;
   }
 
-  /* 專案 chip 自然寬度,不撐滿;name 過長 ellipsis */
+  /* 專案 chip 撐滿 .proj-switcher 但 name 仍 ellipsis;cap 視覺寬度避免吃掉右側 cluster */
   .proj-trigger {
-    max-width: 60vw;
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: 100%;
     padding: 4px 8px;
+    display: flex;
   }
 
   .proj-trigger-name {
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PickerSelect } from "../../ui/PickerSelect";
-import { BranchIcon } from "../../ui/icons";
+import { BranchIcon, CloseIcon } from "../../ui/icons";
 import { TextField } from "../../ui/forms/TextField";
 import "../pipeline/createPipeline.css";
 
@@ -41,7 +41,9 @@ export function CreateCard({
   const uid = useId();
   const inputId = "create-pipeline-name-" + uid;
   const counterId = "create-pipeline-name-counter-" + uid;
+  const formatHintId = "create-pipeline-name-format-" + uid;
   const autoMergeDescId = "create-pipeline-automerge-desc-" + uid;
+  const baseLabelId = "create-pipeline-base-label-" + uid;
 
   const trimmed = name.trim();
   const taken = existingNames.includes(trimmed);
@@ -91,9 +93,7 @@ export function CreateCard({
         <span className="create-card-eyebrow mono" style={{ textTransform: "none" }}>新 pipeline</span>
         <span style={{ flex: 1 }} />
         <button type="button" className="create-x" onClick={onCancel} title="取消 (Esc)" aria-label="取消">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          <CloseIcon />
         </button>
       </div>
 
@@ -110,7 +110,10 @@ export function CreateCard({
           maxLength={NAME_MAX_LENGTH}
           fieldClassName={"create-field-form" + (hasError ? " is-error" : "")}
           inputClassName="mono create-field-form-input"
-          ariaDescribedBy={counterNearLimit ? counterId : undefined}
+          ariaDescribedBy={[
+            !hasError ? formatHintId : null,
+            counterNearLimit ? counterId : null,
+          ].filter(Boolean).join(" ") || undefined}
           error={
             hasError
               ? taken
@@ -122,6 +125,13 @@ export function CreateCard({
           }
         />
         <div className="create-field-meta">
+          <div
+            id={formatHintId}
+            className="create-field-format-hint"
+            hidden={hasError}
+          >
+            a-z、0-9、-、_，首字英數
+          </div>
           <div
             id={counterId}
             className={
@@ -137,7 +147,7 @@ export function CreateCard({
       </div>
 
       <div className="create-field">
-        <div className="create-field-label">基底分支</div>
+        <div id={baseLabelId} className="create-field-label">基底分支</div>
         <PickerSelect
           open={baseOpen}
           setOpen={setBaseOpen}
@@ -145,6 +155,7 @@ export function CreateCard({
           onChange={setBaseBranch}
           icon={<span className="mono" style={{ color: "var(--fg-mute)", display: "inline-flex" }}><BranchIcon /></span>}
           options={baseList.map((b) => ({ id: b, label: b, mono: true }))}
+          ariaLabel="基底分支"
         />
       </div>
 
@@ -176,7 +187,12 @@ export function CreateCard({
           <span>Esc</span>
           <span style={{ color: "var(--fg-faint)" }}>取消</span>
         </button>
-        <button type="submit" className="btn btn-primary create-submit" disabled={!valid}>
+        <button
+          type="submit"
+          className="btn btn-primary create-submit"
+          disabled={!valid}
+          aria-label="建立 pipeline"
+        >
           <span>建立</span>
           <span className="kbd-inline mono">↵</span>
         </button>

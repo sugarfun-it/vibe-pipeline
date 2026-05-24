@@ -139,13 +139,22 @@
   word-break: break-word;
 }
 
+/* phase4-2026-05-23-009 — QR codes need a stable light plate so scanners read
+   them regardless of theme. Token tracks light theme bg-elevated; dark theme
+   keeps a forced white plate since QR contrast is non-negotiable. */
 .auth-qr-wrapper {
   display: flex;
   justify-content: center;
-  padding: 12px;
-  background: #fff;
-  border-radius: var(--radius-sm);
-  margin-bottom: 14px;
+  padding: var(--space-3, 12px);
+  background: var(--qr-plate, #fff);
+  border-radius: var(--radius-control, 6px);
+  margin-bottom: var(--space-3, 12px);
+}
+@media (max-width: 767.98px) {
+  .auth-qr-wrapper {
+    padding: var(--space-2, 8px);
+    margin-bottom: var(--space-2, 8px);
+  }
 }
 
 .auth-dialog-footer {

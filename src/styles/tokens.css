@@ -96,8 +96,26 @@
   --focus-ring-offset: 2px;
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 
+  /* phase4-2026-05-23-009 — QR plate stays white in dark theme so scanners read it */
+  --qr-plate: #ffffff;
+
   --font-ui: "Geist", "Inter Tight", -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  /* phase4-2026-05-23-007 — terminology policy (PROJECT_TERMINOLOGY):
+     - Visible UI labels: localized zh-Hant (e.g. 「執行」「停止」「合併」「結果」).
+       Verdict labels (PASS/FAIL/PART/UNKNOWN) intentionally stay as ASCII glyph
+       in narrow stage chips (IterStages — 9px Geist Mono); elsewhere they get
+       localized via fmtVerdict (通過 / 未通過 / 部分通過 / 結果未知).
+     - Developer tokens (DO NOT translate, ALWAYS in mono font):
+       branch names, commit hashes, file paths, CLI subcommands (e.g. `git init`),
+       state machine keys (state=ready / state=running / draft / done / split / pending),
+       domain entities (pipeline / ticket / commit / runner / worktree).
+     - When the two appear in the same line, separate with `·` (middle dot, full-
+       width if surrounding zh-Hant glyphs) and let .meta-row utility wrap at
+       separator boundaries — not inside a developer token.
+     This is an existing convention, not a code change. Full message-table
+     i18n refactor is tracked separately (see docs/TODO.md / future i18n epic). */
 }
 
 html.light {
@@ -160,6 +178,9 @@ html.light {
 
   /* phase4-focus-001 — focus ring uses theme bg so the 2px halo blends in both themes */
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  /* phase4-2026-05-23-009 — QR plate stays white in light theme too (scanner contrast) */
+  --qr-plate: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -235,6 +256,52 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
 .btn-ghost { background: transparent; border-color: transparent; color: var(--fg-mute); }
 .btn-ghost:hover { background: var(--hover); color: var(--fg); }
 
+/* phase4-2026-05-23-005 — queued state matrix (was inline `var(--queued)` in RunButton) */
+.btn-queued {
+  background: color-mix(in srgb, var(--queued) 14%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--queued) 45%, var(--line-2));
+  color: var(--queued);
+  font-weight: 500;
+}
+.btn-queued:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--queued) 22%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--queued) 60%, var(--line-2));
+}
+.btn-queued:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* phase4-2026-05-23-005 — aria-disabled state ≠ :disabled
+   aria-disabled keeps focusability (SR reads helper text). Visually muted but
+   focusable; cursor:not-allowed encodes pointer affordance; focus ring still
+   appears so keyboard users see "I landed but cannot act".
+   The reason hint relies on `title` (tooltip) + sibling sr-only span; the
+   visible-on-focus pattern below makes the title appear in a tooltip-like
+   slot when keyboard focus lands. */
+.btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  color: var(--fg-mute);
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+.btn[aria-disabled="true"]:hover {
+  background: var(--panel-2);
+  border-color: var(--line);
+  filter: none;
+  transform: none;
+}
+.btn[aria-disabled="true"]:active { transform: none; }
+.btn[aria-disabled="true"]:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* Shared sr-only utility (callers can drop inline srOnly CSSProperties objects). */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* dotted bg */
 
 html.light .dotgrid {
@@ -261,6 +328,14 @@ html.light .dotgrid {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.9s linear infinite; }
+
+/* phase4-2026-05-23-006 — reduced-motion contract for shared spinner / pulse / blink chrome */
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+  .pulse { animation: none; opacity: 0.85; }
+  .blink { animation: none; opacity: 0.85; }
+  .fade-up { animation: none; }
+}
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }

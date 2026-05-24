@@ -95,11 +95,13 @@ function RailItem({
   const total = p.tickets.length;
   const stateText = PIPELINE_STATE_TEXT[p.state] ?? p.state;
   const secondary = railSecondary(p);
-  const accessibleSecondary = railSecondaryAccessible(p);
+  const fullSecondary = railSecondaryAccessible(p);
+  const miniLabel = railMiniLabel(p);
   const ariaLabel =
-    `${p.name} · ${stateText} · ${done}/${total} 完成` +
+    `${p.name} · ${stateText} · ${done} / ${total} ticket 完成` +
     (hasDraft ? " · QA 進行中" : "") +
-    (accessibleSecondary ? ` · ${accessibleSecondary}` : "");
+    (fullSecondary ? ` · ${fullSecondary}` : "") +
+    (miniLabel ? ` · ${miniLabel}` : "");
   return (
     <button
       type="button"
@@ -110,13 +112,17 @@ function RailItem({
     >
       <div className="rail-item-row">
         <span className="rail-state-dot" aria-hidden="true" style={{ background: STATE_COLOR[p.state] }} />
-        <span className="rail-item-name">{p.name}</span>
+        <span className="rail-item-name" title={p.name}>{p.name}</span>
         {hasDraft && (
           <span className="mono rail-qa-badge" aria-hidden="true" title="進行中 QA">
             QA
           </span>
         )}
-        <span className="rail-item-count mono" aria-hidden="true">
+        <span
+          className="rail-item-count mono"
+          aria-hidden="true"
+          title={`${done} / ${total} ticket 已完成`}
+        >
           {done}/{total}
         </span>
       </div>
@@ -139,7 +145,7 @@ function RailItem({
           return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
         })}
       </div>
-      <div className="rail-item-meta" aria-hidden="true">
+      <div className="rail-item-meta" aria-hidden="true" title={fullSecondary || secondary}>
         <span className="mono">{secondary}</span>
       </div>
     </button>
@@ -275,6 +281,37 @@ function railSecondaryAccessible(p: Pipeline): string {
     return planningAgo ? `branch ${branchSuffix} · ${planningAgo}` : `branch ${branchSuffix}`;
   }
   return planningAgo ? `尚未執行 · ${planningAgo}` : "尚未執行";
+}
+
+// rail-mini 的 aria-label:把 ticket status 分布念給 screen reader,不只靠顏色
+function railMiniLabel(p: Pipeline): string {
+  const total = p.tickets.length;
+  if (total === 0) return "尚無 ticket";
+  const counts: Record<string, number> = {};
+  for (const t of p.tickets) {
+    const k =
+      t.status === "failed" ||
+      t.status === "failed_iter_limit" ||
+      t.status === "failed_transient"
+        ? "failed"
+        : t.status;
+    counts[k] = (counts[k] || 0) + 1;
+  }
+  const label: Record<string, string> = {
+    done: "已完成",
+    running: "執行中",
+    paused: "暫停",
+    ready: "準備",
+    failed: "失敗",
+  };
+  const parts: string[] = [];
+  for (const k of ["done", "running", "paused", "ready", "failed"]) {
+    if (counts[k]) parts.push(`${counts[k]} ${label[k]}`);
+  }
+  const known = parts.length ? parts.join("、") : "";
+  const planned = total - (counts.done || 0) - (counts.running || 0) - (counts.paused || 0) - (counts.ready || 0) - (counts.failed || 0);
+  const tail = planned > 0 ? (known ? `、${planned} 待執行` : `${planned} 待執行`) : "";
+  return `共 ${total} ticket${known || tail ? "(" + known + tail + ")" : ""}`;
 }
 
 function lastActivityAt(p: Pipeline): number | null {

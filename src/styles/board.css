@@ -89,6 +89,37 @@
   background: var(--panel-2);
   border-color: var(--line-2);
 }
+/* phase4-2026-05-23-005 — aria-disabled reason hint surfacing on keyboard focus.
+   Pattern: caller sets `title="…"` describing why the action is disabled; on
+   keyboard focus we render that title as a tooltip-like pseudo so keyboard /
+   touch users see the reason without relying on hover. */
+.btn[aria-disabled="true"][title]:focus-visible::after,
+.tdrw-action[aria-disabled="true"][title]:focus-visible::after,
+.run-button[aria-disabled="true"][title]:focus-visible::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  white-space: pre;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
+  padding: 6px 10px;
+  box-shadow: var(--shadow-popover);
+  z-index: var(--z-popover, 100);
+  pointer-events: none;
+  max-width: min(280px, calc(100vw - 32px));
+  text-wrap: pretty;
+}
+.btn[aria-disabled="true"][title]:focus-visible,
+.tdrw-action[aria-disabled="true"][title]:focus-visible,
+.run-button[aria-disabled="true"][title]:focus-visible {
+  position: relative;
+}
 .btn:active:not(:disabled):not([aria-disabled="true"]),
 .tdrw-action:active:not(:disabled):not([aria-disabled="true"]),
 .qadr-send:active:not(:disabled):not([aria-disabled="true"]),
@@ -148,6 +179,30 @@
 .vp-chip--warning { color: var(--paused); border-color: color-mix(in srgb, var(--paused) 40%, var(--line-2)); background: color-mix(in srgb, var(--paused) 12%, transparent); }
 .vp-chip--danger  { color: var(--failed); border-color: color-mix(in srgb, var(--failed) 40%, var(--line-2)); background: color-mix(in srgb, var(--failed) 12%, transparent); }
 .vp-chip--info    { color: var(--iter); border-color: color-mix(in srgb, var(--iter) 40%, var(--line-2)); background: color-mix(in srgb, var(--iter) 12%, transparent); }
+
+/* phase4-2026-05-23-010 — atomic metadata row utility.
+   Use on any meta line where developer tokens (branch names / commit counts /
+   timestamps / paths) must wrap as units. Container flex-wraps at separators,
+   atoms stay together via display:inline-flex + nowrap. */
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1, 4px) var(--space-2, 8px);
+  min-width: 0;
+}
+.meta-atom {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meta-sep {
+  color: var(--fg-faint);
+  user-select: none;
+}
 
 /* phase4-cross-005 — chip taxonomy split.
    --state    : read-only (status/verdict/role). cursor:default, no pointer cues

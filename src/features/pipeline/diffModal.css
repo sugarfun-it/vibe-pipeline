@@ -3,10 +3,12 @@
    This file only carries diff-specific overrides + body / file-list / hunk styles. */
 
 /* Diff modal is wider than the default 540px confirm/sync modal:
-   it needs two-column layout (file nav + diff content). */
+   it needs two-column layout (file nav + diff content).
+   Sizing:小 diff(單檔 / 少量 hunks)不再強撐 90vh — 改用 min-height + max-height,
+   讓 modal 跟著內容收(視覺上不會被整片白底淹沒),大 diff 仍能伸展到 90vh。 */
 .diff-modal.drawer--modal {
   max-width: 1100px;
-  height: 100%;
+  min-height: 320px;
   max-height: 90vh;
 }
 
@@ -28,6 +30,12 @@
   /* 讓 long branch 在這個 group 內 truncate;不讓 group 撐爆 head 把 ✕ 推出可視範圍 */
   min-width: 0;
   flex: 1 1 auto;
+}
+/* 標題 "差異" 永不換行 / 永不縮 — 之前 mobile 多檔 / 長 path 時被擠到逐字換行
+   (rwd-002);只讓 branch segment 在剩餘寬度裡 ellipsis */
+.diff-modal-title-label {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .diff-modal-branch {
   font-size: 11px;
@@ -84,8 +92,12 @@
 .diff-modal-copy {
   height: 26px;
   padding: 0 10px;
+  /* 已複製 / 複製差異 label 寬差異最多 1 個全形字 → min-width 鎖住寬,
+     避免 toggle 後 header 抖動(尤其 mobile head grid actions 那欄會跳寬度) */
+  min-width: 84px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   border-radius: 5px;
   border: 1px solid var(--line);
   background: transparent;
@@ -428,13 +440,23 @@
 
   .diff-modal-body {
     grid-template-columns: 1fr;
+    /* auto = file nav 跟著內容高度(單檔時不再撐出 132px 空白),1fr = diff content 填剩餘 */
+    grid-template-rows: auto minmax(0, 1fr);
     min-width: 0;
   }
 
   .diff-modal-files {
+    /* 多檔時用 max-height + 內部捲;單檔 / 少檔 fit-content 即可 */
     max-height: 132px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
+    align-self: start;
+  }
+
+  /* 單檔 diff:mobile 把 file nav 整段藏掉,讓 diff content 直接靠 head,
+     避免「一行 file row + 半屏空白 + 才看到 diff」的破碎感(rwd-001 + structure-001) */
+  .diff-modal-body.is-single-file .diff-modal-files {
+    display: none;
   }
 
   .diff-modal-content,
