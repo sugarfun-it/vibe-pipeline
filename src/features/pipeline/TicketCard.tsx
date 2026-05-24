@@ -261,7 +261,7 @@ export const TicketCard = memo(function TicketCard({
               return (
                 <div className="ticket-iter ticket-iter-row">
                   <span className="iter-round-num mono">
-                    #{roundNum}
+                    第 {roundNum} 輪
                   </span>
                   <IterStages
                     stage={ticket.iter!.stage}
@@ -276,7 +276,7 @@ export const TicketCard = memo(function TicketCard({
             })()}
             {rounds.length === 0 && !inProgress && (
               <div className="ticket-iter ticket-iter-row">
-                <span className="iter-round-num mono">#1</span>
+                <span className="iter-round-num mono">第 1 輪</span>
                 <IterStages
                   stage="doer"
                   status={ticket.status}
@@ -306,8 +306,8 @@ export const TicketCard = memo(function TicketCard({
         const terminalStatus: TicketStatus = isTerminal && ticket.status !== "done" ? "failed" : ticket.status;
         const verdictHint = isTerminal ? (ticket.status === "done" ? "PASS" : "FAIL") : undefined;
         return (
-          <div className="ticket-iter ticket-iter-row">
-            <span className="iter-round-num mono">#1</span>
+          // step / merge / sync ticket 單次任務,不顯示 round 號(只一輪),用 --single variant
+          <div className="ticket-iter ticket-iter-row ticket-iter-row--single">
             <IterStages
               stage={terminalStage}
               status={terminalStatus}

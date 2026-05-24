@@ -7,37 +7,66 @@
   display: flex; flex-direction: column;
   min-height: 0; min-width: 0;
   overflow-y: auto;
-  padding: 22px 28px 28px;
+  padding: 20px 24px 24px;
   background: var(--bg);
 }
-.focus-head { margin-bottom: 16px; position: relative; z-index: 5; }
+.focus-head { margin-bottom: 18px; position: relative; z-index: 5; }
+/* V1 Refined:title-row 自身做 relative anchor 給 .focus-actions / .focus-overflow 的絕對定位用,
+   actions 釘在右上(視覺上與 title 同列右側),overflow ⋯ 更靠右(46px 留給 actions cluster)。
+   meta-row 改成緊湊的 mono strip(monospace 11px,用 ::before · 連接 chips),不再寬鬆 flex-wrap。 */
 .focus-head-top {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
-/* 兩列結構:
-   row 1 = title + branch chip + ... actions(run / overflow)
-   row 2 = status chip + count + runs chip + diff/sync + ... + ticket button
-   每列獨立 flex-wrap;靠 spacer div 把 actions / + ticket 推到右側 */
-.focus-head-title-row,
+.focus-head-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  padding-right: 280px; /* 留給 actions cluster + overflow ⋯ */
+  min-height: 34px;
+}
 .focus-head-meta-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  overflow: hidden;
 }
-.focus-head-title-spacer,
-.focus-head-meta-spacer {
-  flex: 1 1 auto;
-  min-width: 0;
-}
+.focus-head-title-spacer { flex: 1 1 auto; min-width: 0; }
+.focus-head-meta-spacer { display: none; } /* V1 Refined:meta-row chip 自己接 ::before ·,不需要 spacer */
 .focus-actions {
+  position: absolute;
+  top: 0;
+  right: 44px; /* 留 44px 給 overflow ⋯ */
+  height: 34px;
+  margin-left: 0 !important;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
+  flex-wrap: nowrap;
+  z-index: 2;
+}
+.focus-actions .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 5px 14px;
+  font-size: 12px;
+  min-height: 30px;
+}
+.focus-actions .btn-accent,
+.focus-actions .focus-add-ticket {
+  padding: 5px 12px;
+  font-size: 12px;
+  min-height: 30px;
 }
 .focus-run-wrap {
   display: inline-flex;
@@ -50,33 +79,125 @@
 .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
   display: none;
 }
-/* FC-006: 單 ticket / 短內容時整欄拉滿太空曠 — 給 inner 元素統一 max-width,
-   ticket list、banner、ticket card 對齊;header 兩列因 spacer 推右側,自然填滿欄寬。 */
+/* FC-006(2026-05-25 重寫):inner content 直接 100% 填滿 focus 容器,不再 cap max-width。
+   .focus 寬度天然被 sidebar + inbox-strip 限制,不會無限拉寬;固定 max-width(1080 / 1400 / 1600)
+   在不同螢幕 scaling 下都會留奇怪空白,跨機器表現不一。100% 一致簡單。
+   header 兩列原本靠 spacer div 推右側 actions,維持不動。 */
 .focus-head,
 .focus-list,
 .focus .banner {
-  max-width: var(--focus-content-max, 1080px);
   width: 100%;
 }
 /* runs / 累積成本 chip:pipeline header 上 quick glance,完整明細在 OverflowMenu「執行紀錄」 drawer */
 .focus-title {
   margin: 0;
   font-size: 22px; font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.022em;
   color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
-.focus-count { font-size: 11.5px; color: var(--fg-mute); }
+.focus-count {
+  font-size: 11px; color: var(--fg-mute);
+  background: transparent;
+  border: 0;
+  padding: 0 10px;
+  border-radius: 0;
+  position: relative;
+  min-height: auto;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* V1 Refined chip-state:state-colored capsule pill,把 source 內 .dot 的 inline state color
+   撐滿成 chip 背景(0.18 tint),不必動 JSX 就能拿到 state 色。running 時 .dot.pulse 用
+   chipStatePulse 在 0.18↔0.34 間呼吸,不縮放整個 pill */
+.focus-head-meta-row > .chip-state {
+  position: relative;
+  background: transparent;
+  border: 0;
+  padding: 3px 12px;
+  border-radius: 999px;
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.focus-head-meta-row > .chip-state .dot {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: inherit;
+  opacity: 0.18;
+  z-index: -1;
+}
+.focus-head-meta-row > .chip-state .dot.pulse {
+  animation: chipStatePulse 1.8s ease-in-out infinite;
+}
+@keyframes chipStatePulse {
+  0%, 100% { opacity: 0.18; }
+  50%      { opacity: 0.34; }
+}
+.focus-head-meta-row > .focus-count,
+.focus-head-meta-row > .chip:not(.chip-state),
+.focus-head-meta-row > .sync-chip {
+  background: transparent;
+  border: 0;
+  padding: 0 10px;
+  color: var(--fg-mute);
+  font-size: 11px;
+  border-radius: 0;
+  position: relative;
+  min-height: auto;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-head-meta-row > .focus-count::before,
+.focus-head-meta-row > .chip:not(.chip-state)::before,
+.focus-head-meta-row > .sync-chip::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-faint);
+  opacity: 0.6;
+}
 
 /* ─── focus ticket list ───────────────────────────────────── */
-.focus-list { display: flex; flex-direction: column; gap: 10px; }
+.focus-list { display: flex; flex-direction: column; gap: 8px; }
+/* iter-uiux 2026-05-25 focus-column.has_active_draft r2 — .focus-list 內含 .focus-empty
+   時整個 ticket list 撐滿剩餘高度,讓 .focus-empty(flex column + justify-content:center)
+   真的能在 header 下方的垂直可用區段中央。否則 .focus-list 高度為 0,.focus-empty 雖然
+   justify-content:center 也只是把自身 child 對齊到自己 0 高度的中央 → 仍然貼著 header。 */
+.focus-list:has(> .focus-empty) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 
 /* ─── banners(ReadyBanner / paused banner)─────────────── */
 .banner {
   display: flex; align-items: center; gap: var(--space-3, 14px);
-  padding: var(--space-3, 12px) var(--space-3, 14px);
-  border-radius: var(--radius-panel, 10px);
+  padding: 12px 14px;
+  border-radius: 10px;
   border: 1px solid;
-  margin-top: var(--space-3, 12px);
+  margin-top: 14px;
   position: relative;
   z-index: var(--z-banner, 5);
 }
@@ -91,8 +212,8 @@
 .banner-icon { display: inline-flex; flex-shrink: 0; color: currentColor; }
 .banner-paused .banner-icon { color: var(--paused); }
 .banner-body { flex: 1; min-width: 0; }
-.banner-title { font-size: 13px; font-weight: 600; color: var(--fg); }
-.banner-desc { font-size: 11.5px; color: var(--fg-mute); margin-top: 2px; }
+.banner-title { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.banner-desc { font-size: 10.5px; color: var(--fg-mute); margin-top: 2px; letter-spacing: 0.01em; }
 
 /* phase4-cross-011 — banner state modifiers + data-state contract.
    ReadyBanner.tsx emits data-state="ready|merging|merged|failed"; styling
@@ -150,25 +271,39 @@
 [data-density="compact"] .focus-list { gap: 6px; }
 [data-density="compact"] .focus { padding: 16px 24px 24px; }
 
-/* ─── Diff chip(chip-state 旁邊的 +N -N Nf)──────────────────── */
+/* ─── Diff chip / Sync chip(V1 Refined:meta-row 內 inline,flat hover affordance)─── */
 
-.focus-diff-chip {
-  font-size: 11px;
+.focus-diff-chip,
+.sync-chip {
   cursor: pointer;
-  border: 1px solid var(--line);
+  transition: color 100ms ease;
+}
+.focus-diff-chip:hover,
+.sync-chip:hover {
+  color: var(--fg);
   background: transparent;
+  box-shadow: none;
 }
 
 .focus-diff-added { color: var(--done); }
-.focus-diff-sep {
-  color: var(--fg-faint);
-  margin: 0 4px;
-}
 .focus-diff-deleted { color: var(--failed); }
-.focus-diff-files {
-  color: var(--fg-mute);
-  margin-left: 6px;
+.focus-diff-sep { margin: 0 3px; color: var(--fg-faint); }
+.focus-diff-files { color: var(--fg-faint); margin-left: 4px; }
+
+/* sync chip color variants */
+.sync-chip.sync-chip-conflict { color: var(--accent); }
+.sync-chip.sync-chip-failed { color: var(--failed); }
+.sync-chip.sync-chip-done { color: var(--done); }
+.sync-chip.sync-chip-busy { color: var(--queued); }
+.sync-chip-icon {
+  background: transparent;
+  border: 0;
+  padding: 1px 4px;
+  margin-left: 4px;
+  color: currentColor;
+  opacity: 0.7;
 }
+.sync-chip-icon:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
 
 /* ─── Empty tickets(沒 ticket 時的中央 CTA)─────────────────── */
 
@@ -178,21 +313,33 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 60px 24px;
+  padding: 48px 12px;
+  /* iter-uiux 2026-05-25 focus-column.empty_pipeline (FC-EMPTY-001):
+     讓 EmptyTickets 在 header 與欄底之間垂直置中,而不是貼在 header 下方。
+     flex:1 撐滿剩餘 .focus 高度;min-height:0 防 overflow-y:auto container 計算問題。 */
+  flex: 1 1 auto;
+  min-height: 0;
   color: var(--fg-mute);
   text-align: center;
 }
 
 .focus-empty-title {
+  /* h2 — 重置瀏覽器預設 margin,維持與舊 div 視覺一致 */
+  margin: 0;
   font-size: 14px;
   color: var(--fg);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
 .focus-empty-desc {
   font-size: 12px;
+  color: var(--fg-mute);
   line-height: 1.6;
-  max-width: 360px;
+  /* iter-uiux 2026-05-25 focus-column.has_active_draft r1
+     (focus-column-empty-copy-line-length-mobile):mobile 下用 min() 限制
+     line length 避免長字串撐到容器邊緣,desktop 仍 360px。 */
+  max-width: min(360px, calc(100% - 16px));
 }
 
 .focus-empty-cta {
@@ -201,10 +348,22 @@
 
 /* ─── Overflow menu(⋯ 按鈕 + 展開的 menu) ─────────────────── */
 
+/* V1 Refined:overflow ⋯ 釘在 title-row 右側最邊(actions cluster 右側),走絕對定位 */
 .focus-overflow {
-  position: relative;
-  display: inline-block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  z-index: 3;
 }
+.focus-overflow > .btn {
+  padding: 4px 8px;
+  min-height: 30px;
+  color: var(--fg-mute);
+}
+.focus-overflow > .btn:hover { color: var(--fg); }
 
 /* Menu surface — visual only. 定位由 <Popover> primitive(portal + JS-computed left/top)負責,
    這裡禁設 position / top / right(會跟 Popover 計算的座標打架,造成 menu 拉伸到 viewport 邊界)。
@@ -281,27 +440,91 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
+/* V1 Refined rename input:borderless underline,跟 .focus-title 的 22px / -0.022em / mono 同節奏,
+   accent border-bottom + caret,失焦無 chrome 不打架 */
 .focus-title-input {
-  font-size: inherit;
-  font-weight: inherit;
-  padding: 2px 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  font-family: var(--font-mono);
   color: var(--fg);
-  min-width: 200px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0;
+  padding: 0 2px 2px;
+  outline: none;
+  min-width: 220px;
+  width: auto;
+  caret-color: var(--accent);
+  transition: border-color 100ms ease;
 }
-
+.focus-title-input::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
 .focus-title-input.is-invalid {
-  border-color: var(--failed);
+  border-bottom-color: var(--failed);
+  color: var(--failed);
 }
 
+/* V1 Refined confirm/cancel:icon-only,小按鈕(26px),accent confirm 跟 underline 同色系
+   font-size:0 是防禦性 — JSX 內只有 svg,沒文字會被影響,但避免未來加文字打破視覺 */
+.focus-title-edit-confirm,
+.focus-title-edit-cancel {
+  background: transparent;
+  border: 0;
+  padding: 4px 6px;
+  min-height: 26px;
+  border-radius: 4px;
+  color: var(--fg-mute);
+  font-size: 0;
+  transition: background 100ms ease, color 100ms ease;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+.focus-title-edit-confirm svg,
+.focus-title-edit-cancel svg {
+  width: 14px;
+  height: 14px;
+}
+.focus-title-edit-confirm {
+  color: var(--accent);
+}
+.focus-title-edit-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.focus-title-edit-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.focus-title-edit-cancel:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+/* Rename inline error hint:跟 confirm/cancel 同列下緣對齊,失敗紅字 */
+.focus-title-edit > [role="status"] {
+  font-size: 10.5px;
+  color: var(--failed);
+  align-self: flex-end;
+  margin-bottom: 4px;
+}
+
+/* V1 Refined:rename pencil 預設淡入(只 hover title-row 時才浮出),
+   減少 header 視覺噪音但鍵盤 / 滑鼠 hover 仍能進入編輯 */
 .focus-title-edit-btn {
   padding: 2px 6px;
   font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 100ms ease;
 }
+.focus-head-title-row:hover .focus-title-edit-btn { opacity: 1; }
+.focus-title-edit-btn:focus-visible { opacity: 1; }
 
 /* ─── Modal body(sync conflict modal)── 內元素 spacing ─────── */
 
@@ -387,18 +610,37 @@
     font-size: 11px !important;
   }
 
-  /* mobile:focus header 用兩列 flex 結構(JSX 切好的 title-row / meta-row),
-     不再強制 grid auto-place — auto-place 在窄寬度把每個 chip / button 各自踢成一列。 */
-  .focus-head-title-row,
-  .focus-head-meta-row {
+  /* V1 Refined desktop 用絕對定位釘 actions / overflow 到 title-row 右上;
+     mobile 還原回 flow,actions 改 order:99 跑到第二列(full-width),overflow 也回 inline。 */
+  .focus-head-title-row {
+    padding-right: 0 !important;
+    min-height: 0 !important;
+    align-items: center;
+    flex-wrap: wrap !important;
     gap: 6px !important;
   }
-  /* view ↔ edit 切換用同樣 control-h(32px)按鈕,不再需要強制 44px lock */
-  .focus-head-title-row {
-    align-items: center;
+  .focus-head-meta-row {
+    flex-wrap: wrap !important;
+    row-gap: 4px !important;
+    gap: 0 6px !important;
+    overflow: visible !important;
   }
   .focus-actions {
+    position: static !important;
+    right: auto !important;
+    height: auto !important;
+    margin-left: auto !important;
     gap: 6px;
+    flex: 0 0 100%;
+    order: 99;
+    justify-content: flex-end;
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+  }
+  .focus-overflow {
+    position: static !important;
+    right: auto !important;
+    height: auto !important;
   }
 
   /* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
@@ -449,11 +691,20 @@
     flex-shrink: 0;
   }
 
-  /* iter-uiux 2026-05-24 retry — syncActive 時 RunButton 是 disabled「同步中」狀態,
-     在 mobile 跟 +新增 ticket / sync-chip 同列搶版面;隱藏 disabled RunButton,
-     sync 狀態由 sync-chip 承擔語意,+新增 ticket 是當下唯一可動主 CTA。
-     sr-only role=status 仍保留,所以 SR 公告不受影響(在 RunButton.tsx 內)。 */
+  /* iter-uiux 2026-05-24 retry — syncActive 時 RunButton 是 disabled「助理處理中」狀態,
+     在 mobile 跟 +新增 ticket / sync-chip 同列搶版面;隱藏可見 button,
+     但 wrapper 與 sr-only role=status 仍保留在 a11y tree(2026-05-25 sync_active r1
+     focus-column-sync-a11y-001:原本 wrapper display:none 會把 sr-only 一併隱掉,改成
+     只藏 button 視覺,wrapper 改 zero footprint)。 */
   .focus-actions .focus-run-wrap[data-sync-active="1"] {
+    display: inline-flex;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+  .focus-actions .focus-run-wrap[data-sync-active="1"] > button {
     display: none;
   }
 

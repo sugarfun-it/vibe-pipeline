@@ -3,24 +3,24 @@
 
 .ticket {
   position: relative;
-  padding: 12px 16px 14px 22px;
+  /* V1 Refined:padding 加寬,radius 10(對齊 banner 10px elevation 層級) */
+  padding: 13px 16px 14px 18px;
   background: var(--panel);
   border: 1px solid var(--line);
-  /* TICKET-009:外層卡片 radius 對齊 design system 卡片 8px(內層 ticket-iter 跟著降到 6px) */
-  border-radius: 8px;
-  transition: border-color 120ms, background 120ms, transform 120ms, box-shadow 120ms;
+  border-radius: 10px;
+  transition: border-color 100ms ease, background 100ms ease, transform 120ms, box-shadow 120ms;
   animation: fadeUp 280ms ease-out both;
   /* tk-001c:content indent token — header num 欄寬 + header grid gap;sub/goal/progress/iter-row 等
      ticket 內容類 row 全部 margin-left 引用同一個值,避免 num 左緣與內容欄左緣產生多條 indent。 */
-  --ticket-num-width: 22px;
+  --ticket-num-width: 24px;
   --ticket-header-gap: 8px;
   --ticket-content-indent: calc(var(--ticket-num-width) + var(--ticket-header-gap));
 }
 .ticket:hover { border-color: var(--line-2); background: var(--panel-2); }
-/* tk-003:可點擊卡片強化 hover affordance(border + bg 雙訊號) */
+/* V1 Refined:可點擊 hover 用 panel-2(原本 hover),affordance 仍清楚 */
 .ticket.is-clickable:hover {
   border-color: var(--line-2);
-  background: var(--hover);
+  background: var(--panel-2);
 }
 .ticket.is-clickable:hover .ticket-card__chevron { color: var(--fg); transform: translateX(2px); }
 /* TICKET-008:active(pressed)狀態 — 按下時微微下沉 + 邊框收緊,讓點擊回饋更明確 */
@@ -76,9 +76,16 @@
 }
 
 .ticket-band {
-  /* TICKET-011:band 從 3px 加寬到 4px,跟 status-tinted 背景拉開區隔(低對比螢幕也看得清狀態色) */
-  position: absolute; left: 0; top: 8px; bottom: 8px;
-  width: 4px; border-radius: 2px;
+  /* V1 Refined:band 3px(精煉),inset 略內縮(left:6 top:12 bottom:12),
+     running 加 18% 同色光暈強化「正在跑」感 */
+  position: absolute;
+  left: 6px; top: 12px; bottom: 12px;
+  width: 3px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+.ticket.is-running .ticket-band {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--running) 18%, transparent);
 }
 
 .ticket-row {
@@ -103,8 +110,10 @@
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  transition: color 120ms, transform 120ms;
+  opacity: 0.5;
+  transition: color 120ms, transform 120ms, opacity 120ms;
 }
+.ticket.is-clickable:hover .ticket-card__chevron { opacity: 1; }
 /* tk-005:sub row 只保留給 step+meta 用(iter 改去 iter-row,chip 已 inline 到 title) */
 .ticket-card__sub {
   display: flex;
@@ -126,14 +135,19 @@
   align-self: center;
 }
 .ticket-num {
-  /* tk-006:對比拉高(fg-faint → fg-mute) */
-  font-size: 11px; color: var(--fg-mute); width: var(--ticket-num-width); flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  width: var(--ticket-num-width);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 .ticket-title {
-  flex: 1; font-size: 13.5px; font-weight: 500;
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
   color: var(--fg);
-  /* TICKET-010:remove negative letter-spacing;13.5px CJK 不需要再壓字距 */
-  letter-spacing: 0;
   min-width: 0;
   /* 中英混合 + 全形括弧 / 「/」沒空白時 browser 不知斷行,title 撐爆 row 蓋住 chip */
   overflow-wrap: anywhere;
@@ -143,7 +157,7 @@
   margin-top: 6px;
   margin-left: var(--ticket-content-indent);
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--fg-mute);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -151,16 +165,22 @@
   overflow: hidden;
 }
 
+/* V1 Refined mode chip:outline pill(999 radius),不再實心 panel-2 */
 .ticket-mode {
-  background: var(--panel-2);
-  font-size: 10.5px;
+  background: transparent;
+  border: 1px solid var(--line-2);
   color: var(--fg-mute);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  font-weight: 500;
 }
 .ticket-mode.is-iter {
-  background: var(--iter-soft);
+  background: transparent;
+  border-color: color-mix(in srgb, var(--iter) 45%, transparent);
   color: var(--iter);
-  border-color: transparent;
-  font-weight: 600;
+  font-weight: 500;
 }
 /* mode chip 可切換時(button 元素)— hover 加邊框 + 浮起,看得出可點 */
 button.ticket-mode {
@@ -181,12 +201,14 @@ button.ticket-mode {
 }
 .ticket-mode.is-toggle:active { transform: translateY(0.5px); }
 
+/* V1 Refined status-pill:dot + text only,卸 bg,跟外卡 status-tint 不重複 */
 .status-pill {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .status-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
@@ -195,17 +217,17 @@ button.ticket-mode {
   font-size: 10.5px; color: var(--fg-mute);
 }
 
-/* ── iter row ── */
+/* ── iter row ──
+   V1 Refined:卸內層 panel chrome(border / bg / padding),iter rows 跟 ticket 內容 inline 排列,
+   不再是「卡中卡」結構。stage chip / round-num / iter-meta 字級全壓低,讓密度提升。 */
 .ticket-iter {
-  display: flex; align-items: center; gap: 18px;
-  margin-top: 10px;
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 4px;
   margin-left: var(--ticket-content-indent);
-  padding: 8px 10px;
-  /* TICKET-009:內層 panel radius 6px,跟外層 ticket 8px 成 2px 階梯 */
-  border-radius: 6px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  font-size: 11.5px;
+  padding: 4px 0 0;
+  border: 0;
+  background: transparent;
+  font-size: 10.5px;
   flex-wrap: wrap;
 }
 /* TICKET-003:stage chain 允許 wrap;narrow mobile + 長 verdict label 不再 overflow */
@@ -215,9 +237,10 @@ button.ticket-mode {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: var(--font-mono); font-size: 10.5px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
   border: 1px solid var(--line-2);
   color: var(--fg-faint);
   background: transparent;
@@ -231,19 +254,34 @@ button.ticket-mode {
 }
 .iter-stage.is-paused { color: var(--paused); border-color: var(--paused); background: var(--paused-soft); }
 .iter-stage-arrow { color: var(--fg-faint); font-size: 11px; }
-/* iter rounds 多 row 排列 */
+/* iter rounds 多 row 排列 —
+   V1 Refined 每輪整行加 1px 外框 + panel-2 微底色 + 6px radius,讓多輪歷史像一條 status log */
 .ticket-iter-row {
   display: flex; align-items: center; gap: 10px;
   margin-top: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel-2) 40%, transparent);
   /* margin-left 由 .ticket-iter 處理(JSX 永遠是 "ticket-iter ticket-iter-row" 並用) */
+}
+.ticket-iter-row + .ticket-iter-row {
+  margin-top: 4px;
+}
+/* step / merge / sync ticket 單次任務,無 round-num,卸 chrome 維持原 inline 視覺 */
+.ticket-iter-row--single {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .ticket-iter-summary {
   margin-left: var(--ticket-content-indent);
 }
 .iter-round-num {
-  /* tk-006:contrast 拉高(fg-faint → fg-mute) */
-  font-size: 10px; color: var(--fg-mute);
-  min-width: 24px;
+  font-size: 10px;
+  min-width: 44px;
+  font-weight: 500;
+  color: var(--fg-mute);
 }
 /* tk-002 / tk-008:compact round summary row — 取代 verbose per-round IterStages 顯示。
    單一 inset bar:左側 round 編號 + stage flow + verdict,右側 elapsed。
@@ -363,36 +401,54 @@ button.ticket-mode {
 .iter-meta {
   display: inline-flex; align-items: center; gap: 6px;
   margin-left: auto;
-  font-size: 10.5px; color: var(--fg-mute);
+  font-size: 9.5px; color: var(--fg-faint);
 }
 .iter-meta strong { color: var(--fg); font-weight: 600; }
-
-/* ── live log ── */
-.ticket-livelog {
-  margin-top: 8px;
-  margin-left: var(--ticket-content-indent);
-  padding: 7px 10px;
-  font-size: 11px;
+.ticket-iter-summary {
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.75;
   color: var(--fg-mute);
-  background: #0a0c10;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border-top: 0;
+  padding-top: 0;
+  text-align: right;
+}
+
+/* ── live log ──
+   V1 Refined:轉淡藍 running-tint(脫離舊的純黑碼字感),融入 ticket 卡內節奏 */
+.ticket-livelog {
+  margin-top: 6px;
+  margin-left: var(--ticket-content-indent);
+  padding: 5px 9px;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  background: color-mix(in srgb, var(--running) 8%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--running) 22%, var(--line-2));
+  border-radius: 5px;
   display: flex; align-items: center; gap: 8px;
 }
-html.light .ticket-livelog { background: #1c1916; color: #fbf8f1; border-color: #1c1916; }
+/* V1 Refined light mode:沿用 running tint,僅換比例 + fg 文字對比拉高,
+   不再硬留純黑 terminal 底(跟整 light 主題不協調) */
+html.light .ticket-livelog {
+  background: color-mix(in srgb, var(--running) 5%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--running) 28%, var(--line));
+  color: var(--fg);
+}
+html.light .livelog-cursor { color: var(--running); }
 .livelog-cursor { color: var(--running); }
 
-/* ── paused actions ── */
+/* ── paused actions ──
+   V1 Refined:dashed top border + 小一階 padding,跟整卡密度同步 */
 .ticket-paused-actions {
   display: flex; align-items: center; gap: 10px;
-  margin-top: 10px; padding-top: 10px;
+  margin-top: 6px; padding-top: 6px;
   margin-left: var(--ticket-content-indent);
-  border-top: 1px dashed var(--line);
+  border-top: 1px dashed var(--line-2);
   flex-wrap: wrap;
 }
 .paused-reason {
   flex: 1; min-width: 180px;
-  font-size: 11.5px; color: var(--paused);
+  font-size: 11px; color: var(--paused);
 }
 /* TG-402:failed* ticket 也要看得到 reason(原本只在 paused 才 render row);
    borderTop 用 failed 色,文字也轉成 failed token,跟整卡 is-failed tint 一致。 */
