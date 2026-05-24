@@ -105,6 +105,36 @@ export async function reset(): Promise<Response> {
   return ok({});
 }
 
+// POST /api/__test/seed/rich-pipeline
+// body: { hash: string, pipelineId?: string, pipelineName?: string, baseBranch?: string }
+// 寫一個 ticket state 豐富(done step+commits / done iter 多輪 / paused / failed_iter_limit /
+// ready / draft 共 6 ticket)的 pipeline.json 到 hash 對應的 project,給 iter-uiux drive recipe
+// + e2e demo 一鍵 seed 用。pipeline 本身 state=paused,涵蓋 ticket-card / iter-stages / focus-list /
+// paused-actions / overflow-menu 等多數視覺單元。
+export async function seedRichPipeline(req: Request): Promise<Response> {
+  const body = (await req.json().catch(() => ({}))) as {
+    hash?: string;
+    pipelineId?: string;
+    pipelineName?: string;
+    baseBranch?: string;
+  };
+  if (!body.hash) return err("bad_request", "hash required");
+  const project = await projectStore.findByHash(body.hash);
+  if (!project) return err("not_found", `project not found for hash=${body.hash}`, 404);
+  const pipeline = testMode.richTicketPipeline({
+    id: body.pipelineId,
+    name: body.pipelineName,
+    baseBranch: body.baseBranch,
+  });
+  const pipelinesDir = join(project.path, ".vibe-pipeline", "pipelines");
+  if (!existsSync(pipelinesDir)) mkdirSync(pipelinesDir, { recursive: true });
+  writeFileSync(
+    join(pipelinesDir, `${pipeline.id}.json`),
+    JSON.stringify(pipeline, null, 2)
+  );
+  return ok({ pipeline });
+}
+
 // GET /api/__test/fcm/calls
 export function fcmCalls(): Response {
   return Response.json({ calls: fakeFcmCalls });

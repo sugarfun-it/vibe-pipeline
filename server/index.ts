@@ -143,6 +143,8 @@ async function handle(req: Request): Promise<Response> {
     if (pathname === "/api/__test/script/split" && method === "POST")
       return test.setSplitScript(req);
     if (pathname === "/api/__test/reset" && method === "POST") return test.reset();
+    if (pathname === "/api/__test/seed/rich-pipeline" && method === "POST")
+      return test.seedRichPipeline(req);
     if (pathname === "/api/__test/fcm/calls" && method === "GET") return test.fcmCalls();
     if (pathname === "/api/__test/fcm/reset" && method === "POST") return test.fcmReset();
     if (pathname === "/api/__test/push/file-content" && method === "GET")
