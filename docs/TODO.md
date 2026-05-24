@@ -63,6 +63,36 @@ Phase 8 候選清單。動工時搬進 pipeline ticket(`vbpl ticket add --pipeli
 - 落點:`src/ui/Popover.tsx` / `src/ui/forms/forms.css` / `src/features/pipeline/focus.css` / 新增 `src/ui/menu/menu.css`(or 類似)/ 新增 `src/ui/forms/SettingsField.tsx`
 - 規模:中(~5 個檔變動,~15 處 consumer 改),iter 模式 critic 多輪查 visual regression
 - 風險:動既有共用 class 會波及多處(Rail / OverflowMenu / SettingsPopover / 各 Settings tab)— ship 前要全 popover 開一遍 + 全 settings tab 切一遍人工 visual 驗
+- **2026-05-24 iter-uiux Phase 4 補加項**(同一根因):
+  - **Overlay primitive rename + ref-counted scroll-lock** — 6 個 overlay caller 各自 inert / scroll-lock 自己管,沒中央 ref-count → 多重 overlay open 時 race。primitive 該擁有
+  - **toggle-pill iOS-switch 重設計** — 目前 `.toggle-pill` 在 disabled / off 之間視覺難分,Phase 4 只加 scope hack;真解是換 native iOS-switch pattern(track / thumb / labels 對齊),全 app `.toggle-pill` consumer 跟著改
+  - **OverflowMenu copy migration to `descriptionRich`** — ConfirmDialog 在 Phase 4 加了 `descriptionRich?: ReactNode` API,但 OverflowMenu 內部 confirm 還用舊 string 字串,沒享 rich text(粗體 / 行高 / icon)— 屬 primitive consumer migration
+
+### 7. EmptyProject CTA → 提升 shared context
+
+- 痛點:`EmptyProject` 的「選擇專案資料夾」CTA 直接呼叫 `setBrowseOpen` — 但這個 state owner 在 TopBar 內,EmptyProject 沒法直接 trigger,目前是 deferred 沒接線
+- 2026-05-24 iter-uiux Phase 4 揭露(`empty-project` unit)
+- 設計方向:
+  - 把 `browseOpen` / `setBrowseOpen` 從 TopBar local state 升到 `ProjectPickerContext`(新建)
+  - TopBar 跟 EmptyProject 都從 context 拿,EmptyProject CTA 直接可開 browse modal
+  - 順手把 browse modal JSX 也搬出 TopBar(目前 inline 在 TopBar.tsx 內 ~150 行),改成自己 component
+- 落點:新建 `src/contexts/ProjectPickerContext.tsx`、抽 `src/features/pipelineCreate/BrowseProjectModal.tsx`、改 `TopBar.tsx` + `EmptyProject.tsx` 兩 consumer
+- 規模:小-中(~3 個 new files、~2 個改),step ticket 即可
+- 風險:browse modal 內部有 keyboard / focus / fetch loading state,搬家時 e2e 要重跑
+
+### 8. i18n message-table 抽 ~50 strings
+
+- 痛點:全 app 散佈硬寫繁中字串,沒 message-table 層 → 任何 copy 改要 grep + 多檔同步;遠期想支援英文 / 簡中也卡在這步
+- 2026-05-24 iter-uiux 多輪反覆指出(多個 unit deferred 含 i18n-001 等)
+- 估規模:~50 visible strings(各 unit changelog 散落估)— 中型 sprint
+- 設計方向:
+  - 走 lightweight i18n(不用 react-intl / i18next,避免 bundle bloat)— 自寫 `src/i18n/messages.ts` 一個物件 + `t(key)` helper
+  - 命名 namespace:`pipeline.*` / `ticket.*` / `qa.*` / `settings.*` / `auth.*` 等
+  - 初期只繁中,key 名用英文 → 之後加 zh-CN / en 直接新 messages file
+- 子議題:**verdict glyph 在地化 audit**(`✓` `✗` `?` 等符號用 ASCII 或 unicode 對 SR / 中文 narrator 唸法差很多,要決定保留 unicode 還是改文字)
+- 落點:新建 `src/i18n/`、全 ~50 處 hard-coded string callsite 改 `t(...)`
+- 規模:中(~50 處 callsite),iter 模式 critic 多輪查 copy diff
+- YAGNI 評估:VP 是 maintainer + 中文 enduser only,英文化沒急;主要好處是 copy 改集中。可緩
 
 ### 3. Web UI 不該自動 fire `pipeline.run`(monitor only)
 - 痛點:settings-pixel-polish audit log 記到兩次 `user_action pipeline.run`(00:21:58 + 01:23:41)而 user 確認沒按
