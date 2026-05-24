@@ -50,7 +50,6 @@ vbpl server start # 起 backend on 3001(同 serve API + PWA)
 ├── scripts/            install / uninstall / update scripts(從 tarball 帶來)
 ├── state.json          recent projects 等 global state
 ├── config.json         user-level model defaults
-├── auth.json           TOTP secret + sessions
 ├── gateway-token       FCM gateway bearer
 ├── server.json         vbpl server start 管理檔
 ├── server.log          backend stdout/stderr

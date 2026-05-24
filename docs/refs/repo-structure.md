@@ -50,8 +50,7 @@ vibe-pipeline/
 │   │   ├── pipelineCreate/    CreateCard + CreatePlaceholder
 │   │   ├── init/              InitPopup (修改後直接接 BoardScreen)
 │   │   ├── qa/                QADrawer + useQA (真接 backend)
-│   │   ├── auth/              SetupScreen + LoginScreen + SecurityTab + AddDeviceDialog + useAuthStatus + authApi + types
-│   │   ├── settings/          SettingsPopover + SettingsPopover.css(tab UI:Project / AI 任務 / 通知 / 安全)
+│   │   ├── settings/          SettingsPopover + SettingsPopover.css(tab UI:Project / AI 任務 / 通知 / 更新)
 │   ├── lib/
 │   │   └── fcm.ts             Firebase 前端 SDK init + getToken + register + foreground handler
 │   ├── styles/                CSS(tokens / board / notif / init / drawer / qa)
@@ -62,13 +61,12 @@ vibe-pipeline/
 │   └── router/                (規劃) buildPath helper
 │
 ├── server/                    後端。職責邊界見 vibe-pipeline-backend SKILL
-│   ├── index.ts               Bun.serve 入口,route 表 + authGuard middleware
+│   ├── index.ts               Bun.serve 入口,route 表(無 auth middleware,Tailscale 是唯一邊界)
 │   ├── routes/                純 dispatch,不寫業務邏輯
 │   │   ├── _http.ts           ok/err/requireJsonUtf8/readJson 共用 Response 包裝
 │   │   ├── projects.ts        /api/projects/* (含 pipelines CRUD + git-init + reveal + 重置)
 │   │   ├── qa.ts              /api/.../qa/* (start / turn / finalize / cancel / drafts)
 │   │   ├── userConfig.ts      /api/user/config GET / PUT(跨 project per-task-class model)
-│   │   ├── auth.ts            /api/auth/{status,setup-init,setup-verify,login,logout,sessions,reset}
 │   │   ├── push.ts            /api/push/{config,register,unregister,tokens,test}
 │   │   ├── system.ts          /api/system/{version,update}(self-update tarball flow)
 │   │   └── test.ts            test-mode only endpoint
@@ -93,7 +91,6 @@ vibe-pipeline/
 │       ├── pipelineMerge.ts   mechanical(git --no-ff)+ AI fallback merge
 │       ├── git/worktree.ts    ensure / remove / prune (per pipeline)
 │       ├── cli/               CliAdapter + claudeAdapter + codexAdapter + factory(prompt 走 stdin + workerEnv)
-│       ├── auth/              storage / middleware / cookie / pending
 │       ├── push/              tokenStore(轉 gateway HTTP) + gatewayToken(lazy auto-issue + SSOT ~/.vibe-pipeline/gateway-token)
 │       ├── fcm/index.ts       fanoutPush 走 maintainer-host gateway(無 firebase-admin)
 │       ├── runner/            orchestrator(killProcessTree 跨平台) / ticketWatcher / runnerPrompt / runLog / syncJob
@@ -135,7 +132,7 @@ vibe-pipeline/
 │   │   └── vibe-pipeline-e2e/SKILL.md
 │   └── rules/                 path-specific 雷區(frontmatter `paths:` 標明適用範圍)
 │       ├── pwa-sw.md          SW / Workbox / vite-plugin-pwa
-│       ├── remote-access.md   Tailscale / TOTP / FCM / network binding
+│       ├── remote-access.md   Tailscale / FCM / network binding(無 app auth)
 │       └── cli-codex.md       codex CLI spawn / sandbox / multi-agent
 │
 └── node_modules/              (gitignored)
@@ -150,14 +147,13 @@ vibe-pipeline/
 ├── bin/vbpl[.exe]             CLI binary install path(對齊 pyenv/cargo/nvm 慣例)
 ├── state.json                 { lastProject, recentProjects: [{path, lastOpenedAt}] }
 ├── config.json                user-level model defaults(per-task-class)
-├── auth.json                  TOTP secret 雜湊 + sessions[]
 ├── gateway-token              FCM gateway bearer token(lazy auto-issue,posix 0600)
 ├── server.json                vbpl server start 記 vibe-pipeline repo path / PID / log path
 ├── server.log                 vbpl server start 接的 backend stdout/stderr
 ├── update.log                 self-update flow log(truncate per run)
 └── worktrees/<projHash>/<pipelineId>/   git worktree per pipeline,平行執行用
 
-舊 `device_tokens.json` 已不寫(2026-05-19 push gateway 接管,device token 全在 gateway Firestore)。
+舊 `device_tokens.json` 已不寫(2026-05-19 push gateway 接管,device token 全在 gateway Firestore)。舊 `auth.json` 也不再讀寫(2026-05-24 TOTP auth 整層拔除,可手動 `rm` 清孤兒檔)。
 
 <target-repo>/.vibe-pipeline/  每個 user target repo 內,由 init 建(整 dir gitignored)
 ├── config.json                project-local 設定(不隨 repo 共享,team 各自 init)

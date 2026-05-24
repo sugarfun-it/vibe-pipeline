@@ -22,8 +22,6 @@
 | `src/styles/tokens.css` | 全站 design token,所有 feature 共用 → global |
 | `src/styles/drawer.css` | overlay/drawer 基礎樣式被多個 feature(qa、pipeline、settings ...)的 drawer / popover 共用 → global |
 | `src/styles/board.css` | BoardScreen 與相關 layout 屬於 app shell 層 → global |
-| `src/styles/auth-screen.css` | LoginScreen + SetupScreen 兩個 feature component 共用(同屬 auth 但屬 app entry 流程) → global |
-| `src/features/auth/auth.css` | 只給 auth feature 內 AddDeviceDialog / SecurityTab 用的次要樣式 → colocate |
 | `src/features/pipeline/diffModal.css` | 只給 `DiffModal.tsx` 用 → colocate |
 | `src/features/pipeline/auditTimeline.css` | 只給 `AuditTimeline.tsx` 用 → colocate |
 | `src/features/qa/qa.css` | QA feature 內部專用 → colocate |
@@ -31,6 +29,6 @@
 
 ## 避雷
 
-- **禁止同名並存** — 不能同時有 `src/styles/X.css` 與 `src/features/X/X.css`。撞名導致 grep import / 翻 dir 都會混淆。新增前先 grep 確認沒撞。當 feature dir 名稱(例 `auth`)與 global 用途撞時,global 那邊用更明確的名字(`auth-screen.css` 而非 `auth.css`)。
+- **禁止同名並存** — 不能同時有 `src/styles/X.css` 與 `src/features/X/X.css`。撞名導致 grep import / 翻 dir 都會混淆。新增前先 grep 確認沒撞。當 feature dir 名稱與 global 用途撞時,global 那邊用更明確的名字(例 `<feature>-screen.css`)。
 - **新檔 prefix 用 camelCase 配 component**(`toast.css`、`confirmDialog.css` 模式),不要用 PascalCase。`SettingsPopover.css` 是歷史遺留,新檔別跟。
 - **colocated CSS 不要被別 feature import** — 出現第二個 feature 想用時,先升格到 `src/styles/`(順手 rename 成不撞 feature dir 名)再共享。

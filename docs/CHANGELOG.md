@@ -146,3 +146,19 @@
   - **maintainer 發 release 流程**(README §自動更新更新):bump version → 寫 release notes → `bun run scripts/build-tarball.ts vX.Y.Z` → `git tag` → `gh release create ... .tar.gz`
   - 設計 ref → [`refs/enduser-install-update-design.md`](refs/enduser-install-update-design.md)
 - **gatewayToken DEFAULT_GATEWAY_URL fallback fix**(working tree,未 commit):`server/lib/push/gatewayToken.ts` `gatewayUrl()` 之前沒 `PUSH_GATEWAY_URL` env 就回 null → `ensureToken` 直接 throw → enduser 從沒設過 env → 永遠 issue 不到 token。加 `DEFAULT_GATEWAY_URL` 對齊 `server/lib/fcm/index.ts`,return type 從 `string | null` → `string`
+
+---
+
+## 2026-05-24(Auth feature 整層拔除)
+
+VP 走 single-user / Tailscale-trusted model,TOTP cookie 流程已是 dead code(maintainer 自己也說沒用),Option C 全拔(前後端 + npm dep + e2e + doc + iter-uiux extension 對齊)。
+
+- **Backend 拔除**:`server/lib/auth/{storage,middleware,cookie,pending}.ts` + `server/routes/auth.ts`(共 ~480 LOC)整刪;`server/index.ts` 拔 `authGuard` middleware + 8 個 `/api/auth/*` dispatch + `X-Forwarded-For` mock escape hatch(本來只給 auth.spec 用);`server/routes/test.ts` 拔 `authReset` / `authSeedSecret` 兩個 helper
+- **Frontend 拔除**:`src/features/auth/`(整目錄,7 檔 ~2400 LOC) + `src/api/auth.ts` + `src/styles/auth-screen.css` 整刪;`src/App.tsx` 拔 `/setup` `/login` 兩 Route;`SettingsPopover` 砍 Security tab(`activeTab` union 收成 4 個 panel,`useAuthStatus` 取消);`src/lib/fcm.ts` 兩處 `authedFetch` 換 `apiFetch`
+- **`src/api/_client.ts`**:`authedFetch` 重命名 `apiFetch`,砍 `401 → /login redirect` 邏輯,保留 `credentials:include` 給未來 cookie-based feature
+- **npm dep**:`otpauth` / `qrcode-svg` / `@types/qrcode-svg` 全拔,`bun install` 同步 lock
+- **E2E**:`tests/e2e/mock/auth.spec.ts` 整刪;`settings-popover.spec.ts` 改 4-tab 描述;`mount-probe.spec.ts` 從 `EXPECTED_MOUNT_ENDPOINTS` 移除 `/api/auth/status`
+- **規則 / SKILL update**:`.claude/rules/remote-access.md` 重寫 — 標明 Tailscale 是唯一存取邊界,警告勿放 shared tailnet;`vibe-pipeline-backend` SKILL 拔 Auth 章節 + `/api/auth/*` route 條目;`vibe-pipeline-frontend` SKILL 拔 `/setup` `/login` route;`vibe-pipeline-e2e` SKILL 標 `auth.spec.ts` 已刪;`iter-uiux-vibe-pipeline` SKILL 拔 16 個 `auth.*` / `settings.security.*` (unit,state) pair + 4 個 project-specific units(security-tab / add-device-dialog / setup-screen / login-screen);`iter-uiux/references/parallel-subagents.md` 移除 add-device-dialog 列
+- **Doc update**:README §遠端存取 拔 TOTP 段,加「無 app-level auth,Tailscale tailnet 是唯一邊界」說明;`.env.example` 拔 `VP_DISABLE_AUTH`;`docs/refs/repo-structure.md` 拔 `features/auth/` / `routes/auth.ts` / `auth/` lib / `auth.json` / Settings 安全 tab 條目;`docs/refs/css-placement.md` 拔 `auth-screen.css` / `auth.css` 範例;`docs/refs/enduser-install-update-design.md` 拔 `auth.json` mention;`docs/vibe-pipeline/install.md` 拔 `auth.json` 條目
+- **Disk state**:`~/.vibe-pipeline/auth.json` 變孤兒檔,backend 不再讀寫;user 可手動 `rm` 清,沒主動 migration 避免邊界 case(per audit Option C 修正:VP 沒 user,no backup OK)
+- 安全 model 變化:單層(Tailscale ACL + tailnet membership),適合 single-user;shared tailnet 不適用

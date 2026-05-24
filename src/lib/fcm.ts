@@ -8,7 +8,7 @@ import {
   type Messaging,
   type MessagePayload,
 } from "firebase/messaging";
-import { authedFetch } from "../features/auth/authApi";
+import { apiFetch } from "../api/_client";
 
 type FcmConfig = {
   apiKey: string;
@@ -137,7 +137,7 @@ export async function requestAndRegisterToken(): Promise<string> {
   });
   if (!token) throw new Error("getToken 回空,可能 VAPID / authDomain 不對");
   try {
-    const res = await authedFetch(`${API_BASE_URL}/api/push/register`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/push/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({ token, platform: "web" }),
@@ -166,7 +166,7 @@ export async function unregisterToken(): Promise<void> {
   }
   if (token) {
     try {
-      const res = await authedFetch(`${API_BASE_URL}/api/push/unregister`, {
+      const res = await apiFetch(`${API_BASE_URL}/api/push/unregister`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ token }),

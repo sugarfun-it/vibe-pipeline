@@ -5,12 +5,12 @@ import { join, resolve } from "node:path";
 const ROOT = resolve(import.meta.dir, "..");
 
 // Backend runtime deps(實際 grep server/ + cli/ + shared/ import 結果):
-//   - server/ → otpauth + qrcode-svg(其餘是 node: / bun: built-in)
+//   - server/ → 0 npm deps(全 node: / bun: built-in;2026-05-24 auth feature 拔除後 otpauth / qrcode-svg 一併下架)
 //   - cli/    → 0 npm deps
 //   - shared/ → 0 npm deps
 // frontend deps(firebase / react / workbox-* runtime / 等)build-time 才用,
 // 已 bundle 進 dist/,enduser tarball 不必帶 source npm package。
-const ENDUSER_RUNTIME_DEPS = ["otpauth", "qrcode-svg"];
+const ENDUSER_RUNTIME_DEPS: readonly string[] = [];
 
 const WHITELIST = [
   "dist",

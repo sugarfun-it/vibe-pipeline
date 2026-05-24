@@ -1,18 +1,16 @@
 import { join, normalize, resolve as pathResolve, sep } from "node:path";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { vibeHome } from "./lib/paths";
 import * as projects from "./routes/projects";
 import * as qa from "./routes/qa";
 import * as push from "./routes/push";
 import * as userConfigRoutes from "./routes/userConfig";
 import * as test from "./routes/test";
-import * as auth from "./routes/auth";
 import * as system from "./routes/system";
 import * as projectStore from "./lib/projectStore";
 import * as orchestrator from "./lib/runner/orchestrator";
 import * as syncJob from "./lib/runner/syncJob";
 import * as testMode from "./lib/testMode";
-import { authGuard, guardResponse } from "./lib/auth/middleware";
 import { initFCM } from "./lib/fcm/index";
 
 const DESIRED_PORT = Number(process.env.PORT ?? 3001);
@@ -134,19 +132,6 @@ async function handle(req: Request): Promise<Response> {
     return system.update();
   }
 
-  if (pathname.startsWith("/api/auth/")) {
-    if (pathname === "/api/auth/setup-init" && method === "POST") return auth.setupInit();
-    if (pathname === "/api/auth/setup-verify" && method === "POST") return auth.setupVerify(req);
-    if (pathname === "/api/auth/login" && method === "POST") return auth.login(req);
-    if (pathname === "/api/auth/logout" && method === "POST") return auth.logout(req);
-    if (pathname === "/api/auth/status" && method === "GET") return auth.status();
-    if (pathname === "/api/auth/sessions" && method === "GET") return auth.listSessions();
-    if (pathname === "/api/auth/reset" && method === "POST") return auth.reset(req);
-    const sessionDelMatch = pathname.match(/^\/api\/auth\/sessions\/([a-f0-9]{64})$/);
-    if (sessionDelMatch && method === "DELETE") return auth.deleteSession(sessionDelMatch[1]);
-    return notFound();
-  }
-
   // E2E 控制端點 — 只 mock 模式 mount,real 模式 404
   if (testMode.isTestMode() && pathname.startsWith("/api/__test/")) {
     if (pathname === "/api/__test/register-project" && method === "POST")
@@ -162,9 +147,6 @@ async function handle(req: Request): Promise<Response> {
     if (pathname === "/api/__test/fcm/reset" && method === "POST") return test.fcmReset();
     if (pathname === "/api/__test/push/file-content" && method === "GET")
       return test.pushFileContent();
-    if (pathname === "/api/__test/auth/reset" && method === "POST") return test.authReset();
-    if (pathname === "/api/__test/auth/seed-secret" && method === "POST")
-      return test.authSeedSecret(req);
     return notFound();
   }
 
@@ -384,26 +366,9 @@ const serveOpts: Parameters<typeof Bun.serve>[0] = {
       logAccess(req.method, url.pathname, response.status, startedAt);
       return response;
     }
-    let ip = srv.requestIP(req)?.address ?? null;
-    // E2E escape hatch:mock 模式下可用 X-Forwarded-For 覆寫 IP,測非 loopback / 進入 auth flow。
-    // 僅在 VP_TEST_MODE=mock 啟用;production build 不會走到。
-    if (testMode.isTestMode()) {
-      const xff = req.headers.get("X-Forwarded-For");
-      if (xff) ip = xff.split(",")[0]!.trim();
-    }
+    const ip = srv.requestIP(req)?.address ?? null;
     (req as unknown as { __ip?: string }).__ip = ip ?? "unknown";
     try {
-      // /api/__test/* 在 mock 模式 mount,本身就是 e2e 控制面;不應走 authGuard(否則 spec 設 XFF 後自己進不來)
-      const skipGuard = testMode.isTestMode() && url.pathname.startsWith("/api/__test/");
-      if (url.pathname.startsWith("/api/") && !skipGuard) {
-        const guard = await authGuard(req, ip);
-        const blocked = guardResponse(guard, req);
-        if (blocked) {
-          response = withCors(blocked, origin);
-          logAccess(req.method, url.pathname, response.status, startedAt);
-          return response;
-        }
-      }
       response = withCors(await handle(req), origin);
     } catch (e) {
       response = withCors(
@@ -453,6 +418,20 @@ try {
 }
 
 console.log(`vibe-pipeline backend listening on http://${server.hostname}:${server.port}`);
+
+// 2026-05-24 auth removal migration:啟動時若舊 ~/.vibe-pipeline/auth.json 仍在 → 直接刪。
+// 該檔在 auth feature 拔除後變孤兒,留著是垃圾(maintainer 確認 VP 無 user,no backup OK)。
+// noop 一旦檔不存在,所以不影響後續 boot。
+try {
+  const orphan = join(vibeHome(), ".vibe-pipeline", "auth.json");
+  if (existsSync(orphan)) {
+    unlinkSync(orphan);
+    console.log(`[migrate] removed orphan ${orphan}(auth feature 已於 2026-05-24 拔除)`);
+  }
+} catch (e) {
+  console.warn(`[migrate] auth.json cleanup 失敗(不致命):${e instanceof Error ? e.message : String(e)}`);
+}
+
 void initFCM();
 
 // Crash recovery: 啟動時掃所有有 .vibe-pipeline/ 的 recent project,

@@ -4,9 +4,7 @@ import { Popover } from "../../ui/Popover";
 import { AITab } from "./AITab";
 import { NotificationsTab } from "./NotificationsTab";
 import { ProjectTab } from "./ProjectTab";
-import { SecurityTab } from "../auth/SecurityTab";
 import { UpdateTab } from "./UpdateTab";
-import { useAuthStatus } from "../auth/useAuthStatus";
 import { useUserConfig } from "./useUserConfig";
 import { CheckIconSm } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
@@ -32,8 +30,7 @@ export function SettingsPopover({
   const [savedFading, setSavedFading] = useState(false);
   const tablistRef = useRef<HTMLDivElement>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { status: authStatus } = useAuthStatus();
-  type TabKey = "project" | "ai" | "notifications" | "update" | "security";
+  type TabKey = "project" | "ai" | "notifications" | "update";
   const [activeTab, setActiveTab] = useState<TabKey>("project");
   const baseId = useId();
   const tabId = (k: TabKey) => `${baseId}-tab-${k}`;
@@ -91,7 +88,6 @@ export function SettingsPopover({
     { key: "ai", label: "AI 任務" },
     { key: "notifications", label: "通知" },
     { key: "update", label: "更新" },
-    ...(authStatus?.bound === true ? ([{ key: "security", label: "安全" }] as const) : []),
   ];
 
   function onTabKey(e: React.KeyboardEvent<HTMLButtonElement>, idx: number) {
@@ -211,12 +207,6 @@ export function SettingsPopover({
       {activeTab === "update" && (
         <div role="tabpanel" id={panelId("update")} aria-labelledby={tabId("update")} className="settings-tab-content">
           <UpdateTab />
-        </div>
-      )}
-
-      {activeTab === "security" && authStatus?.bound === true && (
-        <div role="tabpanel" id={panelId("security")} aria-labelledby={tabId("security")}>
-          <SecurityTab status={authStatus} />
         </div>
       )}
     </Popover>

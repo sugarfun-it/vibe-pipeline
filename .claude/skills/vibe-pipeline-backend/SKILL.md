@@ -20,13 +20,12 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 
 > 物理路徑樹 → root [`CLAUDE.md`](../../../CLAUDE.md) § Repo 結構。本段只寫**邊界規則**。
 
-- **`server/index.ts`** 只做:啟 `Bun.serve`、解 URL、authGuard middleware、dispatch 到 route。**不寫業務邏輯**
+- **`server/index.ts`** 只做:啟 `Bun.serve`、解 URL、dispatch 到 route。**不寫業務邏輯**;**無 app-level auth**(Tailscale 是唯一存取邊界,見 [`.claude/rules/remote-access.md`](../../../.claude/rules/remote-access.md))
 - **`server/routes/*`** 純 dispatch:解 body、call `lib/`、包 response envelope。**不直接 IO**
 - **`server/lib/*`** 純 IO + 邏輯,**不知道 HTTP**(可被 `vbpl` CLI 直接 import,不經 server)。每檔一個職責,別跨層
 - **`server/lib/qa/*`** QA 子系統 — claude CLI 整合 / draft store / 系統 prompt / parsing
 - **`server/lib/cli/*`** Provider 抽象 — claude / codex adapter,給 QA / split / runner 三處用同一介面
 - **`server/lib/runner/*`** Pipeline runner — orchestrator / runnerPrompt / runLog / ticketWatcher / syncJob
-- **`server/lib/auth/*`** TOTP middleware + storage + cookie + pending setup tokens
 - **`server/lib/push/*` + `server/lib/fcm/*`** Web Push token store + firebase-admin fanout
 - **`server/lib/spawn.ts`**(2026-05-20 集中)Subprocess 起點唯一統一入口:`runCapture` / `spawnStreaming` / `spawnFireForget` — **default `windowsHide:true`**(別自己 `Bun.spawn` 跳過,Windows 偶發跳 console window);`spawnStreaming` default `detached:true`(POSIX process group,給 killProcessTree 殺整棵用)
 - **`server/lib/atomicWrite.ts`**(2026-05-20 集中)`atomicWriteJson` / `atomicWriteText` 內含 Windows EPERM/EBUSY retry + posix chmod + JSON round-trip validation。任何 `~/.vibe-pipeline/*.json` / `pipelines/*.json` 寫入走這個,不要直接 `writeFileSync`
@@ -44,7 +43,6 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - `/api/projects/:hash/pipelines[/:id][/run|/stop|/merge|/sync(|/ai|/cancel|/dismiss)|/worktree/reveal|/runs|/tickets]`
 - `/api/projects/:hash/qa/*` — drafts / start / turn / finalize / cancel / split
 - `/api/projects/:hash/config`、`/api/user/config` — project + user level
-- `/api/auth/*` — TOTP setup / login / sessions / reset
 - `/api/push/*` — FCM token register / unregister / config / test
 
 **Response envelope**:統一 `{ ok: true, data }` 或 `{ ok: false, error: { code, message } }`。
@@ -102,12 +100,9 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 
 `user_action` entry 加 `via?: "cli" | "browser" | "other"` 欄。`routes/projects.ts:detectVia(req)` 讀 `User-Agent` header → "vbpl-cli" 命中 cli;"Mozilla" 命中 browser;其他歸 other。debug「mystery run」(audit 抓到 user 沒按)時可秒判 source。`withUserAudit` 從 router 收 req 傳入,handler 加 `via: detectVia(req)` 到 meta。新加 mutation handler 想標 via 也是同模式。
 
-### Auth(`server/lib/auth/`)
+### Auth — 已拔除(2026-05-24)
 
-- `authGuard()`:loopback IP(`127.0.0.1` / `::1`)永遠 bypass + setup/login/status path bypass + cookie validate → redirect `/setup` or `/login`
-- `vp_auth` cookie:HttpOnly + SameSite=Strict + 7d
-- TOTP secret 寫 `~/.vibe-pipeline/auth.json`(`fs.chmod(0o600)` Windows NTFS 不生效,見 [`.claude/rules/remote-access.md`](../../../.claude/rules/remote-access.md))
-- setup_token 是 in-memory map,5min 過期 — server restart 期間中斷的 setup 必須重來
+VP app 不再有 TOTP / cookie / session 層。`server/lib/auth/`、`server/routes/auth.ts`、middleware、`auth.json` 全砍;Tailscale ACL + tailnet membership 是唯一存取邊界(見 [`.claude/rules/remote-access.md`](../../../.claude/rules/remote-access.md))。`apiFetch` (`src/api/_client.ts`) 保留 `credentials:include` 給未來 cookie-based feature,但目前無 401 redirect。
 
 ### Push(`server/lib/push/` + `server/lib/fcm/`)
 
@@ -210,7 +205,7 @@ dev clone:沒 `~/.vibe-pipeline/current/`,Settings 顯示「複製指令」仍�
 
 ## 觸發本 SKILL 的場景
 
-- 改 `server/` 內任何檔(routes / lib / runner / qa / auth / push / fcm / cli adapter)
+- 改 `server/` 內任何檔(routes / lib / runner / qa / push / fcm / cli adapter)
 - 加新 endpoint / 動 response envelope / 改 error code
 - 處理 pipeline state machine / merge / sync 邏輯
 - 跟 claude / codex CLI spawn 相關

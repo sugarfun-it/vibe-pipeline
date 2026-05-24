@@ -4,7 +4,7 @@ import { resetMocks } from "../helpers/mock-control";
 import { API_BASE } from "../helpers/api-base";
 
 // Settings popover Tab UI 驗收：
-//  1. 開 gear → popover 出現,4 個 tab(security 條件性,未綁定預設不出)
+//  1. 開 gear → popover 出現,固定 4 個 tab(project / ai / notifications / update)
 //  2. Project tab 改 max_parallel → autosave → reload 仍在 + GET /config 拿得到
 //  3. AI 任務 tab 改 qa.model → autosave → reload 仍在 + GET /user/config 拿得到
 //  4. 通知 tab 切換可見(無 backend persistence,只驗 UI 切到位)
@@ -76,7 +76,7 @@ async function openSettings(page: import("@playwright/test").Page) {
   await expect(page.locator(".settings-popover")).toBeVisible();
 }
 
-test("Project / AI / 通知 三個 tab 預設可切換;Security 在未綁定 TOTP 時不出現", async ({ page }) => {
+test("Project / AI / 通知 / 更新 四個 tab 預設可切換", async ({ page }) => {
   await page.goto(`/board?project=${proj.hash}`);
   await openSettings(page);
 
@@ -93,9 +93,6 @@ test("Project / AI / 通知 三個 tab 預設可切換;Security 在未綁定 TOT
   await popover.getByRole("button", { name: "通知" }).click();
   // 通知 tab 內容有「啟用通知 / 已啟用 / 尚未啟用」其中之一 — 用 hint 字串認
   await expect(popover.getByText(/pipeline 完成/)).toBeVisible();
-
-  // Security tab 預設無 TOTP secret(authStatus.bound=false)→ tab 不渲染
-  await expect(popover.getByRole("button", { name: "安全" })).toHaveCount(0);
 });
 
 test("Project tab：改 max_parallel autosave → reload 持久 + 落盤 project config.json", async ({ page }) => {

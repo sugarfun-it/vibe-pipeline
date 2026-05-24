@@ -1,21 +1,25 @@
 ---
 paths:
   - server/index.ts
-  - server/lib/auth/**
   - server/lib/push/**
   - server/lib/fcm/**
   - .env
   - .env.example
-description: 手機遠端 setup(Tailscale + TOTP + FCM)相關雷區
+description: 手機遠端 setup(Tailscale + FCM)相關雷區
 ---
 
 # 遠端存取雷區
 
-改 auth / push / FCM / network binding / CORS 設定前讀。背景見 [`README.md` §遠端存取](../../README.md)。
+改 push / FCM / network binding / CORS 設定前讀。背景見 [`README.md` §遠端存取](../../README.md)。
 
-## Windows `auth.json` NTFS ACL chmod 0o600 不生效
+## VP 無 app-level auth — Tailscale 是唯一存取邊界(2026-05-24)
 
-`~/.vibe-pipeline/auth.json` 存 TOTP secret 雜湊,程式 `fs.chmod(0o600)` 在 Windows NTFS 沒效果。個人 PC 單帳戶 OK(user profile 預設已隔離),多帳戶 / 工作機要手動右鍵 → 安全性 → 移除 Users/Everyone。
+TOTP / cookie / session 已整層拔除(`server/lib/auth/**`、`server/routes/auth.ts`、`/setup` `/login` 路由、`auth.json` 全砍)。安全 model 變單層:
+
+- **Tailscale ACL + tailnet membership** 是唯一存取控制 — 同 tailnet 內任何 device 都能直連 VP backend,沒第二層 OTP gate
+- 適用場景:single-user 自己的 tailnet。**不要把 VP 放進 shared tailnet**(家人 / 同事 / 公司網)— 沒 auth 層擋,任何 tailnet member 都能讀寫 pipeline / 改 ticket / 触發 AI run
+- 若未來要加回 app-level auth,別用 TOTP-cookie 那條(完整理由見 `docs/refs/archive/auth-removal-2026-05-24.md` 若有);考慮 mTLS / Tailscale serve `--funnel=false` + per-device share 或更輕的 PIN
+- enduser disk 上的 `~/.vibe-pipeline/auth.json` 若仍存在是 orphan,可手動 `rm` 清,backend 不再讀寫
 
 ## Tailscale HTTPS 不可省
 
@@ -33,7 +37,7 @@ backend 同 serve API + dist/ PWA,單一 port 3001;SW 只在 build 後的 `dist/
 
 ## `ALLOWED_ORIGINS` 不要放 `*`
 
-TOTP 是 auth 層但 CORS 也是邊界,Tailscale tailnet 不該假設絕對安全。
+無 app-level auth 後 CORS 是僅存的 web 邊界,Tailscale tailnet 不該假設絕對安全;放 `*` 等於允許任何頁面 cross-origin 打 backend。
 
 ## 離線 push 補送靠 FCM 不靠 VP
 

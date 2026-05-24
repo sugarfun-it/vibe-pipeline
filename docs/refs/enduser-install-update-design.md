@@ -57,7 +57,7 @@ dev 在 `~/code/vibe-pipeline/`(或本 worktree)按「套用更新」**會去蓋
 3. 在該 backend 上按「套用更新」驗 download → extract → 新 backend spawn → 舊 exit 全段
 4. 驗完想清掉:`rm -rf ~/.vibe-pipeline/app/`(注意:state.json / worktrees/ 不在 app/ 內,不會被砍)
 
-dev 機器本身的 `~/.vibe-pipeline/` runtime data(`state.json` / `worktrees/` / `auth.json` / `gateway-token` …)**跟 `app/` 平級且獨立**,不會被 update 影響。
+dev 機器本身的 `~/.vibe-pipeline/` runtime data(`state.json` / `worktrees/` / `gateway-token` …)**跟 `app/` 平級且獨立**,不會被 update 影響。
 
 ## 不在本次 scope
 

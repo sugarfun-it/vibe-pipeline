@@ -52,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scri
 irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.ps1 | iex
 ```
 
-uninstall 只移除 `~/.vibe-pipeline/{versions,current,bin}/`;state / auth / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
+uninstall 只移除 `~/.vibe-pipeline/{versions,current,bin}/`;state / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
 
 Maintainer / 改 source code → 看下面 §快速開始 §Maintainer 段。
 
@@ -150,7 +150,7 @@ flowchart TB
 - **自動合併**(全 ticket done + `autoMerge=true`):後端先試純 `git merge --no-ff`,撞衝突才 spawn AI
 - **同步**:把 base 拉進 pipeline worktree,同 git-first → 衝突才 AI 的二段式
 - **跨 provider sub-agent**:claude main → Task tool;codex → Bash 直呼 `codex exec`
-- **PWA + Tailscale + TOTP**:桌機跑 server,手機透過 Tailscale HTTPS 連入,非 loopback 強制 TOTP,FCM push ticket 事件到手機
+- **PWA + Tailscale**:桌機跑 server,手機透過 Tailscale HTTPS 連入(tailnet 是唯一存取邊界,無 app-level auth),FCM push ticket 事件到手機
 - **CLI `vbpl`**:4 nouns(project / pipeline / ticket / config)+ `--json` mode;spawn 操作走 backend HTTP 避免子程孤兒
 - **狀態恢復**:server 重啟時自動掃 pipeline 收斂 stale `running` → paused(legacy `stopping` 殘留也一併修);runtime watchdog 抓死 PID
 
@@ -194,10 +194,9 @@ vbpl pipeline merge <id>                                        # 合併回 base
 1. 桌機 + 手機都裝 Tailscale,登入同 tailnet
 2. 桌機跑 `tailscale serve --https=443 http://localhost:3001`(backend 同 serve API + dist/ PWA 單一 port,SW 在 `bun run build` 後的 dist/ 內生效)
 3. 手機開 `https://<machine>.<tailnet>.ts.net`,安裝成 PWA
-4. 首次非 loopback 連線 → TOTP 設定(掃 QR 加進 Authenticator,之後每個 session 輸入 6 碼登入)
-5. Settings →「通知」開啟推播,ticket 事件會到手機(需先填 push gateway,見下)
+4. Settings →「通知」開啟推播,ticket 事件會到手機(需先填 push gateway,見下)
 
-手機遠端踩雷(Windows ACL / HTTPS / 0.0.0.0 / ALLOWED_ORIGINS / 離線 push 補送)見 [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md)。
+**安全 model**:VP 無 app-level auth,**tailnet membership + Tailscale ACL 是唯一存取邊界**。適合 single-user 自己的 tailnet,**不要放 shared tailnet**(任何 tailnet member 都能讀寫 pipeline)。手機遠端踩雷(HTTPS / 0.0.0.0 / ALLOWED_ORIGINS / 離線 push 補送)見 [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md)。
 
 ---
 

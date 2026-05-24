@@ -11,7 +11,7 @@ E2E 用 Playwright 跑真瀏覽器 + 真 backend,**不靠 unit test 取代**。p
 
 ## 現況
 
-12 mock spec / 57 test + `auth.spec.ts`(TOTP)+ real 套 `vp-autotest` iter ticket 驗證。缺覆蓋:FCM fanout(需 mock FCM Admin SDK)/ RWD breakpoint / autoMerge / splitInto / sync / prune worktree / Settings 4-tab。Phase 進度 → [`CHANGELOG.md`](../../../docs/CHANGELOG.md)。
+mock spec + real 套 `vp-autotest` iter ticket 驗證。缺覆蓋:FCM fanout(需 mock FCM Admin SDK)/ RWD breakpoint / autoMerge / splitInto / sync / prune worktree / Settings 4-tab。Phase 進度 → [`CHANGELOG.md`](../../../docs/CHANGELOG.md)。**Auth(TOTP)e2e 已於 2026-05-24 隨 auth feature 拔除一併刪除**。
 
 ## 雙模式
 

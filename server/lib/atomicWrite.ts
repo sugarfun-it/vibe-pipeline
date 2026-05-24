@@ -1,5 +1,5 @@
 // Atomic file write helper:tmp → optional chmod → rename → catch 清 tmp。
-// 統一 5 個 caller(projectStore / pipelineDir / userConfig / auth/storage / push/gatewayToken)。
+// 統一 caller(projectStore / pipelineDir / userConfig / push/gatewayToken)。
 //
 // 設計:
 // - 用 node:fs/promises writeFile + rename(避 Bun.$ mv 在 Windows 慢)
@@ -45,7 +45,7 @@ export async function atomicWriteText(
     try {
       await chmod(tmp, opts.chmod);
     } catch {
-      // Windows NTFS / 權限不足:silent ignore,跟原 auth/storage 行為一致
+      // Windows NTFS / 權限不足:silent ignore
     }
   }
   try {

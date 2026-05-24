@@ -9,7 +9,6 @@ const PROJECT_HASH = "1876248b";
 // 加新 mount endpoint 才該動 expected 集合。
 const EXPECTED_MOUNT_ENDPOINTS = new Set([
   "/api/health",
-  "/api/auth/status",
   "/api/projects",
   "/api/projects/<H>/qa/drafts",
   "/api/projects/<H>/status",

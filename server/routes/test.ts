@@ -5,7 +5,6 @@ import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import * as projectStore from "../lib/projectStore";
 import * as testMode from "../lib/testMode";
-import { readAuth, writeAuth } from "../lib/auth/storage";
 import { fakeFcmCalls, resetFakeFcmCalls } from "../lib/fcm/index";
 import { vibeHome } from "../lib/paths";
 import type { QAReply } from "../lib/qa/schema";
@@ -123,21 +122,4 @@ export async function pushFileContent(): Promise<Response> {
   const path = join(vibeHome(), ".vibe-pipeline", filename);
   const content = existsSync(path) ? await Bun.file(path).text() : "";
   return ok({ filename, content });
-}
-
-// POST /api/__test/auth/reset
-// 清空 auth.json(totp_secret + sessions 全清)。
-export async function authReset(): Promise<Response> {
-  await writeAuth({ totp_secret: null, boundAt: null, sessions: [] });
-  return ok({});
-}
-
-// POST /api/__test/auth/seed-secret
-// 寫入 fake secret(模擬已綁定但沒 session 的狀態,測 /login flow)。
-// body: { secret?: string } — 預設 "MOCKSECRETMOCKSECRETMOCKSECRET12"
-export async function authSeedSecret(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as { secret?: string };
-  const secret = body.secret ?? "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
-  await writeAuth({ totp_secret: secret, boundAt: Date.now(), sessions: [] });
-  return ok({});
 }

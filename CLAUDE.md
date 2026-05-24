@@ -11,14 +11,14 @@
 - **跨 provider SKILL 路由**(改哪 dir 看哪份 SKILL)→ [`AGENTS.md`](AGENTS.md)
 - **path-specific 規則**(SW / 遠端存取等)→ [`.claude/rules/`](.claude/rules/)
 - **開發環境 / scripts** → [`README.md`](README.md) §快速開始 + §Scripts
-- **手機遠端 setup**(Tailscale + TOTP + FCM)→ [`README.md`](README.md) §遠端存取
+- **手機遠端 setup**(Tailscale + FCM,無 app-level auth)→ [`README.md`](README.md) §遠端存取
 
 dir 概覽(細節去 `repo-structure.md`):
 
 | dir | 職責 | 改 code 看哪份 SKILL |
 |---|---|---|
 | `src/` | React 前端 | `vibe-pipeline-frontend` |
-| `server/` | Bun backend(API + runner + qa + fcm + auth) | `vibe-pipeline-backend` |
+| `server/` | Bun backend(API + runner + qa + fcm) | `vibe-pipeline-backend` |
 | `cli/` | `vbpl` CLI(import server/lib 直存 fs,不發 HTTP) | `vibe-pipeline-cli` |
 | `shared/` | 跨 backend/frontend 持久化型別 | (跟著用方走) |
 | `docs/` | CHANGELOG / TODO / refs / 散發給 enduser 的 SKILL bundle | — |
@@ -33,12 +33,12 @@ path-specific rules(動到對應 path 加讀,別只讀 SKILL):
 | 動到 path | 加讀 |
 |---|---|
 | `public/firebase-messaging-sw.js` / `vite.config.ts` PWA 段 / `src/lib/swUpdate.ts` / `src/lib/fcm.ts` / `src/features/system/SwUpdateBanner.tsx` | [`.claude/rules/pwa-sw.md`](.claude/rules/pwa-sw.md) |
-| `server/index.ts` / `server/lib/auth/**` / `server/lib/push/**` / `server/lib/fcm/**` / `.env*` | [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md) |
+| `server/index.ts` / `server/lib/push/**` / `server/lib/fcm/**` / `.env*` | [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md) |
 | `server/lib/cli/codexAdapter.ts` | [`.claude/rules/cli-codex.md`](.claude/rules/cli-codex.md) |
 
 ## 不踩的雷(全 repo always-on)
 
-> path-specific 雷區(動 SW / Workbox / Tailscale auth 等才相關)搬到 [`.claude/rules/`](.claude/rules/)。本段只留改任何 code 都該記得的。
+> path-specific 雷區(動 SW / Workbox / Tailscale 遠端 等才相關)搬到 [`.claude/rules/`](.claude/rules/)。本段只留改任何 code 都該記得的。
 
 1. **不開 `<StrictMode>`** — `useEffect([])` 雙觸發會讓 QA 第一輪 AI message 跑兩次等。`src/main.tsx` 已關。
 2. **token 走 `tokens.css` 變數**,別寫 hex / px 原值;新顏色加 token 不要 hard-code。

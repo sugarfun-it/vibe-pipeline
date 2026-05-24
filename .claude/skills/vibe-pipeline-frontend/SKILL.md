@@ -8,7 +8,7 @@ description: vibe-pipeline 前端開發規範 — shell 結構、設計 token、
 1. root [`CLAUDE.md`](../../../CLAUDE.md) — repo 結構 / 雷區 / 設計信條 / 架構決策
 2. 歷次大改動 / Phase 進度 → [`CHANGELOG.md`](../../../docs/CHANGELOG.md)
 
-Phase 5 後 `src/` 加了 `features/auth/`(TOTP)+ `lib/fcm.ts`(Web Push)+ Settings 4-tab UI + 全套 mobile RWD(`@media (max-width:767.98px)`)。改這些段前看現有檔案,別憑記憶。
+Phase 5 後 `src/` 加了 `lib/fcm.ts`(Web Push)+ Settings 4-tab UI(project / ai / notifications / update)+ 全套 mobile RWD(`@media (max-width:767.98px)`)。**TOTP / `features/auth/` 已於 2026-05-24 拔除**(VP 無 app-level auth;Tailscale 是唯一存取邊界)。改這些段前看現有檔案,別憑記憶。
 
 ## UI 防禦規則(來自 runner real-run 踩到的雷)
 
@@ -160,7 +160,6 @@ root [`CLAUDE.md`](../../../CLAUDE.md) §不踩的雷 是全 repo 公用,本段�
 主要 route:
 - `/` → redirect `/board`
 - `/board` 主畫面;`?project=<hash>&pipeline=<id>&ticket=<id>` 帶 context
-- `/setup` / `/login` TOTP
 
 `STATE_COLOR` / `STATE_LABEL` / `SEV_COLOR` / `fmtElapsed` 在 `src/data/` 是純 helper(原本的 mock seed 已全砍);新 helper 可加進這層。
 
@@ -222,7 +221,7 @@ backend 一律回 `{ ok: true, data }` 或 `{ ok: false, error: { code, message 
 
 例:
 - `/board?project=a3b4f1e2` — 看哪個 project
-- `/board?project=a3b4f1e2&pipeline=feat-auth` — 看哪條 pipeline
+- `/board?project=a3b4f1e2&pipeline=feat-merge` — 看哪條 pipeline
 - `?theme=dark` — 主題
 
 例外:**會頻繁變動但不需要 URL 反映**的(如 banner 動畫狀態、未讀計數的本地 optimistic 值)用 component state 即可。

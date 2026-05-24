@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BoardScreen } from "./features/pipeline/BoardScreen";
-import { SetupScreen } from "./features/auth/SetupScreen";
-import { LoginScreen } from "./features/auth/LoginScreen";
 import { ConfirmProvider } from "./ui/ConfirmDialog";
 import { ToastProvider, ToastStage } from "./ui/Toast";
 import { OnlineStatusBadge } from "./shell/OnlineStatusBadge";
@@ -74,8 +72,6 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/board" replace />} />
             <Route path="/board" element={<BoardRoute />} />
-            <Route path="/setup" element={<SetupScreen />} />
-            <Route path="/login" element={<LoginScreen />} />
           </Routes>
           <ToastStage />
         </ToastProvider>
