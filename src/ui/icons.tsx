@@ -103,8 +103,8 @@ export const HistoryIcon = (p: IconProps) => (
   </svg>
 );
 
-export const SpinnerIcon = (p: IconProps) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="spin" {...p}>
+export const SpinnerIcon = ({ className, ...p }: IconProps) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className={className ? `spin ${className}` : "spin"} {...p}>
     <path d="M12 3a9 9 0 1 1-9 9" />
   </svg>
 );
