@@ -63,7 +63,6 @@
    --chip-c 由 [data-state] attribute selector 設色,語意化、無需 inline style。
    bg/border 用 color-mix 從 --chip-c 衍生,不需另存 STATE_SOFT 字典 */
 .rail-status-chip {
-  --chip-c: var(--fg-mute);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -72,9 +71,9 @@
   font-weight: 600;
   padding: 2px 7px 2px 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
-  color: var(--chip-c);
-  border: 1px solid color-mix(in srgb, var(--chip-c) 30%, transparent);
+  background: color-mix(in srgb, var(--chip-c, var(--fg-mute)) 12%, transparent);
+  color: var(--chip-c, var(--fg-mute));
+  border: 1px solid color-mix(in srgb, var(--chip-c, var(--fg-mute)) 30%, transparent);
   letter-spacing: 0.01em;
   line-height: 1.1;
   white-space: nowrap;

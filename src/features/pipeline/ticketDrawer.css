@@ -257,7 +257,6 @@
 /* td-008:status pill 維持 filled tone(主狀態),mode / iter meta 退成純文字 */
 .tdrw-status-chip,
 .tdrw-status-pill {
-  --chip-c: var(--fg-mute);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -266,9 +265,9 @@
   font-size: 11.5px;
   font-weight: 600;
   border: 1px solid;
-  color: var(--chip-c);
-  background: color-mix(in srgb, var(--chip-c) 14%, transparent);
-  border-color: color-mix(in srgb, var(--chip-c) 35%, transparent);
+  color: var(--chip-c, var(--fg-mute));
+  background: color-mix(in srgb, var(--chip-c, var(--fg-mute)) 14%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c, var(--fg-mute)) 35%, transparent);
   line-height: 1.4;
 }
 .tdrw-meta-chip {
