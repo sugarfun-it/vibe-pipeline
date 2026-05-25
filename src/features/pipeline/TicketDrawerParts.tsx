@@ -12,7 +12,11 @@ export function Section({ label, children }: { label: string; children: React.Re
 
 export function ReadOnlyValue({ value }: { value: string | undefined }) {
   if (!value) return <span className="tdrw-empty">(空)</span>;
-  return <div className="tdrw-text">{value}</div>;
+  return (
+    <div className="tdrw-text tdrw-prompt-md">
+      <ReactMarkdown>{value}</ReactMarkdown>
+    </div>
+  );
 }
 
 // 長 prompt 內容預設折疊,避免推走後續操作型 section(迭代輪次 / commit / 日誌 / 原因 / 狀態歷史)。

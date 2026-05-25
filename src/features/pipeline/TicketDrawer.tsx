@@ -3,7 +3,6 @@ import "../../styles/drawer.css";
 import "./ticketDrawer.css";
 import type { Ticket, CommitRef } from "../../types/pipeline";
 import { MODE_LABELS } from "../../api/qa";
-import { STATE_COLOR } from "../../data/pipelines";
 import { formatDateTime } from "../../lib/format";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { RefreshIcon, ScissorsIcon, TrashIcon } from "../../ui/icons";
@@ -88,7 +87,6 @@ export function TicketDrawer({
     onClose();
   }
 
-  const accent = STATE_COLOR[ticket.status] || "var(--fg-mute)";
   const statusLabel = TICKET_STATUS_LABEL[ticket.status] || ticket.status;
   const modeLabel = MODE_LABELS[ticket.mode as "step" | "iter"] ?? ticket.mode;
   const spec = ticket as unknown as {
@@ -110,11 +108,7 @@ export function TicketDrawer({
       </Section>
       <Section label="驗收">
         {Array.isArray(spec.acceptance) && spec.acceptance.length > 0 ? (
-          <ul className="tdrw-list">
-            {spec.acceptance.map((a) => (
-              <li key={a}>{a}</li>
-            ))}
-          </ul>
+          <ReadOnlyValue value={spec.acceptance.map((a) => `- ${a}`).join("\n")} />
         ) : (
           <ReadOnlyValue value={undefined} />
         )}
@@ -221,13 +215,8 @@ export function TicketDrawer({
             <span
               className="tdrw-status-chip tdrw-status-pill"
               data-state={ticket.status}
-              style={{
-                color: accent,
-                background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-                borderColor: `color-mix(in srgb, ${accent} 35%, transparent)`,
-              }}
             >
-              <span className="dot" style={{ background: accent }} />
+              <span className="dot" />
               {statusLabel}
             </span>
             {(() => {
