@@ -113,7 +113,7 @@ export function TicketDrawer({
       <Section label="驗收">
         {Array.isArray(spec.acceptance) && spec.acceptance.length > 0 ? (
           <CollapsiblePrompt
-            text={spec.acceptance.map((a) => `- ${a}`).join("\n")}
+            text={spec.acceptance.join("\n\n")}
             defaultCollapsed={isDone}
             label="驗收"
           />
