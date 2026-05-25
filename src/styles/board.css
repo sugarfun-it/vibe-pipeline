@@ -11,7 +11,7 @@
 
    本檔留:跨 feature 共用的 button / chip / form primitives、modal base、
    topbar / proj-menu base、board layout shell、mobile overlay 共用契約、
-   .sr-only / .action-toast / .empty-project / shimmer keyframe 等。
+   .sr-only / .action-toast / shimmer keyframe 等。
 */
 
 .board-root {
@@ -32,10 +32,7 @@
    are added by tokens.css. Fallbacks here so this file degrades gracefully
    if tokens.css updates land in a separate commit. */
 
-/* phase4-cross-010 — global screen-reader utility. Previously lived locally
-   inside diffModal.css; promoted to board.css so every unit (run-button,
-   run-history, ticket card, toast, diff-modal, confirm-dialog, qa-drawer,
-   icon-button) can share a single contract. */
+/* phase4-cross-010 — global screen-reader utility. */
 .sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -47,45 +44,22 @@
   white-space: nowrap !important;
   border: 0 !important;
 }
-/* .sr-only-focusable lifts text into view when focused (skip-links pattern) */
-.sr-only-focusable:focus,
-.sr-only-focusable:focus-visible,
-.sr-only.is-focusable:focus,
-.sr-only.is-focusable:focus-visible {
-  position: static !important;
-  width: auto !important;
-  height: auto !important;
-  margin: 0 !important;
-  overflow: visible !important;
-  clip: auto !important;
-  white-space: normal !important;
-}
-
 /* Shared base for button-like controls (phase4-control-001).
-   Existing .btn / .tdrw-action / .qadr-send / .sb-tab / .brw-btn / .run-button
-   selectors remain stable; we just align disabled/hover/active/focus. */
+   .btn / .tdrw-action / .qadr-send selectors remain stable;
+   we just align disabled/hover/active/focus. */
 .btn:disabled,
 .btn[aria-disabled="true"],
 .tdrw-action:disabled,
 .tdrw-action[aria-disabled="true"],
 .qadr-send:disabled,
-.qadr-send[aria-disabled="true"],
-.sb-tab:disabled,
-.sb-tab[aria-disabled="true"],
-.brw-btn:disabled,
-.brw-btn[aria-disabled="true"],
-.run-button:disabled,
-.run-button[aria-disabled="true"] {
+.qadr-send[aria-disabled="true"] {
   opacity: 0.48;
   cursor: not-allowed;
   color: var(--fg-faint);
 }
 .btn[aria-disabled="true"]:hover,
 .tdrw-action[aria-disabled="true"]:hover,
-.qadr-send[aria-disabled="true"]:hover,
-.sb-tab[aria-disabled="true"]:hover,
-.brw-btn[aria-disabled="true"]:hover,
-.run-button[aria-disabled="true"]:hover {
+.qadr-send[aria-disabled="true"]:hover {
   background: var(--panel-2);
   border-color: var(--line-2);
 }
@@ -94,8 +68,7 @@
    keyboard focus we render that title as a tooltip-like pseudo so keyboard /
    touch users see the reason without relying on hover. */
 .btn[aria-disabled="true"][title]:focus-visible::after,
-.tdrw-action[aria-disabled="true"][title]:focus-visible::after,
-.run-button[aria-disabled="true"][title]:focus-visible::after {
+.tdrw-action[aria-disabled="true"][title]:focus-visible::after {
   content: attr(title);
   position: absolute;
   left: 50%;
@@ -116,26 +89,22 @@
   text-wrap: pretty;
 }
 .btn[aria-disabled="true"][title]:focus-visible,
-.tdrw-action[aria-disabled="true"][title]:focus-visible,
-.run-button[aria-disabled="true"][title]:focus-visible {
+.tdrw-action[aria-disabled="true"][title]:focus-visible {
   position: relative;
 }
 .btn:active:not(:disabled):not([aria-disabled="true"]),
 .tdrw-action:active:not(:disabled):not([aria-disabled="true"]),
-.qadr-send:active:not(:disabled):not([aria-disabled="true"]),
-.sb-tab:active:not(:disabled):not([aria-disabled="true"]),
-.brw-btn:active:not(:disabled):not([aria-disabled="true"]),
-.run-button:active:not(:disabled):not([aria-disabled="true"]) {
+.qadr-send:active:not(:disabled):not([aria-disabled="true"]) {
   transform: translateY(0.5px);
 }
 
 /* Shared :focus-visible (phase4-focus-001) — single ring token, no outline:none dead-ends.
    Components keep their own border/background; we layer the ring via box-shadow so it
    never gets clipped by overflow:hidden parents. */
-:where(.btn, .tdrw-action, .qadr-send, .sb-tab, .brw-btn, .run-button,
+:where(.btn, .tdrw-action, .qadr-send,
        .chip, .status-pill, .vp-chip, .sync-chip,
        .picker-trigger, .create-x, .create-cancel, .create-submit,
-       .topbar-overflow-item, .topbar-overflow-toggle, .pipeline-overflow-menu-item,
+       .pipeline-overflow-menu-item,
        .rail-item, .rail-add, .rail-section-overflow-btn,
        .ticket.is-clickable, .ticket-mode,
        .proj-trigger, .proj-menu-item, .picker-item,
@@ -146,13 +115,12 @@
 }
 
 /* Unified chip primitive (phase4-chip-001).
-   .vp-chip is the canonical base; existing .chip / .status-pill / .statechip /
+   .vp-chip is the canonical base; existing .chip / .status-pill /
    .tdrw-status-chip / .tdrw-run-status / .rail-qa-badge selectors stay alive
    but inherit the same base properties so they no longer drift. */
 .vp-chip,
 .chip,
 .status-pill,
-.statechip,
 .tdrw-status-chip,
 .tdrw-run-status {
   display: inline-flex;
@@ -168,7 +136,6 @@
   white-space: nowrap;
   box-sizing: border-box;
 }
-.vp-chip-dot,
 .status-pill-dot {
   width: 6px;
   height: 6px;
@@ -176,8 +143,6 @@
   background: currentColor;
 }
 .vp-chip--success { color: var(--done); border-color: color-mix(in srgb, var(--done) 40%, var(--line-2)); background: color-mix(in srgb, var(--done) 12%, transparent); }
-.vp-chip--warning { color: var(--paused); border-color: color-mix(in srgb, var(--paused) 40%, var(--line-2)); background: color-mix(in srgb, var(--paused) 12%, transparent); }
-.vp-chip--danger  { color: var(--failed); border-color: color-mix(in srgb, var(--failed) 40%, var(--line-2)); background: color-mix(in srgb, var(--failed) 12%, transparent); }
 .vp-chip--info    { color: var(--iter); border-color: color-mix(in srgb, var(--iter) 40%, var(--line-2)); background: color-mix(in srgb, var(--iter) 12%, transparent); }
 
 /* phase4-2026-05-23-010 — atomic metadata row utility.
@@ -205,17 +170,7 @@
 }
 
 /* phase4-cross-005 — chip taxonomy split.
-   --state    : read-only (status/verdict/role). cursor:default, no pointer cues
-   --readonly : alias of --state for explicit non-interactive intent
-   --action   : clickable command (commit copy, reveal-folder, sync). hover/active feedback
-   --toggle   : on/off semantic chip (mode-toggle). pressed-state visual
-   --mode     : variant style for radio-like mode selection
-   --metric   : decorative counter / badge (parallel-chip, focus-count-chip, qa-badge)
-   Aliases on existing component classes preserved further down. */
-.vp-chip--state,
-.vp-chip--readonly {
-  cursor: default;
-}
+   --action   : clickable command (commit copy, reveal-folder, sync). hover/active feedback */
 .vp-chip--action {
   cursor: pointer;
   transition: background 120ms, border-color 120ms, color 120ms, transform 80ms;
@@ -233,78 +188,19 @@
   cursor: not-allowed;
   opacity: 0.48;
 }
-.vp-chip--toggle {
-  cursor: pointer;
-  transition: background 120ms, border-color 120ms, color 120ms;
-}
-.vp-chip--toggle[aria-pressed="true"],
-.vp-chip--toggle.is-on {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-}
-.vp-chip--toggle[aria-pressed="false"]:hover,
-.vp-chip--toggle.is-off:hover {
-  border-color: var(--line);
-  background: var(--hover);
-}
-.vp-chip--mode {
-  cursor: pointer;
-}
-.vp-chip--metric {
-  font-weight: 600;
-  color: var(--fg-mute);
-}
 
 /* Component aliases — keep existing class names but bind them to taxonomy.
    Result: ReadyBanner / TicketCard / Topbar continue to emit their own class,
    while the visual contract converges. */
 .status-pill,
-.statechip,
 .tdrw-status-chip,
 .tdrw-run-status { cursor: default; }
-.topbar-reveal-folder,
-.sync-chip { /* action chips */ }
 .ticket-mode.is-toggle { cursor: pointer; }
 .parallel-chip,
-.focus-count-chip,
 .focus-count,
 .rail-qa-badge {
   font-weight: 600;
 }
-
-/* Unified form fields (phase4-form-001).
-   .vp-input / .vp-select / .vp-textarea is the canonical contract; existing
-   .create-input input / .picker-trigger / .settings-input / .tdrw-iter-limit /
-   .qadr-input / .qadr-textarea inherit shared focus + radius + height. */
-.vp-input,
-.vp-select,
-.vp-textarea {
-  min-height: var(--control-h, 32px);
-  padding: 0 var(--control-pad-x, 12px);
-  border-radius: var(--radius-control, 6px);
-  border: 1px solid var(--line-2);
-  background: var(--panel);
-  color: var(--fg);
-  font: inherit;
-  transition: border-color 120ms, background 120ms;
-}
-.vp-textarea { padding: 8px var(--control-pad-x, 12px); min-height: calc(var(--control-h, 32px) * 2); }
-.vp-input:hover,
-.vp-select:hover,
-.vp-textarea:hover { border-color: var(--line); }
-.vp-input:focus-visible,
-.vp-select:focus-visible,
-.vp-textarea:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--focus-ring, 0 0 0 2px var(--bg), 0 0 0 4px var(--accent));
-}
-.vp-input:disabled,
-.vp-select:disabled,
-.vp-textarea:disabled { opacity: 0.48; cursor: not-allowed; }
-.vp-field-error { color: var(--failed); font-size: 11px; }
-.vp-help { color: var(--fg-faint); font-size: 11px; }
 
 /* Unified danger (phase4-danger-001) — semantic tokens, no hardcoded hex.
    --danger-fg / --danger-bg-soft / --danger-border come from tokens.css. */
@@ -317,14 +213,12 @@
   background: color-mix(in srgb, var(--failed) 85%, #000);
   border-color: color-mix(in srgb, var(--failed) 85%, #000);
 }
-.btn-danger.btn-ghost,
-.btn-danger-ghost {
+.btn-danger.btn-ghost {
   background: transparent;
   color: var(--failed);
   border-color: color-mix(in srgb, var(--failed) 35%, var(--line-2));
 }
-.btn-danger.btn-ghost:hover:not(:disabled):not([aria-disabled="true"]),
-.btn-danger-ghost:hover:not(:disabled):not([aria-disabled="true"]) {
+.btn-danger.btn-ghost:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
   border-color: var(--danger-border, color-mix(in srgb, var(--failed) 55%, var(--line-2)));
 }
@@ -403,43 +297,21 @@
   min-height: var(--control-h, 32px);
   padding: 0 var(--control-pad-x, 12px);
 }
-.toggle-pill--off,
-.toggle-pill.is-off {
-  color: var(--fg-mute);
-  border-color: var(--line-2);
-  background: var(--panel-2);
-}
-.toggle-pill--on,
 .toggle-pill.is-on {
   color: var(--done);
   border-color: var(--done);
   background: color-mix(in srgb, var(--done) 12%, transparent);
 }
-.toggle-pill--disabled,
-.toggle-pill.is-disabled,
 .toggle-pill[aria-disabled="true"],
 .toggle-pill:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   pointer-events: auto;
 }
-.toggle-pill--disabled:hover,
-.toggle-pill.is-disabled:hover,
 .toggle-pill[aria-disabled="true"]:hover,
 .toggle-pill:disabled:hover {
   background: var(--panel-2);
   border-color: var(--line-2);
-}
-.toggle-pill--blocked,
-.toggle-pill.is-blocked {
-  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 45%, var(--line-2)));
-  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 10%, transparent));
-  color: var(--failed);
-}
-.toggle-pill-hint {
-  font-size: 11px;
-  color: var(--fg-faint);
-  margin-left: 6px;
 }
 @media (pointer: coarse) {
   .toggle-pill { min-height: 40px; }
@@ -564,73 +436,13 @@
     background: var(--bg-elevated);
   }
 
-  /* phase4-cross-008 — unified mobile policy contract.
-     One breakpoint (767.98px). All fullscreen overlays follow the same rules:
-       1. Use 100dvh (not 100vh) — avoids iOS Safari url-bar jump.
-       2. inset:0 + safe-area-inset paddings on all four sides.
-       3. Sticky header (action row) uses --z-banner so it floats above content.
-       4. Reveal-folder + desktop-only meta hidden via single rule.
-       5. Coarse pointer targets >= 40px (toggle/icon-button).
-     Component-specific overrides (drawers, settings, qa, diff modal) live in
-     their own CSS files but MUST match this contract. */
-
-  /* shared fullscreen overlay primitive — drawer/settings/qa/diff inherit */
-  .vp-mobile-overlay,
-  .vp-fullscreen-overlay {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100dvh;
-    max-width: 100vw;
-    max-height: 100dvh;
-    border-radius: 0;
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-right: max(12px, env(safe-area-inset-right));
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    padding-left: max(12px, env(safe-area-inset-left));
-  }
-
-  /* shared mobile header bar — sticky action row inside fullscreen overlays */
-  .vp-mobile-header {
-    position: sticky;
-    top: 0;
-    z-index: var(--z-banner, 40);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    background: var(--bg-elevated);
-    border-bottom: 1px solid var(--line);
-  }
-
   /* coarse pointer mobile target promotion */
-  .icon-button,
   .vp-chip--action,
   .toggle-pill,
-  .topbar-overflow-toggle,
   .create-x,
   .action-toast-close {
     min-height: 40px;
     min-width: 40px;
-  }
-
-  /* hide desktop-only context everywhere; centralised
-     advisor topbar.active_meta_localhost r1:reveal-folder 在 mobile 改成 icon-only(於 topbar.css 處理),
-     不再強制 hide。此處只保留 .desktop-only。 */
-  .desktop-only {
-    display: none !important;
-  }
-
-  /* mobile-only helpers (counterpart) */
-  .mobile-only {
-    display: revert !important;
-  }
-}
-
-/* desktop default — mobile-only helpers hidden */
-@media (min-width: 768px) {
-  .mobile-only {
-    display: none !important;
   }
 }
 

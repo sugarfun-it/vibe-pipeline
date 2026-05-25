@@ -143,7 +143,6 @@ export function QADrawer({
               <span className="mono qadr-crumb-project" title={pipelineName}>
                 {pipelineName}
               </span>
-              <span className="sep qadr-crumb-current-sep">/</span>
               <span className="qadr-crumb-current">新需求單</span>
             </span>
             <button type="button"

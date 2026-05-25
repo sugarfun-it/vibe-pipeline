@@ -144,13 +144,21 @@
   opacity: 0.18;
   z-index: -1;
 }
+/* 透明 border ::before layer 預留給 hover / active 等狀態變色 hook(目前沒實際變色,
+   但 refined 設計刻意留這層,免得未來加狀態時 chip 邊界跳動)*/
+.focus-head-meta-row > .chip-state::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
 .focus-head-meta-row > .chip-state .dot.pulse {
   animation: chipStatePulse 1.8s ease-in-out infinite;
 }
-@keyframes chipStatePulse {
-  0%, 100% { opacity: 0.18; }
-  50%      { opacity: 0.34; }
-}
+/* chipStatePulse keyframe 定義在 tokens.css */
 .focus-head-meta-row > .focus-count,
 .focus-head-meta-row > .chip:not(.chip-state),
 .focus-head-meta-row > .sync-chip {
@@ -216,56 +224,39 @@
 .banner-desc { font-size: 10.5px; color: var(--fg-mute); margin-top: 2px; letter-spacing: 0.01em; }
 
 /* phase4-cross-011 — banner state modifiers + data-state contract.
-   ReadyBanner.tsx emits data-state="ready|merging|merged|failed"; styling
-   converges so RunButton merge-ready, rail ready/merged dot, focus-head
-   pipeline state all read off the same palette. Aliases mirror class form. */
-.banner[data-state="ready"],
-.banner--ready {
+   ReadyBanner.tsx emits data-state="ready|merging|merged|failed";
+   styling converges so RunButton merge-ready, rail ready/merged dot, focus-head
+   pipeline state all read off the same palette. */
+.banner[data-state="ready"] {
   background: var(--done-soft);
   border-color: color-mix(in srgb, var(--done) 35%, transparent);
   color: var(--done);
 }
-.banner[data-state="merging"],
-.banner--merging {
+.banner[data-state="merging"] {
   background: color-mix(in srgb, var(--running) 12%, transparent);
   border-color: color-mix(in srgb, var(--running) 35%, transparent);
   color: var(--running);
 }
-.banner[data-state="merged"],
-.banner--merged {
+.banner[data-state="merged"] {
   background: color-mix(in srgb, var(--done) 8%, transparent);
   border-color: color-mix(in srgb, var(--done) 45%, var(--line-2));
   color: var(--done);
 }
-.banner[data-state="failed"],
-.banner--failed {
+.banner[data-state="failed"] {
   background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
   border-color: var(--danger-border, color-mix(in srgb, var(--failed) 45%, var(--line-2)));
   color: var(--failed);
 }
-.banner[data-state="paused"],
-.banner--paused {
+.banner[data-state="paused"] {
   background: var(--paused-soft);
   border-color: color-mix(in srgb, var(--paused) 30%, transparent);
   color: var(--paused);
 }
 /* icon inherits the banner state colour by default; body keeps neutral fg
    so descriptive text remains readable while the accent stays on the icon. */
-.banner[data-state] .banner-icon,
-.banner--ready .banner-icon,
-.banner--merging .banner-icon,
-.banner--merged .banner-icon,
-.banner--failed .banner-icon { color: currentColor; }
-.banner[data-state] .banner-title,
-.banner--ready .banner-title,
-.banner--merging .banner-title,
-.banner--merged .banner-title,
-.banner--failed .banner-title { color: var(--fg); }
-.banner[data-state] .banner-desc,
-.banner--ready .banner-desc,
-.banner--merging .banner-desc,
-.banner--merged .banner-desc,
-.banner--failed .banner-desc { color: var(--fg-mute); }
+.banner[data-state] .banner-icon { color: currentColor; }
+.banner[data-state] .banner-title { color: var(--fg); }
+.banner[data-state] .banner-desc { color: var(--fg-mute); }
 
 /* density compact — focus padding 收一點 */
 [data-density="compact"] .focus-list { gap: 6px; }
@@ -358,12 +349,18 @@
   align-items: center;
   z-index: 3;
 }
-.focus-overflow > .btn {
+.focus-overflow > .btn,
+.rail-section-overflow > .btn {
   padding: 4px 8px;
   min-height: 30px;
   color: var(--fg-mute);
 }
-.focus-overflow > .btn:hover { color: var(--fg); }
+/* rail trigger 預設無底色但保留框線,hover 才顯 bg(走 .btn primitive 的 hover) */
+.rail-section-overflow > .btn {
+  background: transparent;
+}
+.focus-overflow > .btn:hover,
+.rail-section-overflow > .btn:hover { color: var(--fg); }
 
 /* Menu surface — visual only. 定位由 <Popover> primitive(portal + JS-computed left/top)負責,
    這裡禁設 position / top / right(會跟 Popover 計算的座標打架,造成 menu 拉伸到 viewport 邊界)。
@@ -591,6 +588,20 @@
   opacity: 1;
 }
 
+/* ─── Narrow desktop(<920px,laptop + rail + inbox 三欄擠壓區)──
+   V1 Refined RWD:padding 縮、actions btn 縮小、title 19px,
+   避免 absolute-pinned actions 撞 title 跟 overflow ⋯ */
+@media (max-width: 919.98px) {
+  .focus { padding: 16px 18px 18px; }
+  .focus-head-title-row { padding-right: 240px; gap: 8px; min-height: 32px; }
+  .focus-actions { right: 38px; gap: 4px; height: 32px; }
+  .focus-overflow { height: 32px; }
+  .focus-actions .btn { padding: 4px 10px; font-size: 11.5px; min-height: 28px; }
+  .focus-overflow > .btn,
+  .rail-section-overflow > .btn { padding: 4px 6px; min-height: 28px; }
+  .focus-title { font-size: 19px; }
+}
+
 /* ─── Mobile(focus header / banner / RunButton 相關)─────── */
 @media (max-width: 767.98px) {
   /* 手機 FocusColumn 縮小 padding,標題小一點,降低上方密度 */
@@ -611,36 +622,52 @@
   }
 
   /* V1 Refined desktop 用絕對定位釘 actions / overflow 到 title-row 右上;
-     mobile 還原回 flow,actions 改 order:99 跑到第二列(full-width),overflow 也回 inline。 */
+     mobile 還原回 flow:title-row nowrap(title 撐滿,overflow ⋯ 釘右邊靠 margin-left:auto),
+     actions 改自己一列(order:99 / width:100% / dashed top),允許 flex-wrap 給多按鈕情境。 */
   .focus-head-title-row {
     padding-right: 0 !important;
     min-height: 0 !important;
     align-items: center;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     gap: 6px !important;
   }
   .focus-head-meta-row {
     flex-wrap: wrap !important;
-    row-gap: 4px !important;
-    gap: 0 6px !important;
+    row-gap: 6px !important;
+    column-gap: 0 !important;
     overflow: visible !important;
+  }
+  /* meta-row chips:mobile 不再 ellipsis,讓 diff/sync info 完整顯示並換行 */
+  .focus-head-meta-row > .focus-count,
+  .focus-head-meta-row > .chip:not(.chip-state),
+  .focus-head-meta-row > .sync-chip {
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+    flex-shrink: 0;
   }
   .focus-actions {
     position: static !important;
     right: auto !important;
     height: auto !important;
-    margin-left: auto !important;
+    margin: 0 !important;
+    margin-top: 8px !important;
     gap: 6px;
     flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
     order: 99;
     justify-content: flex-end;
-    padding-top: 4px;
+    padding-top: 8px;
     border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
   }
   .focus-overflow {
     position: static !important;
     right: auto !important;
     height: auto !important;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   /* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
@@ -650,7 +677,8 @@
   /* v2-board-003:mobile pencil / focus 區的 overflow ⋯ padding 收一點;
      tap target 走 .btn 的 min-height(canonical control-h),不再強制 44px */
   .focus-title-edit-btn,
-  .focus-overflow > .btn {
+  .focus-overflow > .btn,
+  .rail-section-overflow > .btn {
     padding-inline: 8px;
   }
 
@@ -794,4 +822,33 @@
 @media (min-width: 768px) {
   .run-btn-empty-label-full { display: inline; }
   .run-btn-empty-label-short { display: none; }
+}
+
+/* ─── Ultra-narrow(<540px,小手機)── refined 額外壓縮 header padding
+   meta-row 改 horizontal scroll(不 wrap),title 17px */
+@media (max-width: 539.98px) {
+  .focus { padding: 12px 10px 14px !important; }
+  .focus-title { font-size: 17px !important; }
+  /* meta-row 維持 wrap(refined v2 矯正:之前用 nowrap+overflow-x:auto 會把 actions
+     塞 100% 寬硬撐爆 viewport,chips 又被壓到只剩 · 符號) */
+  .focus-head-meta-row {
+    font-size: 10.5px;
+    flex-wrap: wrap !important;
+    row-gap: 4px;
+  }
+  .focus-head-meta-row > .focus-count,
+  .focus-head-meta-row > .chip:not(.chip-state),
+  .focus-head-meta-row > .sync-chip { padding: 0 8px; }
+
+  /* Action button 在這 size 範圍補 touch target(32-34 min-height)*/
+  .focus-actions .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .focus-actions .btn-primary,
+  .focus-actions .btn-danger {
+    padding: 7px 14px;
+    min-height: 34px;
+  }
 }

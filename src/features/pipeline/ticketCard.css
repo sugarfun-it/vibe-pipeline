@@ -283,60 +283,12 @@ button.ticket-mode {
   font-weight: 500;
   color: var(--fg-mute);
 }
-/* tk-002 / tk-008:compact round summary row — 取代 verbose per-round IterStages 顯示。
-   單一 inset bar:左側 round 編號 + stage flow + verdict,右側 elapsed。
-   背景用 done-tint 弱化容器感,不要再有獨立 shadow / 第二層 card。*/
-.ticket-card__progress {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  min-height: 32px;
-  padding: 6px 10px;
-  margin-top: 8px;
-  border-radius: var(--radius-control, 6px);
-  background: color-mix(in srgb, var(--done) 7%, transparent);
-  border: 1px solid color-mix(in srgb, var(--done) 18%, transparent);
-  font-size: 11.5px;
-  box-shadow: none;
-}
-/* failed 系列(把上面 done-tint 蓋掉,用 failed-tint)*/
-.ticket.is-failed .ticket-card__progress {
-  background: color-mix(in srgb, var(--failed) 7%, transparent);
-  border-color: color-mix(in srgb, var(--failed) 22%, transparent);
-}
-.ticket-card__round-summary .ticket-card__round-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.ticket-card__round-flow {
-  /* tk-006:tertiary text 用 fg-mute 而非 fg-faint */
-  color: var(--fg-mute);
-  font-size: 11px;
-}
-.ticket-card__round-verdict {
-  font-weight: 600;
-  font-size: 11px;
-}
-.ticket-card__round-verdict.is-pass { color: var(--done); }
-.ticket-card__round-verdict.is-fail { color: var(--failed); }
-.ticket-card__round-verdict.is-part { color: var(--paused); }
-.ticket-card__round-verdict.is-unknown { color: var(--fg-mute); }
-.ticket-card__round-elapsed {
-  margin-left: 0;
-  color: var(--fg-mute);
-}
 .ticket-iter-summary {
   margin-top: 6px;
   font-size: 10.5px;
   color: var(--fg-mute);
   font-family: var(--font-mono);
 }
-
-/* legacy:.iter-stage-pulse 留著怕別處還用到,不再被 IterStages 渲染 */
 
 /* 階段標記:past=✓ / current=▶或⏸或 verdict / future=? */
 .iter-stage-mark {
@@ -391,12 +343,6 @@ button.ticket-mode {
   0%, 100% { opacity: 0.4; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.18); }
 }
-
-.verdicts { display: inline-flex; align-items: center; gap: 4px; }
-
-.verdict-pip.is-pass { background: var(--done); }
-.verdict-pip.is-warn { background: var(--paused); }
-.verdict-pip.is-fail { background: var(--failed); }
 
 .iter-meta {
   display: inline-flex; align-items: center; gap: 6px;
@@ -536,20 +482,41 @@ html.light .livelog-cursor { color: var(--running); }
   }
 }
 
-/* tk-007:極窄 viewport(<=480px)再緊一點 padding,progress 跟 header 留更小距離 */
+/* tk-007:極窄 viewport(<=480px)再緊一點 padding */
 @media (max-width: 480px) {
   .ticket {
     padding: 10px 12px 12px 18px;
-  }
-  .ticket-card__progress {
-    margin-top: 6px;
-    padding: 5px 8px;
   }
   /* tk-001c:mobile 只改 indent token,所有 row 自動跟著變;不再個別重寫 margin-left */
   .ticket {
     --ticket-num-width: 20px;
     --ticket-header-gap: 10px;
   }
+}
+
+/* ─── Ultra-narrow(<540px,小手機)── V1 Refined:
+   ticket card padding/radius 收緊;header 允許 wrap(title 自動到第二行);
+   iter row flex-wrap + stages wrap;livelog 字級壓低 */
+@media (max-width: 539.98px) {
+  .ticket {
+    padding: 11px 12px 12px 14px;
+    border-radius: 8px;
+  }
+  .ticket-band { left: 4px; top: 10px; bottom: 10px; }
+  .ticket-card__header { flex-wrap: wrap; row-gap: 4px; }
+  .ticket-card__titleline { flex-basis: 100%; min-width: 0; }
+  .ticket-card__trailing { margin-left: auto; }
+  .ticket-title { font-size: 13px; line-height: 1.35; }
+  .ticket-num { font-size: 10px; width: 22px; }
+  .ticket-iter-row {
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+  .iter-stages { flex-wrap: wrap; }
+  .iter-meta { margin-left: auto; }
+  .ticket-goal { font-size: 11.5px; }
+  .ticket-livelog { font-size: 10px; padding: 4px 7px; }
 }
 
 @media (hover: none) {

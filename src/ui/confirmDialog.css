@@ -77,43 +77,6 @@
   margin-top: 8px;
 }
 
-/* phase4-2026-05-23-012 — utility classes for destructive descriptionRich:
-   callers building bullet rows / mono details get a consistent visual without
-   each one rolling its own styling. */
-.confirm-desc ul.confirm-desc-list {
-  margin: 0;
-  /* iter-uiux-2026-05-24 rich-desc r1 — bump marker/content breathing room
-     (16→18px) so mobile wrap rows don't crowd the marker. */
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1, 4px);
-}
-.confirm-desc ul.confirm-desc-list li {
-  font-size: 12px;
-  line-height: 1.5;
-}
-.confirm-desc ul.confirm-desc-list li::marker {
-  color: var(--fg-mute);
-}
-.confirm-desc code.confirm-desc-mono {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  padding: 1px 5px;
-  border-radius: var(--radius-xs, 4px);
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  color: var(--fg);
-  /* iter-uiux-2026-05-24 rich-desc r1 — mixed CJK/Latin prose: tiny logical
-     margin so chip doesn't kiss adjacent Chinese characters. Long-path chips
-     (`~/.vibe-pipeline/worktrees/...`) need to wrap on character boundaries
-     and keep border/background continuous on each wrapped line. */
-  margin-inline: 2px;
-  overflow-wrap: anywhere;
-  word-break: normal;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-}
 .confirm-actions {
   display: flex;
   gap: 8px;

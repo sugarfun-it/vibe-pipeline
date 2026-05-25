@@ -104,7 +104,6 @@ export const BoardOverlays = memo(function BoardOverlays({
     <TicketDrawer
       ticket={liveTicket}
       pipelineName={active.name}
-      pipelineBranch={active.branch}
       pipelineId={active.id}
       projectHash={project.hash}
       onClose={() => setOpenTicket(null)}

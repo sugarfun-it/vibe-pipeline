@@ -18,7 +18,6 @@ import { TICKET_STATUS_LABEL } from "../../data/pipelines";
 export function TicketDrawer({
   ticket,
   pipelineName,
-  pipelineBranch,
   pipelineId,
   projectHash,
   isSplitting = false,
@@ -31,7 +30,6 @@ export function TicketDrawer({
 }: {
   ticket: Ticket;
   pipelineName: string;
-  pipelineBranch: string;
   pipelineId: string;
   projectHash: string;
   isSplitting?: boolean;
@@ -189,14 +187,6 @@ export function TicketDrawer({
           <div className="drawer-crumb tdrw-breadcrumb">
             <span className="mono">{pipelineName}</span>
             <span className="sep" style={{ color: "var(--fg-faint)" }}>›</span>
-            {pipelineBranch && (
-              <>
-                <span className="mono tdrw-crumb-branch" title={`pipeline branch:${pipelineBranch}`}>
-                  {pipelineBranch}
-                </span>
-                <span className="sep" style={{ color: "var(--fg-faint)" }}>›</span>
-              </>
-            )}
             <span className="mono" style={{ color: "var(--fg-mute)" }}>
               Ticket #{String(ticket.n).padStart(2, "0")}
             </span>

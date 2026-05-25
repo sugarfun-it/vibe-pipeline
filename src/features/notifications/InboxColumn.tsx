@@ -394,8 +394,6 @@ function InboxPanel({
       )}
 
       <div className="inbox-foot">
-        <span>共 {items.length} 則通知{unreadCount > 0 ? ` · ${unreadCount} 未讀` : ""}</span>
-        <span style={{ flex: 1 }} />
         {items.length > 0 && unreadCount > 0 && (
           <button type="button"
             className="inbox-foot-link"

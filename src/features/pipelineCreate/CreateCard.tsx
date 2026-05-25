@@ -96,8 +96,7 @@ export function CreateCard({
     <form className="create-card fade-up" onSubmit={submit} ref={cardRef}>
       <div className="create-card-head">
         <span className="rail-status-chip" data-state="planning" aria-hidden="true">
-          <span className="rail-status-chip-dot" />
-          <span>新 pipeline</span>
+          新 pipeline
         </span>
         <span style={{ flex: 1 }} />
         <button type="button" className="create-x" onClick={onCancel} title="取消 (Esc)" aria-label="取消">

@@ -225,18 +225,6 @@ html.light .settings-popover-tab.is-active {
   min-width: 0;
 }
 
-.settings-field-controls > .settings-input--w-full {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.settings-error {
-  font-size: 11px;
-  color: var(--failed);
-  margin-bottom: 8px;
-  word-break: break-word;
-}
-
 /* tight 版 field row(auto-merge toggle 那行)— 桌面同 grid layout, label 左 toggle 右 */
 .settings-field-row--tight {
   align-items: center;
@@ -323,19 +311,6 @@ html.light .settings-popover-tab.is-active {
   margin-bottom: 8px;
 }
 
-.push-blocked-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--failed) 12%, transparent);
-  color: var(--failed);
-  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
-  font-size: 11.5px;
-  font-weight: 500;
-  white-space: nowrap;
-}
 
 .push-hint--inline { margin: 0; }
 .push-hint-list {
@@ -365,17 +340,6 @@ html.light .settings-popover-tab.is-active {
 .settings-popover .toggle-pill.is-disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.push-error {
-  font-size: 11px;
-  color: var(--failed);
-  margin-top: 8px;
-  padding: 8px;
-  background: color-mix(in srgb, var(--failed) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--failed) 30%, var(--line));
-  border-radius: 4px;
-  word-break: break-all;
 }
 
 /* persistent state block — neutral / info / ok / error 四 variant 共用排版 */
@@ -598,11 +562,6 @@ html.light .settings-popover-tab.is-active {
   gap: 8px;
 }
 
-.update-version-line {
-  font-size: 13px;
-  line-height: 1.4;
-}
-
 /* 狀態摘要區塊 — headline 大字版本 + status chip;sub 行 latest + release notes link */
 .update-summary {
   display: flex;
@@ -702,14 +661,6 @@ html.light .settings-popover-tab.is-active {
   text-decoration: underline;
 }
 
-.update-release-link--cta {
-  margin-left: 2px;
-  padding: 0 6px;
-  height: var(--control-h, 32px);
-  line-height: var(--control-h, 32px);
-  font-size: 12.5px;
-}
-
 .update-action-row { align-items: center; }
 
 .update-progress {
@@ -744,7 +695,6 @@ html.light .settings-popover-tab.is-active {
 .update-success-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .update-success-title { font-weight: 500; color: var(--done); }
 .update-success-tag { color: var(--done); font-weight: 700; overflow-wrap: anywhere; }
-.update-success-sub { color: var(--fg-mute); font-weight: 400; }
 .update-success-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
 .update-error {
@@ -782,20 +732,6 @@ html.light .settings-popover-tab.is-active {
   border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
   opacity: 0.85;
   cursor: not-allowed;
-}
-
-.update-cmd-row { display: flex; flex-direction: column; gap: 4px; }
-.update-cmd-line { display: flex; align-items: stretch; gap: 6px; }
-.update-cmd-code {
-  flex: 1;
-  padding: 6px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  font-size: 12px;
-  overflow-x: auto;
-  white-space: nowrap;
-  user-select: all;
 }
 
 /* ─── Tab content wrapper(統一各 tab 垂直節奏)──────────────────── */
@@ -978,11 +914,6 @@ html.light .settings-popover-tab.is-active {
     row-gap: 4px;
     width: 100%;
     min-width: 0;
-  }
-
-  .settings-field-controls > .settings-input,
-  .settings-field-controls > .picker-select {
-    min-height: 40px;
   }
 
   .settings-popover .form-input,

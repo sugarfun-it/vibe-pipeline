@@ -62,12 +62,6 @@
   color: var(--fg-faint); margin-bottom: 8px;
 }
 
-html.light .init-cmd { background: var(--inverse-fg, #1c1916); color: #fbf8f1; }
-html.light .init-cmd .init-cmd-prompt { color: #d8a25a; }
-html.light .init-cmd-text { color: #fbf8f1; }
-
-.init-cmd-copy.is-copied { color: var(--done); border-color: var(--done-soft); background: var(--done-soft); }
-
 .init-tree-wrap { padding: 14px 28px 18px; }
 .init-tree {
   font-size: 12px; line-height: 1.85;
@@ -111,8 +105,6 @@ html.light .init-cmd-text { color: #fbf8f1; }
 
 /* phase4-2026-05-23-008 — move InitPopup.tsx inline styles into named classes */
 .init-h1-nowrap { white-space: nowrap; }
-.init-icon-mute { color: var(--fg-mute); }
-.init-icon-faint { color: var(--fg-faint); display: inline-flex; align-items: center; }
 .init-icon-accent { color: var(--accent); display: inline-flex; }
 .init-tree-wrap--no-top { padding-top: 0; }
 .init-busy-hint {
@@ -129,16 +121,6 @@ html.light .init-cmd-text { color: #fbf8f1; }
 .init-popup-actions {
   display: flex; gap: 10px; align-items: center;
 }
-.init-popup-error {
-  padding: 10px 14px;
-  margin: 0 28px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--fg);
-  background: var(--accent-soft);
-  border: 1px solid var(--accent);
-}
-
 .init-git-toggle {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -83,13 +83,3 @@
   border: 0;
 }
 
-/* Variant: centered code input (OTP / 6-digit verification) */
-.form-input--code {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  letter-spacing: 6px;
-  text-align: center;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--panel-2);
-}

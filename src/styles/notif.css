@@ -542,13 +542,14 @@
 .inbox-foot {
   padding: 8px 14px;
   border-top: 1px solid var(--line);
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
   font-size: 11px;
   color: var(--fg-faint);
   background: var(--bg);
   flex-shrink: 0;
 }
-/* footer link 用 button reset + 真正 hit area,不再純文字樣 */
+/* footer link 用 button reset + 真正 hit area,不再純文字樣;
+   nowrap + flex-shrink:0 避免中文 label 在 narrow inbox 寬度下被斷字(「清除全部通」/「知」) */
 .inbox-foot-link {
   appearance: none;
   -webkit-appearance: none;
@@ -561,6 +562,8 @@
   border-radius: 5px;
   cursor: pointer;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 100ms, color 100ms;
 }
 .inbox-foot-link:hover { color: var(--fg); background: var(--hover); }

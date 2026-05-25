@@ -6,8 +6,6 @@
   pointer-events: none;
   filter: saturate(0.7);
 }
-.rail.is-creating .rail-archive.is-muted { opacity: 0.5; pointer-events: none; }
-
 /* Rail-inline create card.
    border 1.5→1px + 8px radius(對齊 .rail-item 8px) + 卸掉 strong shadow,讓 card 在
    rail 列表內讀起來像「升級版 rail-item」而非 modal 浮塊。muted rows 已用
@@ -54,11 +52,6 @@ html.light .create-card { background: var(--bg-elevated); }
 }
 .create-card-head .rail-status-chip {
   padding: 2px 8px 2px 7px;
-}
-/* phase4-2026-05-25:create-card-eyebrow legacy — V2 chip 取代,留 class 給可能殘留的 caller */
-.create-card-eyebrow {
-  font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
-  color: var(--fg-mute);
 }
 /* 縮成跟 chip 同等級的密度,避免關閉鈕視覺壓過 chip */
 .create-x {

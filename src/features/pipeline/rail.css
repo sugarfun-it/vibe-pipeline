@@ -25,46 +25,10 @@
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--fg-faint);
 }
+/* trigger 共用 .focus-overflow > .btn 樣式(見 focus.css)— 視覺一致 */
 .rail-section-overflow {
   position: relative;
   display: inline-block;
-}
-.rail-section-overflow-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--fg-mute);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-}
-/* mobile: 觸控放大,避免漏點(WCAG 2.5.5 建議 44x44;這裡取 40x40 兼顧 header label 比例) */
-@media (max-width: 720px) {
-  .rail-section-overflow-btn {
-    width: 40px;
-    height: 40px;
-  }
-}
-.rail-section-overflow-btn:hover {
-  color: var(--fg);
-  background: var(--hover);
-  border-color: var(--line-2);
-}
-.rail-section-overflow-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-  border-color: transparent;
-}
-.rail-section-overflow.is-open .rail-section-overflow-btn {
-  color: var(--fg);
-  background: var(--hover);
-  border-color: var(--line-2);
 }
 /* Rail 用 menu 較窄 — 收掉 .focus-overflow-menu 的 180px min-width 讓內容自然撐;定位 Popover 負責 */
 .rail-section-overflow-menu {
@@ -93,10 +57,7 @@
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line-2));
 }
 /* V2 chip:左 accent bar 拿掉,state chip + is-active 的 bg/border 已足夠表達 selected */
-.rail-item-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
-
-/* 通用 dot 視覺 atom — rail item 自己不用了(改 chip),但 CreateCard 等仍用作 eyebrow 前綴 */
-.rail-state-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rail-item-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
 
 /* 狀態膠囊 — 取代原 7px state-dot。
    --chip-c 由 [data-state] attribute selector 設色,語意化、無需 inline style。
@@ -126,63 +87,46 @@
 .rail-status-chip[data-state="failed"]   { --chip-c: var(--failed); }
 .rail-status-chip[data-state="planning"] { --chip-c: var(--draft); }
 
-.rail-status-chip-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--chip-c);
-  flex-shrink: 0;
-}
-/* 雙層 pulse:dot 自身 scale + ::after 擴散環。比通用 pulseDot 更精緻,
-   讓 running 狀態在 rail 內仍能被一眼抓到 */
-.rail-status-chip.is-running .rail-status-chip-dot {
-  position: relative;
-  animation: chipPulse 1.6s ease-in-out infinite;
-}
-.rail-status-chip.is-running .rail-status-chip-dot::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  border: 1px solid var(--chip-c);
-  opacity: 0;
-  animation: chipPulseRing 1.6s ease-out infinite;
-}
-@keyframes chipPulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.15); }
-}
-@keyframes chipPulseRing {
-  0%   { transform: scale(0.6); opacity: 0.6; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
 /* active rail-item 內 count chip 對比拉開(bg panel-2 → bg) */
 .rail-item.is-active .rail-item-count {
   background: var(--bg);
   color: var(--fg);
 }
 
-/* creating mode:其他 row 變 muted,chip 跟著淡掉,pulse 停 */
+/* creating mode:其他 row 變 muted,chip 跟著淡掉 */
 .rail-item.is-muted .rail-status-chip { opacity: 0.55; }
-.rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot,
-.rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot::after {
-  animation: none;
-}
 /* min-width:0 so flex truncation owns the name column; QA badge + count stay full-width on either side */
-.rail-item-name { flex: 1; min-width: 0; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-item-name {
+  flex: 1; min-width: 0;
+  font-weight: 500; color: var(--fg);
+  letter-spacing: -0.003em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rail-item.is-active .rail-item-name { font-weight: 600; }
-.rail-item-count { font-size: 10.5px; color: var(--fg-faint); flex-shrink: 0; }
+/* V2 chip:count 從純文字升為 chip 視覺(panel-2 bg + 3px radius + mono),跟 status chip 同節奏 */
+.rail-item-count {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  letter-spacing: 0;
+  flex-shrink: 0;
+}
 
 .rail-mini {
-  display: grid; gap: 2px;
+  display: grid;
+  gap: 2px;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   height: 3px;
   opacity: 0.55;
+  margin-top: 1px;
 }
-.rail-item:hover .rail-mini { opacity: 0.8; }
+.rail-item:hover .rail-mini { opacity: 0.85; }
 .rail-item.is-active .rail-mini { opacity: 1; }
-.rail-mini-cell { border-radius: 1px; }
+.rail-mini-cell { border-radius: 2px; }
 .rail-mini-cell.is-running {
   position: relative; overflow: hidden;
   background: linear-gradient(90deg, var(--running) 0%, color-mix(in srgb, var(--running) 30%, transparent) 50%, var(--running) 100%);
@@ -190,11 +134,13 @@
   animation: shimmer 1.6s linear infinite;
 }
 .rail-item-meta {
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--fg-faint);
   display: flex; align-items: center; gap: 6px;
   min-width: 0;
 }
+/* active rail-item:meta 跟 count 一樣提亮,跟 chip / name 同層級 */
+.rail-item.is-active .rail-item-meta { color: var(--fg-mute); }
 .rail-item-meta .mono {
   white-space: nowrap;
   overflow: hidden;
@@ -230,11 +176,14 @@
 /* Rail QA draft badge — 跟在 rail-item 內,colocate 一起。
    flex-shrink:0 confirms QA badge never collapses when pipeline name is long;
    .rail-item-name owns truncation via flex:1 + min-width:0. */
+/* V2 chip:QA badge 改 outline(transparent bg + accent 45% border),不再 filled accent-soft
+   — refined 設計要 quieter,在 row 內當輔助 indicator,不該跟 status chip 搶視覺權重 */
 .rail-qa-badge {
   font-size: 9px;
-  padding: 1px 5px;
+  padding: 0 4px;
   border-radius: 3px;
-  background: var(--accent-soft);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   color: var(--accent);
   letter-spacing: 0.04em;
   font-weight: 600;

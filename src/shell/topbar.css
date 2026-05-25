@@ -117,32 +117,6 @@
 .parallel-chip {
   cursor: default;
 }
-.topbar-overflow {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-.topbar-overflow-toggle { display: none; }
-.topbar-overflow-menu {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.topbar-overflow-mobile-items { display: none; }
-.topbar-overflow-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 9px;
-  border-radius: 6px;
-  color: var(--fg);
-  text-align: left;
-  font-size: 12px;
-}
-.topbar-overflow-item:hover {
-  background: var(--hover);
-}
 .pipeline-overflow-menu-item {
   background: transparent;
 }
@@ -193,11 +167,6 @@
   .topbar-reveal-folder > span {
     display: none;
   }
-  /* 內容少不需要 overflow menu — 全部 inline 顯示 */
-  .topbar-overflow-mobile-items {
-    display: none !important;
-  }
-
   .topbar-left {
     gap: 0;
     min-width: 0;
@@ -238,34 +207,9 @@
     width: min(320px, calc(100vw - 20px));
   }
 
-  /* mobile:不用 ⋯ 摺疊 — 把 parallel chip / theme toggle / settings 直接平鋪在 topbar */
-  .topbar-overflow-toggle {
-    display: none;
-  }
-  .topbar-overflow-menu {
-    display: inline-flex !important;
-    position: static;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    z-index: auto;
-  }
-  .topbar-overflow-mobile-items {
-    /* 額外塞給 mobile 用的 branch chip / reveal-folder 整段隱藏(資訊已在 Pipeline 內) */
-    display: none !important;
-  }
 }
 
 /* ─── proj-menu 內元素(以下為 popover row + X 等內細部樣式) ───────── */
-
-.proj-menu-label--empty {
-  opacity: 0.6;
-}
 
 /* 空狀態 — 用一般 body 樣式而非 section label,語意上是 status / help */
 .proj-menu-empty {

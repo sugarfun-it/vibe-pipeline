@@ -71,6 +71,17 @@
   --z-modal: 1700;
   --z-toast: 2200;
 
+  /* 2026-05-25 — drawer width SSOT。QA / TicketDrawer 各自設計寬度,改一處全 app 同步。
+     PipelineHistoryDrawer 共用 .tdrw-drawer surfaceClassName 跟 TicketDrawer,沒獨立寬度 */
+  --drawer-w-qa: 560px;
+  --drawer-w-ticket: 620px;
+
+  /* 2026-05-25 — drawer 統一視覺:accent stripe(-1px inset)+ shadow-lg。
+     3 處 verbatim 重複 → 抽 token,改 stripe 顏色 / shadow 一處生效 */
+  --shadow-drawer-accent:
+    -1px 0 0 0 color-mix(in srgb, var(--accent) 22%, transparent),
+    var(--shadow-lg);
+
   /* phase4-cross-006 — canonical spacing scale (consumed by board/drawer/qa/diff/settings) */
   --space-1: 4px;
   --space-2: 8px;
@@ -373,12 +384,25 @@ html.light .dotgrid {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.9s linear infinite; }
 
-/* phase4-2026-05-23-006 — reduced-motion contract for shared spinner / pulse / blink chrome */
+/* 2026-05-25 — redesign-introduced pulse keyframe(原在 focus.css)。
+   消費者:focus-head-meta-row .chip-state .dot.pulse 用 chipStatePulse(opacity 呼吸)。 */
+@keyframes chipStatePulse {
+  0%, 100% { opacity: 0.18; }
+  50%      { opacity: 0.34; }
+}
+
+/* phase4-2026-05-23-006 — reduced-motion contract for shared spinner / pulse / blink chrome
+   2026-05-25 補:涵蓋 chipStatePulse(focus.css 消費)。 */
 @media (prefers-reduced-motion: reduce) {
   .spin { animation: none; }
   .pulse { animation: none; opacity: 0.85; }
   .blink { animation: none; opacity: 0.85; }
   .fade-up { animation: none; }
+  /* FocusColumn chip-state pulse(focus.css) */
+  .focus-head-meta-row > .chip-state .dot.pulse {
+    animation: none;
+    opacity: 0.18;
+  }
 }
 
 @keyframes fadeUp {

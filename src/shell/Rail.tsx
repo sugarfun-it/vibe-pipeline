@@ -126,8 +126,7 @@ function RailItem({
           aria-hidden="true"
           title={stateText}
         >
-          <span className="rail-status-chip-dot" />
-          <span>{stateText}</span>
+          {stateText}
         </span>
         <span className="rail-item-name" title={p.name}>{p.name}</span>
         {hasDraft && (
@@ -174,11 +173,11 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className={"rail-section-overflow" + (open ? " is-open" : "")}>
+    <div className="rail-section-overflow">
       <button
         ref={triggerRef}
         type="button"
-        className="rail-section-overflow-btn"
+        className="btn"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
