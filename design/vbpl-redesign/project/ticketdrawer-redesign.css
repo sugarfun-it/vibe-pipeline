@@ -1,0 +1,1360 @@
+/* ============================================================================
+   TicketDrawer Redesign — overlay on top of ticketdrawer.css
+   Goal: visual continuity with BoardRail / FocusColumn redesigns.
+   - Status pill: full capsule, tinted bg, color border, pulse on running
+   - Mode pill: outline capsule, iter = purple tint
+   - Section labels: tiny mono uppercase, 0.1em tracking
+   - Round cards: side accent band by verdict, condensed head row
+   - Commits: hash-as-chip, single-line subject
+   - Footer: sticky solid surface, primary action accent-tinted
+   DOM is verbatim; only class-level overrides here.
+   ============================================================================ */
+
+/* ─── preview shell ─────────────────────────────────────────────────── */
+
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--font-ui);
+  color: var(--fg);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* faux pipeline board behind the drawer, just to anchor the design */
+.tdrw-stage--demo-host {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+.tdrw-stage--demo-host > .drawer-scrim {
+  background: var(--scrim-drawer);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.demo-stage-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(at 18% 22%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%),
+    radial-gradient(at 82% 78%, color-mix(in srgb, var(--running) 5%, transparent), transparent 60%),
+    var(--bg);
+  z-index: 0;
+}
+.demo-faux-board {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-mute);
+}
+.demo-faux-board .demo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.demo-faux-board .demo-brand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.demo-faux-board .demo-sep { color: var(--fg-faint); }
+.demo-faux-board .demo-crumb-pipeline { color: var(--fg-mute); font-family: var(--font-mono); font-size: 11px; }
+.demo-faux-board .demo-crumb-active { color: var(--fg); font-family: var(--font-mono); font-size: 11px; }
+
+.demo-faux-tickets {
+  position: fixed;
+  top: 64px;
+  left: 20px;
+  right: 660px;
+  bottom: 20px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.demo-faux-tickets .demo-faux-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  margin-bottom: 4px;
+}
+.demo-faux-tickets .demo-faux-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-faint);
+  margin-bottom: 10px;
+}
+.demo-faux-tickets .demo-faux-ticket {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  opacity: 0.7;
+}
+.demo-faux-tickets .demo-faux-ticket.is-active {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line-2));
+  background: var(--panel-2);
+  opacity: 1;
+}
+.demo-faux-tickets .demo-faux-tnum {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  width: 22px;
+  flex-shrink: 0;
+}
+.demo-faux-tickets .demo-faux-tname {
+  font-size: 12.5px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.demo-faux-tickets .demo-faux-tstate {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* ─── Drawer surface ────────────────────────────────────────────────── */
+
+.tdrw-stage--demo-host > .tdrw-drawer {
+  width: 620px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--line-2);
+  border-radius: 14px 0 0 14px;
+  box-shadow:
+    -1px 0 0 0 color-mix(in srgb, var(--accent) 22%, transparent),
+    var(--shadow-lg);
+}
+
+.tdrw-drawer .drawer-head.tdrw-head {
+  padding: 14px 22px 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+}
+
+/* ─── Header: breadcrumb ────────────────────────────────────────────── */
+
+.tdrw-drawer .drawer-crumb.tdrw-breadcrumb {
+  min-height: 24px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--fg-faint);
+  gap: 6px;
+}
+.tdrw-drawer .tdrw-breadcrumb .mono {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+}
+.tdrw-drawer .tdrw-breadcrumb .sep {
+  color: var(--fg-faint);
+  opacity: 0.5;
+  margin: 0 2px;
+}
+.tdrw-drawer .tdrw-breadcrumb .tdrw-crumb-branch {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid var(--line);
+  color: var(--fg-mute);
+  font-size: 10px;
+  max-width: 240px;
+}
+.tdrw-drawer .tdrw-breadcrumb > [style*="fg-mute"] {
+  color: var(--fg) !important;
+  font-weight: 600;
+}
+.tdrw-drawer .create-x.tdrw-close {
+  min-width: 32px;
+  min-height: 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  color: var(--fg-mute);
+  margin-inline-end: -8px;
+}
+.tdrw-drawer .create-x.tdrw-close:hover {
+  background: var(--hover);
+  color: var(--fg);
+  border-color: var(--line);
+}
+
+/* ─── Header: title ─────────────────────────────────────────────────── */
+
+.tdrw-drawer .drawer-titlerow.tdrw-titlerow {
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.tdrw-drawer .drawer-title.tdrw-title {
+  margin: 4px 0 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
+  color: var(--fg);
+}
+
+/* ─── Header: status row (pill + mode + iter limit) ─────────────────── */
+
+.tdrw-drawer .drawer-meta.tdrw-status-row {
+  gap: 8px;
+  margin: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Status pill — full capsule, tinted bg, colored border, optional pulse */
+.tdrw-drawer .tdrw-status-chip.tdrw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  border-radius: 999px;
+  border-width: 1px;
+  line-height: 1.4;
+}
+.tdrw-drawer .tdrw-status-chip.tdrw-status-pill .dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  position: relative;
+}
+.tdrw-drawer .tdrw-status-chip.tdrw-status-pill[style*="--running"] .dot,
+.tdrw-drawer .tdrw-status-chip.tdrw-status-pill[style*="var(--running)"] .dot {
+  animation: tdrwStatusPulse 1.6s ease-in-out infinite;
+}
+@keyframes tdrwStatusPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.35); opacity: 0.85; }
+}
+
+/* Mode chip — outline capsule with iter purple tint */
+.tdrw-drawer .tdrw-meta-chip.ticket-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--fg-mute);
+  line-height: 1.4;
+}
+.tdrw-drawer .tdrw-meta-chip.ticket-mode.is-iter {
+  color: var(--iter);
+  border-color: color-mix(in srgb, var(--iter) 45%, transparent);
+  background: color-mix(in srgb, var(--iter) 9%, transparent);
+}
+.tdrw-drawer .tdrw-meta-chip.ticket-mode.is-toggle {
+  border-style: solid;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.tdrw-drawer .tdrw-meta-chip.ticket-mode.is-toggle:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--fg);
+}
+
+/* IterLimitField — inline aligned, no big border */
+.tdrw-drawer .tdrw-iter-limit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
+  border: 1px dashed var(--line-2);
+  font-size: 11px;
+}
+.tdrw-drawer .tdrw-iter-limit-wrap.is-invalid {
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+  border-color: var(--failed);
+}
+.tdrw-drawer .tdrw-iter-limit-label,
+.tdrw-drawer .tdrw-iter-limit-unit {
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+.tdrw-drawer .form-input.tdrw-iter-limit {
+  width: 32px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0;
+  text-align: center;
+  color: var(--fg);
+}
+.tdrw-drawer .form-input.tdrw-iter-limit:focus,
+.tdrw-drawer .form-input.tdrw-iter-limit:focus-visible {
+  border-bottom-color: var(--accent);
+  outline: none;
+  box-shadow: none;
+}
+.tdrw-drawer .form-input.tdrw-iter-limit.is-invalid {
+  border-bottom-color: var(--failed);
+  color: var(--failed);
+  background: transparent;
+}
+
+/* readonly form (existing iter that's run) */
+.tdrw-drawer .tdrw-status-row > span:not(.tdrw-status-chip):not(.tdrw-iter-limit-wrap) {
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+
+/* ─── Body ──────────────────────────────────────────────────────────── */
+
+.tdrw-drawer .drawer-body.tdrw-body {
+  padding: 6px 22px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.tdrw-drawer .drawer-body.tdrw-body::-webkit-scrollbar {
+  width: 8px;
+}
+.tdrw-drawer .drawer-body.tdrw-body::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 4px;
+}
+
+/* ─── Section ───────────────────────────────────────────────────────── */
+
+.tdrw-drawer .tdrw-section {
+  border-top: 1px solid var(--line);
+  padding: 18px 0 8px;
+}
+.tdrw-drawer .tdrw-section:first-child {
+  border-top: 0;
+  padding-top: 12px;
+}
+.tdrw-drawer .tdrw-section-label.tdrw-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.tdrw-drawer .tdrw-section-label.tdrw-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line) 0%, transparent 90%);
+  max-width: 220px;
+  margin-left: 4px;
+}
+.tdrw-drawer .tdrw-section-body {
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.6;
+}
+.tdrw-drawer .tdrw-text {
+  font-size: 13px;
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+.tdrw-drawer .tdrw-empty {
+  color: var(--fg-faint);
+  font-style: italic;
+  font-size: 12.5px;
+}
+
+/* Acceptance list — number-prefixed, no bullets */
+.tdrw-drawer .tdrw-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: tdrw-accept;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tdrw-drawer .tdrw-list li {
+  counter-increment: tdrw-accept;
+  position: relative;
+  padding: 7px 12px 7px 32px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg);
+  margin: 0;
+}
+.tdrw-drawer .tdrw-list li::before {
+  content: counter(tdrw-accept);
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+/* ─── Prompt block ──────────────────────────────────────────────────── */
+
+.tdrw-drawer .tdrw-prompt-md {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--fg);
+}
+.tdrw-drawer .tdrw-prompt-md > p {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  margin: 0;
+  color: var(--fg);
+}
+.tdrw-drawer .tdrw-prompt-fade {
+  height: 4em;
+  background: linear-gradient(to bottom, transparent, var(--panel));
+}
+.tdrw-drawer .tdrw-prompt-toggle {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--fg-mute);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 12px;
+  min-height: 26px;
+  border-radius: 6px;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.tdrw-drawer .tdrw-prompt-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Plain pre/log block */
+.tdrw-drawer .tdrw-prompt {
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--running) 7%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--running) 22%, var(--line-2));
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--fg);
+  white-space: pre-wrap;
+  position: relative;
+}
+.tdrw-drawer .tdrw-prompt::before {
+  content: "▌";
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--running);
+  animation: tdrwLogCursor 1.2s steps(2) infinite;
+  font-weight: 700;
+}
+@keyframes tdrwLogCursor {
+  0%, 50%   { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ─── Iter rounds ───────────────────────────────────────────────────── */
+
+.tdrw-drawer .tdrw-iter-summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border: 1px dashed var(--line-2);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--iter) 4%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tdrw-drawer .tdrw-iter-rounds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tdrw-drawer .tdrw-iter-round {
+  position: relative;
+  padding: 10px 12px 11px 16px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  gap: 8px;
+  overflow: hidden;
+}
+.tdrw-drawer .tdrw-iter-round::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--draft);
+}
+.tdrw-drawer .tdrw-iter-round:has(.tdrw-iter-verdict.is-pass)::before {
+  background: var(--done);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--done) 30%, transparent);
+}
+.tdrw-drawer .tdrw-iter-round:has(.tdrw-iter-verdict.is-fail)::before {
+  background: var(--failed);
+}
+.tdrw-drawer .tdrw-iter-round:has(.tdrw-iter-verdict.is-partial)::before {
+  background: var(--paused);
+}
+
+.tdrw-drawer .tdrw-iter-round-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tdrw-drawer .tdrw-iter-round-n {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-mute);
+  letter-spacing: 0.02em;
+}
+.tdrw-drawer .tdrw-iter-verdict {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+.tdrw-drawer .tdrw-iter-verdict.is-pass {
+  color: var(--done);
+  background: color-mix(in srgb, var(--done) 10%, transparent);
+  border-color: color-mix(in srgb, var(--done) 45%, transparent);
+}
+.tdrw-drawer .tdrw-iter-verdict.is-fail {
+  color: var(--failed);
+  background: color-mix(in srgb, var(--failed) 10%, transparent);
+  border-color: color-mix(in srgb, var(--failed) 45%, transparent);
+}
+.tdrw-drawer .tdrw-iter-verdict.is-partial {
+  color: var(--paused);
+  background: color-mix(in srgb, var(--paused) 10%, transparent);
+  border-color: color-mix(in srgb, var(--paused) 45%, transparent);
+}
+.tdrw-drawer .tdrw-iter-round-dur {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+.tdrw-drawer .tdrw-iter-round-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tdrw-drawer .tdrw-iter-round-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.tdrw-drawer .tdrw-iter-round-block .tdrw-text {
+  font-size: 12px;
+  color: var(--fg);
+  line-height: 1.55;
+}
+.tdrw-drawer .tdrw-feedback-empty {
+  color: var(--fg-faint);
+  font-size: 11.5px;
+}
+
+/* ─── Commits ───────────────────────────────────────────────────────── */
+
+.tdrw-drawer .tdrw-commits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tdrw-drawer .tdrw-commit {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  padding: 4px 6px 4px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  align-items: center;
+  transition: background 120ms;
+}
+.tdrw-drawer .tdrw-commit:hover {
+  background: var(--hover);
+}
+.tdrw-drawer .tdrw-commit-hash.tdrw-commit-hash-btn {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  min-height: 24px;
+  min-width: 64px;
+  justify-content: center;
+}
+.tdrw-drawer .tdrw-commit-hash.tdrw-commit-hash-btn:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: var(--accent);
+}
+.tdrw-drawer .tdrw-commit-hash.tdrw-commit-hash-btn.is-copied {
+  background: color-mix(in srgb, var(--done) 14%, transparent);
+  border-color: color-mix(in srgb, var(--done) 45%, transparent);
+  color: var(--done);
+}
+.tdrw-drawer .tdrw-commit-subject {
+  font-size: 12.5px;
+  color: var(--fg);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.tdrw-drawer .tdrw-commit-ts {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+}
+.tdrw-drawer .tdrw-commit-copied {
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: var(--done);
+  color: var(--bg);
+  border: 0;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+/* ─── Audit timeline ────────────────────────────────────────────────── */
+
+.tdrw-drawer .audit-toggle.tdrw-section-label {
+  padding: 8px 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-faint);
+}
+.tdrw-drawer .audit-toggle .audit-chev {
+  width: 10px;
+  color: var(--fg-mute);
+}
+.tdrw-drawer .audit-count-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  min-width: 22px;
+  height: 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  border: 1px solid var(--line-2);
+  color: var(--fg-mute);
+  letter-spacing: 0;
+}
+.tdrw-drawer .audit-count-badge[data-empty] {
+  background: transparent;
+  border-style: dashed;
+  color: var(--fg-faint);
+}
+.tdrw-drawer .audit-sort-hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  letter-spacing: 0.04em;
+  margin: 4px 0 8px;
+}
+.tdrw-drawer .audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tdrw-drawer .audit-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11.5px;
+}
+.tdrw-drawer .audit-ts {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+}
+.tdrw-drawer .audit-states {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.tdrw-drawer .audit-from {
+  color: var(--fg-mute);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+.tdrw-drawer .audit-to {
+  color: var(--fg);
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.tdrw-drawer .audit-arrow {
+  color: var(--fg-faint);
+}
+.tdrw-drawer .audit-source-line {
+  grid-column: 1 / span 2;
+  font-size: 11px;
+  color: var(--fg-mute);
+  padding-left: 0;
+}
+.tdrw-drawer .audit-source {
+  color: var(--accent);
+  font-weight: 500;
+}
+.tdrw-drawer .audit-detail {
+  color: var(--fg-mute);
+}
+.tdrw-drawer .audit-empty-state {
+  padding: 16px 12px;
+  background: var(--panel);
+  border: 1px dashed var(--line-2);
+  border-radius: 6px;
+  align-items: flex-start;
+}
+.tdrw-drawer .audit-empty-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.tdrw-drawer .audit-empty-hint {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+}
+
+/* ─── Footer ────────────────────────────────────────────────────────── */
+
+.tdrw-drawer .tdrw-footer {
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.tdrw-drawer .tdrw-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.tdrw-drawer .tdrw-actions-primary {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+.tdrw-drawer .tdrw-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  min-height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--fg);
+  transition: background 120ms, border-color 120ms, transform 80ms;
+}
+.tdrw-drawer .tdrw-action:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+.tdrw-drawer .tdrw-action:active { transform: translateY(0.5px); }
+
+.tdrw-drawer .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon {
+  margin-left: auto;
+  padding: 6px 14px;
+  gap: 6px;
+  background: color-mix(in srgb, var(--failed) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line-2));
+  color: var(--failed);
+  justify-content: center;
+}
+.tdrw-drawer .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon:hover {
+  background: color-mix(in srgb, var(--failed) 14%, transparent);
+  border-color: var(--failed);
+  color: var(--failed);
+}
+.tdrw-drawer .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon .tdrw-delete-icon-label {
+  position: static;
+  width: auto;
+  height: auto;
+  clip: auto;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+/* AI 拆分 — accent ghost variant */
+.tdrw-drawer .tdrw-actions-primary > button[aria-haspopup="dialog"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line-2));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.tdrw-drawer .tdrw-actions-primary > button[aria-haspopup="dialog"]:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+
+/* AI 拆分 confirm card — pin to footer, accent-ish */
+.tdrw-drawer .tdrw-footer.tdrw-split-confirm {
+  background: color-mix(in srgb, var(--failed) 7%, var(--bg-elevated));
+  border-top: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--failed) 30%, transparent);
+}
+.tdrw-drawer .tdrw-split-confirm-head {
+  margin-bottom: 6px;
+}
+.tdrw-drawer .tdrw-split-confirm-icon { color: var(--failed); }
+.tdrw-drawer .tdrw-split-confirm-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.tdrw-drawer .tdrw-split-confirm-desc {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.tdrw-drawer .tdrw-split-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.tdrw-drawer .tdrw-split-confirm-actions .tdrw-action.tdrw-action-danger {
+  margin-left: 0;
+  background: var(--failed);
+  color: var(--bg);
+  border-color: var(--failed);
+  width: auto;
+  padding: 6px 14px;
+}
+.tdrw-drawer .tdrw-split-confirm-actions .tdrw-action.tdrw-action-danger:hover {
+  filter: brightness(1.08);
+}
+.tdrw-drawer .tdrw-split-confirm-actions .tdrw-action.tdrw-action-danger .tdrw-delete-icon-label {
+  position: static;
+  width: auto;
+  height: auto;
+  clip: auto;
+  overflow: visible;
+}
+
+/* AI splitting state — full-row spinner */
+.tdrw-drawer .tdrw-footer.tdrw-actions-running {
+  justify-content: flex-start;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  border-top: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+.tdrw-drawer .tdrw-spinner {
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+}
+.tdrw-drawer .tdrw-running-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ─── ConfirmDialog (modal) ─────────────────────────────────────────── */
+
+.drawer-stage--modal.confirm-stage {
+  z-index: 2000;
+}
+.drawer--modal.confirm-card {
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  padding: 22px 22px 16px;
+}
+.drawer--modal.confirm-card .confirm-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-bottom: 8px;
+}
+.drawer--modal.confirm-card .confirm-warning {
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.drawer--modal.confirm-card .confirm-desc {
+  font-size: 12.5px;
+  color: var(--fg-mute);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.drawer--modal.confirm-card .confirm-actions {
+  margin-top: 16px;
+  gap: 8px;
+}
+.drawer--modal.confirm-card .btn {
+  min-height: 32px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  border-radius: 7px;
+}
+
+/* ─── Demo control panel (left side) ────────────────────────────────── */
+
+.demo-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  width: 280px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.demo-panel.is-collapsed {
+  width: auto;
+  padding: 8px 12px;
+}
+.demo-panel.is-collapsed > *:not(.demo-collapse) { display: none; }
+
+.demo-panel .demo-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.demo-panel .demo-collapse strong {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.demo-panel.is-collapsed .demo-collapse {
+  border-bottom: 0;
+  margin: 0;
+  padding: 0;
+}
+.demo-toggle {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 9px;
+  color: var(--fg-mute);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.demo-toggle:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.demo-panel .demo-section {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.demo-panel .demo-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+.demo-panel .demo-section h3 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.demo-panel label.demo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.demo-panel label.demo-row > span:first-child {
+  color: var(--fg-mute);
+  flex-shrink: 0;
+}
+.demo-panel select {
+  font: inherit;
+  font-size: 11px;
+  color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  min-width: 130px;
+  max-width: 160px;
+}
+.demo-panel select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.demo-panel input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+.demo-panel .demo-hint {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  line-height: 1.55;
+  padding-left: 0;
+}
+.demo-panel .demo-hint code,
+.demo-panel .demo-hint .mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-mute);
+}
+
+/* ─── light theme tweaks ────────────────────────────────────────────── */
+
+html.light .tdrw-drawer .tdrw-prompt {
+  background: color-mix(in srgb, var(--running) 5%, var(--panel));
+  border-color: color-mix(in srgb, var(--running) 28%, var(--line));
+}
+html.light .tdrw-drawer .tdrw-iter-summary {
+  background: color-mix(in srgb, var(--iter) 6%, var(--panel-2));
+}
+html.light .tdrw-drawer .tdrw-prompt-fade {
+  background: linear-gradient(to bottom, transparent, var(--panel));
+}
+
+/* ─── RWD — Mobile redesign (bottom-sheet flavor) ───────────────────── */
+
+@media (max-width: 720px) {
+  .demo-faux-board { display: none; }
+  .demo-faux-tickets { display: none; }
+
+  /* Scrim still in place (covers behind the takeover) */
+  .tdrw-stage--demo-host > .drawer-scrim {
+    background: color-mix(in srgb, #000 55%, transparent);
+  }
+
+  /* ── Full-screen mobile surface ──────────────────────────────────── */
+  .tdrw-stage--demo-host > .tdrw-drawer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  /* ── Header: compact, safe-area aware ────────────────────────────── */
+  .tdrw-drawer .drawer-head.tdrw-head {
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    background: var(--bg-elevated);
+  }
+  /* Breadcrumb + close on one tight row */
+  .tdrw-drawer .drawer-crumb.tdrw-breadcrumb {
+    min-height: 28px;
+    margin-bottom: 8px;
+    font-size: 10.5px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .tdrw-drawer .tdrw-breadcrumb > * {
+    flex-shrink: 0;
+  }
+  .tdrw-drawer .tdrw-breadcrumb > [style*="fg-mute"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .tdrw-drawer .create-x.tdrw-close {
+    min-width: 36px;
+    min-height: 36px;
+    margin-inline-end: -6px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+  .tdrw-drawer .create-x.tdrw-close:hover {
+    background: var(--hover);
+  }
+  /* Title gets the room it deserves */
+  .tdrw-drawer .drawer-titlerow.tdrw-titlerow {
+    margin-bottom: 12px;
+  }
+  .tdrw-drawer .drawer-title.tdrw-title {
+    font-size: 19px;
+    line-height: 1.32;
+    margin-top: 0;
+  }
+  /* Status row wraps to two lines if it must, instead of squishing */
+  .tdrw-drawer .drawer-meta.tdrw-status-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    gap: 6px;
+  }
+  .tdrw-drawer .tdrw-status-chip.tdrw-status-pill {
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+  .tdrw-drawer .tdrw-meta-chip.ticket-mode {
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+
+  /* ── Body: a touch more breathing room ───────────────────────────── */
+  .tdrw-drawer .drawer-body.tdrw-body {
+    padding: 4px 16px 20px;
+  }
+  .tdrw-drawer .tdrw-section {
+    padding: 16px 0 6px;
+  }
+  .tdrw-drawer .tdrw-section:first-child {
+    padding-top: 10px;
+  }
+  /* Iter round duration jumps to its own line on really tight widths */
+  .tdrw-drawer .tdrw-iter-round-head {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .tdrw-drawer .tdrw-iter-round-dur {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: 0;
+  }
+  /* Commits — keep hash + subject on one row, ts wraps under */
+  .tdrw-drawer .tdrw-commit {
+    grid-template-columns: auto 1fr;
+    row-gap: 2px;
+    column-gap: 8px;
+  }
+  .tdrw-drawer .tdrw-commit-ts {
+    grid-column: 2 / 3;
+    padding-left: 0;
+  }
+
+  /* ── Footer: equal-width 3-button row ─────────────────────────────
+     `display: contents` on actions-primary promotes its children to direct
+     children of the footer flex, so all 3 buttons (reset / AI 拆分 / delete)
+     share the row equally via flex: 1 1 0. */
+  .tdrw-drawer .tdrw-footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .tdrw-drawer .tdrw-footer.tdrw-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    grid-template-columns: none;
+  }
+  .tdrw-drawer .tdrw-actions-primary {
+    display: contents;
+  }
+  .tdrw-drawer .tdrw-footer.tdrw-actions > .tdrw-action,
+  .tdrw-drawer .tdrw-actions-primary > .tdrw-action {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 13px;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Delete becomes a labelled equal-width button (not icon-only) on mobile.
+     Style mirrors the AI 拆分 accent-ghost treatment but with the failed
+     palette, so all three actions share a consistent ghost-button rhythm. */
+  .tdrw-drawer .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon {
+    flex: 1 1 0;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    margin-left: 0;
+    gap: 6px;
+    color: var(--failed);
+    background: color-mix(in srgb, var(--failed) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line-2));
+  }
+  .tdrw-drawer .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon:hover {
+    background: color-mix(in srgb, var(--failed) 14%, transparent);
+    border-color: var(--failed);
+    color: var(--failed);
+  }
+  .tdrw-drawer .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon .tdrw-delete-icon-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    overflow: visible;
+    font-size: 13px;
+  }
+
+  /* AI splitting state — keep label legible */
+  .tdrw-drawer .tdrw-footer.tdrw-actions-running {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .tdrw-drawer .tdrw-running-label {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /* Split-confirm card — let CTA span the row on phones */
+  .tdrw-drawer .tdrw-footer.tdrw-split-confirm {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .tdrw-drawer .tdrw-split-confirm-desc {
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+  .tdrw-drawer .tdrw-split-confirm-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .tdrw-drawer .tdrw-split-confirm-actions > .tdrw-action {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  /* Demo panel — out of the sheet's way (top-right, collapsible) */
+  .demo-panel {
+    left: auto;
+    right: 8px;
+    top: max(8px, env(safe-area-inset-top));
+    bottom: auto;
+    width: min(260px, calc(100vw - 16px));
+    max-height: 60vh;
+    z-index: 10001;
+  }
+  .demo-panel.is-collapsed {
+    width: auto;
+  }
+}
+
+/* ── Extra-narrow phones (≤360px): drop label fluff ──────────────────── */
+@media (max-width: 360px) {
+  .tdrw-drawer .tdrw-actions-primary > .tdrw-action {
+    padding: 8px 8px;
+    font-size: 12.5px;
+  }
+  .tdrw-drawer .drawer-title.tdrw-title {
+    font-size: 17.5px;
+  }
+}

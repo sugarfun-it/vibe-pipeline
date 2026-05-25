@@ -1,5 +1,5 @@
 /* ============================================================================
-   BoardRail V2 · app — fixtures + BoardRail + DemoApp + DemoPanel
+   BoardRail Redesign · app — fixtures + BoardRail + DemoApp + DemoPanel
    ============================================================================ */
 
 const { useState: useStateA, useMemo: useMemoA, useEffect: useEffectA } = React;
@@ -94,9 +94,9 @@ const FIXTURE_PIPELINES = {
   ],
 };
 
-/* ─── BoardRail (verbatim shape, V2 rail) ───────────────────────────── */
+/* ─── BoardRail (verbatim shape, redesigned rail) ───────────────────── */
 
-function BoardRailV2({
+function BoardRail({
   pipelines, activeId, onSelect,
   creating, setCreating, isUninit, onStartInit,
   draftPipelineIds, branches, defaultAutoMerge, onCreate,
@@ -133,7 +133,7 @@ function BoardRailV2({
   ];
 
   return (
-    <RailV2
+    <Rail
       pipelines={pipelines}
       activeId={activeId}
       onSelect={onSelect}
@@ -169,7 +169,7 @@ function DemoPanel(props) {
   } = props;
   return (
     <aside className="demo-panel" aria-label="Demo controls">
-      <h2>BoardRail V2 · demo controls</h2>
+      <h2>BoardRail · demo controls</h2>
 
       <div className="demo-row">
         <label htmlFor="d-theme">theme</label>
@@ -288,7 +288,7 @@ function App() {
     <>
       <div className="preview-shell">
         <div className="preview-rail-host">
-          <BoardRailV2
+          <BoardRail
             pipelines={pipelines}
             activeId={activeId}
             onSelect={setActiveId}
@@ -305,7 +305,7 @@ function App() {
           />
         </div>
         <div className="preview-stage-fill">
-          <span>focus column placeholder · BoardRail V2 preview</span>
+          <span>focus column placeholder · BoardRail preview</span>
         </div>
       </div>
 

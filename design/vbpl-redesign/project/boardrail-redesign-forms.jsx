@@ -1,5 +1,5 @@
 /* ============================================================================
-   BoardRail V2 · forms — PickerSelect / TextField / CreateCard / ConfirmDialog
+   BoardRail Redesign · forms — PickerSelect / TextField / CreateCard / ConfirmDialog
    ============================================================================ */
 
 const { useState: useStateF, useMemo: useMemoF, useEffect: useEffectF, useRef: useRefF } = React;
@@ -341,16 +341,16 @@ function ConfirmDialog({ open, options, onClose }) {
   );
 }
 
-/* ─── Rail wrapper (V2 variant) ─────────────────────────────────────── */
+/* ─── Rail wrapper ──────────────────────────────────────────────────── */
 
-function RailV2({
+function Rail({
   pipelines, activeId, onSelect,
   creating, onStartCreate, createSlot,
   addLabel, draftPipelineIds, sectionMenuItems,
 }) {
   const isEmpty = !creating && pipelines.length === 0;
   return (
-    <aside className={"rail rail--v2chip" + (creating ? " is-creating" : "")} aria-label="Pipeline 列表">
+    <aside className={"rail rail--redesign" + (creating ? " is-creating" : "")} aria-label="Pipeline 列表">
       <div className="rail-section-header">
         <span className="rail-section-label mono" id="rail-pipelines-label">PIPELINES</span>
         {sectionMenuItems && sectionMenuItems.length > 0 && (
@@ -377,7 +377,7 @@ function RailV2({
           style={{ display: "contents" }}
         >
           {pipelines.map((p) => (
-            <RailItemV2
+            <RailItem
               key={p.id}
               p={p}
               active={p.id === activeId}
@@ -393,4 +393,4 @@ function RailV2({
   );
 }
 
-Object.assign(window, { PickerSelectInline, TextField, CreateCard, ConfirmDialog, RailV2 });
+Object.assign(window, { PickerSelectInline, TextField, CreateCard, ConfirmDialog, Rail });

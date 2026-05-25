@@ -1,5 +1,5 @@
 /* ============================================================================
-   BoardRail Redesign · V2 (status chip) — full version
+   BoardRail Redesign · status chip — full version
    Overrides boardrail.css. Only the rail-item internals change; the chrome,
    create-card, picker, confirm-dialog, form-field all stay original.
    ============================================================================ */
@@ -69,20 +69,20 @@ body {
   background: var(--accent);
 }
 
-/* ─── V2 RailItem · status chip ─────────────────────────────────────── */
+/* ─── RailItem · status chip ─────────────────────────────────────── */
 
-.rail--v2chip .rail-item {
+.rail--redesign .rail-item {
   padding: 10px 10px 11px;
   gap: 7px;
 }
-.rail--v2chip .rail-item.is-active::before { display: none; }
-.rail--v2chip .rail-item.is-active {
+.rail--redesign .rail-item.is-active::before { display: none; }
+.rail--redesign .rail-item.is-active {
   background: var(--selected);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line-2));
 }
-.rail--v2chip .rail-item-row { gap: 7px; align-items: center; }
+.rail--redesign .rail-item-row { gap: 7px; align-items: center; }
 
-.rail--v2chip .rail-state-dot { display: none; }
+.rail--redesign .rail-state-dot { display: none; }
 
 .rail-status-chip {
   --chip-c: var(--fg-mute);
@@ -137,7 +137,7 @@ body {
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-.rail--v2chip .rail-item-name {
+.rail--redesign .rail-item-name {
   font-size: 12.5px;
   font-weight: 500;
   letter-spacing: -0.003em;
@@ -147,9 +147,9 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rail--v2chip .rail-item.is-active .rail-item-name { font-weight: 600; color: var(--fg); }
+.rail--redesign .rail-item.is-active .rail-item-name { font-weight: 600; color: var(--fg); }
 
-.rail--v2chip .rail-item-count {
+.rail--redesign .rail-item-count {
   font-family: var(--font-mono);
   font-size: 10.5px;
   padding: 1px 5px;
@@ -158,29 +158,29 @@ body {
   color: var(--fg-mute);
   letter-spacing: 0;
 }
-.rail--v2chip .rail-item.is-active .rail-item-count {
+.rail--redesign .rail-item.is-active .rail-item-count {
   background: var(--bg);
   color: var(--fg);
 }
 
-.rail--v2chip .rail-mini {
+.rail--redesign .rail-mini {
   height: 3px;
   gap: 2px;
   opacity: 0.55;
   margin-top: 1px;
 }
-.rail--v2chip .rail-mini-cell { border-radius: 2px; }
-.rail--v2chip .rail-item:hover .rail-mini { opacity: 0.85; }
-.rail--v2chip .rail-item.is-active .rail-mini { opacity: 1; }
+.rail--redesign .rail-mini-cell { border-radius: 2px; }
+.rail--redesign .rail-item:hover .rail-mini { opacity: 0.85; }
+.rail--redesign .rail-item.is-active .rail-mini { opacity: 1; }
 
-.rail--v2chip .rail-item-meta {
+.rail--redesign .rail-item-meta {
   font-size: 10.5px;
   color: var(--fg-faint);
 }
-.rail--v2chip .rail-item.is-active .rail-item-meta { color: var(--fg-mute); }
+.rail--redesign .rail-item.is-active .rail-item-meta { color: var(--fg-mute); }
 
 /* QA badge — keep visible but quiet next to the chip */
-.rail--v2chip .rail-qa-badge {
+.rail--redesign .rail-qa-badge {
   background: transparent;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   color: var(--accent);
@@ -192,20 +192,20 @@ body {
 }
 
 /* When a row is muted (creating mode), fade chip too */
-.rail--v2chip .rail-item.is-muted .rail-status-chip { opacity: 0.55; }
-.rail--v2chip .rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot { animation: none; }
-.rail--v2chip .rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot::after { animation: none; }
+.rail--redesign .rail-item.is-muted .rail-status-chip { opacity: 0.55; }
+.rail--redesign .rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot { animation: none; }
+.rail--redesign .rail-item.is-muted .rail-status-chip.is-running .rail-status-chip-dot::after { animation: none; }
 
-/* ─── V2 CreateCard polish ──────────────────────────────────────────── */
+/* ─── CreateCard polish ──────────────────────────────────────────── */
 
-.rail--v2chip .create-card {
+.rail--redesign .create-card {
   position: relative;
   padding: 13px 12px 12px;
   gap: 10px;
   border-color: color-mix(in srgb, var(--draft) 30%, var(--line-2));
   overflow: hidden;
 }
-.rail--v2chip .create-card::before {
+.rail--redesign .create-card::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
@@ -216,29 +216,29 @@ body {
     transparent 100%);
   opacity: 0.7;
 }
-.rail--v2chip .create-card:focus-within {
+.rail--redesign .create-card:focus-within {
   border-color: var(--accent);
 }
-.rail--v2chip .create-card:focus-within::before {
+.rail--redesign .create-card:focus-within::before {
   background: linear-gradient(90deg,
     var(--accent) 0%,
     color-mix(in srgb, var(--accent) 40%, transparent) 60%,
     transparent 100%);
   opacity: 1;
 }
-.rail--v2chip .create-card-head {
+.rail--redesign .create-card-head {
   gap: 6px;
   align-items: center;
   margin-top: 1px;
 }
-.rail--v2chip .create-card-head .rail-status-chip {
+.rail--redesign .create-card-head .rail-status-chip {
   font-size: 10.5px;
   padding: 2px 8px 2px 7px;
 }
 
 /* labels — quieter, matches rail-section-label */
-.rail--v2chip .create-field-label,
-.rail--v2chip .form-label {
+.rail--redesign .create-field-label,
+.rail--redesign .form-label {
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -247,12 +247,12 @@ body {
 }
 
 /* close button — smaller in desktop preview, match the chip's footprint */
-.rail--v2chip .create-x {
+.rail--redesign .create-x {
   width: 26px;
   height: 26px;
   border-radius: 6px;
 }
-.rail--v2chip .create-x svg { width: 12px; height: 12px; }
+.rail--redesign .create-x svg { width: 12px; height: 12px; }
 
 /* ─── demo panel ────────────────────────────────────────────────────── */
 

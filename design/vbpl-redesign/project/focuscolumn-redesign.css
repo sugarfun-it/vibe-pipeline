@@ -612,32 +612,63 @@ html.light .fc--refined .livelog-cursor {
   .fc--refined .focus-title { font-size: 19px; }
 }
 
-/* < 720px : drop the absolute-pinned actions + overflow back into flow */
+/* < 720px : drop the absolute-pinned actions + overflow back into flow.
+   Restructure the head so chips wrap cleanly and the action cluster
+   gets its own full-width row at the bottom. */
 @media (max-width: 719.98px) {
   .fc--refined .focus { padding: 14px 14px 16px; }
   .fc--refined .focus-head { margin-bottom: 12px; }
-  .fc--refined .focus-head-title-row { padding-right: 0; min-height: 0; }
-  .fc--refined .focus-actions {
-    position: static;
-    transform: none;
-    height: auto;
-    right: auto;
-    margin-left: auto !important;
-    order: 99;
-    flex: 0 0 100%;
-    justify-content: flex-end;
-    padding-top: 4px;
-    border-top: 1px dashed var(--line);
+
+  /* Title row: title fills, overflow ⋯ pins to its right edge */
+  .fc--refined .focus-head-title-row {
+    padding-right: 0;
+    min-height: 0;
+    flex-wrap: nowrap;
   }
   .fc--refined .focus-overflow {
     position: static !important;
     height: auto;
     right: auto;
+    margin-left: auto;
+    flex-shrink: 0;
   }
+
+  /* Meta row: chips wrap onto multiple lines, no ellipsis cropping.
+     Actions are forced onto their own row below the chips. */
   .fc--refined .focus-head-meta-row {
     flex-wrap: wrap;
-    row-gap: 4px;
+    row-gap: 6px;
+    column-gap: 0;
+    overflow: visible;
   }
+  .fc--refined .focus-head-meta-row > .focus-count,
+  .fc--refined .focus-head-meta-row > .chip:not(.chip-state),
+  .fc--refined .focus-head-meta-row > .sync-chip {
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+    flex-shrink: 0;
+  }
+
+  /* Actions: take a full row of their own, right-aligned, with a divider above */
+  .fc--refined .focus-actions {
+    position: static;
+    transform: none;
+    height: auto;
+    right: auto;
+    margin: 0 !important;
+    margin-top: 8px !important;
+    order: 99;
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
   .fc--refined .focus-runs-chip { display: none; }
   .fc--refined .focus-title { font-size: 18px; }
   .fc-app-bar { padding: 6px 12px; gap: 8px; }
@@ -645,7 +676,7 @@ html.light .fc--refined .livelog-cursor {
 }
 
 /* < 540px : compact ticket card — wrap title under #num + mode chip,
-   collapse iter rows */
+   collapse iter rows. Keep the wrap-actions layout from <720px. */
 @media (max-width: 539.98px) {
   .fc--refined .focus { padding: 12px 10px 14px; }
   .fc--refined .ticket { padding: 11px 12px 12px 14px; border-radius: 8px; }
@@ -670,18 +701,28 @@ html.light .fc--refined .livelog-cursor {
   .fc--refined .ticket-goal { font-size: 11.5px; }
   .fc--refined .ticket-livelog { font-size: 10px; padding: 4px 7px; }
 
-  /* Header further compressed */
+  /* Header further compressed — keep wrapping (do NOT switch to nowrap+scroll) */
   .fc--refined .focus-title { font-size: 17px; }
   .fc--refined .focus-head-meta-row {
     font-size: 10.5px;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    row-gap: 4px;
   }
-  .fc--refined .focus-head-meta-row::-webkit-scrollbar { display: none; }
   .fc--refined .focus-head-meta-row > .focus-count,
   .fc--refined .focus-head-meta-row > .chip:not(.chip-state),
   .fc--refined .focus-head-meta-row > .sync-chip { padding: 0 8px; }
+
+  /* Action buttons fill horizontally if many of them */
+  .fc--refined .focus-actions .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .fc--refined .focus-actions .btn-primary,
+  .fc--refined .focus-actions .btn-danger {
+    padding: 7px 14px;
+    min-height: 34px;
+  }
 
   /* Top bar — let scenarios wrap, brand shrinks */
   .fc-app-bar { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px; }

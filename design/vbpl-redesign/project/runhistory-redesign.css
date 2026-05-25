@@ -1,0 +1,527 @@
+/* ============================================================================
+   RunHistory Redesign — light polish overlay on top of runhistory.css
+   Goal: keep the source layout / hierarchy exactly as-is; refine spacing,
+         typography, colors and hover states only.
+   DOM is verbatim. No structural transforms.
+   ============================================================================ */
+
+/* ─── preview shell (app bar + faux board behind drawer) ───────── */
+
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body { font-family: var(--font-ui); color: var(--fg); background: var(--bg); }
+#root { height: 100vh; }
+
+.rh-app-bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(at 22% 18%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%),
+    radial-gradient(at 78% 82%, color-mix(in srgb, var(--running) 4%, transparent), transparent 60%),
+    var(--bg);
+}
+.rh-app-bar {
+  position: fixed; inset: 0 0 auto 0; z-index: 2;
+  display: flex; align-items: center; gap: 12px;
+  height: 44px; padding: 0 18px;
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px; color: var(--fg-mute);
+}
+.rh-app-brand {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 600; color: var(--fg);
+}
+.rh-app-brand-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+}
+.rh-app-sep { color: var(--fg-faint); }
+.rh-app-crumb-pipe { font-family: var(--font-mono); font-size: 11px; color: var(--fg-mute); }
+.rh-app-crumb-active { font-family: var(--font-mono); font-size: 11px; color: var(--fg); }
+.rh-app-spacer { flex: 1 1 auto; }
+.rh-app-state-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10.5px;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-mute);
+  padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel-2);
+}
+.rh-app-state-toggle .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--running);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--running) 50%, transparent);
+  animation: rhPulse 1.6s ease-in-out infinite;
+}
+@keyframes rhPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(1.3); }
+}
+
+.rh-faux-tickets {
+  position: fixed; top: 64px; left: 20px; right: 660px; bottom: 20px; z-index: 1;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px; overflow: hidden; pointer-events: none;
+}
+.rh-faux-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+.rh-faux-sub { font-family: var(--font-mono); font-size: 11px; color: var(--fg-faint); margin-bottom: 8px; }
+.rh-faux-ticket {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); opacity: 0.55;
+}
+.rh-faux-tnum { font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-faint); width: 22px; flex-shrink: 0; }
+.rh-faux-tname { font-size: 12.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rh-faux-tstate {
+  font-size: 10.5px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* ─── Drawer surface ────────────────────────────────────────────── */
+
+.tdrw-drawer {
+  top: 44px;
+  width: 640px;
+  max-width: calc(100vw - 16px);
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--line-2);
+  border-radius: 12px 0 0 12px;
+  box-shadow:
+    -1px 0 0 0 color-mix(in srgb, var(--accent) 18%, transparent),
+    var(--shadow-lg);
+}
+.tdrw-drawer-head {
+  padding: 14px 20px;
+  background: var(--bg-elevated);
+}
+.tdrw-drawer-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.tdrw-drawer-head .pipeline-history-scope {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  margin-top: 3px !important;
+}
+.tdrw-drawer-head .pipeline-history-scope .mono {
+  color: var(--fg);
+  padding: 0 5px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+}
+.tdrw-drawer-close { border-radius: 6px; }
+
+.drawer-body {
+  padding: 14px 20px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.drawer-body::-webkit-scrollbar { width: 8px; }
+.drawer-body::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
+
+/* ─── Pipeline top summary — same structure, slight polish ────── */
+
+.pipeline-history-top-summary {
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-color: var(--line);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.pipeline-history-top-summary-label {
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+.pipeline-history-top-summary-state {
+  font-weight: 600;
+  color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pipeline-history-top-summary-state::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--running);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--running) 50%, transparent);
+  animation: rhPulse 1.6s ease-in-out infinite;
+}
+.pipeline-history-top-summary-line-meta .mono { color: var(--fg); }
+
+/* ─── Empty state — gentler, no card ─────────────────────────── */
+
+.rh-empty-state {
+  padding: 18px 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fg) 2%, var(--panel-2));
+  gap: 8px;
+}
+.rh-empty-state .rh-empty-title { color: var(--fg); }
+.rh-empty-state .rh-empty-cta {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line-2));
+  color: var(--accent);
+  font-weight: 600;
+}
+.rh-empty-state .rh-empty-cta:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: var(--accent);
+}
+
+/* loading state — subtle spinner */
+.tdrw-empty {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-mute);
+  padding: 10px 14px 10px 32px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  position: relative;
+}
+.tdrw-empty::before {
+  content: "";
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  animation: rhSpin 0.9s linear infinite;
+}
+@keyframes rhSpin { to { transform: translateY(-50%) rotate(360deg); } }
+
+/* ─── Summary strip (keep inline layout, slight refinement) ──── */
+
+.tdrw-runs { gap: 10px; }
+
+.tdrw-runs-summary {
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border-color: var(--line);
+  border-radius: 8px;
+  column-gap: 22px;
+}
+.tdrw-runs-summary .tdrw-run-meta-label {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tdrw-runs-summary .tdrw-run-meta-item strong {
+  font-size: 13px;
+  color: var(--fg);
+  font-feature-settings: "tnum";
+}
+.tdrw-runs-summary .tdrw-run-meta-partial { color: var(--paused); }
+
+/* ─── Run cards — same layout, polished surface ────────────── */
+
+.tdrw-run-card {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 120ms ease;
+}
+.tdrw-run-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 10px; bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--done);
+  opacity: 0.85;
+}
+.tdrw-run-card.is-fail::before {
+  background: var(--failed);
+}
+.tdrw-run-card:hover { border-color: var(--line-2); }
+
+/* head row — align chevron + hint to the timestamp line, not the wrapped result */
+.tdrw-run-head {
+  padding: 8px 12px 8px 16px;
+  align-items: start !important;
+}
+.tdrw-run-head:hover {
+  background: color-mix(in srgb, var(--fg) 2%, transparent);
+}
+.tdrw-run-head-chev {
+  color: var(--fg-mute);
+  opacity: 0.75;
+  margin-top: 4px;
+}
+.tdrw-run-head-title .mono {
+  font-size: 11.5px;
+  color: var(--fg);
+  font-feature-settings: "tnum";
+}
+
+/* status pill — refine but keep the same shape */
+.tdrw-run-status {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 7px !important;
+  font-size: 10.5px !important;
+  font-weight: 600;
+  border-radius: 999px !important;
+}
+.tdrw-run-status::before {
+  content: "";
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tdrw-run-result {
+  font-size: 12px;
+  color: var(--fg-mute);
+  flex-basis: 100%;
+  margin-top: 2px;
+}
+.tdrw-run-result code,
+.tdrw-text code,
+.tdrw-run-detail-result code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  color: var(--fg);
+}
+
+.tdrw-run-head-hint {
+  font-family: var(--font-mono);
+  font-size: 10px !important;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint) !important;
+  margin-top: 3px;
+}
+
+/* meta row — keep the wrap layout, just polish labels/values */
+/* collapse the meta strip together with the body when the card is closed */
+.tdrw-run-card:has(.tdrw-run-head[aria-expanded="false"]) .tdrw-run-meta {
+  display: none;
+}
+.tdrw-run-meta {
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border-top-color: var(--line);
+  column-gap: 18px;
+  row-gap: 6px;
+}
+.tdrw-run-meta-label {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tdrw-run-meta-item strong {
+  color: var(--fg);
+  font-feature-settings: "tnum";
+}
+.tdrw-run-meta-provider {
+  padding-top: 2px;
+}
+.tdrw-run-meta-provider-value {
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* failure reason — softly red-tint within the meta row */
+.tdrw-run-meta-fail {
+  max-width: none !important;
+  flex: 1 0 100% !important;
+  padding: 6px 10px;
+  margin-top: 2px;
+  background: color-mix(in srgb, var(--failed) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--failed) 22%, var(--line));
+  border-radius: 6px;
+}
+.tdrw-run-meta-fail .tdrw-run-meta-label { color: var(--failed); }
+.tdrw-run-meta-fail strong {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ticket diff items — small chips */
+.tdrw-run-meta-ticket-diff-item {
+  font-family: var(--font-mono);
+  font-size: 10.5px !important;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid var(--line);
+  color: var(--fg);
+}
+
+/* ─── Open detail — refine pre blocks, keep structure ────────── */
+
+.tdrw-run-detail {
+  padding: 14px 14px 16px;
+  background: var(--panel);
+  border-top-color: var(--line);
+  gap: 12px !important;
+}
+
+.tdrw-run-detail-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint) !important;
+  font-weight: 600 !important;
+}
+.tdrw-run-detail-tag {
+  font-size: 9.5px !important;
+  background: var(--bg) !important;
+  border-color: var(--line-2) !important;
+  color: var(--fg-mute) !important;
+}
+
+/* result block — soft tinted panel */
+.tdrw-run-detail-result .tdrw-text {
+  font-size: 12.5px;
+  color: var(--fg);
+  padding: 9px 11px;
+  background: color-mix(in srgb, var(--done) 5%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--done) 20%, var(--line));
+  border-radius: 6px;
+}
+.tdrw-run-card.is-fail .tdrw-run-detail-result .tdrw-text {
+  background: color-mix(in srgb, var(--failed) 5%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--failed) 20%, var(--line));
+}
+
+/* session ID — copyable feel */
+.tdrw-run-session-id {
+  font-size: 11.5px;
+  padding: 9px 11px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+  transition: border-color 120ms;
+}
+.tdrw-run-session-id:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line-2));
+}
+
+/* pre blocks — refined dark surface, line-numbery feel */
+.tdrw-run-pre {
+  background: var(--bg);
+  border-color: var(--line-2);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.65;
+  padding: 9px 12px;
+  max-height: 280px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+.tdrw-run-pre::-webkit-scrollbar { width: 8px; height: 8px; }
+.tdrw-run-pre::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
+
+/* pre-toggle / copy buttons */
+.tdrw-run-pre-toggle {
+  font-family: var(--font-mono);
+  font-size: 10.5px !important;
+  padding: 3px 10px !important;
+  min-height: 24px !important;
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--fg-mute);
+}
+.tdrw-run-pre-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* error retry */
+.tdrw-run-detail-error {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--failed) 25%, var(--line-2));
+  background: color-mix(in srgb, var(--failed) 5%, var(--panel-2));
+  border-radius: 6px;
+  font-style: normal;
+  font-size: 11.5px;
+}
+.tdrw-run-detail-error .tdrw-run-pre-toggle {
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+  border-color: color-mix(in srgb, var(--failed) 40%, var(--line-2));
+  color: var(--failed);
+}
+
+/* ─── Demo panel polish ─────────────────────────────────────── */
+
+.demo-panel {
+  width: 300px;
+  border-radius: 10px;
+  border-color: var(--line-2);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+}
+.demo-panel-head {
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel-2));
+}
+.demo-panel-title {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.demo-panel-toggle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.demo-row-label {
+  font-size: 10px !important;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+}
+.demo-chip { font-size: 10.5px; padding: 3px 9px; }
+.demo-chip:hover:not(.is-active) {
+  background: var(--hover);
+  color: var(--fg);
+  border-color: var(--line-2);
+}
+.demo-chip.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+}
+.demo-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-faint);
+}
+
+/* ─── Mobile ──────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .rh-faux-tickets { display: none; }
+  .tdrw-drawer {
+    width: 100vw;
+    border-radius: 0;
+    border-left: 0;
+  }
+}

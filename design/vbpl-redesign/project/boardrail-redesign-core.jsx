@@ -1,5 +1,5 @@
 /* ============================================================================
-   BoardRail V2 · components (icons / RailItem / CreateCard / ConfirmDialog)
+   BoardRail Redesign · components (icons / RailItem / CreateCard / ConfirmDialog)
    Exposed on window for the app file.
    ============================================================================ */
 
@@ -124,9 +124,9 @@ function MiniCells({ tickets }) {
   });
 }
 
-/* ─── V2 RailItem ───────────────────────────────────────────────────── */
+/* ─── RailItem ──────────────────────────────────────────────────────── */
 
-function RailItemV2({ p, active, onClick, muted, hasDraft }) {
+function RailItem({ p, active, onClick, muted, hasDraft }) {
   const done = p.tickets.filter((t) => t.status === "done").length;
   const total = p.tickets.length;
   const stateText = PIPELINE_STATE_TEXT[p.state] || p.state;
@@ -240,5 +240,5 @@ function RailSectionMenu({ items }) {
 Object.assign(window, {
   PlusIcon, CloseIcon, DotsHorizontalIcon, TrashIcon, BranchIcon, CheckIconSm, WarnIcon,
   PIPELINE_STATE_TEXT, lastActivityAt, fmtAgo, railSecondary, MiniCells,
-  RailItemV2, RailSectionMenu,
+  RailItem, RailSectionMenu,
 });
