@@ -188,6 +188,32 @@
   color: var(--fg-faint);
   opacity: 0.6;
 }
+/* 可點的 chip(diff / sync,都是 <button>)在 meta-row 純文字佈局下仍要 affordance —
+   hover 變 fg + underline,clear 表示 clickable;cursor 跟 button native pointer 一致 */
+.focus-head-meta-row > button.chip:not(.chip-state),
+.focus-head-meta-row > button.sync-chip {
+  cursor: pointer;
+  text-decoration: none;
+}
+.focus-head-meta-row > button.chip:not(.chip-state):hover,
+.focus-head-meta-row > button.sync-chip:hover {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.focus-head-meta-row > button.chip:not(.chip-state):focus-visible,
+.focus-head-meta-row > button.sync-chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.focus-head-meta-row > button.chip:not(.chip-state):disabled,
+.focus-head-meta-row > button.sync-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
 /* ─── focus ticket list ───────────────────────────────────── */
 .focus-list { display: flex; flex-direction: column; gap: 8px; }
