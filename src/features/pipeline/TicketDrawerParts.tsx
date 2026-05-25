@@ -13,7 +13,7 @@ export function Section({ label, children }: { label: string; children: React.Re
 export function ReadOnlyValue({ value }: { value: string | undefined }) {
   if (!value) return <span className="tdrw-empty">(空)</span>;
   return (
-    <div className="tdrw-text tdrw-prompt-md">
+    <div className="tdrw-prompt-md">
       <ReactMarkdown>{value}</ReactMarkdown>
     </div>
   );
