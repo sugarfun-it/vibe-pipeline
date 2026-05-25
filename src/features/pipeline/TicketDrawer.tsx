@@ -220,6 +220,7 @@ export function TicketDrawer({
           <div className="drawer-meta tdrw-status-row mono">
             <span
               className="tdrw-status-chip tdrw-status-pill"
+              data-state={ticket.status}
               style={{
                 color: accent,
                 background: `color-mix(in srgb, ${accent} 14%, transparent)`,
@@ -522,4 +523,3 @@ function Commits({ commits }: { commits: CommitRef[] }) {
     </div>
   );
 }
-
