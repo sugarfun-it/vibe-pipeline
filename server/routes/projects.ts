@@ -5,7 +5,6 @@ import * as pipelineDir from "../lib/pipelineDir";
 import * as git from "../lib/git";
 import * as orchestrator from "../lib/runner/orchestrator";
 import * as worktree from "../lib/git/worktree";
-import * as runLog from "../lib/runner/runLog";
 import * as notifs from "../lib/notifs/store";
 import * as auditLog from "../lib/auditLog";
 import { triggerMerge, autoMergeNoAI } from "../lib/pipelineMerge";
@@ -409,30 +408,6 @@ export async function runPipeline(hash: string, pipelineId: string, req?: Reques
   }));
 }
 
-// GET /api/projects/:hash/pipelines/:id/diff-stat
-// 給 UI polling 顯示「+N -M / K files」用,讓 user 在 runner 跑大任務時看到 worktree 真的有在改
-export async function pipelineDiffStat(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) => {
-    if (!project.hasGit) return ok(null);
-    return withPipeline(hash, pipelineId, async (_p, plRaw) => {
-      const baseBranch = (plRaw as { baseBranch?: string }).baseBranch || "main";
-      return ok(await worktree.diffStat(project.path, pipelineId, baseBranch));
-    }, { requireInit: false });
-  }, { requireInit: false });
-}
-
-// GET /api/projects/:hash/pipelines/:id/diff
-// 完整 diff:檔案列表 + raw unified diff 文字。前端自己 parse 顯示。
-export async function pipelineDiff(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) => {
-    if (!project.hasGit) return ok(null);
-    return withPipeline(hash, pipelineId, async (_p, plRaw) => {
-      const baseBranch = (plRaw as { baseBranch?: string }).baseBranch || "main";
-      return ok(await worktree.fullDiff(project.path, pipelineId, baseBranch));
-    }, { requireInit: false });
-  }, { requireInit: false });
-}
-
 // /pause 跟 /stop 共用本 handler。
 // 固定立即停止:running 走 SIGKILL + 標 paused;queued 走 cancelQueued。
 // 預期沒 body / 不是 JSON 也容忍。
@@ -509,17 +484,6 @@ export async function mergePipeline(hash: string, pipelineId: string): Promise<R
     case "git_error":         return err("invalid_path", mech.error, 500);
   }
   }));
-}
-
-export async function listPipelineRuns(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) => ok(await runLog.listRuns(project.path, pipelineId)), { requireInit: false });
-}
-
-export async function getPipelineRun(hash: string, pipelineId: string, filename: string): Promise<Response> {
-  return withProject(hash, async (p) => {
-    const run = await runLog.getRun(p.path, pipelineId, filename);
-    return run ? ok(run) : err("not_found", `Run log not found: ${filename}`, 404);
-  }, { requireInit: false });
 }
 
 // GET /api/projects/:hash/pipelines/:id/audit?limit=50

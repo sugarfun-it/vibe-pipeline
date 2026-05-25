@@ -2,6 +2,7 @@ import { join, normalize, resolve as pathResolve, sep } from "node:path";
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { vibeHome } from "./lib/paths";
 import * as projects from "./routes/projects";
+import * as runRoutes from "./routes/run";
 import * as notifs from "./routes/notifs";
 import * as syncRoutes from "./routes/sync";
 import * as qa from "./routes/qa";
@@ -268,12 +269,12 @@ async function handle(req: Request): Promise<Response> {
 
     const diffStatMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/diff-stat$/);
     if (diffStatMatch && method === "GET") {
-      return projects.pipelineDiffStat(hash, diffStatMatch[1]);
+      return runRoutes.pipelineDiffStat(hash, diffStatMatch[1]);
     }
 
     const diffFullMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/diff$/);
     if (diffFullMatch && method === "GET") {
-      return projects.pipelineDiff(hash, diffFullMatch[1]);
+      return runRoutes.pipelineDiff(hash, diffFullMatch[1]);
     }
 
     const pipelineAuditMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/audit$/);
@@ -283,13 +284,13 @@ async function handle(req: Request): Promise<Response> {
 
     const pipelineRunsListMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/runs$/);
     if (pipelineRunsListMatch && method === "GET") {
-      return projects.listPipelineRuns(hash, pipelineRunsListMatch[1]);
+      return runRoutes.listPipelineRuns(hash, pipelineRunsListMatch[1]);
     }
     const pipelineRunsDetailMatch = rest.match(
       /^\/pipelines\/([a-z0-9_-]+)\/runs\/([A-Za-z0-9._-]+)$/
     );
     if (pipelineRunsDetailMatch && method === "GET") {
-      return projects.getPipelineRun(
+      return runRoutes.getPipelineRun(
         hash,
         pipelineRunsDetailMatch[1],
         pipelineRunsDetailMatch[2]
