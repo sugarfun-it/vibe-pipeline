@@ -4,7 +4,6 @@ import * as projectStore from "../lib/projectStore";
 import * as pipelineDir from "../lib/pipelineDir";
 import * as git from "../lib/git";
 import * as orchestrator from "../lib/runner/orchestrator";
-import * as syncJob from "../lib/runner/syncJob";
 import * as worktree from "../lib/git/worktree";
 import * as runLog from "../lib/runner/runLog";
 import * as notifs from "../lib/notifs/store";
@@ -13,7 +12,7 @@ import { triggerMerge, autoMergeNoAI } from "../lib/pipelineMerge";
 import { pickFolder, revealFolder } from "../lib/dialog";
 import { projectHash } from "../lib/hash";
 import { isExistingDirectory } from "../lib/fs";
-import { ok, err, withProject, withPipeline, withJsonBody } from "./_http";
+import { ok, err, withProject, withPipeline, withJsonBody, withUserAudit } from "./_http";
 import type { ApiErrorCode, Project } from "../../shared/types";
 
 // validProjectPath 是 isExistingDirectory 在 routes 層的 alias,維持原本呼叫點不動。
@@ -31,49 +30,6 @@ export function detectVia(req?: Request): auditLog.ViaKind | undefined {
 
 // 包 mutation handler:開頭寫 pending 一筆,Response 看 ok 寫 ok / 看 error envelope 寫 error。
 // caller 不必手動 finalize。throw 的話 catch 並重 throw 給上層 500。
-async function withUserAudit(
-  projectPath: string,
-  meta: { action: string; pipelineId?: string; ticketId?: string; via?: auditLog.ViaKind },
-  fn: () => Promise<Response>
-): Promise<Response> {
-  const handle = auditLog.beginUserAction({
-    projectPath,
-    action: meta.action,
-    pipelineId: meta.pipelineId,
-    ticketId: meta.ticketId,
-    via: meta.via,
-  });
-  let res: Response;
-  try {
-    res = await fn();
-  } catch (e) {
-    handle.error(String(e), "thrown");
-    throw e;
-  }
-  // 嘗試 inspect response envelope 判斷 ok/err。clone 才不會耗掉 body。
-  try {
-    const cloned = res.clone();
-    const parsed = (await cloned.json()) as
-      | { ok: true }
-      | { ok: false; error?: { code?: string; message?: string } };
-    if (parsed && parsed.ok === true) {
-      handle.ok();
-    } else if (parsed && parsed.ok === false) {
-      const code = parsed.error?.code;
-      const msg = parsed.error?.message ?? "(no message)";
-      handle.error(msg, code);
-    } else {
-      // 非預期 envelope(理論不會發生)— 看 HTTP status 推斷
-      if (res.ok) handle.ok();
-      else handle.error(`http ${res.status}`, "non_envelope");
-    }
-  } catch {
-    if (res.ok) handle.ok();
-    else handle.error(`http ${res.status}`, "envelope_parse_failed");
-  }
-  return res;
-}
-
 export async function listRecent(): Promise<Response> {
   const items = await projectStore.listRecent();
   return ok(items);
@@ -553,86 +509,6 @@ export async function mergePipeline(hash: string, pipelineId: string): Promise<R
     case "git_error":         return err("invalid_path", mech.error, 500);
   }
   }));
-}
-
-// GET sync 狀態:回 worktree 落後 base 幾個 commit
-// 給前端 chip 用,polling 1 次/3s 由前端控
-export async function syncStatus(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) => {
-    if (!project.hasGit) return ok({ behind: null });
-    return withPipeline(hash, pipelineId, async (_p, plRaw) => {
-      const baseBranch = (plRaw as { baseBranch?: string }).baseBranch || "main";
-      return ok({ behind: await worktree.behindBaseCount(project.path, pipelineId, baseBranch), baseBranch });
-    }, { requireInit: false });
-  }, { requireInit: false });
-}
-
-// POST /sync:嘗試直接 git merge(<1s,大多狀況不用 AI)
-// - 沒落後 → 立即 done
-// - clean merge → 立即 done
-// - 衝突 → 寫 syncJob.state=conflict_await,前端跳 modal 讓 user 決定要不要 AI 解
-// - merge 失敗(非衝突)→ syncJob.failed
-// 前置:state ∈ {ready, paused, planning, failed} 才允許,running/queued/merged 擋
-export async function syncPipeline(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.sync", pipelineId }, async () => {
-      if (!project.hasGit) return err("invalid_path", "Project 沒 .git/", 400);
-      if (orchestrator.isRunning(hash, pipelineId)) {
-        return err("invalid_path", "Pipeline 在跑,先 pause 才能 sync", 409);
-      }
-      const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
-        state?: string;
-        branch?: string;
-        baseBranch?: string;
-        [k: string]: unknown;
-      } | null;
-      if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
-      if (pipeline.state === "queued") return err("invalid_path", "Pipeline 在排隊,等開跑後 pause 才能 sync", 409);
-
-      const res = await syncJob.startSync({ projectPath: project.path, projectHash: hash, pipelineId });
-      if (!res.ok) return err("invalid_path", res.error, 409);
-      return ok({ ok: true, state: res.state, behind: res.behind, conflictFiles: res.conflictFiles });
-    }), { requireInit: false });
-}
-
-// POST /sync/ai:user 在 conflict_await 狀態確認讓 AI 解衝突
-export async function syncConfirmAi(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.sync.confirmAi", pipelineId }, async () => {
-      const res = await syncJob.confirmAi({ projectPath: project.path, projectHash: hash, pipelineId });
-      if (!res.ok) return err("invalid_path", res.error, 409);
-      return ok({ ok: true });
-    }), { requireInit: false });
-}
-
-// POST /sync/cancel:取消 sync(conflict_await 階段 = 不解了 / ai_running 階段 = 殺 AI)
-export async function syncCancel(hash: string, pipelineId: string): Promise<Response> {
-  return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.sync.cancel", pipelineId }, async () => {
-      const res = await syncJob.cancelSync({ projectPath: project.path, projectHash: hash, pipelineId });
-      if (!res.ok) return err("invalid_path", res.error, 409);
-      return ok({ ok: true });
-    }), { requireInit: false });
-}
-
-// POST /sync/dismiss:user 看完 done / failed 狀態後 dismiss(把 syncJob 從 pipeline.json 拿掉)
-// 不負責清 git 狀態(done 已經乾淨;failed 已經 abort 過)
-export async function syncDismiss(hash: string, pipelineId: string): Promise<Response> {
-  return withPipeline(hash, pipelineId, async (project, pRaw) => {
-    const p = pRaw as { syncJob?: { state?: string }; [k: string]: unknown };
-    if (!p.syncJob) return ok({ ok: true });
-    if (p.syncJob.state === "ai_running" || p.syncJob.state === "merging") {
-      return err("invalid_path", "Sync 還在跑,先 cancel", 409);
-    }
-    const { syncJob: _drop, ...rest } = p;
-    void _drop;
-    await pipelineDir.writePipeline(project.path, pipelineId, rest, {
-      source: "api-sync-dismiss",
-      sourceDetail: "user dismissed syncJob",
-      prevStateHint: typeof (p as { state?: string }).state === "string" ? (p as { state: string }).state : undefined,
-    });
-    return ok({ ok: true });
-  }, { requireInit: false });
 }
 
 export async function listPipelineRuns(hash: string, pipelineId: string): Promise<Response> {

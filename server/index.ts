@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileS
 import { vibeHome } from "./lib/paths";
 import * as projects from "./routes/projects";
 import * as notifs from "./routes/notifs";
+import * as syncRoutes from "./routes/sync";
 import * as qa from "./routes/qa";
 import * as push from "./routes/push";
 import * as userConfigRoutes from "./routes/userConfig";
@@ -225,12 +226,12 @@ async function handle(req: Request): Promise<Response> {
       // pause 與 stop 共用 handler;固定立即停止
       if (action === "pause" || action === "stop") return projects.pausePipeline(hash, id, req);
       if (action === "merge") return projects.mergePipeline(hash, id);
-      if (action === "sync") return projects.syncPipeline(hash, id);
+      if (action === "sync") return syncRoutes.syncPipeline(hash, id);
     }
 
     const syncStatusMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/sync-status$/);
     if (syncStatusMatch && method === "GET") {
-      return projects.syncStatus(hash, syncStatusMatch[1]);
+      return syncRoutes.syncStatus(hash, syncStatusMatch[1]);
     }
 
     const syncSubMatch = rest.match(
@@ -239,9 +240,9 @@ async function handle(req: Request): Promise<Response> {
     if (syncSubMatch && method === "POST") {
       const id = syncSubMatch[1];
       const sub = syncSubMatch[2];
-      if (sub === "ai") return projects.syncConfirmAi(hash, id);
-      if (sub === "cancel") return projects.syncCancel(hash, id);
-      if (sub === "dismiss") return projects.syncDismiss(hash, id);
+      if (sub === "ai") return syncRoutes.syncConfirmAi(hash, id);
+      if (sub === "cancel") return syncRoutes.syncCancel(hash, id);
+      if (sub === "dismiss") return syncRoutes.syncDismiss(hash, id);
     }
 
     const worktreeRevealMatch = rest.match(

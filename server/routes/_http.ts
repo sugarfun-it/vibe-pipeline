@@ -1,6 +1,7 @@
 import type { ApiResponse, ApiErrorCode } from "../../shared/types";
 import * as projectStore from "../lib/projectStore";
 import * as pipelineDir from "../lib/pipelineDir";
+import * as auditLog from "../lib/auditLog";
 
 export type ProjectInfo = NonNullable<Awaited<ReturnType<typeof projectStore.findByHash>>>;
 
@@ -76,6 +77,50 @@ export function requireJsonUtf8(req: Request): Response | null {
     );
   }
   return null;
+}
+
+// 包 fn 自動 audit 寫入 / 失敗。從 projects.ts 搬出共用,sync / pipeline routes 都會用到。
+export async function withUserAudit(
+  projectPath: string,
+  meta: { action: string; pipelineId?: string; ticketId?: string; via?: auditLog.ViaKind },
+  fn: () => Promise<Response>
+): Promise<Response> {
+  const handle = auditLog.beginUserAction({
+    projectPath,
+    action: meta.action,
+    pipelineId: meta.pipelineId,
+    ticketId: meta.ticketId,
+    via: meta.via,
+  });
+  let res: Response;
+  try {
+    res = await fn();
+  } catch (e) {
+    handle.error(String(e), "thrown");
+    throw e;
+  }
+  // 嘗試 inspect response envelope 判斷 ok/err。clone 才不會耗掉 body。
+  try {
+    const cloned = res.clone();
+    const parsed = (await cloned.json()) as
+      | { ok: true }
+      | { ok: false; error?: { code?: string; message?: string } };
+    if (parsed && parsed.ok === true) {
+      handle.ok();
+    } else if (parsed && parsed.ok === false) {
+      const code = parsed.error?.code;
+      const msg = parsed.error?.message ?? "(no message)";
+      handle.error(msg, code);
+    } else {
+      // 非預期 envelope(理論不會發生)— 看 HTTP status 推斷
+      if (res.ok) handle.ok();
+      else handle.error(`http ${res.status}`, "non_envelope");
+    }
+  } catch {
+    if (res.ok) handle.ok();
+    else handle.error(`http ${res.status}`, "envelope_parse_failed");
+  }
+  return res;
 }
 
 export function isJsonUtf8(contentType: string): boolean {
