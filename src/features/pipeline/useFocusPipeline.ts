@@ -3,7 +3,7 @@ import { useApi } from "../../hooks/useApi";
 import { useTimeout } from "../../hooks/useTimeout";
 import * as api from "../../api/projects";
 import type { RunSummary } from "../../api/projects";
-import { STATE_COLOR, STATE_LABEL } from "../../data/pipelines";
+import { STATE_LABEL } from "../../data/pipelines";
 import type { Pipeline } from "../../types/pipeline";
 
 export type UseFocusPipelineOpts = {
@@ -22,7 +22,6 @@ export type UseFocusPipelineResult = {
   // derived display state
   behind: number | null;
   totalCost: number;
-  stateColor: string;
   stateLabel: string;
   done: number;
   total: number;
@@ -112,7 +111,6 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
 
   const behind = syncStatus?.behind ?? null;
   const totalCost = runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
-  const stateColor = STATE_COLOR[pipeline.state];
   const stateLabel = STATE_LABEL[pipeline.state];
   // mode=sync 是舊 synthetic ticket(已換 pipeline.syncJob),不計入 done/total
   const realTickets = pipeline.tickets.filter((t) => t.mode !== "sync");
@@ -155,7 +153,6 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
     onStart,
     behind,
     totalCost,
-    stateColor,
     stateLabel,
     done,
     total,

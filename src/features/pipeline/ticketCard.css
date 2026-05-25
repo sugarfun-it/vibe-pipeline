@@ -203,11 +203,13 @@ button.ticket-mode {
 
 /* V1 Refined status-pill:dot + text only,卸 bg,跟外卡 status-tint 不重複 */
 .status-pill {
+  --chip-c: var(--fg-mute);
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 10.5px;
   letter-spacing: 0.01em;
   padding: 0;
   border-radius: 0;
+  color: var(--chip-c);
   background: transparent;
 }
 .status-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }

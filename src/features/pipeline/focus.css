@@ -118,12 +118,13 @@
    撐滿成 chip 背景(0.18 tint),不必動 JSX 就能拿到 state 色。running 時 .dot.pulse 用
    chipStatePulse 在 0.18↔0.34 間呼吸,不縮放整個 pill */
 .focus-head-meta-row > .chip-state {
+  --chip-c: var(--fg-mute);
   position: relative;
-  background: transparent;
-  border: 0;
+  background: color-mix(in srgb, var(--chip-c) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-c) 35%, transparent);
   padding: 3px 12px;
   border-radius: 999px;
-  color: var(--fg);
+  color: var(--chip-c);
   font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 600;
@@ -141,6 +142,7 @@
   width: auto;
   height: auto;
   border-radius: inherit;
+  background: var(--chip-c);
   opacity: 0.18;
   z-index: -1;
 }

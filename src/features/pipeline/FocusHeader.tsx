@@ -24,7 +24,6 @@ export function FocusHeader({
   spawning,
   behind,
   totalCost,
-  stateColor,
   stateLabel,
   done,
   total,
@@ -57,7 +56,6 @@ export function FocusHeader({
   spawning: boolean;
   behind: number | null;
   totalCost: number;
-  stateColor: string;
   stateLabel: string;
   done: number;
   total: number;
@@ -118,11 +116,7 @@ export function FocusHeader({
         <div className="focus-head-meta-row">
           <span
             className="chip chip-state"
-            style={{
-              color: "var(--fg)",
-              borderColor: "transparent",
-              background: "color-mix(in srgb, " + stateColor + " 14%, transparent)",
-            }}
+            data-state={pipeline.state}
             aria-label={`pipeline 狀態:${stateLabel}`}
           >
             <span
@@ -131,7 +125,6 @@ export function FocusHeader({
                 "dot" +
                 (pipeline.state === "running" ? " pulse" : "")
               }
-              style={{ background: stateColor }}
             />{" "}{stateLabel}
           </span>
           <span className="focus-count mono" title={`完成 ${done} / 全部 ${total}`}>

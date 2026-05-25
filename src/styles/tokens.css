@@ -439,3 +439,4 @@ html.light .dotgrid {
 [data-state="planning"]          { --chip-c: var(--draft); }
 [data-state="draft"]             { --chip-c: var(--draft); }
 [data-state="success"]           { --chip-c: var(--done); }
+[data-state="merging"]           { --chip-c: var(--running); }

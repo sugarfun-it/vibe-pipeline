@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { MODE_LABELS } from "../../api/qa";
-import { fmtElapsed, STATE_COLOR, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../data/pipelines";
+import { fmtElapsed, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../data/pipelines";
 import type { IterStage, Ticket, TicketStatus } from "../../types/pipeline";
 import { ChevronRightIcon } from "../../ui/icons";
 import { IterStages } from "./IterStages";
@@ -340,14 +340,12 @@ export const TicketCard = memo(function TicketCard({
 });
 
 function StatusPill({ status }: { status: TicketStatus }) {
-  const c = TICKET_STATUS_COLOR[status] ?? STATE_COLOR[status];
   const label = TICKET_STATUS_LABEL[status] ?? status;
   const isLive = status === "running";
   return (
-    <span className="status-pill mono" style={{ color: c }}>
+    <span className="status-pill mono" data-state={status}>
       <span
         className={"status-pill-dot" + (isLive ? " pulse" : "")}
-        style={{ background: c }}
         aria-hidden
       />
       {label}
