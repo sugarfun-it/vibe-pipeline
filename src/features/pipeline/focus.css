@@ -440,13 +440,13 @@
   min-width: 0;
 }
 
-/* V1 Refined rename input:borderless underline,跟 .focus-title 的 22px / -0.022em / mono 同節奏,
+/* V1 Refined rename input:borderless underline,字體跟 .focus-title 同(sans 22px / 600 / -0.022em),
    accent border-bottom + caret,失焦無 chrome 不打架 */
 .focus-title-input {
+  font-family: inherit;
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.022em;
-  font-family: var(--font-mono);
   color: var(--fg);
   background: transparent;
   border: 0;
@@ -467,14 +467,14 @@
   color: var(--failed);
 }
 
-/* V1 Refined confirm/cancel:icon-only,小按鈕(26px),accent confirm 跟 underline 同色系
-   font-size:0 是防禦性 — JSX 內只有 svg,沒文字會被影響,但避免未來加文字打破視覺 */
+/* V1 Refined confirm/cancel:icon-only,跟 .focus-overflow > .btn 同尺寸(30px / padding 4×8),
+   accent confirm 跟 underline 同色系。font-size:0 是防禦性 — JSX 內只有 svg。 */
 .focus-title-edit-confirm,
 .focus-title-edit-cancel {
   background: transparent;
   border: 0;
-  padding: 4px 6px;
-  min-height: 26px;
+  padding: 4px 8px;
+  min-height: 30px;
   border-radius: 4px;
   color: var(--fg-mute);
   font-size: 0;
@@ -598,8 +598,11 @@
   .focus-overflow { height: 32px; }
   .focus-actions .btn { padding: 4px 10px; font-size: 11.5px; min-height: 28px; }
   .focus-overflow > .btn,
-  .rail-section-overflow > .btn { padding: 4px 6px; min-height: 28px; }
-  .focus-title { font-size: 19px; }
+  .rail-section-overflow > .btn,
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel { padding: 4px 6px; min-height: 28px; }
+  .focus-title,
+  .focus-title-input { font-size: 19px; }
 }
 
 /* ─── Mobile(focus header / banner / RunButton 相關)─────── */
@@ -608,7 +611,8 @@
   .focus {
     padding: 14px 14px 18px !important;
   }
-  .focus-title {
+  .focus-title,
+  .focus-title-input {
     font-size: 18px !important;
   }
   .focus-head { margin-bottom: 10px !important; }
@@ -678,22 +682,19 @@
      tap target 走 .btn 的 min-height(canonical control-h),不再強制 44px */
   .focus-title-edit-btn,
   .focus-overflow > .btn,
-  .rail-section-overflow > .btn {
-    padding-inline: 8px;
-  }
-
-  /* rename confirm / cancel 跟 .btn / ⋯ overflow 同高(--control-h ≈ 32px),icon-only 收 padding。
-     較小尺寸讓 title row 一直容得下 input + ✓ + × + ⋯,不必在 edit mode 隱藏 overflow,
-     view ↔ edit 切換也不會造成行高跳動。 */
+  .rail-section-overflow > .btn,
   .focus-title-edit-confirm,
   .focus-title-edit-cancel {
-    padding: 0;
+    padding-inline: 8px;
+  }
+  /* rename confirm / cancel 跟 ⋯ overflow 同一節奏 — 不強制方形(原 aspect 1/1 顯得比 ⋯ 重) */
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
     border-radius: var(--radius-control, 6px);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    aspect-ratio: 1 / 1;
   }
 
   /* mobile-focus-006:merged pipeline 的 disabled 「無可執行」button 在 mobile 隱藏 —
@@ -828,7 +829,8 @@
    meta-row 改 horizontal scroll(不 wrap),title 17px */
 @media (max-width: 539.98px) {
   .focus { padding: 12px 10px 14px !important; }
-  .focus-title { font-size: 17px !important; }
+  .focus-title,
+  .focus-title-input { font-size: 17px !important; }
   /* meta-row 維持 wrap(refined v2 矯正:之前用 nowrap+overflow-x:auto 會把 actions
      塞 100% 寬硬撐爆 viewport,chips 又被壓到只剩 · 符號) */
   .focus-head-meta-row {
@@ -850,5 +852,11 @@
   .focus-actions .btn-danger {
     padding: 7px 14px;
     min-height: 34px;
+  }
+  /* ⋯ overflow / rename ✓✕ 跟其他 action button 同 touch target */
+  .focus-overflow > .btn,
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
+    min-height: 32px;
   }
 }
