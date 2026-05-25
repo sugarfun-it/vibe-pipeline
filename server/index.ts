@@ -2,6 +2,7 @@ import { join, normalize, resolve as pathResolve, sep } from "node:path";
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { vibeHome } from "./lib/paths";
 import * as projects from "./routes/projects";
+import * as pipelineRoutes from "./routes/pipeline";
 import * as runRoutes from "./routes/run";
 import * as notifs from "./routes/notifs";
 import * as syncRoutes from "./routes/sync";
@@ -208,25 +209,25 @@ async function handle(req: Request): Promise<Response> {
     if (rest === "/config" && method === "PUT") return projects.updateConfig(hash, req);
     if (rest === "/runtime" && method === "GET") return projects.getRuntime(hash);
     if (rest === "/audit" && method === "GET") return projects.listProjectAudit(hash, req);
-    if (rest === "/worktrees/cleanup-merged" && method === "POST") return projects.cleanupMergedWorktrees(hash);
-    if (rest === "/pipelines" && method === "GET") return projects.listPipelines(hash);
-    if (rest === "/pipelines" && method === "POST") return projects.createPipeline(hash, req);
+    if (rest === "/worktrees/cleanup-merged" && method === "POST") return pipelineRoutes.cleanupMergedWorktrees(hash);
+    if (rest === "/pipelines" && method === "GET") return pipelineRoutes.listPipelines(hash);
+    if (rest === "/pipelines" && method === "POST") return pipelineRoutes.createPipeline(hash, req);
     const pipelineMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)$/);
     if (pipelineMatch) {
       const id = pipelineMatch[1];
-      if (method === "GET") return projects.getPipeline(hash, id);
-      if (method === "PUT") return projects.savePipeline(hash, id, req);
-      if (method === "DELETE") return projects.deletePipeline(hash, id);
+      if (method === "GET") return pipelineRoutes.getPipeline(hash, id);
+      if (method === "PUT") return pipelineRoutes.savePipeline(hash, id, req);
+      if (method === "DELETE") return pipelineRoutes.deletePipeline(hash, id);
     }
 
     const pipelineRunMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/(run|pause|stop|merge|sync)$/);
     if (pipelineRunMatch && method === "POST") {
       const id = pipelineRunMatch[1];
       const action = pipelineRunMatch[2];
-      if (action === "run") return projects.runPipeline(hash, id, req);
+      if (action === "run") return pipelineRoutes.runPipeline(hash, id, req);
       // pause 與 stop 共用 handler;固定立即停止
-      if (action === "pause" || action === "stop") return projects.pausePipeline(hash, id, req);
-      if (action === "merge") return projects.mergePipeline(hash, id);
+      if (action === "pause" || action === "stop") return pipelineRoutes.pausePipeline(hash, id, req);
+      if (action === "merge") return pipelineRoutes.mergePipeline(hash, id);
       if (action === "sync") return syncRoutes.syncPipeline(hash, id);
     }
 
@@ -250,21 +251,21 @@ async function handle(req: Request): Promise<Response> {
       /^\/pipelines\/([a-z0-9_-]+)\/worktree\/reveal$/
     );
     if (worktreeRevealMatch && method === "POST") {
-      return projects.revealWorktree(hash, worktreeRevealMatch[1]);
+      return pipelineRoutes.revealWorktree(hash, worktreeRevealMatch[1]);
     }
 
     const worktreeCleanupMatch = rest.match(
       /^\/pipelines\/([a-z0-9_-]+)\/worktree\/cleanup$/
     );
     if (worktreeCleanupMatch && method === "POST") {
-      return projects.cleanupWorktree(hash, worktreeCleanupMatch[1]);
+      return pipelineRoutes.cleanupWorktree(hash, worktreeCleanupMatch[1]);
     }
 
     // 「重置 pipeline」— 取代舊 worktree/prune + ticket reset 兩個 button
     // 一步:worktree 刪 + branch 刪(讓下次 fresh from base)+ tickets done/failed→draft
     const resetMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/reset$/);
     if (resetMatch && method === "POST") {
-      return projects.resetPipelineRoute(hash, resetMatch[1]);
+      return pipelineRoutes.resetPipelineRoute(hash, resetMatch[1]);
     }
 
     const diffStatMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/diff-stat$/);
@@ -279,7 +280,7 @@ async function handle(req: Request): Promise<Response> {
 
     const pipelineAuditMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/audit$/);
     if (pipelineAuditMatch && method === "GET") {
-      return projects.listPipelineAudit(hash, pipelineAuditMatch[1], req);
+      return pipelineRoutes.listPipelineAudit(hash, pipelineAuditMatch[1], req);
     }
 
     const pipelineRunsListMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/runs$/);
