@@ -19,7 +19,20 @@ const TICKET_USAGE = `vbpl ticket — manage tickets within a pipeline
     --prompt-file <path>      從檔讀;值為 "-" 走 stdin
     --acceptance-file <path>  從檔讀;值為 "-" 走 stdin
   --acceptance items: 用 ; 或換行分隔;單條免分隔。
-  注意:同一條指令只能有一個 *-file 用 "-" 讀 stdin(stream 只能消費一次)。`;
+  注意:同一條指令只能有一個 *-file 用 "-" 讀 stdin(stream 只能消費一次)。
+
+  Bulk input 模式(避 shell quoting + 一次塞所有 text 欄位,推薦給 agent 用):
+    --input-json <path|->     讀 JSON {title, goal, prompt, acceptance}。acceptance 可
+                              是 string[](推薦)或 string(用 ; / 換行 分隔)。
+                              個別 --title / --goal / ... inline flag 仍可覆寫 JSON 欄位。
+                              update 用:JSON 內出現的欄位才更新,缺的保留原值。
+                              --input-json - 跟其他 *-file - 互斥(stdin 只能消費一次)。
+                              可跟全域 --json output mode 同時用(input/output 分離)。
+
+    範例(agent heredoc,markdown 含 backtick / $ / ! 全部安全):
+      vbpl ticket add --pipeline X --input-json - --json <<'EOF'
+      {"title":"...","goal":"...","prompt":"...","acceptance":["a","b"]}
+      EOF`;
 
 export async function runTicket(sub: string | undefined, args: ParsedArgs): Promise<void> {
   if (sub === "help" || args.flags["help"] === true) {
@@ -64,6 +77,62 @@ async function readTextArg(
 // acceptance 拆 N 條:支援 ; 或換行(file 模式常見一行一條)+ trim + 過濾空字串
 function splitAcceptance(raw: string): string[] {
   return raw.split(/[;\r\n]+/).map((s) => s.trim()).filter(Boolean);
+}
+
+type JsonInput = {
+  title?: string;
+  goal?: string;
+  prompt?: string;
+  acceptance?: string | string[];
+};
+
+// --input-json <path|->:讀 bulk JSON 輸入。給 agent 用 heredoc 一次塞所有 text 欄位,避 shell quoting 雷。
+// 跟 *-file - 共用 stdinClaim(一條指令 stdin 只能被一個 reader 消費)。
+// 命名故意跟全域 --json output mode 區分,兩者可同時使用(in/out 分離)。
+async function readJsonInput(
+  args: ParsedArgs,
+  stdinClaim: { v: boolean },
+): Promise<JsonInput | undefined> {
+  const v = args.flags["input-json"];
+  if (typeof v !== "string" || v.length === 0) return undefined;
+  let raw: string;
+  if (v === "-") {
+    if (stdinClaim.v) fail("INVALID_ARGS", "--input-json -: 同指令已有別的 *-file 占用 stdin,只能擇一");
+    stdinClaim.v = true;
+    raw = await Bun.stdin.text();
+  } else {
+    try {
+      raw = await Bun.file(v).text();
+    } catch (e) {
+      fail("IO_ERROR", `--input-json: 讀檔失敗 ${v}: ${(e as Error).message}`);
+    }
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw!);
+  } catch (e) {
+    fail("INVALID_ARGS", `--input-json: JSON 解析失敗: ${(e as Error).message}`);
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    fail("INVALID_ARGS", "--input-json: 內容必須是 object {title, goal, prompt, acceptance}");
+  }
+  return parsed as JsonInput;
+}
+
+// 從 JSON 取單一文字欄位,並 normalize 成 string | undefined(allow null = unset)
+function jsonText(j: JsonInput | undefined, key: keyof JsonInput): string | undefined {
+  if (!j) return undefined;
+  const v = j[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+// acceptance 從 JSON 取:string[] 直接用,string 走 splitAcceptance,缺 = undefined
+function jsonAcceptance(j: JsonInput | undefined): string[] | undefined {
+  if (!j) return undefined;
+  const a = j.acceptance;
+  if (Array.isArray(a)) return a.map((s) => String(s).trim()).filter(Boolean);
+  if (typeof a === "string") return splitAcceptance(a);
+  return undefined;
 }
 
 function getPipelineId(args: ParsedArgs): string {
@@ -145,18 +214,21 @@ async function ticketAdd(args: ParsedArgs): Promise<void> {
   if (!pipelineId) fail("INVALID_ARGS", "Usage: vbpl ticket add --pipeline <id> --title <title> --goal <goal> --prompt <prompt> --acceptance \"a;b\" [--mode step|iter]");
 
   const stdinClaim = { v: false };
-  const title = (await readTextArg(args, "title", stdinClaim))?.trim();
+  // --input-json 先讀(可能占用 stdin),inline / *-file flag 覆寫個別欄位
+  const jsonIn = await readJsonInput(args, stdinClaim);
+
+  const title = ((await readTextArg(args, "title", stdinClaim)) ?? jsonText(jsonIn, "title") ?? "").trim();
   if (!title) fail("INVALID_ARGS", "--title is required");
 
-  const goal = ((await readTextArg(args, "goal", stdinClaim)) ?? "").trim();
-  if (!goal) fail("INVALID_ARGS", "--goal is required (一句話描述這 ticket 做什麼;runner 不用但給人 review)。多行可用 --goal-file <path> 或 --goal-file -");
+  const goal = ((await readTextArg(args, "goal", stdinClaim)) ?? jsonText(jsonIn, "goal") ?? "").trim();
+  if (!goal) fail("INVALID_ARGS", "--goal is required (一句話描述這 ticket 做什麼;runner 不用但給人 review)。多行可用 --goal-file <path> / --goal-file - / --input-json -");
 
-  const prompt = ((await readTextArg(args, "prompt", stdinClaim)) ?? "").trim();
-  if (!prompt) fail("INVALID_ARGS", "--prompt is required (給 executor 的完整任務指示)。多行可用 --prompt-file <path> 或 --prompt-file -");
+  const prompt = ((await readTextArg(args, "prompt", stdinClaim)) ?? jsonText(jsonIn, "prompt") ?? "").trim();
+  if (!prompt) fail("INVALID_ARGS", "--prompt is required (給 executor 的完整任務指示)。多行可用 --prompt-file <path> / --prompt-file - / --input-json -");
 
   const acceptanceRaw = await readTextArg(args, "acceptance", stdinClaim);
-  const acceptance = acceptanceRaw ? splitAcceptance(acceptanceRaw) : [];
-  if (acceptance.length === 0) fail("INVALID_ARGS", "--acceptance is required (critic 拿來判 PASS/FAIL)。單條免分隔,多條用 ; 或換行分隔;或用 --acceptance-file <path>");
+  const acceptance = acceptanceRaw ? splitAcceptance(acceptanceRaw) : (jsonAcceptance(jsonIn) ?? []);
+  if (acceptance.length === 0) fail("INVALID_ARGS", "--acceptance is required (critic 拿來判 PASS/FAIL)。單條免分隔,多條用 ; 或換行分隔;或用 --acceptance-file <path> / --input-json -");
   const rawMode = typeof args.flags["mode"] === "string" ? args.flags["mode"] : "step";
   const mode: TicketMode = (rawMode === "iter" ? "iter" : "step");
   const iterLimit = typeof args.flags["iter-limit"] === "string" ? Number(args.flags["iter-limit"]) : undefined;
@@ -212,15 +284,20 @@ async function ticketUpdate(args: ParsedArgs): Promise<void> {
   const updated: Ticket = { ...orig };
 
   const stdinClaim = { v: false };
-  const newTitle = await readTextArg(args, "title", stdinClaim);
+  const jsonIn = await readJsonInput(args, stdinClaim);
+
+  const newTitle = (await readTextArg(args, "title", stdinClaim)) ?? jsonText(jsonIn, "title");
   if (newTitle !== undefined) updated.title = newTitle;
-  const newGoal = await readTextArg(args, "goal", stdinClaim);
+  const newGoal = (await readTextArg(args, "goal", stdinClaim)) ?? jsonText(jsonIn, "goal");
   if (newGoal !== undefined) updated.goal = newGoal;
-  const newPrompt = await readTextArg(args, "prompt", stdinClaim);
+  const newPrompt = (await readTextArg(args, "prompt", stdinClaim)) ?? jsonText(jsonIn, "prompt");
   if (newPrompt !== undefined) updated.prompt = newPrompt;
-  const newAcceptance = await readTextArg(args, "acceptance", stdinClaim);
-  if (newAcceptance !== undefined) {
-    updated.acceptance = splitAcceptance(newAcceptance);
+  const newAcceptanceRaw = await readTextArg(args, "acceptance", stdinClaim);
+  if (newAcceptanceRaw !== undefined) {
+    updated.acceptance = splitAcceptance(newAcceptanceRaw);
+  } else {
+    const fromJson = jsonAcceptance(jsonIn);
+    if (fromJson !== undefined) updated.acceptance = fromJson;
   }
   if (typeof args.flags["mode"] === "string") {
     const m = args.flags["mode"];
