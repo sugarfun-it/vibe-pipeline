@@ -188,26 +188,35 @@
   color: var(--fg-faint);
   opacity: 0.6;
 }
-/* 可點的 chip(diff / sync,都是 <button>)在 meta-row 純文字佈局下仍要 affordance —
-   hover 變 fg + underline,clear 表示 clickable;cursor 跟 button native pointer 一致 */
+/* 可點的 chip(diff / sync,都是 <button>)在 meta-row 純文字佈局下要靜止就看得出可點 —
+   靜止:soft border + 內距(button-like outline chip),不靠 hover 才浮出 affordance。
+   覆寫上面把 button chip 抹平成 plain text 的 rule(specificity 0,1,2 > 0,1,1)。 */
 .focus-head-meta-row > button.chip:not(.chip-state),
 .focus-head-meta-row > button.sync-chip {
   cursor: pointer;
-  text-decoration: none;
+  padding: 2px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--fg-mute);
+  margin-left: 6px;
+  position: static;
+  background: transparent;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.focus-head-meta-row > button.chip:not(.chip-state)::before,
+.focus-head-meta-row > button.sync-chip::before {
+  content: none;
 }
 .focus-head-meta-row > button.chip:not(.chip-state):hover,
 .focus-head-meta-row > button.sync-chip:hover {
   color: var(--fg);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-2));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .focus-head-meta-row > button.chip:not(.chip-state):focus-visible,
 .focus-head-meta-row > button.sync-chip:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 .focus-head-meta-row > button.chip:not(.chip-state):disabled,
 .focus-head-meta-row > button.sync-chip:disabled {
