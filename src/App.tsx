@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { BoardScreen } from "./features/pipeline/BoardScreen";
 import { ConfirmProvider } from "./ui/ConfirmDialog";
 import { ToastProvider, ToastStage } from "./ui/Toast";
@@ -29,6 +28,16 @@ function BoardRoute() {
   const density = (densityRaw as "compact" | "medium") || "medium";
   const startCreating = creatingRaw === "1";
   return <BoardScreen density={density} startCreating={startCreating} />;
+}
+
+// 過去從 `/` redirect 到 `/board`(react-router Navigate),拔 router 後改用 effect 一次
+// replaceState(冪等:已在 /board 就 no-op)。bookmark 兼容,不污染 history。
+function useRootRedirect() {
+  useEffect(() => {
+    if (window.location.pathname === "/") {
+      window.history.replaceState(null, "", "/board" + window.location.search + window.location.hash);
+    }
+  }, []);
 }
 
 function useFcmBootstrap() {
@@ -64,18 +73,14 @@ function useFcmBootstrap() {
 
 export default function App() {
   useFcmBootstrap();
+  useRootRedirect();
   return (
-    <BrowserRouter>
-      <ConfirmProvider>
-        <ToastProvider>
-          <OnlineStatusBadge />
-          <Routes>
-            <Route path="/" element={<Navigate to="/board" replace />} />
-            <Route path="/board" element={<BoardRoute />} />
-          </Routes>
-          <ToastStage />
-        </ToastProvider>
-      </ConfirmProvider>
-    </BrowserRouter>
+    <ConfirmProvider>
+      <ToastProvider>
+        <OnlineStatusBadge />
+        <BoardRoute />
+        <ToastStage />
+      </ToastProvider>
+    </ConfirmProvider>
   );
 }

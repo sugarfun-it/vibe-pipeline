@@ -2216,7 +2216,7 @@
 /* ─── ConfirmDialog (modal) ─────────────────────────────────────────── */
 
 .drawer-stage--modal.confirm-stage {
-  z-index: 2000;
+  z-index: var(--z-confirm, 2000);
 }
 .drawer--modal.confirm-card {
   border-radius: 12px;

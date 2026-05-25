@@ -123,9 +123,9 @@ html.light .settings-popover-tab.is-active {
 .settings-popover-saved.is-fading { opacity: 0; }
 
 /* sp-proj-r1-003:picker dropdown 走 body portal,z-index 預設 100 < settings-popover (1500),
-   會被 settings panel 蓋住整片 options 看不見。提到 1600(modal 1000 / settings 1500 / toast 2000 之間)。 */
+   會被 settings panel 蓋住整片 options 看不見。提到 --z-picker-popover(1600,settings 跟 modal 之間)。 */
 .picker-menu[role="listbox"] {
-  z-index: 1600;
+  z-index: var(--z-picker-popover, 1600);
 }
 
 /* ─── Field row(Project tab + 通用)─────────────────────────── */

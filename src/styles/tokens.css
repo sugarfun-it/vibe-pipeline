@@ -68,8 +68,11 @@
   --z-drawer: 200;
   --z-banner: 300;
   --z-settings: 1500;
+  --z-picker-popover: 1600; /* picker dropdown 從 body portal 出來 — 必須蓋過 settings popover */
   --z-modal: 1700;
+  --z-confirm: 2000; /* ConfirmDialog 要堆在其他 modal(Diff / SyncConflict)之上 */
   --z-toast: 2200;
+  --z-top: 9999; /* 全域最頂(online status badge 等不能被任何 overlay 蓋的 indicator) */
 
   /* 2026-05-25 — drawer width SSOT。QA / TicketDrawer 各自設計寬度,改一處全 app 同步。
      PipelineHistoryDrawer 共用 .tdrw-drawer surfaceClassName 跟 TicketDrawer,沒獨立寬度 */
