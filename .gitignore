@@ -57,3 +57,7 @@ update-flow.*
 
 # codegraph per-machine SQLite index(每台機自己跑 `codegraph init`)
 .codegraph/
+
+# Rust shim build artifacts(scripts/shim 用 — source commit、binary 不 commit)
+scripts/shim/target/
+scripts/shim/Cargo.lock
