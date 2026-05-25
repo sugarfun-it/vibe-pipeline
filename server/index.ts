@@ -2,6 +2,7 @@ import { join, normalize, resolve as pathResolve, sep } from "node:path";
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { vibeHome } from "./lib/paths";
 import * as projects from "./routes/projects";
+import * as notifs from "./routes/notifs";
 import * as qa from "./routes/qa";
 import * as push from "./routes/push";
 import * as userConfigRoutes from "./routes/userConfig";
@@ -294,17 +295,17 @@ async function handle(req: Request): Promise<Response> {
       );
     }
 
-    if (rest === "/notifs" && method === "GET") return projects.listNotifs(hash);
-    if (rest === "/notif" && method === "POST") return projects.postNotif(hash, req);
+    if (rest === "/notifs" && method === "GET") return notifs.listNotifs(hash);
+    if (rest === "/notif" && method === "POST") return notifs.postNotif(hash, req);
     if (rest === "/notifs/mark-all-read" && method === "POST")
-      return projects.markAllNotifsRead(hash);
+      return notifs.markAllNotifsRead(hash);
     if (rest === "/notifs/dismiss-all" && method === "POST")
-      return projects.dismissAllNotifs(hash);
+      return notifs.dismissAllNotifs(hash);
     const notifMatch = rest.match(/^\/notifs\/([a-z0-9]+)\/(read|dismiss)$/);
     if (notifMatch && method === "POST") {
       const nid = notifMatch[1];
-      if (notifMatch[2] === "read") return projects.markNotifRead(hash, nid);
-      if (notifMatch[2] === "dismiss") return projects.dismissNotif(hash, nid);
+      if (notifMatch[2] === "read") return notifs.markNotifRead(hash, nid);
+      if (notifMatch[2] === "dismiss") return notifs.dismissNotif(hash, nid);
     }
 
     const qaStartMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/qa\/start$/);
