@@ -40,10 +40,14 @@ try {
 New-Item -ItemType Directory -Force -Path $VpHome | Out-Null
 Set-Location -LiteralPath $VpHome
 # Shim under ~/.vibe-pipeline/bin/ - aligned with pyenv/cargo/nvm convention,
-# same dir as legacy vbpl.exe, uninstall just rm ~/.vibe-pipeline/.
+# uninstall just rm ~/.vibe-pipeline/.
+# v0.2.5+ ships Rust .exe shim (vbpl.exe) inside tarball at $VersionDir\bin\vbpl.exe;
+# install.ps1 prefers .exe (solves Node/Bun spawn ENOENT + cmd.exe re-tokenize + PATHEXT
+# 大小寫雷區). Older tarballs without bin/vbpl.exe fall back to generating vbpl.cmd.
 # Pre-v0.2.1 shim at %LOCALAPPDATA%\vibe-pipeline\ is auto-cleaned below.
 $ShimDir     = Join-Path $VpHome "bin"
-$Shim        = Join-Path $ShimDir "vbpl.cmd"
+$ShimExe     = Join-Path $ShimDir "vbpl.exe"
+$ShimCmd     = Join-Path $ShimDir "vbpl.cmd"
 $OldShimDir  = Join-Path $env:LOCALAPPDATA "vibe-pipeline"
 $OldShim     = Join-Path $OldShimDir "vbpl.cmd"
 
@@ -54,10 +58,11 @@ function Info($m) { Write-Host $m }
 function Err($m)  { Write-Host "ERROR: $m" -ForegroundColor Red }
 
 # 0) Stop running backend (so port 3001 is free + current/ has no cwd lock for swap)
-#    Try existing shim first; if no shim, try via cwd current/. Errors are ignored
-#    (no backend running -> nothing to stop).
+#    Try existing shim first (.exe preferred, then .cmd); if no shim, try via cwd current/.
+#    Errors are ignored (no backend running -> nothing to stop).
 $ExistingShim = $null
-if (Test-Path $Shim) { $ExistingShim = $Shim }
+if (Test-Path $ShimExe) { $ExistingShim = $ShimExe }
+elseif (Test-Path $ShimCmd) { $ExistingShim = $ShimCmd }
 elseif (Test-Path $OldShim) { $ExistingShim = $OldShim }
 if ($ExistingShim) {
   Info "Stopping any running backend ..."
@@ -247,15 +252,27 @@ if (Test-Path $LegacyApp) {
   }
 }
 
-# 8) Shim points to current\
+# 8) Shim install: prefer Rust .exe shipped in tarball ($VersionDir\bin\vbpl.exe),
+#    fall back to generated .cmd for older tarballs (pre-v0.2.5).
+#    .exe solves Node/Bun spawn ENOENT, cmd.exe re-tokenize, PATHEXT case雷;.cmd
+#    is legacy fallback. Always remove the *other* extension so PATHEXT resolves
+#    deterministically (no two siblings competing).
 New-Item -ItemType Directory -Force -Path $ShimDir | Out-Null
-$shimContent = @"
+$BundledExe = Join-Path $VersionDir "bin\vbpl.exe"
+if (Test-Path $BundledExe) {
+  Copy-Item -Path $BundledExe -Destination $ShimExe -Force
+  if (Test-Path $ShimCmd) { Remove-Item -Force $ShimCmd -ErrorAction SilentlyContinue }
+  Info "OK Shim (exe): $ShimExe"
+} else {
+  $shimContent = @"
 @echo off
 set VBPL_HOME=%USERPROFILE%\.vibe-pipeline\current
 bun run "%VBPL_HOME%\cli\vbpl.ts" %*
 "@
-Set-Content -Path $Shim -Value $shimContent -Encoding ASCII
-Info "OK Shim: $Shim"
+  Set-Content -Path $ShimCmd -Value $shimContent -Encoding ASCII
+  if (Test-Path $ShimExe) { Remove-Item -Force $ShimExe -ErrorAction SilentlyContinue }
+  Info "OK Shim (cmd fallback, tarball missing bin/vbpl.exe): $ShimCmd"
+}
 
 # 8.5) Cleanup legacy shim at %LOCALAPPDATA%\vibe-pipeline\ (pre-v0.2.1)
 if (Test-Path $OldShim) {

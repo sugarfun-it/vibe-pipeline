@@ -6,48 +6,34 @@ PATHEXT 大小寫 / 啟動 overhead / signal 傳遞 / stdio TTY / process tree),
 
 ## Build
 
-需要 Rust toolchain(`rustup`):
+需要 Rust toolchain(`rustup`)+ mingw linker。`rust-toolchain.toml` 跟 `.cargo/config.toml`
+固定 target = `x86_64-pc-windows-gnu`,第一次 build 自動 install 對應 std。
 
 ```bash
 cd scripts/shim
 cargo build --release
-# 產出:scripts/shim/target/release/vbpl.exe
-```
-
-第一次 build 慢(rustc 初始化 + 依賴),~30s。之後 incremental 秒級。
-release 模式 + `strip = true` + `opt-level = "z"` + `panic = "abort"` → exe 大小 ~ 200-400 KB。
-
-## Cross-compile from POSIX(optional)
-
-```bash
-rustup target add x86_64-pc-windows-gnu
-cd scripts/shim
-cargo build --release --target x86_64-pc-windows-gnu
 # 產出:scripts/shim/target/x86_64-pc-windows-gnu/release/vbpl.exe
 ```
 
-需要 mingw-w64(`apt install mingw-w64` / `brew install mingw-w64`)。
+第一次 build 慢(rustc 初始化 + std download + 依賴),~30s。之後 incremental 秒級。
+release 模式 + `strip = true` + `opt-level = "z"` + `panic = "abort"` → exe 大小 ~ 320 KB。
 
-## 手動驗證(不動 install pipeline)
+### linker 要求(per platform)
 
-```powershell
-# 1. build 出 vbpl.exe(假設已 cargo build --release)
-# 2. 備份現有 vbpl.cmd,放新 exe 進去
-$shim = "$HOME\.vibe-pipeline\bin\vbpl.exe"
-Move-Item "$HOME\.vibe-pipeline\bin\vbpl.cmd" "$HOME\.vibe-pipeline\bin\vbpl.cmd.bak" -Force
-Copy-Item scripts/shim/target/release/vbpl.exe $shim
+| OS | 需要 | 怎麼裝 |
+|---|---|---|
+| Windows | mingw-w64 `gcc.exe` on PATH | `winget install MSYS2.MSYS2` + `pacman -S mingw-w64-x86_64-gcc`,把 `C:\msys64\mingw64\bin` 加 PATH |
+| Linux | `x86_64-w64-mingw32-gcc` on PATH | `apt install mingw-w64`(Debian / Ubuntu) |
+| macOS | `x86_64-w64-mingw32-gcc` on PATH | `brew install mingw-w64` |
 
-# 3. 開新 PowerShell(讓 PATH 重新解析).cmd → .exe
-vbpl --version
-vbpl server status
+`scripts/build-tarball.ts` 在 Windows 會自動把 `C:\msys64\mingw64\bin` 跟 `~/.cargo/bin`
+prepend 進 env,maintainer 不必每次手動改 PATH。
 
-# 4. Node spawn 測 ── 之前 .cmd 撞 ENOENT,新 exe 該過
-bun -e "const r = Bun.spawnSync(['vbpl', '--version']); console.log('exit:', r.exitCode);"
+## 整合狀態
 
-# 5. Ctrl+C 測 ── vbpl server logs -f 後按 Ctrl+C,子程序該乾淨 exit
-```
-
-驗 OK 後再考慮整合進 `scripts/install.ps1`(把 `vbpl.cmd` 換成 `vbpl.exe`)、`scripts/build-tarball.ts`(把 shim 加進 tarball)、release pipeline cross-compile。
+- ✅ `scripts/build-tarball.ts` 自動 build 並塞 `vbpl.exe` 到 tarball 的 `bin/vbpl.exe`
+- ✅ `scripts/install.ps1` 優先用 tarball 內 `bin/vbpl.exe`,fallback 寫 `vbpl.cmd`(舊 tarball 相容)
+- 未做:GitHub Actions Windows runner 跑 release build / Azure Trusted Signing 簽 exe
 
 ## Signal 行為
 

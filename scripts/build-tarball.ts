@@ -20,6 +20,8 @@ const WHITELIST = [
   // scripts/ ship 進來原因:backend /api/system/update spawn install.{ps1,sh} 需要 local
   // script(避 GitHub raw fallback 的 args 傳遞坑)。順手帶 uninstall script,user 從 install
   // dir 也能拔。build-tarball.ts 自己也在這 dir 但 user 不會誤跑。
+  // scripts/shim/ 是 Rust source(maintainer-only),pruneShimSource() 會從 stage 移掉,
+  // 改塞編譯產物到 bin/vbpl.exe。
   "scripts",
   "package.json",
   "bun.lock",
@@ -27,6 +29,9 @@ const WHITELIST = [
   "LICENSE",
   "README.md",
 ];
+
+const SHIM_DIR = "scripts/shim";
+const SHIM_EXE_REL = "scripts/shim/target/x86_64-pc-windows-gnu/release/vbpl.exe";
 
 function parseArgs(argv: string[]): { version: string; allowDirty: boolean } {
   const args = argv.slice(2);
@@ -97,6 +102,66 @@ async function buildDist(): Promise<void> {
     console.error("[fail] dist/ not produced");
     process.exit(1);
   }
+}
+
+// Build Windows shim (Rust → vbpl.exe). rust-toolchain.toml + .cargo/config.toml 在
+// scripts/shim/ 內處理 channel / target 選擇,只要 cargo 跟 mingw linker on PATH 就行。
+// Windows maintainer:PATH 要含 C:\msys64\mingw64\bin(裝 mingw-w64-x86_64-gcc 後)。
+// POSIX maintainer:PATH 要含 x86_64-w64-mingw32-gcc(apt install mingw-w64 / brew install mingw-w64)。
+async function buildShim(): Promise<void> {
+  console.log("[step] cargo build --release (Windows shim, GNU target)");
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === "string") env[k] = v;
+  }
+  if (process.platform === "win32") {
+    const pathKey = env.PATH ? "PATH" : "Path";
+    let currentPath = env[pathKey] ?? "";
+    const prepend: string[] = [];
+    const cargoBin = join(process.env.USERPROFILE ?? "", ".cargo", "bin");
+    if (existsSync(cargoBin) && !currentPath.toLowerCase().includes(cargoBin.toLowerCase())) {
+      prepend.push(cargoBin);
+    }
+    const msys2 = "C:\\msys64\\mingw64\\bin";
+    if (existsSync(msys2) && !currentPath.toLowerCase().includes("msys64\\mingw64\\bin")) {
+      prepend.push(msys2);
+    }
+    if (prepend.length > 0) {
+      env[pathKey] = `${prepend.join(";")};${currentPath}`;
+    }
+  }
+  const proc = Bun.spawn(["cargo", "build", "--release"], {
+    cwd: join(ROOT, SHIM_DIR),
+    stdout: "inherit",
+    stderr: "inherit",
+    env,
+  });
+  const code = await proc.exited;
+  if (code !== 0) {
+    console.error("[fail] cargo build failed");
+    console.error("  Windows:install MSYS2 + `pacman -S mingw-w64-x86_64-gcc`,確保 C:\\msys64\\mingw64\\bin 在 PATH");
+    console.error("  POSIX:install mingw-w64(apt / brew),`x86_64-w64-mingw32-gcc` 要在 PATH");
+    process.exit(1);
+  }
+  if (!existsSync(join(ROOT, SHIM_EXE_REL))) {
+    console.error(`[fail] shim artifact missing at ${SHIM_EXE_REL}`);
+    process.exit(1);
+  }
+  const sz = statSync(join(ROOT, SHIM_EXE_REL)).size;
+  console.log(`[shim] vbpl.exe built (${(sz / 1024).toFixed(0)} KB)`);
+}
+
+// 把 shim source 從 stage 拔掉(WHITELIST scripts/ 抄進來的),改塞編譯產物到 stage/bin/vbpl.exe。
+// install.ps1 從 $VersionDir/bin/vbpl.exe 拷貝到 ~/.vibe-pipeline/bin/vbpl.exe。
+function stageShimArtifact(stageDir: string): void {
+  const stagedShim = join(stageDir, SHIM_DIR);
+  if (existsSync(stagedShim)) {
+    rmSync(stagedShim, { recursive: true, force: true });
+  }
+  const binDir = join(stageDir, "bin");
+  mkdirSync(binDir, { recursive: true });
+  cpSync(join(ROOT, SHIM_EXE_REL), join(binDir, "vbpl.exe"));
+  console.log("[shim] stage/bin/vbpl.exe placed, stage/scripts/shim/ source pruned");
 }
 
 // 拔掉 dev / build deps + 跟前端 build 相關的「dependencies」(實際只 frontend 用,
@@ -205,6 +270,7 @@ async function main() {
   await assertCleanTree(allowDirty);
   const version = await assertVersionMatches(argVersion);
   await buildDist();
+  await buildShim();
 
   const stageParent = join(ROOT, "release-tmp");
   const dirName = `vibe-pipeline-v${version}`;
@@ -213,6 +279,8 @@ async function main() {
 
   const copied = stageWhitelist(stageDir);
   console.log(`[stage] copied: ${copied.join(", ")}`);
+
+  stageShimArtifact(stageDir);
 
   // 拔 dev / frontend deps,留 enduser 真正需要的 → 預裝 node_modules
   await stripStagePackageJson(stageDir);
