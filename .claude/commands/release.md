@@ -23,16 +23,39 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`;或 `<ship-version> fake <loca
 
 target user = enduser(裝 vbpl 的人),**不是** maintainer。寫的人(AI / 你)看完這段再下筆。
 
-### 結構(固定三段)
+行業參考(短 / 動詞起手 / user-visible only):Stripe、Linear、Vercel、Anthropic API、Tailwind major releases。對標的反例是 GitHub 自動生成 PR list(細到無法判斷要不要升)+ 自家 v0.2.4(把 maintainer CHANGELOG 當 release notes 發)。
+
+### 口吻 — 寫給「裝了 vbpl 的朋友看」
+
+像跟朋友講「新版做了什麼」,不是寫 PR description / commit message。**白話、口語、直接**。
+
+| 改前(工程術語 ❌) | 改後(白話 ✓) |
+|---|---|
+| Fix push notification token registration regression | 推播壞了,現在會收到通知 |
+| Backend `EADDRINUSE` auto-fallback | port 3001 被別的程式佔到時,backend 會自己換一個 port 起來 |
+| 設計系統收斂 / 視覺一致性提升 | 按鈕、邊框、顏色長得比較整齊 |
+| 重構 backend 模組,降低耦合 | (刪掉。user 看不到差別) |
+| Sticky footer + iter chip / merged mode | ticket drawer 底下按鈕固定不滑走 |
+| Implements iter-uiux based UI consolidation | UI 改得比較好看 |
+
+英文專有名詞(`port` / `cache` / `token` / `backend` / `PWA`)留著 OK ── user 平常就這樣講。但避免 `regression` / `fallback chain` / `idempotent` / `landmark` 這種沒在日常對話用的字。
+
+### 核心測試 — 寫完先問自己 4 句
+
+1. **「user 5 秒讀完 Highlights,能說出『我為什麼要升』嗎?」** 不能 → 重寫
+2. **「整份有沒有任何句子是給 maintainer 看的?」** 有 → 刪
+3. **「拿掉就少資訊嗎?」** 不少 → 刪
+4. **「念出來像跟朋友講話嗎?還是像在念 commit message?」** 後者 → 改白話
+
+### 結構(固定三段,不開新 ## 區段)
 
 ```markdown
 ## Highlights
-- **<一句話 user-visible 改動>** — 一行說明影響。
+- **<動詞起手:修了 / 加了 / 改了 / 砍了 ___>** — 一句說 user 行為差別。
 - **<另一條>** — ...
 
-## Fix(若 release 主要是 bug fix)/ Feature(新功能)/ <領域>(視內容開節)
-### <短標題>
-1-3 句說 user 怎麼踩、修法摘要(不貼 code,不講 design rationale)。
+## Fix / Feature(只開一節,選對應的;**不再開 ## Tokens / ## Primitives 之類 maintainer 區段**)
+1-3 句寫 user 怎麼踩 → 一句修法摘要。
 
 ## 升級
 \`\`\`bash
@@ -41,30 +64,41 @@ vbpl update
 \`\`\`
 ```
 
-### 禁寫
+**Highlights 上限 3-5 條**。超過代表沒收斂 user-visible 結論。每條 ≤ 30 字。run-on 用 `/` 串多個技術點 = 沒挑重點。
 
-- Maintainer-only flow(release 流程、tag 策略、gateway redeploy 紀錄、build-tarball 內部)
-- Deep rationale / 設計信條對齊 / 雷區 walkthrough(那些去 commit / CHANGELOG / SKILL.md)
-- 完整 code block 跟堆砌 diff(超過 5 行就拆 link 出去)
-- 「砍了 N 行死碼 / N 個檔重構」這種 maintainer 指標(enduser 不在意,放 commit msg)
-- Token / class / 設計系統內部命名(`--radius-control`、`.vp-chip` 等;只在影響 enduser 行為時提)
+### 禁寫(grep 自我檢查;命中就刪重寫)
 
-### 可寫
+- Maintainer flow:release 步驟 / tag 策略 / gateway redeploy / build-tarball 內部 / package.json bump
+- Deep rationale / 設計信條 / 雷區 walkthrough → 那些去 commit / CHANGELOG / SKILL.md
+- 完整 code block 跟堆砌 diff(超過 5 行就 link 出去)
+- **「N 行 / N 處 / N 個檔 / N 個 unit / N 個 token」這種計數指標**(enduser 不在意 effort / scope)
+- **內部 toolchain 名詞**:codex / iter-uiux / playwright / parallel sub-agent / advisor-reviewer 等
+- **File path / 變數名 / class 名 / token 名**(`server/index.ts`、`Bun.serve`、`.vp-chip`、`--radius-control`、`gatewayUrl()` ── enduser 看不懂)
+- **內部 taxonomy**:primitive / landmark / token / overlay contract / per-unit rebuild ── 換成 user 詞彙(按鈕 / 標題 / 對話框)
+- **`## Backlog` / `## 刻意 defer` / `## Tradeoffs`** ── release notes 寫**有發的**,不寫沒發的
+- 「視覺更一致」「設計系統收斂」「重構」「瘦身」 ── 抽象用語,user 認不出對應行為差別
 
-- 一句話 highlights(每個 ≤ 25 字),user 一眼看到「我為什麼要升」
-- bug fix:症狀 + 一句修法(symptoms-first,user 認得症狀就升)
-- feature:新指令 / 新 UI 入口 / 行為改變
-- 升級步驟(永遠就這 4 行)
+### 句型對照(改寫前後)
 
-### 大小參考
-
-| 類型 | 目標大小 |
+| 改前(❌) | 改後(✓) |
 |---|---|
-| hotfix(v0.2.1 型) | < 600B / < 20 行 |
-| 一般 fix(v0.2.3 型) | < 1.5KB / < 40 行 |
-| 大改(v0.2.4 UI overhaul 型) | < 3.5KB / < 70 行 |
+| UI/UX 大改 — 設計系統收斂(tokens / chip / button / overlay / focus-ring)... | 拿掉了「按鈕 hover 突然變色」「drawer 邊角圓不一致」等視覺雜訊 |
+| 重構大瘦身:3 條主檔從 1100/950/1460 行 → 890/180/120 | (刪掉。enduser 看不到行數) |
+| `server/index.ts` `Bun.serve` 包 try/catch,`EADDRINUSE` 改 `port: 0` | port 3001 被佔時 backend 自動改用閒置 port,不再 crash |
+| 透過 15 個 UI unit 的 parallel codex-supervised iter loop | (刪掉 toolchain 細節。看效果不看流程) |
+| 新增 canonical token:`--radius-control/card/panel`、`--control-h`... | (整段刪。token 是 internal,user 看到的是「圓角統一」) |
 
-超出就再砍。不確定砍哪 → 砍 maintainer 視角 / 砍 rationale / 砍 code block。
+### 大小上限(超過硬砍,不留情)
+
+| 類型 | 上限 | 範例 |
+|---|---|---|
+| hotfix | **< 500B / 15 行** | v0.2.1 |
+| 一般 fix | **< 1KB / 25 行** | v0.2.3 |
+| 大改(含 feature + UI overhaul) | **< 2KB / 40 行** | v0.2.4 應該是 — 實際 3.5KB 已超 |
+
+**超過就砍**,不要妥協。砍順序:maintainer 視角 → rationale → file path / 變數名 → 計數指標 → toolchain 名詞 → 抽象形容詞。
+
+超過 40 行還砍不掉 = 把 CHANGELOG 寫進來了。回頭只留 user 行為差別。
 
 
 
