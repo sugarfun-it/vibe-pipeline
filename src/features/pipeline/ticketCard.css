@@ -299,7 +299,7 @@ button.ticket-mode {
   font-family: var(--font-mono);
 }
 .iter-stage-mark.is-running {
-  color: var(--iter);
+  color: var(--running);
   animation: iter-stage-mark-pulse 1.2s ease-in-out infinite;
 }
 .iter-stage-mark.is-paused {

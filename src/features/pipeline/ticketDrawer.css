@@ -641,15 +641,17 @@
 /* hist-020:成功狀態走 [data-state] selector 系統 + .vp-chip tone */
 .tdrw-run-status.is-ok,
 .tdrw-run-status[data-state="success"] {
-  color: var(--done);
-  background: color-mix(in srgb, var(--done) 12%, transparent);
-  border-color: color-mix(in srgb, var(--done) 35%, var(--line-2));
+  --chip-c: var(--done);
+  color: var(--chip-c);
+  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c) 35%, var(--line-2));
 }
 .tdrw-run-status.is-fail,
 .tdrw-run-status[data-state="failed"] {
-  color: var(--failed);
-  background: color-mix(in srgb, var(--failed) 12%, transparent);
-  border-color: color-mix(in srgb, var(--failed) 35%, var(--line-2));
+  --chip-c: var(--failed);
+  color: var(--chip-c);
+  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c) 35%, var(--line-2));
 }
 .tdrw-run-meta {
   /* hist-004:meta row 用 flex-wrap,每個 item 自然寬度,wrap 到下一列。

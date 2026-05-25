@@ -79,13 +79,6 @@
   line-height: 1.1;
   white-space: nowrap;
 }
-.rail-status-chip[data-state="running"]  { --chip-c: var(--running); }
-.rail-status-chip[data-state="queued"]   { --chip-c: var(--queued); }
-.rail-status-chip[data-state="paused"]   { --chip-c: var(--paused); }
-.rail-status-chip[data-state="ready"]    { --chip-c: var(--done); }
-.rail-status-chip[data-state="merged"]   { --chip-c: var(--fg-faint); }
-.rail-status-chip[data-state="failed"]   { --chip-c: var(--failed); }
-.rail-status-chip[data-state="planning"] { --chip-c: var(--draft); }
 
 /* active rail-item 內 count chip 對比拉開(bg panel-2 → bg) */
 .rail-item.is-active .rail-item-count {

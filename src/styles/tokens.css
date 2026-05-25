@@ -423,3 +423,19 @@ html.light .dotgrid {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* phase4-2026-05-25 — Chip / pill state → color SSOT
+   Caller sets data-state="X"; CSS uses var(--chip-c).
+   bg/border derived via color-mix in each chip family. */
+[data-state="running"]           { --chip-c: var(--running); }
+[data-state="queued"]            { --chip-c: var(--queued); }
+[data-state="paused"]            { --chip-c: var(--paused); }
+[data-state="ready"]             { --chip-c: var(--done); }
+[data-state="done"]              { --chip-c: var(--done); }
+[data-state="merged"]            { --chip-c: var(--fg-faint); }
+[data-state="failed"]            { --chip-c: var(--failed); }
+[data-state="failed_iter_limit"] { --chip-c: var(--failed); }
+[data-state="failed_transient"]  { --chip-c: var(--failed); }
+[data-state="planning"]          { --chip-c: var(--draft); }
+[data-state="draft"]             { --chip-c: var(--draft); }
+[data-state="success"]           { --chip-c: var(--done); }
