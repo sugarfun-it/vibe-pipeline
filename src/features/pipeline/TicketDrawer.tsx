@@ -1,10 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import "../../styles/drawer.css";
 import "./ticketDrawer.css";
-import type { Ticket, IterRound, CommitRef } from "../../types/pipeline";
+import type { Ticket, CommitRef } from "../../types/pipeline";
 import { MODE_LABELS } from "../../api/qa";
-import { STATE_COLOR, fmtElapsed, normalizeVerdict } from "../../data/pipelines";
+import { STATE_COLOR } from "../../data/pipelines";
 import { formatDateTime } from "../../lib/format";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { RefreshIcon, ScissorsIcon, TrashIcon } from "../../ui/icons";
@@ -12,9 +11,11 @@ import { AuditTimeline } from "./AuditTimeline";
 import { Overlay } from "../../ui/Overlay";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useTimeout } from "../../hooks/useTimeout";
-import { NumberField } from "../../ui/forms/NumberField";
 
 import { TICKET_STATUS_LABEL } from "../../data/pipelines";
+import { IterLimitField } from "./IterLimitField";
+import { IterRounds } from "./IterRounds";
+import { CollapsiblePrompt, ReadOnlyValue, Section } from "./TicketDrawerParts";
 
 export function TicketDrawer({
   ticket,
@@ -441,74 +442,6 @@ export function TicketDrawer({
   );
 }
 
-// 迭代上限欄位:draft / ready 狀態的 iter ticket 顯 number input,點 ▲▼ / 直接打字改;
-// 失焦或 Enter 才送(避免每按一下都打 API)。其他狀態 read-only 顯「上限 N 輪」。
-function IterLimitField({
-  ticket,
-  value,
-  onChange,
-}: {
-  ticket: Ticket;
-  value: number;
-  onChange?: (ticketId: string, limit: number) => Promise<void> | void;
-}) {
-  const editable =
-    !!onChange &&
-    ticket.mode === "iter" &&
-    (ticket.status === "draft" || ticket.status === "ready");
-  const [draft, setDraft] = useState(String(value));
-  // ticket value 從外部變化(別人改 / refetch)→ 同步進來
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
-
-  if (!editable) {
-    return <span>上限 {value} 輪</span>;
-  }
-  const draftNum = Number(draft);
-  const invalid =
-    draft === "" || !Number.isFinite(draftNum) || draftNum < 1 || draftNum > 5 || !Number.isInteger(draftNum);
-  // TD-ITER-INVALID-001:invalid 不再 blur 後靜默還原 — 留在畫面上等使用者改;只有 valid 才 commit。
-  // user 想還原走 Esc(明確操作),不是 click 別處 → 值悄悄變回 5(data-loss surprise)。
-  function commit() {
-    if (invalid) return; // 不還原、不送 API,保留無效畫面等使用者處理
-    if (draftNum !== value) onChange?.(ticket.id, draftNum);
-  }
-  return (
-    <span className={"tdrw-iter-limit-wrap" + (invalid ? " is-invalid" : "")}>
-      <span className="tdrw-iter-limit-label">上限</span>
-      <NumberField
-        label="迭代上限輪數"
-        labelHidden
-        ariaLabel="迭代上限輪數(1 至 5)"
-        title="迭代上限輪數，範圍 1 至 5。按 Enter 送出，按 Esc 還原"
-        min={1}
-        max={5}
-        value={draft === "" ? "" : Number(draft)}
-        onChange={(v) => setDraft(v === "" ? "" : String(v))}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          // ESC 在 input 內只還原,不冒泡(免 TicketDrawer 全域 ESC 又收掉 drawer)
-          if (e.key === "Enter") {
-            e.stopPropagation();
-            (e.target as HTMLInputElement).blur();
-          }
-          if (e.key === "Escape") {
-            e.stopPropagation();
-            setDraft(String(value));
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
-        // TD-ITER-INVALID-004:標點全形 + 拆兩句,把 Esc 提示獨立(不擠在驗證訊息裡)
-        error={invalid ? "請輸入 1 至 5 的整數。按 Esc 還原" : undefined}
-        fieldClassName="tdrw-iter-limit-field"
-        inputClassName={"tdrw-iter-limit" + (invalid ? " is-invalid" : "")}
-      />
-      <span className="tdrw-iter-limit-unit">輪（1 至 5）</span>
-    </span>
-  );
-}
-
 function isTerminalStatus(s: string): boolean {
   return s === "done" || s === "failed" || s === "failed_iter_limit" || s === "failed_transient";
 }
@@ -529,127 +462,6 @@ function isSplittable(t: Ticket): boolean {
 function isDeletable(t: Ticket): boolean {
   if (t.mode === "merge" || t.mode === "sync") return false;
   return t.status !== "running";
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="tdrw-section">
-      <div className="tdrw-section-label tdrw-section-title mono">{label}</div>
-      <div className="tdrw-section-body">{children}</div>
-    </div>
-  );
-}
-
-function ReadOnlyValue({ value }: { value: string | undefined }) {
-  if (!value) return <span className="tdrw-empty">(空)</span>;
-  return <div className="tdrw-text">{value}</div>;
-}
-
-// 長 prompt 內容預設折疊,避免推走後續操作型 section(迭代輪次 / commit / 日誌 / 原因 / 狀態歷史)。
-// 短內容(< 400 字)直接全顯,不放折疊鈕(不浪費 click)。
-// 重點:永遠把完整 markdown 餵給 ReactMarkdown,不切原文(切 raw markdown 會切壞 fenced code block / list / table);
-// 折疊用 CSS max-height + 漸層遮罩做視覺裁切。
-// a11y:折疊時把所有可 focus 子元素 tabindex=-1,避免 Tab 跑到看不見的連結。
-// 注意:不對整塊 aria-hidden — collapsed preview 仍是可見內容,設 aria-hidden 會讓 SR 連可見部分都讀不到。
-// SR 可讀完整 markdown(內容仍在 DOM),視覺端用 max-height + fade 裁切;Tab 鏈不會跑到視覺外。
-function CollapsiblePrompt({ text, defaultCollapsed = false }: { text: string; defaultCollapsed?: boolean }) {
-  const LONG = 400;
-  const isLong = text.length > LONG;
-  // done 狀態下短 prompt 也預設折疊(td-006:done 時 outcome 在前,原始 spec 退到後面收合)
-  const shouldCollapse = isLong || defaultCollapsed;
-  const [expanded, setExpanded] = useState(!shouldCollapse);
-  const collapsed = shouldCollapse && !expanded;
-  // TDRW-PROMPT-006:改用 inert(被裁切的 overflow 整塊讓 SR + 鍵盤都跳過),
-  // 不再手動 patch tabindex。SR 改靠 .tdrw-prompt-sr-hint 提示「折疊中,可展開查看完整 N 字」。
-  // (舊作法 tabindex=-1 只擋鍵盤,SR 仍會讀全文,造成「看不到但聽到」的不一致)
-  return (
-    <div className="tdrw-prompt-collapse">
-      {shouldCollapse && collapsed && (
-        <span className="sr-only">
-          提示詞目前為視覺折疊預覽,共 {text.length} 字,可按下「展開全部」查看完整內容。
-        </span>
-      )}
-      <div
-        // @ts-expect-error inert is a valid HTML attribute supported by React 19; TS lib may lag
-        inert={collapsed ? "" : undefined}
-        className={"tdrw-prompt-md" + (collapsed ? " is-collapsed" : "")}
-      >
-        <ReactMarkdown>{text}</ReactMarkdown>
-        {collapsed && <div className="tdrw-prompt-fade" aria-hidden />}
-      </div>
-      {shouldCollapse && (
-        <button
-          type="button"
-          className="tdrw-prompt-toggle"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-label={
-            expanded
-              ? `收合提示詞,共 ${text.length} 字`
-              : `展開提示詞,共 ${text.length} 字(目前折疊預覽)`
-          }
-        >
-          {expanded ? "收合" : `展開全部 · 共 ${text.length} 字`}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function IterRounds({ rounds }: { rounds: IterRound[] }) {
-  return (
-    <div className="tdrw-iter-rounds">
-      {rounds.map((r) => {
-        const n = normalizeVerdict(r.criticVerdict);
-        const cls =
-          n === "PASS"
-            ? "is-pass"
-            : n === "FAIL"
-            ? "is-fail"
-            : "is-partial";
-        // td-012:PASS / FAIL 顯示中文化標籤(domain term Runner / commit / branch 保留英文,
-        // 但審核結果 verdict 是純語意判定,翻譯不影響領域語)
-        const verdictLabel = n === "PASS" ? "通過" : n === "FAIL" ? "失敗" : r.criticVerdict;
-        const dur =
-          r.endedAt && r.startedAt
-            ? fmtElapsed(Math.round((r.endedAt - r.startedAt) / 1000))
-            : "—";
-        return (
-          <div key={r.n} className="tdrw-iter-round">
-            <div className="tdrw-iter-round-head">
-              <span className="mono tdrw-iter-round-n">#{r.n}</span>
-              <span
-                className={"tdrw-iter-verdict " + cls}
-                title={r.criticVerdict}
-                aria-label={`審核結果 ${verdictLabel}(原值 ${r.criticVerdict})`}
-              >
-                {verdictLabel}
-              </span>
-              <span className="mono tdrw-iter-round-dur">{dur}</span>
-            </div>
-            {r.executorSummary && (
-              <div className="tdrw-iter-round-block">
-                <div className="tdrw-iter-round-label">執行 AI 摘要</div>
-                <div className="tdrw-text">{r.executorSummary}</div>
-              </div>
-            )}
-            {/* 審核 block 永遠顯,空 feedback 顯 placeholder(PASS 時 runner prompt 允許省略 feedback,
-                若 UI 整段隱掉,user 會誤以為審核沒跑) */}
-            <div className="tdrw-iter-round-block">
-              <div className="tdrw-iter-round-label">審核 AI 回饋</div>
-              {r.criticFeedback ? (
-                <div className="tdrw-text">{r.criticFeedback}</div>
-              ) : (
-                <div className="tdrw-text tdrw-feedback-empty">
-                  {n === "PASS" ? "（通過，無補充意見）" : "（無 feedback）"}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 function Commits({ commits }: { commits: CommitRef[] }) {
