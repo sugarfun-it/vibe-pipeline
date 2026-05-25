@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSystemVersion, triggerSystemUpdate, getHealth, type VersionStatus } from "../../api/system";
+import { getSystemVersion, triggerSystemUpdate, type VersionStatus } from "../../api/system";
 import { ApiError } from "../../api/_client";
 import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon, SpinnerIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
@@ -49,7 +49,11 @@ export function UpdateTab() {
     };
   }, []);
 
-  const startHealthPoll = useCallback(() => {
+  // poll /api/system/version(兼當 health probe + 版本變化偵測)。
+  // 比舊版純 /api/health 多一個 fallback signal:即使 PWA 從沒抓到 down(install 太快、
+  // setTimeout 對齊不巧),只要看到 current 跟 install 前不同 → 視為 install 成功,finalize。
+  // 否則卡死在「等待 backend 下線」(舊 bug,polling 假設一定會看到 down→up transition)。
+  const startHealthPoll = useCallback((initialVersion: string) => {
     startTimeRef.current = Date.now();
     let localAfterDown = false;
     setPhase({ kind: "polling", afterDown: false, lastTickOk: true });
@@ -58,34 +62,29 @@ export function UpdateTab() {
       if (Date.now() - startTimeRef.current > HEALTH_POLL_TIMEOUT_MS) {
         const reason = "系統更新後超過 3 分鐘仍未恢復連線。請重新整理頁面，或稍後再檢查。";
         setPhase({ kind: "error", reason });
-        // 不發 toast：錯誤已在 panel 內以 role=alert 持久呈現,toast 會與 panel 重複播報。
         return;
       }
       const ctrl = new AbortController();
       pollAbortRef.current = ctrl;
-      let okThisTick = false;
+      let v: VersionStatus | null = null;
       try {
-        await getHealth(ctrl.signal);
-        okThisTick = true;
+        v = await getSystemVersion(ctrl.signal);
+        setVersion(v);
       } catch {
-        okThisTick = false;
+        v = null;
       }
-      // 用 local 變數追 afterDown，避免靠 setState updater closure 判 finalize(race)
-      if (!okThisTick) {
+      if (!v) {
         localAfterDown = true;
         setPhase((prev) => (prev.kind === "polling" ? { ...prev, afterDown: true, lastTickOk: false } : prev));
+      } else if (v.current !== initialVersion) {
+        // 版本變了 = install 真的把新 tarball swap 進去了,不管中間有沒有看到 down,直接 finalize
+        setPhase({ kind: "done", newTag: v.current });
+        return;
       } else if (localAfterDown) {
-        // backend 回來了 → finalize
-        try {
-          const v = await getSystemVersion();
-          setVersion(v);
-          setPhase({ kind: "done", newTag: v.current });
-        } catch {
-          setPhase({ kind: "done", newTag: null });
-        }
+        // 版本沒變但中間看到過 down(同版重裝 / install 失敗 fallback),仍視為流程結束
+        setPhase({ kind: "done", newTag: v.current });
         return;
       } else {
-        // 還沒 down 過,health 仍 ok → 純更新 lastTickOk
         setPhase((prev) => (prev.kind === "polling" ? { ...prev, lastTickOk: true } : prev));
       }
       pollTimerRef.current = setTimeout(() => {
@@ -94,13 +93,14 @@ export function UpdateTab() {
     };
 
     void tick();
-  }, [toast]);
+  }, []);
 
   const onApply = useCallback(async () => {
+    const initial = version?.current ?? "";
     setPhase({ kind: "starting" });
     try {
       await triggerSystemUpdate();
-      startHealthPoll();
+      startHealthPoll(initial);
     } catch (e) {
       const reason =
         e instanceof ApiError
@@ -111,7 +111,7 @@ export function UpdateTab() {
       setPhase({ kind: "error", reason });
       // 同 timeout：錯誤已 in-panel,不重複 toast。
     }
-  }, [startHealthPoll]);
+  }, [startHealthPoll, version?.current]);
 
   const isUpdating = phase.kind === "starting" || phase.kind === "polling";
   const isError = phase.kind === "error";
