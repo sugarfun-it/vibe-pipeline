@@ -8,9 +8,8 @@ import { SettingsButton } from "./SettingsButton";
 import { BoardRail } from "./BoardRail";
 import { BoardMain } from "./BoardMain";
 import { BoardOverlays } from "./BoardOverlays";
-import { toNotifItem } from "./notifAdapter";
+import { useInbox } from "./useInbox";
 import { ActiveProjectProvider, type ActiveProjectContextValue } from "../../contexts/ActiveProjectContext";
-import type { NotifItem } from "../../types/notif";
 import { useActiveProjectHash } from "../../hooks/useActiveProject";
 import { useApi } from "../../hooks/useApi";
 import { useTimeout } from "../../hooks/useTimeout";
@@ -19,7 +18,6 @@ import { useLocalStorageState } from "../../hooks/useLocalStorageState";
 import * as api from "../../api/projects";
 import type { Pipeline, Ticket } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
-import type { InboxFilter, InboxState } from "../../types/notif";
 import { InboxColumn } from "../notifications/InboxColumn";
 import "./boardScreen.css";
 
@@ -68,11 +66,22 @@ export function BoardScreen({
   const [maxParallel, setMaxParallel] = useState<number>(0);
   const [defaultAutoMerge, setDefaultAutoMerge] = useState<boolean>(false);
 
-  const [inboxState, setInboxState] = useState<InboxState>("collapsed");
-  const [filter, setFilter] = useState<InboxFilter>("all");
-  const [items, setItems] = useState<NotifItem[]>([]);
-  const [highlightId, setHighlightId] = useState<string | null>(null);
-  const unreadCount = items.filter((i) => i.unread).length;
+  const {
+    inboxState,
+    setInboxState,
+    filter,
+    setFilter,
+    items,
+    setItems,
+    highlightId,
+    setHighlightId,
+    unreadCount,
+    markRead,
+    dismissNotif,
+    markAllRead,
+    dismissAllNotifs,
+    focusInboxItem,
+  } = useInbox(hash);
 
   // notify* — 統一寫 setActionError(toast)。透過 Context 暴露給深層子組件,不再 props drill。
   const notifyError = useCallback((msg: string, _opts?: { sub?: string; pipelineId?: string }) => {
@@ -85,47 +94,13 @@ export function BoardScreen({
     setActionError(msg);
   }, []);
 
-  function markRead(id: string) {
-    setItems((arr) => arr.map((it) => (it.id === id ? { ...it, unread: false } : it)));
-    if (hash) api.markNotifRead(hash, id).catch(() => {});
-  }
-  function dismissNotif(id: string) {
-    setItems((arr) => arr.filter((it) => it.id !== id));
-    if (hash) api.dismissNotif(hash, id).catch(() => {});
-  }
-  function markAllRead() {
-    setItems((arr) => arr.map((it) => ({ ...it, unread: false })));
-    if (hash) api.markAllNotifsRead(hash).catch(() => {});
-  }
-  function dismissAllNotifs() {
-    setItems([]);
-    if (hash) api.dismissAllNotifs(hash).catch(() => {});
-  }
   function focusNotif(id: string, pipelineId?: string) {
-    setInboxState("expanded");
     if (pipelineId) {
       setActiveId(pipelineId);
       setActiveTab("focus");
     }
-    setHighlightId(id);
-    markRead(id);
+    focusInboxItem(id);
   }
-
-  useTimeout(() => setHighlightId(null), highlightId ? 1600 : null, [highlightId]);
-
-  const notifsResult = useApi(
-    async () => (hash ? await api.listNotifs(hash) : null),
-    { intervalMs: 10000, gate: !!hash, deps: [hash] }
-  );
-  useEffect(() => {
-    if (!hash) {
-      setItems([]);
-      return;
-    }
-    if (notifsResult.data) {
-      setItems(notifsResult.data.map(toNotifItem));
-    }
-  }, [hash, notifsResult.data]);
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000);
