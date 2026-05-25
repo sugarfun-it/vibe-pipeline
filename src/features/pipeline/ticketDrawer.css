@@ -312,22 +312,6 @@
 .tdrw-drawer .ticket-mode:not(.is-toggle) {
   cursor: default;
 }
-/* TDRW-INTERACTION-001:不可切換的 mode chip 不該長得像可點(原本因 .ticket-mode.is-iter 套 accent 色,
-   看起來像 link / button)。drawer 內 static chip 強制退回 muted 純文字風,讓「可點 / 不可點」對比清楚 */
-.tdrw-drawer .tdrw-meta-chip:not(.is-toggle),
-.tdrw-drawer .ticket-mode:not(.is-toggle) {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: var(--fg-mute);
-  font-weight: 400;
-}
-.tdrw-drawer .tdrw-meta-chip:not(.is-toggle):hover,
-.tdrw-drawer .ticket-mode:not(.is-toggle):hover {
-  background: transparent;
-  border-color: transparent;
-  color: var(--fg-mute);
-}
 .tdrw-status-chip .dot {
   width: 6px; height: 6px;
   border-radius: 50%;
