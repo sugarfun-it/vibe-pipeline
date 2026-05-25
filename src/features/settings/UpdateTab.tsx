@@ -256,16 +256,7 @@ export function UpdateTab() {
                     <>
                       到 <span className="mono update-success-tag">{phase.newTag}</span>
                     </>
-                  ) : ""}，重新整理頁面後生效。
-                </div>
-                <div className="update-success-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => window.location.reload()}
-                  >
-                    重新整理頁面
-                  </button>
+                  ) : ""}。新版前端準備好時上方會跳套用更新提示。
                 </div>
               </div>
             </div>
