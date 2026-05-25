@@ -190,29 +190,45 @@
 }
 /* 可點的 chip(diff / sync,都是 <button>)在 meta-row 純文字佈局下要靜止就看得出可點 —
    靜止:soft border + 內距(button-like outline chip),不靠 hover 才浮出 affordance。
-   覆寫上面把 button chip 抹平成 plain text 的 rule(specificity 0,1,2 > 0,1,1)。 */
+   覆寫上面把 button chip 抹平成 plain text 的 rule(specificity 0,1,2 > 0,1,1)。
+   兩個 chip 共用 shape / padding / 高度,顏色色系區分:
+   - diff(viewer,中性)= --line-2 neutral outline
+   - sync(action,主動)= --queued 色系 soft fill outline */
 .focus-head-meta-row > button.chip:not(.chip-state),
 .focus-head-meta-row > button.sync-chip {
   cursor: pointer;
   padding: 2px 8px;
-  border: 1px solid var(--line-2);
   border-radius: 999px;
-  color: var(--fg-mute);
   margin-left: 6px;
   position: static;
-  background: transparent;
   transition: border-color 120ms, color 120ms, background 120ms;
 }
 .focus-head-meta-row > button.chip:not(.chip-state)::before,
 .focus-head-meta-row > button.sync-chip::before {
   content: none;
 }
-.focus-head-meta-row > button.chip:not(.chip-state):hover,
-.focus-head-meta-row > button.sync-chip:hover {
-  color: var(--fg);
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-2));
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+/* diff:neutral outline */
+.focus-head-meta-row > button.chip:not(.chip-state) {
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--fg-mute);
 }
+.focus-head-meta-row > button.chip:not(.chip-state):hover {
+  color: var(--fg);
+  border-color: var(--line);
+  background: var(--hover);
+}
+/* sync:queued-tinted soft fill outline(action 主動 — user 知道按了會做事)*/
+.focus-head-meta-row > button.sync-chip {
+  border: 1px solid color-mix(in srgb, var(--queued) 45%, var(--line-2));
+  background: color-mix(in srgb, var(--queued) 10%, transparent);
+  color: var(--queued);
+}
+.focus-head-meta-row > button.sync-chip:hover {
+  border-color: var(--queued);
+  background: color-mix(in srgb, var(--queued) 18%, transparent);
+}
+/* shared focus / disabled */
 .focus-head-meta-row > button.chip:not(.chip-state):focus-visible,
 .focus-head-meta-row > button.sync-chip:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
