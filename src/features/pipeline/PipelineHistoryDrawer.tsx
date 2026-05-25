@@ -4,6 +4,7 @@ import "./ticketDrawer.css";
 import { RunHistory } from "./RunHistory";
 import { AuditTimeline } from "./AuditTimeline";
 import { Overlay } from "../../ui/Overlay";
+import { formatDateTime } from "../../lib/format";
 import * as api from "../../api/projects";
 import type { AuditEntry } from "../../api/projects";
 
@@ -118,7 +119,7 @@ export function PipelineHistoryDrawer({
                     讓「來源:」 與「系統」之間出現視覺空白(像「來源: 系統」),
                     把這兩 span 併到同一 span,gap 不再插入,觀感緊湊。 */}
                 <span>最後變動於 </span>
-                <span className="mono" title={fmtTopAuditFull(topAudit.ts)}>{fmtTopAudit(topAudit.ts)}</span>
+                <span className="mono" title={formatDateTime(topAudit.ts, "full-tz")}>{formatDateTime(topAudit.ts, "compact")}</span>
                 <span className="pipeline-history-top-summary-sep" aria-hidden> · </span>
                 <span title={s.rawTitle}>來源:{s.text}</span>
               </div>
@@ -140,23 +141,6 @@ export function PipelineHistoryDrawer({
   );
 }
 
-// 短格式 — 跟 drawer 既有 mono 樣式對齊;不重複造輪
-function fmtTopAudit(ts: number): string {
-  const d = new Date(ts);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-// HD-EMPTY-007 round 1 (2026-05-25):title / SR 用完整年月時區,visible 仍短;
-//   解「5/25 01:56」缺年/時區的歧義
-function fmtTopAuditFull(ts: number): string {
-  const d = new Date(ts);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const tz = -d.getTimezoneOffset();
-  const tzh = pad(Math.floor(Math.abs(tz) / 60));
-  const tzm = pad(Math.abs(tz) % 60);
-  const tzSign = tz >= 0 ? "+" : "-";
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())} (UTC${tzSign}${tzh}:${tzm})`;
-}
 // HD-EMPTY-001 round 1 (2026-05-25):state enum → zh user-facing 標籤,未知保留原 enum
 const STATE_LABEL_TOP: Record<string, string> = {
   planning: "規劃中",

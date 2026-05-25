@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { DotsHorizontalIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { Popover } from "../ui/Popover";
 import { STATE_LABEL } from "../data/pipelines";
+import { formatAgo } from "../lib/format";
 import type { Pipeline } from "../types/pipeline";
 import "../features/pipeline/rail.css";
 
@@ -230,7 +231,7 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
 function railSecondary(p: Pipeline): string {
   const base = p.baseBranch || "main";
   const branchSuffix = p.branch.replace(/^pipeline\//, "");
-  const ago = fmtAgo(lastActivityAt(p));
+  const ago = formatAgo(lastActivityAt(p));
   const agoSuffix = ago ? ` · ${ago}` : "";
 
   if (p.state === "running") {
@@ -254,7 +255,7 @@ function railSecondary(p: Pipeline): string {
   // planning(或未知 state):明確標「尚未執行」+ 更新時間,branch 跟 name 不同才補 branch。
   // 沒 activity 時 fallback 到 createdAt(剛建好的 pipeline 也能顯示 "剛剛 / N 分鐘前"),避免
   // 「idle 草稿 vs stale 草稿」在 rail 看起來一樣。
-  const planningAgo = ago ? `更新於 ${ago}` : (p.createdAt ? `建立於 ${fmtAgo(p.createdAt) || "剛剛"}` : "");
+  const planningAgo = ago ? `更新於 ${ago}` : (p.createdAt ? `建立於 ${formatAgo(p.createdAt) || "剛剛"}` : "");
   if (branchSuffix !== p.name) {
     return planningAgo ? `⎇ ${branchSuffix} · ${planningAgo}` : `⎇ ${branchSuffix}`;
   }
@@ -265,7 +266,7 @@ function railSecondary(p: Pipeline): string {
 function railSecondaryAccessible(p: Pipeline): string {
   const base = p.baseBranch || "main";
   const branchSuffix = p.branch.replace(/^pipeline\//, "");
-  const ago = fmtAgo(lastActivityAt(p));
+  const ago = formatAgo(lastActivityAt(p));
   const agoSuffix = ago ? ` · ${ago}` : "";
 
   if (p.state === "running") {
@@ -344,11 +345,3 @@ function lastActivityAt(p: Pipeline): number | null {
   return max > 0 ? max : null;
 }
 
-function fmtAgo(ms: number | null): string | null {
-  if (!ms) return null;
-  const since = Math.floor((Date.now() - ms) / 1000);
-  if (since < 60) return "剛剛";
-  if (since < 3600) return `${Math.floor(since / 60)}分鐘前`;
-  if (since < 86400) return `${Math.floor(since / 3600)}小時前`;
-  return `${Math.floor(since / 86400)}天前`;
-}

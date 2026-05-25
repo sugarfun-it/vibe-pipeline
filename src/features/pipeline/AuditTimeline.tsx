@@ -3,6 +3,7 @@ import * as api from "../../api/projects";
 import type { AuditEntry } from "../../api/projects";
 import { ArrowRightIcon, ChevronIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
+import { formatDateTime } from "../../lib/format";
 import "./auditTimeline.css";
 
 // Pipeline 狀態變動歷史 timeline。
@@ -178,10 +179,10 @@ const SOURCE_LABEL: Record<string, string> = {
 function AuditRow({ entry }: { entry: AuditEntry }) {
   const srcLabel = SOURCE_LABEL[entry.source] ?? entry.source;
   const detailLabel = localizeDetail(entry.sourceDetail);
-  const ariaLabel = `${fmtTime(entry.ts)}:由「${ariaState(entry.from)}」變為「${ariaState(entry.to)}」,來源 ${srcLabel}${detailLabel ? `(${detailLabel})` : ""}`;
+  const ariaLabel = `${formatDateTime(entry.ts)}:由「${ariaState(entry.from)}」變為「${ariaState(entry.to)}」,來源 ${srcLabel}${detailLabel ? `(${detailLabel})` : ""}`;
   return (
     <li className="audit-row" role="listitem" aria-label={ariaLabel}>
-      <span className="audit-ts mono" aria-hidden>{fmtTime(entry.ts)}</span>
+      <span className="audit-ts mono" aria-hidden>{formatDateTime(entry.ts)}</span>
       <span className="audit-states" aria-hidden>
         <span className="audit-from mono">{entry.from}</span>
         <span className="audit-arrow" aria-hidden>
@@ -206,10 +207,3 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
   );
 }
 
-function fmtTime(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}

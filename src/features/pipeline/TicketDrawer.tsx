@@ -5,6 +5,7 @@ import "./ticketDrawer.css";
 import type { Ticket, IterRound, CommitRef } from "../../types/pipeline";
 import { MODE_LABELS } from "../../api/qa";
 import { STATE_COLOR, fmtElapsed, normalizeVerdict } from "../../data/pipelines";
+import { formatDateTime } from "../../lib/format";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { RefreshIcon, ScissorsIcon, TrashIcon } from "../../ui/icons";
 import { AuditTimeline } from "./AuditTimeline";
@@ -702,7 +703,7 @@ function Commits({ commits }: { commits: CommitRef[] }) {
               </span>
             </button>
             <span className="tdrw-commit-subject">{c.subject}</span>
-            <span className="mono tdrw-commit-ts">{fmtTimeShort(c.ts)}</span>
+            <span className="mono tdrw-commit-ts">{formatDateTime(c.ts, "short")}</span>
           </div>
         );
       })}
@@ -710,10 +711,3 @@ function Commits({ commits }: { commits: CommitRef[] }) {
   );
 }
 
-function fmtTimeShort(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
-    d.getMinutes()
-  )}`;
-}

@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary, RunDetail } from "../../api/projects";
 import { fmtDuration } from "../../data/pipelines";
+import { formatDateTime, formatNum } from "../../lib/format";
 import { ChevronIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
@@ -229,11 +230,11 @@ function RunCard({
   const dur = run.durationMs != null ? fmtDuration(run.durationMs) : "—";
   const turns = run.numTurns != null ? `${run.numTurns}` : "—";
   const tokens = run.tokens
-    ? `輸入 ${fmtNum(run.tokens.input)} · 輸出 ${fmtNum(run.tokens.output)} · 快取 ${fmtNum(
+    ? `輸入 ${formatNum(run.tokens.input)} · 輸出 ${formatNum(run.tokens.output)} · 快取 ${formatNum(
         run.tokens.cacheRead
       )}${
         run.tokens.reasoning != null && run.tokens.reasoning > 0
-          ? ` · 推理 ${fmtNum(run.tokens.reasoning)}`
+          ? ` · 推理 ${formatNum(run.tokens.reasoning)}`
           : ""
       }`
     : "—";
@@ -245,7 +246,7 @@ function RunCard({
     : "—";
   // RH-006:provider chip 全文不能只塞 title(touch 看不到、SR 不可靠)— 同字串塞進可見內容的 aria-label,
   //         然後在 chip 外另放 sr-only 隱藏 span 給 SR 唸完整(visible chip 仍 ellipsis 防爆版)
-  const toggleAria = `${open ? "收合" : "展開"} ${fmtTime(run.startedAt)} 的執行明細(${outcomeLabel}・${exitText})`;
+  const toggleAria = `${open ? "收合" : "展開"} ${formatDateTime(run.startedAt)} 的執行明細(${outcomeLabel}・${exitText})`;
   // RH-002 (2026-05-24):chevron 在 mobile 上 affordance 偏弱 — 加個 visible 短 label 提示展開動作,
   //   user 一眼知道整個 head 可點開看詳情(stdout / stderr / session id)
   // HIST-RUN-001 round 1 (2026-05-25):卡片下方 meta(時間/成本/權杖/執行器/Ticket 進度)
@@ -289,7 +290,7 @@ function RunCard({
           <ChevronIcon />
         </span>
         <div className="tdrw-run-head-title">
-          <span className="mono">{fmtTime(run.startedAt)}</span>
+          <span className="mono">{formatDateTime(run.startedAt)}</span>
           {/* hist-003:header 只留時間 + 狀態 chip(成功 / 失敗 · 退出碼 N) + result 摘要;
               provider/model + ticket count 推到下面 meta row,不再擠在同一行 */}
           <span
@@ -674,23 +675,3 @@ function computeTicketDiff(
   return out;
 }
 
-function fmtNum(n: number): string {
-  if (n < 1000) return String(n);
-  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}k`;
-  return `${(n / 1_000_000).toFixed(2)}M`;
-}
-
-// stdout placeholder 顯字元規模,避免 user 不知道 hidden 內容有多大就按 / 不按
-function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} 字元`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(2)} MB`;
-}
-
-function fmtTime(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}

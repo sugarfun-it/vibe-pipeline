@@ -1,5 +1,6 @@
 import type { NotifItem } from "../../types/notif";
 import type * as api from "../../api/projects";
+import { formatAgo } from "../../lib/format";
 
 // ── Notif adapter: backend NotifRecord → frontend NotifItem ──
 export const SEV_BY_EVENT: Record<string, "block" | "info" | "muted"> = {
@@ -23,14 +24,6 @@ export const SEV_BY_EVENT: Record<string, "block" | "info" | "muted"> = {
   runner_crash: "block",
 };
 
-export function fmtTs(ms: number): string {
-  const since = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-  if (since < 60) return "just now";
-  if (since < 3600) return `${Math.floor(since / 60)} min`;
-  if (since < 86400) return `${Math.floor(since / 3600)} h`;
-  return `${Math.floor(since / 86400)} d`;
-}
-
 export function toNotifItem(r: api.NotifRecord): NotifItem {
   const sev = (r.sev ?? SEV_BY_EVENT[r.type] ?? "muted") as "block" | "info" | "muted";
   return {
@@ -39,7 +32,7 @@ export function toNotifItem(r: api.NotifRecord): NotifItem {
     sev,
     title: r.title,
     sub: r.sub ?? "",
-    ts: fmtTs(r.ts),
+    ts: formatAgo(r.ts, "en") ?? "",
     unread: r.unread,
     pipelineId: r.pipelineId,
   };

@@ -4,6 +4,7 @@ import { ApiError } from "../../api/_client";
 import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon, SpinnerIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
+import { formatLastChecked } from "../../lib/format";
 
 type UpdatingPhase =
   | { kind: "idle" }
@@ -14,17 +15,6 @@ type UpdatingPhase =
 
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_POLL_TIMEOUT_MS = 180_000;
-
-function formatLastChecked(ts: number | null): string {
-  if (!ts) return "—";
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return "剛剛";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分鐘前`;
-  const d = new Date(ts);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-}
 
 export function UpdateTab() {
   const { toast } = useToast();
