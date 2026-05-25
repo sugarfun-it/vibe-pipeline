@@ -104,18 +104,26 @@ export function TicketDrawer({
   const specSections = (
     <>
       <Section label="目標">
-        <ReadOnlyValue value={spec.goal} />
+        {spec.goal ? (
+          <CollapsiblePrompt text={spec.goal} defaultCollapsed={isDone} label="目標" />
+        ) : (
+          <span className="tdrw-empty">(空)</span>
+        )}
       </Section>
       <Section label="驗收">
         {Array.isArray(spec.acceptance) && spec.acceptance.length > 0 ? (
-          <ReadOnlyValue value={spec.acceptance.map((a) => `- ${a}`).join("\n")} />
+          <CollapsiblePrompt
+            text={spec.acceptance.map((a) => `- ${a}`).join("\n")}
+            defaultCollapsed={isDone}
+            label="驗收"
+          />
         ) : (
-          <ReadOnlyValue value={undefined} />
+          <span className="tdrw-empty">(空)</span>
         )}
       </Section>
       <Section label="提示詞">
         {spec.prompt ? (
-          <CollapsiblePrompt text={spec.prompt} defaultCollapsed={isDone} />
+          <CollapsiblePrompt text={spec.prompt} defaultCollapsed={isDone} label="提示詞" />
         ) : (
           <span className="tdrw-empty">(空)</span>
         )}
