@@ -18,6 +18,9 @@ import type {
 // 再解析會被 re-tokenize → 引號 / 空白 / 控制字元錯位。永遠把 prompt 走 stdin 不走 positional。
 // Nested Claude Code session 偵測(Ruflo issue #1395):claude CLI 看到 CLAUDE_SESSION_ID /
 // CLAUDE_PARENT_SESSION_ID env 會誤判為 nested session 拒跑。spawn 前刪掉並標 entrypoint=worker。
+// Windows 雷:Bun.spawn 顯式 env 對 PATH key 大小寫敏感 — Object.entries(process.env) 可能回
+// `"Path"`(混合 case),而 uv_spawn 在 Windows 上只認大寫 `"PATH"` → 找不到 → 撞 ENOENT
+// (bare `claude` 無法解析到 `claude.cmd`)。Normalize 為大寫 PATH/PATHEXT 解。
 function workerEnv(): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -26,6 +29,10 @@ function workerEnv(): Record<string, string> {
   env.CLAUDE_ENTRYPOINT = "worker";
   delete env.CLAUDE_SESSION_ID;
   delete env.CLAUDE_PARENT_SESSION_ID;
+  if (process.platform === "win32") {
+    if (env.Path && !env.PATH) env.PATH = env.Path;
+    if (env.Pathext && !env.PATHEXT) env.PATHEXT = env.Pathext;
+  }
   return env;
 }
 

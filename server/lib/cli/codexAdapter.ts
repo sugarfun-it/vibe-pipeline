@@ -111,6 +111,10 @@ export class CodexAdapter implements CliAdapter {
 
 // 跟 claudeAdapter 對齊:刪 nested-session env、標 entrypoint=worker。codex 不認這些 env 但
 // 設了無害;統一 spawn 環境減 caller 心智負擔(Ruflo issue #1395)。
+// Windows 雷:Bun.spawn 顯式 env 對 PATH key 大小寫敏感 — Object.entries(process.env) 可能回
+// `"Path"`(混合 case),而 uv_spawn 在 Windows 上只認大寫 `"PATH"`,找不到 → 撞 ENOENT
+// (例:`spawn codex failed: uv_spawn 'codex'`,因 PATHEXT 也跟著拿不到,bare `codex` 無法解析
+// 到 `codex.cmd`)。Normalize 為大寫 PATH 解。
 function workerEnv(): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -119,6 +123,10 @@ function workerEnv(): Record<string, string> {
   env.CLAUDE_ENTRYPOINT = "worker";
   delete env.CLAUDE_SESSION_ID;
   delete env.CLAUDE_PARENT_SESSION_ID;
+  if (process.platform === "win32") {
+    if (env.Path && !env.PATH) env.PATH = env.Path;
+    if (env.Pathext && !env.PATHEXT) env.PATHEXT = env.Pathext;
+  }
   return env;
 }
 
