@@ -440,3 +440,13 @@ html.light .dotgrid {
 [data-state="draft"]             { --chip-c: var(--draft); }
 [data-state="success"]           { --chip-c: var(--done); }
 [data-state="merging"]           { --chip-c: var(--running); }
+
+/* ticket status 覆寫:ticket.status "ready" 語意 = 未執行(灰 draft),
+   跟 pipeline.state "ready" 語意 = 可合併(綠 done)同名不同色。
+   chip selector 區分 ticket scope 用 .status-pill / .tdrw-status-chip / .tdrw-status-pill;
+   pipeline scope chip(.rail-status-chip / .chip-state)走 global ready → done 不動。 */
+.status-pill[data-state="ready"],
+.tdrw-status-chip[data-state="ready"],
+.tdrw-status-pill[data-state="ready"] {
+  --chip-c: var(--draft);
+}
