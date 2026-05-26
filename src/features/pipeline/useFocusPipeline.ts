@@ -4,7 +4,7 @@ import { useTimeout } from "../../hooks/useTimeout";
 import * as api from "../../api";
 import type { RunSummary } from "../../api";
 import { STATE_LABEL } from "../../lib/pipelines";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 
 export type UseFocusPipelineOpts = {
   projectHash: string | undefined;

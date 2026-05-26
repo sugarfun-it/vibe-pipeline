@@ -5,7 +5,7 @@
 //
 // real 模式 (VP_TEST_MODE 非 "mock"):isTestMode() 回 false,所有 fake 分支跳過,行為跟以前一樣。
 
-import type { QAReply } from "./qa/schema";
+import type { QAReply } from "../../shared/types";
 
 export function isTestMode(): boolean {
   return process.env.VP_TEST_MODE === "mock";

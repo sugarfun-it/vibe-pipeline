@@ -1,6 +1,6 @@
 import { CheckIconSm, CloseIcon, RefreshIcon } from "../../ui/icons";
 import { fmtElapsed } from "../../lib/pipelines";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 import "./syncStatus.css";
 
 // Sync 狀態列 — 在 pipeline header 顯示 syncJob 進度;沒 syncJob 且 behind > 0 退回顯示「落後 N · 同步」按鈕。

@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { CheckCircleIcon, MergeIcon, SpinnerIcon, WarnIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 
 type BannerVariant = "ready" | "merged" | "merging" | "failed";
 

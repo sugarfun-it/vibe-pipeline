@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Ticket } from "../../types/pipeline";
+import type { Ticket } from "../../../shared/types";
 import { NumberField } from "../../ui/forms/NumberField";
 
 // 迭代上限欄位:draft / ready 狀態的 iter ticket 顯 number input,點 ▲▼ / 直接打字改;

@@ -1,4 +1,4 @@
-import type { Pipeline, PipelineState } from "../../types/pipeline";
+import type { Pipeline, PipelineState } from "../../../shared/types";
 import { HourglassIcon, PlayIcon, StopIcon } from "../../ui/icons";
 
 // RunButton 狀態決策表(authoritative)— 加新 PipelineState 一定要在 switch 補,

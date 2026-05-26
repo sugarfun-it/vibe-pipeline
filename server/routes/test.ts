@@ -7,7 +7,7 @@ import * as projectStore from "../lib/projectStore";
 import * as testMode from "../lib/testMode";
 import { fakeFcmCalls, resetFakeFcmCalls } from "../lib/fcm/index";
 import { vibeHome } from "../lib/paths";
-import type { QAReply } from "../lib/qa/schema";
+import type { QAReply } from "../../shared/types";
 import type { RunnerScript } from "../lib/testMode";
 import type { TicketSpec } from "../../shared/types";
 

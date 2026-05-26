@@ -4,7 +4,7 @@ import { QADrawer } from "../qa/QADrawer";
 import { TicketDrawer } from "./TicketDrawer";
 import * as api from "../../api";
 import * as qaApi from "../../api/qa";
-import type { Pipeline, Ticket } from "../../types/pipeline";
+import type { Pipeline, Ticket } from "../../../shared/types";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";
 

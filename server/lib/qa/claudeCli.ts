@@ -1,5 +1,5 @@
 import { QA_BEHAVIOR_PROMPT } from "./systemPrompt";
-import type { QAReply } from "./schema";
+import type { QAReply } from "../../../shared/types";
 import type { TicketSpec } from "../../../shared/types";
 import { isTestMode, nextQAReply } from "../testMode";
 import { projectHash } from "../hash";

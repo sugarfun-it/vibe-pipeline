@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { normalizeVerdict } from "../../lib/pipelines";
 import { ArrowRightIcon } from "../../ui/icons";
-import type { IterStage, TicketStatus } from "../../types/pipeline";
+import type { IterStage, TicketStatus } from "../../../shared/types";
 
 export const STAGE_LABEL: Record<IterStage, string> = {
   doer: "執行",

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { DotsHorizontalIcon, FolderIcon, HistoryIcon, RefreshIcon, TrashIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { Popover } from "../../ui/Popover";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 import { isLocalHost } from "../../lib/isLocalHost";
 
 // Pipeline 級操作的 overflow menu(原本一字排開太擠,收進 ⋯ 內)。

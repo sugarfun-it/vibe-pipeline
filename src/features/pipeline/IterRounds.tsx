@@ -1,4 +1,4 @@
-import type { IterRound } from "../../types/pipeline";
+import type { IterRound } from "../../../shared/types";
 import { fmtElapsed, normalizeVerdict } from "../../lib/pipelines";
 
 export function IterRounds({ rounds }: { rounds: IterRound[] }) {

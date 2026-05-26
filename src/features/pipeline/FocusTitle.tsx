@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckIconSm, CloseIcon, PencilIcon } from "../../ui/icons";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 
 // 可編輯的 pipeline title — 點 ✎ 進編輯模式,Enter 存,Esc 取消。
 // 重名 / 格式不對 / running 不准存。

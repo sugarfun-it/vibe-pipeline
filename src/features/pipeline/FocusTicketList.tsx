@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { EmptyTickets } from "./EmptyTickets";
 import { TicketCard } from "./TicketCard";
-import type { Pipeline, Ticket } from "../../types/pipeline";
+import type { Pipeline, Ticket } from "../../../shared/types";
 
 // pipeline.tickets 渲染區 — 空 list 顯 EmptyTickets,否則 map TicketCard
 export const FocusTicketList = memo(function FocusTicketList({

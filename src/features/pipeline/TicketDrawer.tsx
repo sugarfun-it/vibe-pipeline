@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import "../../styles/drawer.css";
 import "./ticketDrawer.css";
-import type { Ticket, CommitRef } from "../../types/pipeline";
+import type { Ticket, CommitRef } from "../../../shared/types";
 import { MODE_LABELS } from "../../api/qa";
 import { formatDateTime } from "../../lib/format";
 import { useConfirm } from "../../ui/ConfirmDialog";

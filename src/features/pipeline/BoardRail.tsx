@@ -5,7 +5,7 @@ import { TrashIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { CreateCard } from "./CreateCard";
 import * as api from "../../api";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";
 

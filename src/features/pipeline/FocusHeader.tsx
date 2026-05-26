@@ -8,7 +8,7 @@ import { RunButton } from "./RunButton";
 import { SyncStatusBar } from "./SyncStatusBar";
 import { SyncConflictModal } from "./SyncConflictModal";
 import { FocusDiffChip } from "./FocusDiffChip";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 import type { DiffStat, RunSummary } from "../../api";
 
 export function FocusHeader({

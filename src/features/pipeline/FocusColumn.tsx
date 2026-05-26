@@ -1,7 +1,7 @@
 import { useFocusPipeline } from "./useFocusPipeline";
 import { FocusHeader } from "./FocusHeader";
 import { FocusTicketList } from "./FocusTicketList";
-import type { Pipeline, Ticket } from "../../types/pipeline";
+import type { Pipeline, Ticket } from "../../../shared/types";
 import "./focus.css";
 
 // 對外保留 re-export(歷史 callers 可能 import 這幾個 symbol)

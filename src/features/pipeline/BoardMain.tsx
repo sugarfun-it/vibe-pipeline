@@ -3,7 +3,7 @@ import { CreatePlaceholder } from "./CreateCard";
 import { EmptyProject } from "./EmptyProject";
 import { FocusColumn } from "./FocusColumn";
 import * as api from "../../api";
-import type { Pipeline, Ticket } from "../../types/pipeline";
+import type { Pipeline, Ticket } from "../../../shared/types";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";
 

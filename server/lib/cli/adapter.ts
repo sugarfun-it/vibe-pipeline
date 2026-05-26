@@ -6,7 +6,7 @@
 // stdin / stdout / stderr piping、cwd 行為)。本介面不做「優化」/「補強」,純抽象搬家。
 
 import type { TicketSpec } from "../../../shared/types";
-import type { QAReply } from "../qa/schema";
+import type { QAReply } from "../../../shared/types";
 
 // 跟 shared/types 同步 — adapter.ts 維持自己一份(server/lib/cli 不依賴 shared)
 export type TaskClass = "qa" | "runner" | "split" | "executor" | "critic" | "merge";

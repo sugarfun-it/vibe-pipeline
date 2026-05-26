@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { ArrowRightIcon } from "../../ui/icons";
 import { Overlay } from "../../ui/Overlay";
-import type { Pipeline } from "../../types/pipeline";
+import type { Pipeline } from "../../../shared/types";
 import "../../styles/drawer.css";
 
 // conflict_await 時跳的對話框,給 user 一個明確「要不要交給助理解」的決策關卡(token 花費前的最後確認)
