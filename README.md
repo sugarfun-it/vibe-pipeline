@@ -1,268 +1,163 @@
 # vibe-pipeline
 
-多 AI agent(執行 + 審核)的 ticket / pipeline 編排器。每張 ticket 由 **執行 AI** 跑、**審核 AI** 審,迭代模式自動迴圈到審核 pass。Pipeline 是有序 ticket 列表,跑在獨立 git branch 上,完成後 merge 回 base。
+![vibe-pipeline hero](docs/images/readme-hero.png)
 
-平常用 Web UI,終端機則有 `vbpl` CLI。兩邊共用同一套 backend lib,沒有 HTTP-only 路徑。
+**vibe-pipeline 是給 AI coding agent 用的 local-first pipeline runner。**把工作拆成有順序的 ticket,每張 ticket 先由 executor 實作、再由 critic 審核;每條 pipeline 跑在獨立 git branch / worktree,審核循環通過後才 merge 回 base。
 
----
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f6f4a)](LICENSE)
+[![Runtime: Bun](https://img.shields.io/badge/runtime-Bun-f3c969)](https://bun.sh)
+[![UI: React](https://img.shields.io/badge/UI-React-61dafb)](https://react.dev)
 
-## 給 AI:第一次接觸本 repo
+## 為什麼需要它
 
-User 把 repo URL 給你的話,標準流程:
+AI coding 工具很適合處理單點任務,但長一點的改動仍然需要 scope、順序、隔離、審核、retry 和 merge 紀律。vibe-pipeline 把這些步驟包成一條可追蹤的工作流:
 
-1. **看本 README 全文** — 了解產品 + 找到主 SKILL 位置
-2. **建議 user 裝主 SKILL** — `docs/vibe-pipeline/SKILL.md` 是本檔最重要的引導手冊;source dir(`docs/vibe-pipeline/`)直接 cp 進 AI 的 skills 路徑(Claude Code → `~/.claude/skills/vibe-pipeline/`,codex → `~/.codex/skills/vibe-pipeline/`,其他平台看各自 docs)。詳細路徑跟複製指令在 §給 AI 安裝
-3. **(user 開新 session,你接收主 SKILL)** — 主 SKILL 是跨 project 永久載入的 AI 操作手冊
-4. **檢查 vbpl 裝了沒** — 跑 `vbpl --version`;沒裝 → 看 [`docs/vibe-pipeline/install.md`](docs/vibe-pipeline/install.md) 跑 per-OS build + PATH 步驟
-5. **進入正常操作** — 看主 SKILL「標準操作流」段
+1. 在 Web UI 或 CLI 描述要做的工作。
+2. scope 太大時,先拆成多張 ticket。
+3. executor agent 依 ticket 實作。
+4. critic agent 讀 diff,判定 PASS、FAIL 或 PARTIAL。
+5. ticket 未通過時自動 retry,直到 PASS 或達 iter 上限。
+6. pipeline 全部完成後 merge 回 base branch。
 
-如果 user 的 AI 不認 Claude SKILL 格式:看 `AGENTS.md`(跨 provider pointer)。
+![vibe-pipeline workflow](docs/images/readme-workflow.png)
 
-本 README 是人類 + first-touch AI 共用 quick guide;主 SKILL 是長駐 AI 操作手冊。
+## 產品預覽
 
----
+![vibe-pipeline board screenshot](docs/images/readme-preview.png)
 
-## 安裝 (enduser)
+主介面是 board、drawer 和 settings。Backend 用單一 Bun process 同時 serve Web UI 與 API;`vbpl` CLI 則讓 agent 和 script 透過終端機操作同一份狀態。
 
-一行裝完(需先有 [Bun](https://bun.sh) ≥ 1.1 + Git):
+## 安裝
 
-**macOS / Linux**
+需要 [Bun](https://bun.sh) 1.1 以上與 Git。
+
+### macOS / Linux
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.sh | sh
 ```
 
-**Windows PowerShell**
+### Windows PowerShell
 
 ```powershell
 irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/install.ps1 | iex
 ```
 
-script 會抓 latest release tarball → 解到 `~/.vibe-pipeline/versions/v0.X.Y/` → 建 `current` junction/symlink → 寫 shim `~/.vibe-pipeline/bin/vbpl[.cmd]` → 問要不要加 PATH → 自動 `vbpl server start`(backend on `http://localhost:3001`)。
-
-拔掉:
-
-```sh
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.sh | sh
-```
-
-```powershell
-# Windows
-irm https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/scripts/uninstall.ps1 | iex
-```
-
-uninstall 只移除 `~/.vibe-pipeline/{versions,current,bin}/`;state / worktrees 都保留,要全清自己 `rm -rf ~/.vibe-pipeline`。
-
-Maintainer / 改 source code → 看下面 §快速開始 §Maintainer 段。
-
----
+Installer 會下載最新 release、建立 `vbpl` shim、可選擇加入 PATH,並啟動 backend 到 `http://localhost:3001`。
 
 ## 快速開始
-
-需要 [Bun](https://bun.sh)(≥ 1.1)+ Git。
-
-### Enduser / AI 操作(推薦)
-
-先確定 `vbpl` 已安裝(PATH 內可跑 `vbpl --version`;安裝見 [`docs/vibe-pipeline/install.md`](docs/vibe-pipeline/install.md))。
 
 ```bash
 vbpl server start
 vbpl server status
 ```
 
-`vbpl server start` 會自動找到 vibe-pipeline repo(從 cwd / `VBPL_HOME` / 已記錄的 server.json),背景啟動 backend,終端機關掉 backend 仍會活著。`vbpl pipeline run|stop|merge|sync` 也會自動確保本機 backend 已啟動。
+開啟:
 
-### Maintainer 改 source code
+```text
+http://127.0.0.1:3001/board
+```
+
+常用 CLI:
 
 ```bash
-bun install
-bun run start         # build + 起 backend 3001(單 process 同時 serve API + PWA)
-# 開 http://127.0.0.1:3001/board
+vbpl project init --here
+vbpl project list
+vbpl pipeline list --project <hash>
+vbpl pipeline run <id>
+vbpl pipeline status <id>
+vbpl pipeline log <id>
+vbpl ticket list --pipeline <id>
+vbpl pipeline sync <id>
+vbpl pipeline merge <id>
 ```
 
-`start` 一條指令搞定 production build + backend(static route 自己 serve `dist/`,不必另起 preview)。日常改 VP source code 直接重 build → `bun run server`(改 server code 更省事,不必重 build frontend);要 vite HMR 偶爾 ad-hoc 用 `bunx vite`。
+所有指令都支援 `--json`,方便 script 和 agent automation 使用。
 
-**並行 backend**(`bun run server:e2e`)起在 PORT=3101,跟 user backend(3001)隔離。給「user backend 跑著、自己另開一份 backend 測試」或 e2e fixture / CI 用。backend collapse 後同一 process serve API + dist/,單條 script 就夠,不必再分 vite preview / API 兩條。
+## 核心概念
 
----
-
-## 給 AI 安裝(讓你家的 AI 學會用 vbpl)
-
-主 SKILL bundle 在 [`docs/vibe-pipeline/`](docs/vibe-pipeline/)(含 `SKILL.md` + `install.md` + `repl-runner.md` 三個檔)。把**整個 dir** cp 進 AI 的 skills 路徑(Claude Code → `~/.claude/skills/vibe-pipeline/`;codex → `~/.codex/skills/vibe-pipeline/`;其他平台看各自 docs)。AI 自己會 cp,你叫它「裝這個 SKILL」就行。
-
-只想對某個 repo 限定,cp 進 `<that-project>/.claude/skills/vibe-pipeline/`。
-
-驗證:在新 session 開 AI,問「我能用 vbpl 幹嘛?」AI 應該秒回 pipeline / ticket / executor / critic 心智 + 常用指令。
-
-> 註:repo 內 `.claude/skills/` 還有 `vibe-pipeline-frontend` / `-backend` / `-cli` / `-e2e` 四個 SKILL,**那些只給改 vibe-pipeline 本身 code 的 AI 用**,enduser 不需要安裝。
-
----
-
-## 架構
-
-```mermaid
-flowchart TB
-  subgraph web["Web UI（Vite + React 18 / 5173）"]
-    ui[Board / Drawer / Settings]
-  end
-  subgraph backend["Bun server（3001）"]
-    routes[routes/*<br/>純 dispatch]
-    lib[lib/*<br/>業務邏輯]
-  end
-  subgraph runner["AI runner（claude / codex CLI 子程）"]
-    main[runner 主 agent]
-    exec[執行 AI sub-agent<br/>真的改 code<br/>高 capability]
-    crit[審核 AI sub-agent<br/>讀 diff 判 PASS/FAIL<br/>可用便宜 model]
-  end
-  cli[vbpl CLI]
-
-  ui -->|"/api/* proxy"| routes
-  routes --> lib
-  lib -->|spawn| main
-  main -->|Task / Bash| exec
-  main -->|Task / Bash| crit
-
-  cli -.->|"read（list/show/status/log）<br/>reuse server/lib/* 直存 fs"| lib
-  cli -->|"spawn / kill 操作<br/>POST /api/* 避免子程孤兒"| routes
-```
-
-每個 task class 各自挑 provider(claude / codex)+ model + reasoning effort,從 Settings 改或 `vbpl config set <key> <value>`:
-
-| Task class | 用途 |
+| 概念 | 說明 |
 |---|---|
-| `qa` | 跟 user 對話收斂 ticket 規格 |
-| `split` | One-shot 判「這該拆 N 張」 |
-| `runner` | Pipeline 主 agent(編排 ticket) |
-| `executor` | 寫 / 改 code |
-| `critic` | 讀 diff,PASS / FAIL / PARTIAL |
-| `merge` | 衝突解 |
-
-工廠預設見 `shared/types.ts:DEFAULT_USER_CONFIG`(新建 user 第一次起 server 時寫進 `~/.vibe-pipeline/config.json`)。看當前生效值跑 `vbpl config list`。
-
----
+| Project | 註冊到 vibe-pipeline 的 git repository |
+| Ticket | 一個有 goal、prompt、acceptance、mode、status 的工作單位 |
+| Pipeline | 有順序的 ticket 列表,跑在自己的 branch 和 worktree |
+| Executor | 負責改 code 的 agent 角色 |
+| Critic | 負責讀 diff 並回傳 PASS、FAIL 或 PARTIAL 的 agent 角色 |
+| Iter mode | Executor 和 critic 反覆循環,直到 PASS 或達 iter 上限 |
+| Merge | 完成的 pipeline branch 合併回 base branch |
 
 ## 功能
 
-- **Pipeline = 有序 ticket 列表**,跑在獨立 git branch,worktree 隔離在 `~/.vibe-pipeline/worktrees/<projHash>/<pipelineId>/`
-- **QA drawer**:跟 AI 聊出 ticket 規格;AI 看到 scope 跨多件獨立工作會自動建議拆分
-- **迭代模式**:執行 → 審核 → retry 迴圈到 PASS 或達 iter 上限
-- **自動合併**(全 ticket done + `autoMerge=true`):後端先試純 `git merge --no-ff`,撞衝突才 spawn AI
-- **同步**:把 base 拉進 pipeline worktree,同 git-first → 衝突才 AI 的二段式
-- **跨 provider sub-agent**:claude main → Task tool;codex → Bash 直呼 `codex exec`
-- **PWA + Tailscale**:桌機跑 server,手機透過 Tailscale HTTPS 連入(tailnet 是唯一存取邊界,無 app-level auth),FCM push ticket 事件到手機
-- **CLI `vbpl`**:4 nouns(project / pipeline / ticket / config)+ `--json` mode;spawn 操作走 backend HTTP 避免子程孤兒
-- **狀態恢復**:server 重啟時自動掃 pipeline 收斂 stale `running` → paused(legacy `stopping` 殘留也一併修);runtime watchdog 抓死 PID
+- Web board 管理 project、pipeline、ticket、QA 和 settings
+- `vbpl` CLI 支援 terminal 與 agent-driven 操作
+- 每條 pipeline 使用獨立 git branch / worktree 隔離
+- Executor / critic 可分別設定 provider、model、reasoning effort
+- Ticket-level iterative review loop
+- 自動 merge,先走 git 原生 merge,有衝突才交給 AI
+- 可把 base branch 同步進 pipeline worktree
+- Backend 重啟後自動恢復 stale running 狀態
+- PWA + Tailscale 遠端存取
+- 可使用 hosted gateway 或自架 gateway 推送通知
 
----
+## 架構
 
-## CLI
+![vibe-pipeline structure](docs/images/readme-structure.png)
 
-走 install script:`vbpl` 是 shim(`~/.vibe-pipeline/bin/vbpl[.cmd]`),內含 `bun run current/cli/vbpl.ts %*`。一行裝法見 §安裝 (enduser)。**完整 install + trouble 看 [`docs/vibe-pipeline/install.md`](docs/vibe-pipeline/install.md)**。
+CLI 的 read path 會重用 backend lib;run、stop、merge、sync 這類會 spawn / kill 子程序的操作則走 backend API,避免長時間執行的 child process 變成孤兒。
 
-### 常用指令
+## AI Agent 設定
+
+可重複安裝的 AI skill bundle 在:
+
+```text
+docs/vibe-pipeline/
+```
+
+把整個資料夾放進你的 AI tool skills path:
+
+| 工具 | 目的地 |
+|---|---|
+| Claude Code | `~/.claude/skills/vibe-pipeline/` |
+| Codex | `~/.codex/skills/vibe-pipeline/` |
+
+安裝後開新 AI session,問它可以怎麼使用 `vbpl`。
+
+## Maintainer 開發
 
 ```bash
-vbpl server start                                             # 背景啟動 backend
-vbpl server status
-vbpl server logs -f
-vbpl server restart
-vbpl server stop
-vbpl project list
-vbpl project init --here                                        # fresh 資料夾一鍵 init
-vbpl pipeline list --project <hash>
-vbpl pipeline status <id>
-vbpl pipeline run <id>                                          # 啟動 runner(需要 backend)
-vbpl pipeline log <id>                                          # 過往 run 摘要
-vbpl ticket list --pipeline <id>                                # 列 ticket
-vbpl ticket show --pipeline <id> --ticket <n>                   # 看單張 ticket 細節
-vbpl ticket add --pipeline <id> --title "..." --mode iter
-vbpl ticket update --pipeline <id> --ticket <n> --status done   # 改 title/goal/prompt/acceptance/mode/status/iter-limit
-vbpl ticket remove --pipeline <id> --ticket <n>
-vbpl config set runner.model claude-opus-4-7
-vbpl pipeline sync <id>                                         # git merge base → worktree
-vbpl pipeline sync <id> --ai                                    # 讓 AI 解衝突
-vbpl pipeline merge <id>                                        # 合併回 base(先試 git,衝突才 AI)
+bun install
+bun run start
 ```
 
-每個 verb 都吃 `--json`,搭配 `jq` / PowerShell `ConvertFrom-Json` 寫 script 用。
-
----
-
-## 遠端存取(Tailscale)
-
-1. 桌機 + 手機都裝 Tailscale,登入同 tailnet
-2. 桌機跑 `tailscale serve --https=443 http://localhost:3001`(backend 同 serve API + dist/ PWA 單一 port,SW 在 `bun run build` 後的 dist/ 內生效)
-3. 手機開 `https://<machine>.<tailnet>.ts.net`,安裝成 PWA
-4. Settings →「通知」開啟推播,ticket 事件會到手機(需先填 push gateway,見下)
-
-**安全 model**:VP 無 app-level auth,**tailnet membership + Tailscale ACL 是唯一存取邊界**。適合 single-user 自己的 tailnet,**不要放 shared tailnet**(任何 tailnet member 都能讀寫 pipeline)。手機遠端踩雷(HTTPS / 0.0.0.0 / ALLOWED_ORIGINS / 離線 push 補送)見 [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md)。
-
----
-
-## Push 通知 setup(零設定)
-
-**開 PWA → Settings →「通知」啟用推播 → 即用**。enduser 不必開 Firebase、不必跟 maintainer 拿 token、不必填任何 `.env` push 變數。
-
-第一次 Settings 開啟通知時,backend 會自動向 maintainer host 的 gateway(`https://vp-gateway-799841449136.asia-east1.run.app`)申請 token(IP rate-limit 5/day),拿到後存 `~/.vibe-pipeline/gateway-token`(0600),後續所有 push 自動帶這個 token。Firebase Web SDK config + gateway URL 已 hardcode 進 build,不必設。
-
-要自架一份 gateway / fork 後指到自己 endpoint?設 `PUSH_GATEWAY_URL` / `PUSH_GATEWAY_TOKEN` env var 即可 override 內建預設(`VITE_FCM_*` 同理 override Firebase config)。完整自架說明見 [`gateway/README.md`](gateway/README.md) 跟 [`docs/refs/archive/fcm-push-gateway-2026-05-17.md`](docs/refs/archive/fcm-push-gateway-2026-05-17.md)。
-
-Maintainer ops:Firebase project / service account key / Cloud Run 配置 / cost 監控($1/mo budget alert + Cloud Run max-instances=1 hard cap)/ abuse 管控(per-IP auto-issue rate limit + per-token send 日誌)。
-
----
-
-## Repo 結構
-
-```
-src/         前端(Vite + React)
-server/      Bun 後端(routes 純 dispatch,lib/ 純邏輯)
-cli/         vbpl CLI(reuse server/lib/*)
-shared/      跨前後端持久化型別
-.claude/     repo maintainer SKILL(改 src/server/cli/tests 用)
-docs/        SKILL(主)/ install.md / CHANGELOG.md / refs/ 設計文件
-public/      靜態(PWA manifest、service worker、icons)
-tests/e2e/   Playwright(mock CI 模式 + real 模式)
-```
-
-SKILL 文件分兩種,動非 trivial 改動前先讀:
-
-**主 SKILL**(enduser-facing artifact,可裝進 AI 的 skills 路徑):
-- [vibe-pipeline](docs/vibe-pipeline/SKILL.md) — 產品定位 / scope / vbpl 操作手冊
-
-**maintainer SKILL**(`.claude/skills/`,只給改 vibe-pipeline 自己 code 的 AI 用):
-- [vibe-pipeline-frontend](.claude/skills/vibe-pipeline-frontend/SKILL.md) — UI 慣例
-- [vibe-pipeline-backend](.claude/skills/vibe-pipeline-backend/SKILL.md) — server / runner / sync
-- [vibe-pipeline-cli](.claude/skills/vibe-pipeline-cli/SKILL.md) — CLI 慣例
-- [vibe-pipeline-e2e](.claude/skills/vibe-pipeline-e2e/SKILL.md) — Playwright 覆蓋矩陣
-
----
-
-## Scripts
+常用 script:
 
 | 指令 | 用途 |
 |---|---|
-| `vbpl server start` | **enduser / AI 推薦** — 背景啟動 backend(3001),終端機關掉不會殺 backend |
-| `vbpl server status` | 檢查 backend health / PID / uptime |
-| `vbpl server logs [-f]` | 看 backend log;`-f` 即時 tail |
-| `vbpl server restart` | 重啟 backend(PID 會換新) |
-| `vbpl server stop` | 停掉 `vbpl server start` 管理的 backend |
-| `bun run start` | maintainer 驗 production bundle:build + backend(3001 單 process 同 serve API + dist/) |
-| `bun run server` | maintainer 只起 backend(3001;前景 process,不重 build frontend) |
-| `bun run server:e2e` | 並行 backend on 3101(隔離測試 / e2e fixture / CI;static route 自動同時 serve API + dist/) |
-| `bun run build` | `tsc -b && vite build` → `dist/` |
-| `bun run lint` | Biome lint |
-| `bun run test:e2e` | Playwright mock 模式(CI 預設) |
-| `bun run test:e2e:real` | Playwright real 模式(燒 token,opt-in) |
+| `bun run start` | build frontend,再啟動 3001 backend |
+| `bun run server` | 只啟動 backend,不開 watch mode |
+| `bun run server:e2e` | 啟動隔離測試 backend on 3101 |
+| `bun run build` | typecheck + build |
+| `bun run lint` | 跑 Biome lint |
+| `bun run test:e2e` | 跑 Playwright e2e tests |
 
-額外(沒有 npm script,直接打):
+## 遠端存取
 
-- 改 cli source 測試:`bun run cli/vbpl.ts <noun> <verb>`(沒 rebuild 開銷)
-- vite HMR ad-hoc:`bunx vite`(改 src/ 即時 reload,SW 不註冊)
-- 重產 PWA icons:`bun run scripts/gen-icons.ts`(需 ImageMagick,rare,只在 icon source 改才跑)
+vibe-pipeline 沒有 app-level auth。手機或遠端存取請只暴露在自己的 Tailscale tailnet 內:
 
----
+```bash
+tailscale serve --https=443 http://localhost:3001
+```
+
+接著用手機開 Tailscale HTTPS URL,安裝成 PWA。
+
+## 文件
+
+- [主 AI skill](docs/vibe-pipeline/SKILL.md)
+- [安裝細節](docs/vibe-pipeline/install.md)
+- [Changelog / 設計決策](docs/CHANGELOG.md)
+- [Repo 結構](docs/refs/repo-structure.md)
+- [Maintainer guide](CLAUDE.md)
 
 ## License
 
-MIT — 見 [LICENSE](LICENSE)。
+MIT,見 [LICENSE](LICENSE)。
