@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { InitPopup } from "../init/InitPopup";
+import { InitPopup } from "./InitPopup";
 import { QADrawer } from "../qa/QADrawer";
 import { TicketDrawer } from "./TicketDrawer";
 import * as api from "../../api/projects";

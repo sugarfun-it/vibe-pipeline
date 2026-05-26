@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { TopBar } from "./TopBar";
-import { SwUpdateBanner } from "../features/system/SwUpdateBanner";
+import { SwUpdateBanner } from "./SwUpdateBanner";
 
 export function AppShell({
   rootClassName = "",

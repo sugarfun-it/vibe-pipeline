@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { CreatePlaceholder } from "../pipelineCreate/CreateCard";
+import { CreatePlaceholder } from "./CreateCard";
 import { EmptyProject } from "./EmptyProject";
 import { FocusColumn } from "./FocusColumn";
 import * as api from "../../api/projects";

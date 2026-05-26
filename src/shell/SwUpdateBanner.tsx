@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSwUpdate } from "../../lib/swUpdate";
+import { useSwUpdate } from "../lib/swUpdate";
 
 export function SwUpdateBanner() {
   const { needRefresh, updateSW } = useSwUpdate();

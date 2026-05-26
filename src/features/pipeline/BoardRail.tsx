@@ -3,7 +3,7 @@ import { Rail } from "../../shell/Rail";
 import type { RailMenuItem } from "../../shell/Rail";
 import { TrashIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
-import { CreateCard } from "../pipelineCreate/CreateCard";
+import { CreateCard } from "./CreateCard";
 import * as api from "../../api/projects";
 import type { Pipeline } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
