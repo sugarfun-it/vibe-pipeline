@@ -31,9 +31,26 @@ prepend 進 env,maintainer 不必每次手動改 PATH。
 
 ## 整合狀態
 
-- ✅ `scripts/build-tarball.ts` 自動 build 並塞 `vbpl.exe` 到 tarball 的 `bin/vbpl.exe`
+- ✅ `scripts/shim/vbpl.exe` **commit 進 git**(SSOT prebuilt binary,324KB)
+- ✅ `scripts/build-tarball.ts` 直接 cp commit 版進 tarball,**不跑 cargo**(maintainer / CI 不必裝 Rust toolchain)
+- ✅ build-tarball 跑 `assertShimFresh()`:git log 比 `scripts/shim/src + Cargo.toml` 跟 `scripts/shim/vbpl.exe` 哪個較新,source 較新 → 印 warn 提醒 rebuild(不擋 ship)
 - ✅ `scripts/install.ps1` 優先用 tarball 內 `bin/vbpl.exe`,fallback 寫 `vbpl.cmd`(舊 tarball 相容)
 - 未做:GitHub Actions Windows runner 跑 release build / Azure Trusted Signing 簽 exe
+
+## 改 shim 後 rebuild 流程
+
+shim 源碼幾乎不變(67 行 std-only),預期 1-3 次/年。改完手動:
+
+```bash
+cd scripts/shim
+cargo build --release
+cp target/x86_64-pc-windows-gnu/release/vbpl.exe vbpl.exe
+git add vbpl.exe src/main.rs Cargo.toml  # 視實際改動
+git commit -m "..."
+```
+
+若忘了 rebuild,下次 `bun run scripts/build-tarball.ts` 會印 warn(因 git log src 比 exe 新),不擋 ship。
+真要強制,在 build-tarball.ts 把 warn 改 error 即可。
 
 ## Signal 行為
 

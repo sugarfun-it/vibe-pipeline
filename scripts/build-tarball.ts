@@ -31,7 +31,11 @@ const WHITELIST = [
 ];
 
 const SHIM_DIR = "scripts/shim";
-const SHIM_EXE_REL = "scripts/shim/target/x86_64-pc-windows-gnu/release/vbpl.exe";
+// commit 進 git 的 prebuilt vbpl.exe(SSOT),build-tarball 直接 cp,不跑 cargo。
+// 改 scripts/shim/src 或 Cargo.toml 後:cd scripts/shim && cargo build --release &&
+// cp target/x86_64-pc-windows-gnu/release/vbpl.exe vbpl.exe && git add vbpl.exe && commit。
+// 下方 assertShimFresh() 會在 build-tarball 時檢 source 是否比這顆新,新了 warn。
+const SHIM_EXE_COMMITTED = "scripts/shim/vbpl.exe";
 
 function parseArgs(argv: string[]): { version: string; allowDirty: boolean } {
   const args = argv.slice(2);
@@ -104,55 +108,44 @@ async function buildDist(): Promise<void> {
   }
 }
 
-// Build Windows shim (Rust → vbpl.exe). rust-toolchain.toml + .cargo/config.toml 在
-// scripts/shim/ 內處理 channel / target 選擇,只要 cargo 跟 mingw linker on PATH 就行。
-// Windows maintainer:PATH 要含 C:\msys64\mingw64\bin(裝 mingw-w64-x86_64-gcc 後)。
-// POSIX maintainer:PATH 要含 x86_64-w64-mingw32-gcc(apt install mingw-w64 / brew install mingw-w64)。
-async function buildShim(): Promise<void> {
-  console.log("[step] cargo build --release (Windows shim, GNU target)");
-  const env: Record<string, string> = {};
-  for (const [k, v] of Object.entries(process.env)) {
-    if (typeof v === "string") env[k] = v;
-  }
-  if (process.platform === "win32") {
-    const pathKey = env.PATH ? "PATH" : "Path";
-    let currentPath = env[pathKey] ?? "";
-    const prepend: string[] = [];
-    const cargoBin = join(process.env.USERPROFILE ?? "", ".cargo", "bin");
-    if (existsSync(cargoBin) && !currentPath.toLowerCase().includes(cargoBin.toLowerCase())) {
-      prepend.push(cargoBin);
-    }
-    const msys2 = "C:\\msys64\\mingw64\\bin";
-    if (existsSync(msys2) && !currentPath.toLowerCase().includes("msys64\\mingw64\\bin")) {
-      prepend.push(msys2);
-    }
-    if (prepend.length > 0) {
-      env[pathKey] = `${prepend.join(";")};${currentPath}`;
-    }
-  }
-  const proc = Bun.spawn(["cargo", "build", "--release"], {
-    cwd: join(ROOT, SHIM_DIR),
-    stdout: "inherit",
-    stderr: "inherit",
-    env,
-  });
-  const code = await proc.exited;
-  if (code !== 0) {
-    console.error("[fail] cargo build failed");
-    console.error("  Windows:install MSYS2 + `pacman -S mingw-w64-x86_64-gcc`,確保 C:\\msys64\\mingw64\\bin 在 PATH");
-    console.error("  POSIX:install mingw-w64(apt / brew),`x86_64-w64-mingw32-gcc` 要在 PATH");
+// Staleness check:比 git log 拿 scripts/shim/src + Cargo.toml 最後 commit time 跟
+// scripts/shim/vbpl.exe 最後 commit time。source 比 exe 新 → warn(不 fail,有時 maintainer
+// 故意改 src 不重 build,例如純改 comment / README)。CI 之後可以選擇要不要 fail。
+async function assertShimFresh(): Promise<void> {
+  const exePath = join(ROOT, SHIM_EXE_COMMITTED);
+  if (!existsSync(exePath)) {
+    console.error(`[fail] committed shim missing at ${SHIM_EXE_COMMITTED}`);
+    console.error("  rebuild: cd scripts/shim && cargo build --release && cp target/x86_64-pc-windows-gnu/release/vbpl.exe vbpl.exe && git add vbpl.exe");
     process.exit(1);
   }
-  if (!existsSync(join(ROOT, SHIM_EXE_REL))) {
-    console.error(`[fail] shim artifact missing at ${SHIM_EXE_REL}`);
-    process.exit(1);
+  const exeCommitTs = await gitLastCommitTs([SHIM_EXE_COMMITTED]);
+  const srcCommitTs = await gitLastCommitTs([
+    "scripts/shim/src",
+    "scripts/shim/Cargo.toml",
+    "scripts/shim/rust-toolchain.toml",
+    "scripts/shim/.cargo",
+  ]);
+  if (srcCommitTs !== null && exeCommitTs !== null && srcCommitTs > exeCommitTs) {
+    const srcDate = new Date(srcCommitTs * 1000).toISOString().slice(0, 10);
+    const exeDate = new Date(exeCommitTs * 1000).toISOString().slice(0, 10);
+    console.warn(`[warn] shim source 比 exe 新 (src ${srcDate} > exe ${exeDate})`);
+    console.warn("  若 src 改動會影響 binary,重 build:");
+    console.warn("  cd scripts/shim && cargo build --release && cp target/x86_64-pc-windows-gnu/release/vbpl.exe vbpl.exe && git add vbpl.exe");
+    console.warn("  繼續 ship(假設只是 comment / 文件改動)...");
   }
-  const sz = statSync(join(ROOT, SHIM_EXE_REL)).size;
-  console.log(`[shim] vbpl.exe built (${(sz / 1024).toFixed(0)} KB)`);
+  const sz = statSync(exePath).size;
+  console.log(`[shim] use committed vbpl.exe (${(sz / 1024).toFixed(0)} KB)`);
 }
 
-// 把 shim source 從 stage 拔掉(WHITELIST scripts/ 抄進來的),改塞編譯產物到 stage/bin/vbpl.exe。
-// install.ps1 從 $VersionDir/bin/vbpl.exe 拷貝到 ~/.vibe-pipeline/bin/vbpl.exe。
+async function gitLastCommitTs(paths: string[]): Promise<number | null> {
+  const { code, stdout } = await run(["git", "log", "-1", "--format=%ct", "--", ...paths], { capture: true });
+  if (code !== 0) return null;
+  const ts = parseInt(stdout.trim(), 10);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+// 把 shim source 從 stage 拔掉(WHITELIST scripts/ 抄進來的),改塞 commit 進 git 的
+// vbpl.exe 到 stage/bin/vbpl.exe。install.ps1 從 $VersionDir/bin/vbpl.exe 拷到 ~/.vibe-pipeline/bin/。
 function stageShimArtifact(stageDir: string): void {
   const stagedShim = join(stageDir, SHIM_DIR);
   if (existsSync(stagedShim)) {
@@ -160,7 +153,7 @@ function stageShimArtifact(stageDir: string): void {
   }
   const binDir = join(stageDir, "bin");
   mkdirSync(binDir, { recursive: true });
-  cpSync(join(ROOT, SHIM_EXE_REL), join(binDir, "vbpl.exe"));
+  cpSync(join(ROOT, SHIM_EXE_COMMITTED), join(binDir, "vbpl.exe"));
   console.log("[shim] stage/bin/vbpl.exe placed, stage/scripts/shim/ source pruned");
 }
 
@@ -270,7 +263,7 @@ async function main() {
   await assertCleanTree(allowDirty);
   const version = await assertVersionMatches(argVersion);
   await buildDist();
-  await buildShim();
+  await assertShimFresh();
 
   const stageParent = join(ROOT, "release-tmp");
   const dirName = `vibe-pipeline-v${version}`;
