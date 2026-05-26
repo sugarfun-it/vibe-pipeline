@@ -1,0 +1,227 @@
+/* qa/split.css — split proposal, choice, mobile, and iteration limit rules. */
+/* drawer close X — 統一走 shared .drawer-close(drawer.css)mobile @media 已給 44×44 hit-target */
+@media (max-width: 767.98px) {
+  .qadr-close-confirm-actions {
+    justify-content: stretch;
+  }
+  .qadr-close-confirm-actions > .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+}
+
+/* split proposal */
+.qadr-split-mode-chip {
+  margin-left: var(--space-1, 6px);
+  font-size: 10px;
+}
+.qadr-split-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+/* radio label inside choice-row */
+.qadr-choice-row {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  flex-wrap: wrap;
+  padding: 0;
+}
+.qadr-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: all 120ms;
+}
+
+@media (max-width: 767.98px) {
+  /* Mobile stage / drawer sizing inherited from shared drawer.css.
+     QA-only: body / spec-body inner padding + composer / field / bubble reflows. */
+  .qadr-body,
+  .qadr-spec-body {
+    padding: var(--space-4, 16px) var(--space-4, 16px) calc(var(--space-4, 16px) + env(safe-area-inset-bottom));
+  }
+
+  .qadr-foot {
+    padding: var(--space-3, 12px) var(--space-4, 16px) calc(env(safe-area-inset-bottom) + var(--space-3, 12px));
+    gap: var(--space-2, 8px);
+  }
+
+  .qadr-bubble {
+    max-width: 100%;
+  }
+  .qadr-bubble-ai {
+    max-width: min(100%, 31rem);
+  }
+
+  .qadr-field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .qadr-choice-row {
+    flex-direction: column !important;
+    align-items: flex-start;
+    gap: var(--space-2, 8px) !important;
+  }
+
+  /* qa-real-002: hide the redundant "新需求單" tail in breadcrumb on mobile,
+     keep it only as the page title below. */
+  .qadr-crumb-current {
+    display: none;
+  }
+
+  /* qa-real-004: virtual-keyboard behaviour ≠ desktop Enter rule — hide hint. */
+  .qadr-composer-hint {
+    display: none;
+  }
+
+  /* qa-real-003 / 005: keep cancel link out of bottom-right corner zone;
+     align left so thumb's primary send tap area doesn't share space with destructive.
+     一條細分隔線把 destructive cancel-link 跟 composer 明顯區隔,避免誤觸與「擠在底部」感。 */
+  .qadr-composer-footer {
+    justify-content: flex-start;
+    padding-top: var(--space-2, 8px);
+    border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  }
+  .qadr-cancel-link {
+    padding: 2px 10px;
+    font-size: 11px;
+  }
+}
+
+/* split-proposal block(QADrawer 內 AI 拆分提案區)— 視覺加重,代表這是「會改變
+ * 送出後行為(N 張 vs 1 張)」的高影響選擇,別讓 user 跟一般 form field 混淆。 */
+.qadr-split-proposal {
+  padding: 14px 16px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--iter) 30%, var(--line));
+  background: color-mix(in srgb, var(--iter) 6%, var(--panel));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 3px solid var(--iter);
+}
+.qadr-split-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qadr-split-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+.qadr-split-subtitle {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  margin: 0;
+  line-height: 1.6;
+}
+.qadr-split-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.qadr-split-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+}
+.qadr-split-item-title {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.qadr-split-num {
+  color: var(--fg-mute);
+  font-size: 11px;
+  background: var(--panel-2);
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.qadr-split-toggle {
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--iter) 22%, var(--line));
+}
+.qadr-split-toggle-label {
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+}
+.qadr-split-toggle-label input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--iter);
+}
+.qadr-split-toggle-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--fg-mute);
+  margin-top: 2px;
+  letter-spacing: 0.005em;
+}
+.qadr-split-outcome {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  background: color-mix(in srgb, var(--iter) 6%, transparent);
+  font-family: var(--font-mono);
+  border: 1px dashed color-mix(in srgb, var(--iter) 25%, var(--line));
+}
+
+/* chat_progress mobile:progress row + composer + cancel row + hint 都擠在 sticky footer,
+ * 把 progress 字級壓小、padding 收窄,給 transcript 多一些垂直空間 */
+@media (max-width: 767.98px) {
+  .qadr-foot .qadr-progress {
+    font-size: 10.5px;
+    padding: 0;
+    gap: 4px;
+  }
+  .qadr-foot .qadr-progress-missing {
+    padding: 1px 5px;
+    font-size: 10px;
+  }
+  .qadr-spec-ready-bar {
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    gap: var(--space-2, 8px);
+    font-size: 12px;
+  }
+  .qadr-spec-ready-bar-btn {
+    padding: 6px 10px;
+  }
+}
+
+.qadr-iter-limit-input {
+  width: 4rem !important;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+}

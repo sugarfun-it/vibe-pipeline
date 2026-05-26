@@ -1,0 +1,91 @@
+/* ─── FocusTitle 編輯模式 ────────────────────────────────────── */
+
+.focus-title-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* V1 Refined rename input:borderless underline,字體跟 .focus-title 同(sans 22px / 600 / -0.022em),
+   accent border-bottom + caret,失焦無 chrome 不打架 */
+.focus-title-input {
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid var(--accent);
+  border-radius: 0;
+  padding: 0 2px 2px;
+  outline: none;
+  min-width: 220px;
+  width: auto;
+  caret-color: var(--accent);
+  transition: border-color 100ms ease;
+}
+.focus-title-input::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.focus-title-input.is-invalid {
+  border-bottom-color: var(--failed);
+  color: var(--failed);
+}
+
+/* V1 Refined confirm/cancel:icon-only,跟 .focus-overflow > .btn 同尺寸(30px / padding 4×8),
+   accent confirm 跟 underline 同色系。font-size:0 是防禦性 — JSX 內只有 svg。 */
+.focus-title-edit-confirm,
+.focus-title-edit-cancel {
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  min-height: 30px;
+  border-radius: 4px;
+  color: var(--fg-mute);
+  font-size: 0;
+  transition: background 100ms ease, color 100ms ease;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+.focus-title-edit-confirm svg,
+.focus-title-edit-cancel svg {
+  width: 14px;
+  height: 14px;
+}
+.focus-title-edit-confirm {
+  color: var(--accent);
+}
+.focus-title-edit-confirm:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.focus-title-edit-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.focus-title-edit-cancel:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+/* Rename inline error hint:跟 confirm/cancel 同列下緣對齊,失敗紅字 */
+.focus-title-edit > [role="status"] {
+  font-size: 10.5px;
+  color: var(--failed);
+  align-self: flex-end;
+  margin-bottom: 4px;
+}
+
+/* V1 Refined:rename pencil 預設淡入(只 hover title-row 時才浮出),
+   減少 header 視覺噪音但鍵盤 / 滑鼠 hover 仍能進入編輯 */
+.focus-title-edit-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 100ms ease;
+}
+.focus-head-title-row:hover .focus-title-edit-btn { opacity: 1; }
+.focus-title-edit-btn:focus-visible { opacity: 1; }

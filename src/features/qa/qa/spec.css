@@ -1,0 +1,66 @@
+/* qa/spec.css — spec form and field rules. */
+.qadr-spec-body {
+  padding: 14px var(--space-5, 20px) var(--space-5, 20px);
+}
+.qadr-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.qadr-spec-head {
+  font-size: 11.5px;
+  color: var(--fg);
+  margin-bottom: 4px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.005em;
+  margin: -2px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qadr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qadr-field-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.qadr-spec-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* mobile:final preview form 很長,送出按鈕被推到底,user landing 看不到 primary action。
+   把 action row sticky 黏在 spec-body 底,維持送出鈕可見可達。 */
+@media (max-width: 767.98px) {
+  .qadr-spec-actions {
+    position: sticky;
+    bottom: calc(env(safe-area-inset-bottom) - var(--space-4, 16px));
+    margin-inline: calc(-1 * var(--space-4, 16px));
+    margin-bottom: calc(-1 * (var(--space-4, 16px) + env(safe-area-inset-bottom)));
+    padding: var(--space-3, 12px) var(--space-4, 16px) calc(var(--space-3, 12px) + env(safe-area-inset-bottom));
+    background: var(--panel-2);
+    border-top: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  /* prompt textarea (rows=10) 在 mobile 太高,把後面 mode / iter-limit / actions 推到無法 reach。
+     收到合理高度;user 仍可手動 resize 拉大。 */
+  .qadr-field .qadr-textarea {
+    min-height: 80px;
+    max-height: 40vh;
+  }
+}

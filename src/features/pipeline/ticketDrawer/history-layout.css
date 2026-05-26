@@ -1,0 +1,36 @@
+
+
+/* hist-013 / hist-017:pre tools row — stdout 顯示 / 隱藏 / 複製等工具列 gap 一致 */
+.tdrw-run-pre-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+/* hist-018:狀態變動歷史(AuditTimeline)與 run card 之間明確區隔 —
+   AuditTimeline 用 .tdrw-section 容器,在 RunHistory 之後時加 margin / 邊框拉開視覺距離 */
+.tdrw-drawer .tdrw-runs + .tdrw-section {
+  margin-top: var(--space-5, 20px);
+  padding-top: var(--space-4, 16px);
+  border-top: 1px solid var(--line);
+}
+
+/* hist-011:drawer body 統一 gutter — direct children 對齊同一寬度,不再各自補 margin */
+.tdrw-drawer .drawer-body {
+  padding-inline: var(--space-5, 20px);
+}
+.tdrw-drawer .drawer-body > * {
+  width: 100%;
+}
+
+/* hist-014:result 內容 code-style 字串 — pipeline.state=ready 等 raw token 用 mono */
+.tdrw-run-detail-result code,
+.tdrw-text code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  color: var(--fg);
+}

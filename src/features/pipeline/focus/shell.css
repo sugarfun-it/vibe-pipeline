@@ -1,0 +1,115 @@
+/* FocusColumn feature 專用 CSS — focus column 容器、header、empty、overflow menu、
+   ReadyBanner、focus title edit、focus diff chip 等。
+   非 feature 共用 styles(.btn / .vp-chip / .modal-* / .sr-only / 等 primitives)留 src/styles/board.css。 */
+
+/* ─── Focus column 容器 ─────────────────────────────────────── */
+.focus {
+  display: flex; flex-direction: column;
+  min-height: 0; min-width: 0;
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+  background: var(--bg);
+}
+.focus-head { margin-bottom: 18px; position: relative; z-index: 5; }
+/* V1 Refined:title-row 自身做 relative anchor 給 .focus-actions / .focus-overflow 的絕對定位用,
+   actions 釘在右上(視覺上與 title 同列右側),overflow ⋯ 更靠右(46px 留給 actions cluster)。
+   meta-row 改成緊湊的 mono strip(monospace 11px,用 ::before · 連接 chips),不再寬鬆 flex-wrap。 */
+.focus-head-top {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 0;
+}
+.focus-head-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  padding-right: 280px; /* 留給 actions cluster + overflow ⋯ */
+  min-height: 34px;
+}
+.focus-head-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  overflow: hidden;
+}
+.focus-head-title-spacer { flex: 1 1 auto; min-width: 0; }
+.focus-head-meta-spacer { display: none; } /* V1 Refined:meta-row chip 自己接 ::before ·,不需要 spacer */
+.focus-actions {
+  position: absolute;
+  top: 0;
+  right: 44px; /* 留 44px 給 overflow ⋯ */
+  height: 34px;
+  margin-left: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  z-index: 2;
+}
+.focus-actions .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 5px 14px;
+  font-size: 12px;
+  min-height: 30px;
+}
+.focus-actions .btn-accent,
+.focus-actions .focus-add-ticket {
+  padding: 5px 12px;
+  font-size: 12px;
+  min-height: 30px;
+}
+.focus-run-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+/* FC-003 / FC-009:desktop 也統一 — ready / merged + showMergeBanner 時隱藏 disabled
+   「無可執行 ticket」。ReadyBanner 已是當下唯一 primary CTA,header 的 disabled run
+   button 跨斷點都是冗餘。視覺一致避免 desktop/mobile 兩種版型。 */
+.focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="ready"],
+.focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
+  display: none;
+}
+/* FC-006(2026-05-25 重寫):inner content 直接 100% 填滿 focus 容器,不再 cap max-width。
+   .focus 寬度天然被 sidebar + inbox-strip 限制,不會無限拉寬;固定 max-width(1080 / 1400 / 1600)
+   在不同螢幕 scaling 下都會留奇怪空白,跨機器表現不一。100% 一致簡單。
+   header 兩列原本靠 spacer div 推右側 actions,維持不動。 */
+.focus-head,
+.focus-list,
+.focus .banner {
+  width: 100%;
+}
+/* runs / 累積成本 chip:pipeline header 上 quick glance,完整明細在 OverflowMenu「執行紀錄」 drawer */
+.focus-title {
+  margin: 0;
+  font-size: 22px; font-weight: 600;
+  letter-spacing: -0.022em;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.focus-count {
+  font-size: 11px; color: var(--fg-mute);
+  background: transparent;
+  border: 0;
+  padding: 0 10px;
+  border-radius: 0;
+  position: relative;
+  min-height: auto;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,62 @@
+/* ─── banners(ReadyBanner / paused banner)─────────────── */
+.banner {
+  display: flex; align-items: center; gap: var(--space-3, 14px);
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid;
+  margin-top: 14px;
+  position: relative;
+  z-index: var(--z-banner, 5);
+}
+.banner-paused {
+  background: var(--paused-soft);
+  border-color: color-mix(in srgb, var(--paused) 30%, transparent);
+}
+.banner-ready {
+  background: var(--done-soft);
+  border-color: color-mix(in srgb, var(--done) 30%, transparent);
+}
+.banner-icon { display: inline-flex; flex-shrink: 0; color: currentColor; }
+.banner-paused .banner-icon { color: var(--paused); }
+.banner-body { flex: 1; min-width: 0; }
+.banner-title { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.banner-desc { font-size: 10.5px; color: var(--fg-mute); margin-top: 2px; letter-spacing: 0.01em; }
+
+/* phase4-cross-011 — banner state modifiers + data-state contract.
+   ReadyBanner.tsx emits data-state="ready|merging|merged|failed";
+   styling converges so RunButton merge-ready, rail ready/merged dot, focus-head
+   pipeline state all read off the same palette. */
+.banner[data-state="ready"] {
+  background: var(--done-soft);
+  border-color: color-mix(in srgb, var(--done) 35%, transparent);
+  color: var(--done);
+}
+.banner[data-state="merging"] {
+  background: color-mix(in srgb, var(--running) 12%, transparent);
+  border-color: color-mix(in srgb, var(--running) 35%, transparent);
+  color: var(--running);
+}
+.banner[data-state="merged"] {
+  background: color-mix(in srgb, var(--done) 8%, transparent);
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line-2));
+  color: var(--done);
+}
+.banner[data-state="failed"] {
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 45%, var(--line-2)));
+  color: var(--failed);
+}
+.banner[data-state="paused"] {
+  background: var(--paused-soft);
+  border-color: color-mix(in srgb, var(--paused) 30%, transparent);
+  color: var(--paused);
+}
+/* icon inherits the banner state colour by default; body keeps neutral fg
+   so descriptive text remains readable while the accent stays on the icon. */
+.banner[data-state] .banner-icon { color: currentColor; }
+.banner[data-state] .banner-title { color: var(--fg); }
+.banner[data-state] .banner-desc { color: var(--fg-mute); }
+
+/* density compact — focus padding 收一點 */
+[data-density="compact"] .focus-list { gap: 6px; }
+[data-density="compact"] .focus { padding: 16px 24px 24px; }

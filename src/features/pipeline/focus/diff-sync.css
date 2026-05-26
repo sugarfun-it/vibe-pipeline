@@ -1,0 +1,33 @@
+/* ─── Diff chip / Sync chip(V1 Refined:meta-row 內 inline,flat hover affordance)─── */
+
+.focus-diff-chip,
+.sync-chip {
+  cursor: pointer;
+  transition: color 100ms ease;
+}
+.focus-diff-chip:hover,
+.sync-chip:hover {
+  color: var(--fg);
+  background: transparent;
+  box-shadow: none;
+}
+
+.focus-diff-added { color: var(--done); }
+.focus-diff-deleted { color: var(--failed); }
+.focus-diff-sep { margin: 0 3px; color: var(--fg-faint); }
+.focus-diff-files { color: var(--fg-faint); margin-left: 4px; }
+
+/* sync chip color variants */
+.sync-chip.sync-chip-conflict { color: var(--accent); }
+.sync-chip.sync-chip-failed { color: var(--failed); }
+.sync-chip.sync-chip-done { color: var(--done); }
+.sync-chip.sync-chip-busy { color: var(--queued); }
+.sync-chip-icon {
+  background: transparent;
+  border: 0;
+  padding: 1px 4px;
+  margin-left: 4px;
+  color: currentColor;
+  opacity: 0.7;
+}
+.sync-chip-icon:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }

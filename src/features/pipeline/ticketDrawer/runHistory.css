@@ -1,0 +1,139 @@
+
+
+
+/* ─── RunHistory V1 overlay-only rules(prefix stripped, no source counterpart)─── */
+
+.pipeline-history-top-summary-state::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--running);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--running) 50%, transparent);
+  animation: rhPulse 1.6s ease-in-out infinite;
+}
+.pipeline-history-top-summary-line-meta .mono {
+  color: var(--fg);
+}
+.rh-empty-state .rh-empty-cta:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: var(--accent);
+}
+.tdrw-empty::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  animation: rhSpin 0.9s linear infinite;
+}
+
+@keyframes rhSpin {
+ to { transform: translateY(-50%) rotate(360deg); } 
+}
+.tdrw-runs-summary .tdrw-run-meta-label {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tdrw-runs-summary .tdrw-run-meta-item strong {
+  font-size: 13px;
+  color: var(--fg);
+  font-feature-settings: "tnum";
+}
+.tdrw-runs-summary .tdrw-run-meta-partial {
+  color: var(--paused);
+}
+.tdrw-run-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--done);
+  opacity: 0.85;
+}
+.tdrw-run-card.is-fail::before {
+  background: var(--failed);
+}
+.tdrw-run-card:hover {
+  border-color: var(--line-2);
+}
+.tdrw-run-status::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.tdrw-run-result code, .tdrw-text code, .tdrw-run-detail-result code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  color: var(--fg);
+}
+.tdrw-run-head-hint {
+  font-family: var(--font-mono);
+  font-size: 10px !important;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint) !important;
+  margin-top: 3px;
+}
+.tdrw-run-card:has(.tdrw-run-head[aria-expanded="false"]) .tdrw-run-meta {
+  display: none;
+}
+.tdrw-run-meta-fail .tdrw-run-meta-label {
+  color: var(--failed);
+}
+.tdrw-run-detail-result .tdrw-text {
+  font-size: 12.5px;
+  color: var(--fg);
+  padding: 9px 11px;
+  background: color-mix(in srgb, var(--done) 5%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--done) 20%, var(--line));
+  border-radius: 6px;
+}
+.tdrw-run-card.is-fail .tdrw-run-detail-result .tdrw-text {
+  background: color-mix(in srgb, var(--failed) 5%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--failed) 20%, var(--line));
+}
+.tdrw-run-session-id:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line-2));
+}
+.tdrw-run-pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.tdrw-run-pre::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 4px;
+}
+.tdrw-run-pre-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tdrw-run-detail-error .tdrw-run-pre-toggle {
+  background: color-mix(in srgb, var(--failed) 8%, transparent);
+  border-color: color-mix(in srgb, var(--failed) 40%, var(--line-2));
+  color: var(--failed);
+}
+
+@media (max-width: 900px) {
+  .tdrw-drawer {
+    width: 100vw;
+    border-radius: 0;
+    border-left: 0;
+  }
+}

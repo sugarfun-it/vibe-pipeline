@@ -1,0 +1,37 @@
+/* ─── Misc 小元素 ──────────────────────────────────────────── */
+
+
+.focus-runs-chip {
+  /* 已存在 board.css;這邊保 inline 補的 fontSize:11 + color:fg-mute。
+     iter-uiux 2026-05-24:加邊框 + transparent bg → 視覺上跟 state chip / diff chip
+     區別「metadata」而非「status badge」。padding 略收避免撐高 meta-row。 */
+  font-size: 11px;
+  color: var(--fg-mute);
+  border: 1px solid var(--line);
+  background: transparent;
+  padding-block: 1px;
+}
+
+/* running 狀態停止按鈕 */
+.run-btn-stop-now {
+  background: transparent;
+  color: var(--failed);
+  border: 1px solid color-mix(in srgb, var(--failed) 45%, transparent);
+}
+.run-btn-stop-now:hover {
+  background: var(--failed-soft);
+  border-color: var(--failed);
+}
+
+/* iter-uiux 2026-05-24 — RunButton disabled-empty 文字對比
+   (`無可執行 ticket` / `無可執行`)。
+   原本走 .btn[aria-disabled] 的全域 opacity / muted color → 在暖色背景上
+   洗白。這裡覆寫 owned 範圍內的 token contrast,保持 disabled 語意但
+   可讀。border 走 line-2 而非 transparent,讓 button shape 在視覺上不
+   消失。 */
+.btn.run-btn-empty[aria-disabled="true"] {
+  color: var(--fg-mute);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  opacity: 1;
+}

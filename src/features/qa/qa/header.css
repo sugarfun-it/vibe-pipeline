@@ -1,0 +1,47 @@
+/* qa/header.css — drawer header breadcrumb and textarea base rules. */
+/* Header — 2-column grid so long pipeline names ellipsis instead of pushing
+   close button to a second row.  qa-real-001 / 002 / 007. */
+.qadr-crumb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--control-h, 32px);
+  gap: var(--space-2, 8px);
+  align-items: center;
+}
+.qadr-crumb .qadr-crumb-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.qadr-crumb-project {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  color: var(--fg-mute);
+}
+.qadr-crumb-current {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.qadr-textarea {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+  min-height: 60px;
+}

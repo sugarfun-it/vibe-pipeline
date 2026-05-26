@@ -1,0 +1,272 @@
+/* ─── Narrow desktop(<920px,laptop + rail + inbox 三欄擠壓區)──
+   V1 Refined RWD:padding 縮、actions btn 縮小、title 19px,
+   避免 absolute-pinned actions 撞 title 跟 overflow ⋯ */
+@media (max-width: 919.98px) {
+  .focus { padding: 16px 18px 18px; }
+  .focus-head-title-row { padding-right: 240px; gap: 8px; min-height: 32px; }
+  .focus-actions { right: 38px; gap: 4px; height: 32px; }
+  .focus-overflow { height: 32px; }
+  .focus-actions .btn { padding: 4px 10px; font-size: 11.5px; min-height: 28px; }
+  .focus-overflow > .btn,
+  .rail-section-overflow > .btn,
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel { padding: 4px 6px; min-height: 28px; }
+  .focus-title,
+  .focus-title-input { font-size: 19px; }
+}
+
+/* ─── Mobile(focus header / banner / RunButton 相關)─────── */
+@media (max-width: 767.98px) {
+  /* 手機 FocusColumn 縮小 padding,標題小一點,降低上方密度 */
+  .focus {
+    padding: 14px 14px 18px !important;
+  }
+  .focus-title,
+  .focus-title-input {
+    font-size: 18px !important;
+  }
+  .focus-head { margin-bottom: 10px !important; }
+  .focus-head-top {
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  /* done count 字體略小,跟 state chip 同一視覺層 */
+  .focus-count {
+    font-size: 11px !important;
+  }
+
+  /* V1 Refined desktop 用絕對定位釘 actions / overflow 到 title-row 右上;
+     mobile 還原回 flow:title-row nowrap(title 撐滿,overflow ⋯ 釘右邊靠 margin-left:auto),
+     actions 改自己一列(order:99 / width:100% / dashed top),允許 flex-wrap 給多按鈕情境。 */
+  .focus-head-title-row {
+    padding-right: 0 !important;
+    min-height: 0 !important;
+    align-items: center;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+  .focus-head-meta-row {
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+    column-gap: 0 !important;
+    overflow: visible !important;
+  }
+  /* meta-row chips:mobile 不再 ellipsis,讓 diff/sync info 完整顯示並換行 */
+  .focus-head-meta-row > .focus-count,
+  .focus-head-meta-row > .chip:not(.chip-state),
+  .focus-head-meta-row > .sync-chip {
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+    flex-shrink: 0;
+  }
+  .focus-actions {
+    position: static !important;
+    right: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    margin-top: 8px !important;
+    gap: 6px;
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    order: 99;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
+  }
+  .focus-overflow {
+    position: static !important;
+    right: auto !important;
+    height: auto !important;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* mobile:RunButton disabled「無可執行 ticket」label 改短「無可執行」*/
+  .run-btn-empty-label-full { display: none; }
+  .run-btn-empty-label-short { display: inline; }
+
+  /* v2-board-003:mobile pencil / focus 區的 overflow ⋯ padding 收一點;
+     tap target 走 .btn 的 min-height(canonical control-h),不再強制 44px */
+  .focus-title-edit-btn,
+  .focus-overflow > .btn,
+  .rail-section-overflow > .btn,
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
+    padding-inline: 8px;
+  }
+  /* rename confirm / cancel 跟 ⋯ overflow 同一節奏 — 不強制方形(原 aspect 1/1 顯得比 ⋯ 重) */
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
+    border-radius: var(--radius-control, 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* mobile-focus-006:merged pipeline 的 disabled 「無可執行」button 在 mobile 隱藏 —
+     主動作只剩「+ 新增 ticket」,不要再讓 disabled 跟它競爭視覺權重 */
+  .run-btn-empty.run-btn-empty-merged {
+    display: none !important;
+  }
+
+  /* FC-002:ready(merge-ready)pipeline 在 mobile 也隱藏 disabled 「無可執行」—
+     showMergeBanner 已提供「合併入 main」CTA,header 內 disabled button 形同重複 +
+     讓 +ticket 主動作視覺權重被稀釋。透過 .focus-run-wrap[data-pipeline-state="ready"] 鎖定。 */
+  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="ready"],
+  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
+    display: none !important;
+  }
+
+  /* FC-003:mobile header actions 統一一條 row + 對齊,不被 chip flex-wrap 切斷,
+     primary CTA 永遠靠右、視覺權重一致 */
+  .focus-actions {
+    margin-left: auto;
+  }
+  .focus-actions .btn {
+    flex-shrink: 0;
+  }
+
+  /* iter-uiux 2026-05-24 retry — syncActive 時 RunButton 是 disabled「助理處理中」狀態,
+     在 mobile 跟 +新增 ticket / sync-chip 同列搶版面;隱藏可見 button,
+     但 wrapper 與 sr-only role=status 仍保留在 a11y tree(2026-05-25 sync_active r1
+     focus-column-sync-a11y-001:原本 wrapper display:none 會把 sr-only 一併隱掉,改成
+     只藏 button 視覺,wrapper 改 zero footprint)。 */
+  .focus-actions .focus-run-wrap[data-sync-active="1"] {
+    display: inline-flex;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+  .focus-actions .focus-run-wrap[data-sync-active="1"] > button {
+    display: none;
+  }
+
+  /* iter-uiux 2026-05-24 — empty_pipeline pair:mobile 下 EmptyTickets 已提供中央
+     主 CTA(建第一張 ticket / 接續 QA),header 的 + 新增 ticket / + 接續 QA 跟它重複
+     +擠掉 state chip 行寬。data-empty-mode="1" 時 mobile 隱掉 header 按鈕。
+     2026-05-24 retry — 例外:hasActiveDraft 時 EmptyTickets 顯示「接續 QA」中央 CTA,
+     但 user 第二行 entry 仍需要 header 也有可點按鈕(語意是同樣 primary action,不重複)
+     → data-has-active-draft="1" 時 header 按鈕保留可見,反而是中央 CTA(EmptyTickets)
+     才應該降權,但 EmptyTickets 非本 subagent owned 檔,暫只保留 header 視覺入口。 */
+  .focus-actions[data-empty-mode="1"][data-has-active-draft="0"] .focus-add-ticket {
+    display: none !important;
+  }
+
+  /* mobile-focus-004:ReadyBanner merged 變體在 mobile 把 branch desc(branch → base · N commit)
+     截成單行 ellipsis,避免長 branch name 換行撐高 banner */
+  .banner.banner-merged .banner-desc {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* iter-uiux 2026-05-24 — ReadyBanner mobile 模式下,若 branch + base + commits 無法
+     一行容下,讓 commit count 自然換行;隱藏 `·` 分隔符,避免 `·` 跑到下一行行首 */
+  .banner-desc .banner-meta-sep {
+    display: none;
+  }
+  .banner-desc .meta-atom + .meta-atom {
+    display: block;
+  }
+  /* 非 merged variant 的 banner desc 不限 single-line,所以也讓 meta-atom block 在 mobile
+     是合理 default;merged variant 仍 ellipsis 一行(上面 rule 覆寫住) */
+  .banner.banner-merged .banner-desc .meta-atom + .meta-atom {
+    display: inline;
+  }
+  .banner.banner-merged .banner-body {
+    min-width: 0;
+  }
+
+  /* v2-board-002:ReadyBanner merged 變體在 mobile 壓緊,別搶過已完成的 ticket。 */
+  .banner.banner-merged {
+    padding: var(--space-3, 12px) var(--space-4, 14px);
+    border-radius: var(--radius-control, 6px);
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2, 8px);
+  }
+  .banner.banner-merged .banner-title {
+    font-size: 12.5px;
+  }
+  .banner.banner-merged .banner-desc {
+    font-size: 11px;
+    margin-top: 1px;
+  }
+  .banner.banner-merged .banner-icon {
+    transform: scale(0.85);
+  }
+
+  /* iter-uiux 2026-05-24 retry — ReadyBanner ready / failed variants 在 mobile 下
+     CTA(合併入 main / 重試合併)會把 desc meta(branch → base · N commit)壓到
+     不可讀 ellipsis。改成 mobile 下整個 banner 縱向排列:icon + body 一行,CTA 獨佔下一行
+     full-width,避免擠壓。merged variant 沒 CTA 不受影響;merging variant 同 ready 處理。 */
+  .banner[data-state="ready"],
+  .banner[data-state="failed"],
+  .banner[data-state="merging"] {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .banner[data-state="ready"] .banner-body,
+  .banner[data-state="failed"] .banner-body,
+  .banner[data-state="merging"] .banner-body {
+    flex: 1 1 calc(100% - 44px);
+    min-width: 0;
+  }
+  .banner[data-state="ready"] > .btn,
+  .banner[data-state="failed"] > .btn,
+  .banner[data-state="merging"] > .btn {
+    flex: 0 0 100%;
+    margin-top: 8px;
+    justify-content: center;
+  }
+}
+
+/* RunButton disabled label:desktop 用長版「無可執行 ticket」、mobile 用短版「無可執行」
+   wrap 在 @media query 內,避免被 (max-width:767.98px) 區塊蓋過(那塊在檔案中段)。 */
+@media (min-width: 768px) {
+  .run-btn-empty-label-full { display: inline; }
+  .run-btn-empty-label-short { display: none; }
+}
+
+/* ─── Ultra-narrow(<540px,小手機)── refined 額外壓縮 header padding
+   meta-row 改 horizontal scroll(不 wrap),title 17px */
+@media (max-width: 539.98px) {
+  .focus { padding: 12px 10px 14px !important; }
+  .focus-title,
+  .focus-title-input { font-size: 17px !important; }
+  /* meta-row 維持 wrap(refined v2 矯正:之前用 nowrap+overflow-x:auto 會把 actions
+     塞 100% 寬硬撐爆 viewport,chips 又被壓到只剩 · 符號) */
+  .focus-head-meta-row {
+    font-size: 10.5px;
+    flex-wrap: wrap !important;
+    row-gap: 4px;
+  }
+  .focus-head-meta-row > .focus-count,
+  .focus-head-meta-row > .chip:not(.chip-state),
+  .focus-head-meta-row > .sync-chip { padding: 0 8px; }
+
+  /* Action button 在這 size 範圍補 touch target(32-34 min-height)*/
+  .focus-actions .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .focus-actions .btn-primary,
+  .focus-actions .btn-danger {
+    padding: 7px 14px;
+    min-height: 34px;
+  }
+  /* ⋯ overflow / rename ✓✕ 跟其他 action button 同 touch target */
+  .focus-overflow > .btn,
+  .focus-title-edit-confirm,
+  .focus-title-edit-cancel {
+    min-height: 32px;
+  }
+}

@@ -1,0 +1,25 @@
+/* qa/responsive.css — light theme and narrow responsive rules. */
+html.light .qadr-drawer .qadr-bubble-ai {
+  background: var(--panel);
+  border-left-color: color-mix(in srgb, var(--accent) 60%, var(--line-2));
+}
+html.light .qadr-drawer .qadr-spec-ready-bar {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent) 14%, var(--bg-elevated)),
+    color-mix(in srgb, var(--accent) 6%, var(--bg-elevated)));
+}
+
+@media (max-width: 720px) {
+  .qadr-stage > .qadr-drawer,
+  .qadr-drawer {
+    width: 100vw !important;
+    max-width: none;
+    border-radius: 0;
+    border-left: 0;
+    box-shadow: none;
+  }
+  .qadr-drawer .drawer-head.qadr-head { padding: 12px 16px; }
+  .qadr-drawer .drawer-body.qadr-body { padding: 14px 16px; }
+  .qadr-drawer .drawer-foot.qadr-foot { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
+  /* close X 統一走 shared .drawer-close base — 不在這層 override */
+}

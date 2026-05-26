@@ -1,0 +1,26 @@
+/* ─── Modal body(sync conflict modal)── 內元素 spacing ─────── */
+
+.focus-modal-text {
+  margin: 6px 0;
+}
+
+.focus-modal-text--mt {
+  margin: 12px 0 6px;
+  font-size: 13px;
+}
+
+.focus-modal-files {
+  margin: 8px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--fg-mute);
+  max-height: 200px;
+  overflow-y: auto;
+  /* iter-uiux 2026-05-24 sync R2 (sync-010):long paths wrap, 不撐爆 modal 寬度導致 actions 跑出 viewport */
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.focus-modal-files li {
+  line-height: 1.45;
+  padding: 1px 0;
+}

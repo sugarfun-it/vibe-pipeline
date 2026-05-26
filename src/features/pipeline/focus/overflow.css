@@ -1,0 +1,93 @@
+/* ─── Overflow menu(⋯ 按鈕 + 展開的 menu) ─────────────────── */
+
+/* V1 Refined:overflow ⋯ 釘在 title-row 右側最邊(actions cluster 右側),走絕對定位 */
+.focus-overflow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  z-index: 3;
+}
+.focus-overflow > .btn,
+.rail-section-overflow > .btn {
+  padding: 4px 8px;
+  min-height: 30px;
+  color: var(--fg-mute);
+}
+/* rail trigger 預設無底色但保留框線,hover 才顯 bg(走 .btn primitive 的 hover) */
+.rail-section-overflow > .btn {
+  background: transparent;
+}
+.focus-overflow > .btn:hover,
+.rail-section-overflow > .btn:hover { color: var(--fg); }
+
+/* Menu surface — visual only. 定位由 <Popover> primitive(portal + JS-computed left/top)負責,
+   這裡禁設 position / top / right(會跟 Popover 計算的座標打架,造成 menu 拉伸到 viewport 邊界)。
+   z-index 仍要設 — Popover 是 position: fixed portal 到 body,沒設會被 stacking context 高的兄弟蓋。 */
+.focus-overflow-menu {
+  min-width: 180px;
+  max-width: min(280px, calc(100vw - 16px));
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  z-index: var(--z-popover, 100);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.focus-overflow-item {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  text-align: left;
+  color: var(--fg);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.focus-overflow-item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.focus-overflow-item:disabled {
+  color: var(--fg-faint);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.focus-overflow-item.is-danger {
+  color: var(--failed);
+}
+
+/* danger 跟 :disabled 都改 color,disabled 要贏(視覺上看得出 disabled)— 拉高特異性 */
+.focus-overflow-item.is-danger:disabled {
+  color: var(--fg-faint);
+}
+
+.focus-overflow-item-icon {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.focus-overflow-item-label {
+  white-space: nowrap;
+}
+
+.focus-overflow-item-hint {
+  font-size: 10px;
+  color: var(--fg-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

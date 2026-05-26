@@ -1,0 +1,89 @@
+
+.tdrw-commit-hash {
+  color: var(--accent, var(--running));
+  font-size: 11px;
+}
+/* button 形式 — 按下複製。保留 hash text 樣式。
+   TD-COPY-005:觸控目標補大:desktop ≥ 32 高,mobile ≥ 36 高 + ≥ 44 寬,確保不只是文字 pill */
+.tdrw-commit-hash-btn {
+  background: transparent;
+  border: 1px dashed transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-mono);
+  transition: background 100ms, border-color 100ms;
+  min-height: 32px;
+  min-width: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.tdrw-commit-hash-btn:hover {
+  background: color-mix(in srgb, var(--accent, var(--running)) 14%, transparent);
+  border-color: var(--line);
+}
+.tdrw-commit-hash-btn:focus-visible {
+  background: color-mix(in srgb, var(--accent, var(--running)) 14%, transparent);
+  border-color: var(--line);
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+.tdrw-commit-subject {
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.tdrw-commit-ts {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 767.98px) {
+  /* Stage / drawer mobile sizing inherited from shared drawer.css.
+     Ticket-only mobile rules below. */
+  /* TDRW-RWD-001 / ticket-drawer-001 / ticket-drawer-005 / TD-COPY-002:
+     sticky footer 約 56-64px,mobile body padding-bottom 從 80 → 112 給最後一列 breathing room
+     (commit row / AuditTimeline toggle 才不會視覺貼齊 footer);safe-area 額外加 */
+  .tdrw-body {
+    padding: 12px 16px calc(112px + env(safe-area-inset-bottom));
+  }
+  /* TDRW-SPLIT-RWD-001:split-confirm footer 比一般 actions 高出 ~120px
+     (head + desc + actions stack),body clearance 必須加碼,
+     否則 prompt 折疊預覽 / AuditTimeline toggle 在 confirm 出現時會被擋 */
+  .tdrw-drawer.has-split-confirm .tdrw-body {
+    padding-bottom: calc(240px + env(safe-area-inset-bottom));
+  }
+
+  .tdrw-split-confirm-actions {
+    flex-direction: column;
+  }
+
+  .tdrw-split-confirm-actions .tdrw-action {
+    width: 100%;
+  }
+
+  /* TDRW-RWD-002:commit row 在 mobile 改兩列;timestamp 滑到第二列右側對齊,
+     保留 desktop 「hash / subject / ts」 視覺右對齊習慣 */
+  .tdrw-commit {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .tdrw-commit-ts {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
+@media (hover: none) {
+  .tdrw-commit-hash-btn {
+    background: color-mix(in srgb, var(--accent, var(--running)) 10%, transparent);
+    border-color: var(--line);
+  }
+}

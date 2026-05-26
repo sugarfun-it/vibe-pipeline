@@ -1,0 +1,59 @@
+
+.tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon {
+  width: 32px;
+  padding: 0;
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-mute);
+  justify-content: center;
+}
+.tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon:hover {
+  background: color-mix(in srgb, var(--failed) 14%, transparent);
+  border-color: color-mix(in srgb, var(--failed) 35%, transparent);
+  color: var(--failed);
+}
+.tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon .tdrw-delete-icon-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+}
+.tdrw-actions-primary > button[aria-haspopup="dialog"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line-2));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.tdrw-actions-primary > button[aria-haspopup="dialog"]:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+.tdrw-footer.tdrw-split-confirm {
+  background: color-mix(in srgb, var(--failed) 7%, var(--bg-elevated));
+  border-top: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line));
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--failed) 30%, transparent);
+}
+.tdrw-split-confirm-actions .tdrw-action.tdrw-action-danger {
+  margin-left: 0;
+  background: var(--failed);
+  color: var(--bg);
+  border-color: var(--failed);
+  width: auto;
+  padding: 6px 14px;
+}
+.tdrw-split-confirm-actions .tdrw-action.tdrw-action-danger:hover {
+  filter: brightness(1.08);
+}
+.tdrw-split-confirm-actions .tdrw-action.tdrw-action-danger .tdrw-delete-icon-label {
+  position: static;
+  width: auto;
+  height: auto;
+  clip: auto;
+  overflow: visible;
+}
+.tdrw-footer.tdrw-actions-running {
+  justify-content: flex-start;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+  border-top: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+}

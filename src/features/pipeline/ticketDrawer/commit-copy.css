@@ -1,0 +1,36 @@
+
+
+/* commit hash 複製成功 chip — position:absolute 浮層。
+   TD-COPY-001:不再 left:100% 蓋住 subject(或撐字面看起來像 hash 被改寫),改 bottom:100% 浮在 button 上方,
+   水平靠左對齊 hash 起點;按鈕本身 .is-copied 同時改 border + bg 提供雙重視覺訊號(chip 浮上 + button 變綠) */
+.tdrw-commit-hash-btn {
+  position: relative;
+}
+.tdrw-commit-copied {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  font-size: 9.5px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--done);
+  border: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transform: translateY(2px);
+  pointer-events: none;
+  transition: opacity 120ms, transform 120ms;
+  white-space: nowrap;
+  z-index: 2;
+}
+.tdrw-commit-copied[data-visible] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tdrw-commit-hash-btn.is-copied {
+  border-color: color-mix(in srgb, var(--done) 45%, var(--line));
+  background: color-mix(in srgb, var(--done) 8%, transparent);
+}

@@ -1,0 +1,216 @@
+
+
+/* breadcrumb 的 pipeline 分支 chip — 跟 pipeline 名與 ticket # 用相同 mono 風格,稍微壓淡 */
+/* 折疊式 prompt — 預設 max-height + fade,展開後恢復。
+   TDRW-PROMPT-003:max-height 響應式 — mobile 縮到 ~12 行,desktop 維持 ~14 行,
+   太高的 collapsed 預覽會讓 toggle 推到 viewport 外。
+   TDRW-PROMPT-002:fade end color 用 panel-2(跟 prompt-md bg 同 token),不會在 dark mode 看起來像方塊 */
+.tdrw-prompt-collapse {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tdrw-prompt-md.is-collapsed {
+  position: relative;
+  max-height: 22em;
+  overflow: hidden;
+}
+.tdrw-prompt-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4em;
+  /* 從 prompt-md 自己的背景(panel-2)漸出,避免主題切換時 fade end color 不匹配 */
+  background: linear-gradient(to bottom, transparent, var(--panel));
+  pointer-events: none;
+}
+@media (max-width: 720px) {
+  .tdrw-prompt-md.is-collapsed { max-height: 14em; }
+  .tdrw-prompt-fade { height: 4em; }
+
+  .tdrw-drawer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .drawer-head.tdrw-head {
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    background: var(--bg-elevated);
+  }
+  .drawer-crumb.tdrw-breadcrumb {
+    min-height: 28px;
+    margin-bottom: 8px;
+    font-size: 10.5px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .tdrw-breadcrumb > * {
+    flex-shrink: 0;
+  }
+  .tdrw-breadcrumb > [style*="fg-mute"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .drawer-titlerow.tdrw-titlerow {
+    margin-bottom: 12px;
+  }
+  .drawer-title.tdrw-title {
+    font-size: 19px;
+    line-height: 1.32;
+    margin-top: 0;
+  }
+  .drawer-meta.tdrw-status-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    gap: 6px;
+  }
+  .tdrw-status-chip.tdrw-status-pill {
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+  .tdrw-meta-chip.ticket-mode {
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+  .drawer-body.tdrw-body {
+    padding: 4px 16px 20px;
+  }
+  .tdrw-section {
+    padding: 16px 0 6px;
+  }
+  .tdrw-section:first-child {
+    padding-top: 10px;
+  }
+  .tdrw-iter-round-head {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .tdrw-iter-round-dur {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: 0;
+  }
+  .tdrw-commit {
+    grid-template-columns: auto 1fr;
+    row-gap: 2px;
+    column-gap: 8px;
+  }
+  .tdrw-commit-ts {
+    grid-column: 2 / 3;
+    padding-left: 0;
+  }
+  .tdrw-footer {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .tdrw-footer.tdrw-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    grid-template-columns: none;
+  }
+  .tdrw-actions-primary {
+    display: contents;
+  }
+  .tdrw-footer.tdrw-actions > .tdrw-action, .tdrw-actions-primary > .tdrw-action {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 13px;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon {
+    flex: 1 1 0;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    margin-left: 0;
+    gap: 6px;
+    color: var(--failed);
+    background: color-mix(in srgb, var(--failed) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--failed) 35%, var(--line-2));
+  }
+  .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon:hover {
+    background: color-mix(in srgb, var(--failed) 14%, transparent);
+    border-color: var(--failed);
+    color: var(--failed);
+  }
+  .tdrw-action-danger.tdrw-delete-btn.tdrw-delete-icon .tdrw-delete-icon-label {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    overflow: visible;
+    font-size: 13px;
+  }
+  .tdrw-footer.tdrw-actions-running {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .tdrw-running-label {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .tdrw-footer.tdrw-split-confirm {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .tdrw-split-confirm-desc {
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+  .tdrw-split-confirm-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .tdrw-split-confirm-actions > .tdrw-action {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    justify-content: center;
+    font-size: 13px;
+  }
+}
+/* TDRW-PROMPT-005:toggle 一階提升 — 高度對齊 control token、padding 加大、font 改 sans
+   (跟其他 button 系統一致;mono 留給 hash / branch / dur 等 machine value) */
+.tdrw-prompt-toggle {
+  align-self: flex-start;
+  font-family: var(--font-sans, inherit);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-mute);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  min-height: 26px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+  letter-spacing: 0.02em;
+}
+.tdrw-prompt-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tdrw-prompt-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

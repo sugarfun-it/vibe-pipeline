@@ -1,0 +1,62 @@
+/* SettingsPopover/tab-content.css — tab content wrapper, task-group card containers */
+/* ─── Tab content wrapper(統一各 tab 垂直節奏)──────────────────── */
+
+.settings-tab-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Card container(原 .task-group,通用於 AI / PWA tab)────────── */
+
+.task-group {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 12px;
+  border-radius: 10px;
+}
+.task-group + .task-group { margin-top: 10px; }
+
+.task-group--primary {
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+/* secondary 改成跟 primary 同 card chrome,差異化靠 task-group-hint 的 accent callout
+   表達「跟隨上方 Main Agent」的繼承語意(原本用 dashed 邊框已不再使用) */
+.task-group--secondary {
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.task-group-hint {
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+/* secondary 內的 task-group-hint 升格為 accent callout */
+.task-group--secondary .task-group-hint {
+  display: flex;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: var(--fg);
+  margin-bottom: 12px;
+  line-height: 1.45;
+  align-items: flex-start;
+  gap: 6px;
+}
+.task-group--secondary .task-group-hint svg {
+  color: var(--accent);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.settings-popover-task-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+

@@ -1,0 +1,378 @@
+/* Ticket drawer — content / behaviour only. Stage / scrim / box / mobile
+   sizing now inherit from shared drawer.css. */
+.tdrw-stage {
+  /* Override canonical .drawer-stage (position:absolute) to viewport-fixed
+     since TicketDrawer is rendered inline (no portal). */
+  position: fixed;
+  inset: 0;
+}
+
+/* td-004:關閉 X — desktop 40x40,mobile 44x44 觸控目標;圖示視覺保 16x16,padding 補出可點範圍 */
+.tdrw-drawer .create-x,
+.tdrw-drawer .tdrw-close {
+  min-width: var(--space-10, 40px);
+  min-height: var(--space-10, 40px);
+  display: grid;
+  place-items: center;
+  padding: var(--space-3, 12px);
+  border-radius: var(--radius-control, 6px);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--fg-mute);
+  transition: background 120ms, border-color 120ms, color 120ms;
+  margin-inline-end: -6px;
+}
+.tdrw-drawer .create-x:hover,
+.tdrw-drawer .tdrw-close:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+/* hist-009:focus 環沿用 canonical token,offset 2px,讓鍵盤焦點更顯眼 */
+.tdrw-drawer .create-x:focus-visible,
+.tdrw-drawer .tdrw-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-control, 6px);
+}
+.tdrw-stage > .drawer-scrim {
+  pointer-events: auto;
+}
+/* tdrw-drawer no longer redefines positioning / size / shell — inherited
+   from canonical .drawer. Override only when ticket-specific tweaks needed. */
+
+/* 套 NumberField 後保留 inline 行為:field wrapper 不撐滿、保持 row 內顯示 */
+.tdrw-iter-limit-field {
+  width: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tdrw-iter-limit-field .form-hint {
+  font-size: 11px;
+  color: var(--failed);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+/* iter 上限 input — 跟 drawer-meta 內 chip 共處,小巧,只露數字 */
+.form-input.tdrw-iter-limit {
+  width: 32px;
+  min-height: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 2px;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  border-bottom: 1.5px solid var(--accent);
+}
+.form-input.tdrw-iter-limit:focus, .form-input.tdrw-iter-limit:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: none;
+  border-bottom-color: var(--accent);
+}
+.form-input.tdrw-iter-limit.is-invalid {
+  border-color: var(--failed);
+  background: transparent;
+  border-bottom-color: var(--failed);
+  color: var(--failed);
+}
+/* 隱藏 number input 的上下 spinner 預設樣式(各瀏覽器醜) */
+.tdrw-iter-limit::-webkit-inner-spin-button,
+.tdrw-iter-limit::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+/* td-001:actions 從 header 下方移到 drawer 底部 sticky footer。
+   primary 操作群在左、destructive 推到右,拉開視覺距離防誤點。
+   .tdrw-footer 是所有底部狀態(actions / split-confirm / running)的共用 frame。
+   td-009:按鈕 height 對齊 control token,不再像大型 CTA;destructive 不全寬。 */
+.tdrw-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.tdrw-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+}
+.tdrw-actions-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tdrw-action {
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding-inline: var(--space-3, 12px);
+  border-radius: 7px;
+  border: 1px solid var(--line-2);
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, transform 80ms;
+  padding: 6px 14px;
+}
+.tdrw-action:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+.tdrw-action:active {
+  transform: translateY(0.5px);
+}
+.tdrw-action:disabled,
+.tdrw-action[aria-busy="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+/* td-011:destructive 用 danger-bg-soft + danger-border + danger-fg,跟一般 outline button 視覺差異夠
+   (不只靠紅色文字),色覺辨識不足者也能看出來 */
+.tdrw-action-danger,
+.tdrw-delete-btn {
+  color: var(--failed);
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 10%, var(--panel-2)));
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 30%, var(--line-2)));
+  /* danger 推到 toolbar 尾端,跟左側操作拉出視覺距離 */
+  margin-left: auto;
+}
+.tdrw-action-danger:hover,
+.tdrw-delete-btn:hover {
+  background: color-mix(in srgb, var(--failed) 18%, transparent);
+  border-color: var(--failed);
+}
+/* inline AI 拆分確認卡 — 取代彈 popup,在 footer 內直接展開。
+   TDRW-SPLIT-VISUAL-001 / DESIGN-001:用 warning surface(soft warning bg + 左 border + icon)
+   把它跟一般 footer / accent 視覺拉開,符合「會取代原 ticket」的不可逆 / 高風險語意。 */
+.tdrw-split-confirm {
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 8%, var(--bg-elevated)));
+  border-left: 3px solid color-mix(in srgb, var(--failed) 55%, transparent);
+  animation: tdrw-split-confirm-in 160ms ease-out;
+}
+@keyframes tdrw-split-confirm-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* TDRW-SPLIT-STRUCT-001:title 前加 scissors icon,讓「我現在在做什麼」有狀態錨點 */
+.tdrw-split-confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.tdrw-split-confirm-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--failed);
+  flex: 0 0 auto;
+}
+.tdrw-split-confirm-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+}
+.tdrw-split-confirm-desc {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.tdrw-split-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.tdrw-split-confirm-actions .tdrw-action {
+  flex: none;
+  padding: 6px 14px;
+}
+/* TDRW-SPLIT-INTERACTION-001:確認按鈕用 danger tone(.tdrw-action-danger 已定義),
+   但 inline-flex 內保留 margin-left:auto 在 footer 排版時不適用 — confirm-actions 自己 gap 排,
+   不要拉到尾端;reset 用 .tdrw-split-confirm-cta 個別 override */
+.tdrw-split-confirm .tdrw-split-confirm-cta {
+  margin-left: 0;
+}
+
+/* AI 拆分中 inline 狀態 — footer 內 */
+.tdrw-actions-running {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-elevated));
+}
+.tdrw-running-label {
+  font-size: 12px;
+  color: var(--fg);
+  font-weight: 500;
+}
+.tdrw-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  animation: tdrw-spin 700ms linear infinite;
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+@keyframes tdrw-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* td-005:header 垂直節奏壓緊 — title 字級 22 / line-height 1.25,status row gap 8、下推 12 */
+.tdrw-drawer .tdrw-title {
+  margin-block: var(--space-2, 8px) var(--space-2, 8px);
+  font-size: 22px;
+  line-height: 1.25;
+}
+.tdrw-status-row {
+  gap: var(--space-2, 8px);
+  margin-bottom: var(--space-3, 12px);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* td-008:status pill 維持 filled tone(主狀態),mode / iter meta 退成純文字 */
+.tdrw-status-chip,
+.tdrw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px var(--space-2, 8px);
+  border-radius: var(--radius-control, 6px);
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid;
+  color: var(--chip-c, var(--fg-mute));
+  background: color-mix(in srgb, var(--chip-c, var(--fg-mute)) 14%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c, var(--fg-mute)) 35%, transparent);
+  line-height: 1.4;
+}
+.tdrw-meta-chip {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--fg-mute);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+.tdrw-meta-chip.is-toggle {
+  padding: 2px var(--space-2, 8px);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-control, 6px);
+}
+
+/* mode chip 在 drawer 內 — 可切換時加更明確 affordance(hover 變色 + focus 環),不可切時去掉 cursor。
+   TDRW-SPEC-004:預設用 neutral outline,hover/focus 才上 accent,
+   避免 status pill 的主狀態被 mode chip 的紫色搶走視覺權重 */
+.tdrw-drawer .tdrw-meta-chip.is-toggle,
+.tdrw-drawer .ticket-mode.is-toggle {
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+  background: transparent;
+  color: var(--fg-mute);
+  border-style: dashed;
+  border-color: var(--line-2);
+}
+.tdrw-drawer .tdrw-meta-chip.is-toggle:hover,
+.tdrw-drawer .ticket-mode.is-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--accent);
+  color: var(--fg);
+}
+.tdrw-drawer .tdrw-meta-chip.is-toggle:focus-visible,
+.tdrw-drawer .ticket-mode.is-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.tdrw-drawer .tdrw-meta-chip:not(.is-toggle),
+.tdrw-drawer .ticket-mode:not(.is-toggle) {
+  cursor: default;
+}
+.tdrw-status-chip .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tdrw-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* td-010:section 容器 — 上 border 統一細線、padding 上下對稱;首個 section 不需 border */
+.tdrw-section {
+  padding-block: var(--space-4, 16px) var(--space-2, 8px);
+  border-top: 1px solid var(--line);
+  padding: 18px 0 8px;
+}
+.tdrw-section:first-child {
+  border-top: 0;
+  padding-top: 12px;
+}
+/* td-010:section title 更清楚(13px / 700 / fg-mute),跟 body 距離 8px。
+   TDRW-DESIGN-001:section heading 是人類文字(目標 / 驗收 / 迭代輪次 / commit 紀錄),
+   改回 sans;mono 只留給 machine value(hash / branch / duration / file path) */
+.tdrw-section-label,
+.tdrw-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fg-mute);
+  /* 不 uppercase — 中英混排(如 "commit 紀錄")uppercase 會破排版且 mute 中文無效 */
+  font-family: var(--font-sans, inherit);
+  margin-bottom: var(--space-2, 8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* 無 ::before bar — 改用更安靜的 label 字級 + 上方 section divider 線 區隔。 */
+.tdrw-section-body {
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.6;
+}
+.tdrw-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  color: var(--fg);
+}
+.tdrw-empty {
+  color: var(--fg-mute);
+  font-style: normal;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 10px 14px 10px 32px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  position: relative;
+}

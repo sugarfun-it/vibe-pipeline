@@ -1,0 +1,7 @@
+/* SettingsPopover/picker.css — picker-menu portal z-index override */
+
+/* sp-proj-r1-003:picker dropdown 走 body portal,z-index 預設 100 < settings-popover (1500),
+   會被 settings panel 蓋住整片 options 看不見。提到 --z-picker-popover(1600,settings 跟 modal 之間)。 */
+.picker-menu[role="listbox"] {
+  z-index: var(--z-picker-popover, 1600);
+}

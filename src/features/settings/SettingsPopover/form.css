@@ -1,0 +1,162 @@
+/* SettingsPopover/form.css — field rows, labels, subhints, section titles, form controls scoping */
+/* ─── Field row(Project tab + 通用)─────────────────────────── */
+/* 兩欄 grid:label 左 / control 右。label col 縮到 110-120,subhint padding-left 跟 token 走 */
+
+:root {
+  --settings-label-col: 120px;
+  --settings-row-gap: 14px;
+}
+
+.settings-field-row {
+  display: grid;
+  grid-template-columns: minmax(110px, var(--settings-label-col)) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px var(--settings-row-gap);
+  margin-bottom: 6px;
+}
+
+.settings-field-label {
+  display: block;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: 0.005em;
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* form primitive 包進 .settings-field-controls 的限寬版型 */
+.settings-popover .settings-form-field { width: auto; flex: 0 0 auto; }
+/* 三控件(平行上限 / 基礎分支 / 單次成本上限)鎖同寬,右邊緣對齊 */
+.settings-popover .settings-form-field--narrow .form-input,
+.settings-popover .settings-form-field--mid .form-input { width: 140px; }
+.settings-popover .picker { width: 140px; }
+
+/* 對齊 control 欄;用 label-col token + gap 計算 padding,避免 magic px */
+.settings-subhint {
+  font-size: 11.5px;
+  color: var(--fg-faint);
+  line-height: 1.55;
+  padding-left: calc(var(--settings-label-col) + var(--settings-row-gap));
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+.settings-subhint:last-child { margin-bottom: 0; }
+
+/* 同一條 hint 提供桌面 / 手機兩種長度;靠 media query 切顯示 */
+.settings-subhint-mobile { display: none; }
+
+.settings-subhint--error { color: var(--failed); }
+
+/* saving 狀態 — 字級 12,取消 italic,fg-mute,跟 inline unit 拉開層級 */
+.settings-field-status {
+  font-size: 12px;
+  color: var(--fg-mute);
+  font-style: normal;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* tab 內區塊標題 — eyebrow style(uppercase + accent dot),拉開 section / row 層級 */
+.settings-section-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-section-title::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  flex: 0 0 4px;
+}
+
+.settings-inline-unit {
+  font-size: 11px;
+  color: var(--fg-faint);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.settings-field-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  row-gap: 6px;
+  min-width: 0;
+}
+
+/* tight 版 field row(auto-merge toggle 那行)— 桌面同 grid layout, label 左 toggle 右 */
+.settings-field-row--tight {
+  align-items: center;
+  margin-bottom: 6px;
+}
+.settings-field-row--tight .settings-field-label {
+  font-size: 12.5px;
+  color: var(--fg);
+  font-weight: 500;
+}
+/* auto-merge toggle 以內容寬度呈現,不撐滿右欄 */
+.settings-field-row--tight .toggle-pill {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* refined form-input / picker-trigger — 限制 scope 在 settings popover,
+   不影響其他 feature 的 form atom 視覺 */
+.settings-popover .form-input {
+  border-radius: 7px;
+  background: var(--bg);
+  border-color: var(--line-2);
+  transition: border-color 140ms, box-shadow 140ms, background 120ms;
+}
+.settings-popover .form-input:hover:not(:focus-visible) {
+  border-color: color-mix(in srgb, var(--fg) 18%, var(--line-2));
+}
+
+.settings-popover .picker-trigger {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  background: var(--bg);
+  border-radius: 7px;
+  gap: 8px;
+}
+
+/* sp-r2-001 / r3:settings-popover scope 內 off-state toggle 不該看起來像 disabled。
+   - track 深色化 + 加 border
+   - thumb 加 outline,跟 disabled (opacity 0.55) 拉開
+   - label 字色拉到 var(--fg)
+   - off 狀態 hover 加 accent border 強化「可點」感
+   on-state 沿用全域 --done 規則。 */
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) {
+  color: var(--fg);
+  border-color: var(--line);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]):hover {
+  border-color: var(--accent);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) .toggle-pill-track {
+  background: var(--line-2);
+  border: 1px solid var(--line);
+}
+.settings-popover .toggle-pill:not(.is-on):not(.is-disabled):not([aria-disabled="true"]) .toggle-pill-thumb {
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--line);
+  top: 0;
+  left: 0;
+}
+.settings-popover .toggle-pill.is-on .toggle-pill-thumb {
+  box-shadow: none;
+}
+

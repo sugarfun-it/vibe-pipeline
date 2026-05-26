@@ -1,0 +1,125 @@
+/* SettingsPopover/shell.css — popover frame, close button, tab bar, saved chip */
+/* ─── Desktop popover root ────────────────────────────────────── */
+
+.settings-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  /* 固定寬度,各 tab 切換時 popover 不會抖動;520 容得下 AI 任務 3-equal select grid */
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 80px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  /* 3 層 shadow:inset highlight + 主投影 + 邊界 lift。比 source 更立體,搭 14px radius 的 elevation 語意 */
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent) inset,
+    0 32px 96px rgba(0,0,0,0.45),
+    0 4px 18px rgba(0,0,0,0.35);
+  /* padding-top 44 保 close button 獨立 strip,不跟 segmented tabs 撞 */
+  padding: 44px 18px 14px;
+  z-index: var(--z-settings, 1500);
+  font-size: 13px;
+}
+
+html.light .settings-popover {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.8) inset,
+    0 32px 96px rgba(28,25,22,0.18),
+    0 4px 18px rgba(28,25,22,0.10);
+}
+
+/* 右上關閉 icon — 桌面也顯示,放在獨立 header strip 內(top:8) */
+.settings-popover-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  z-index: 2;
+}
+.settings-popover-close:hover,
+.settings-popover-close:focus-visible {
+  background: var(--hover);
+  color: var(--fg);
+  outline: none;
+}
+
+/* ─── Tab bar(segmented pill control)──────────────────────────── */
+
+/* 不再 position: relative — 讓 saved chip 的 absolute 錨點走 popover,
+   chip 浮在 close button 旁的 header strip 內,不擠壓 tabs 寬度 */
+.settings-popover-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  margin: 0 0 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.settings-popover-tab {
+  flex: 1 1 0;
+  margin: 0;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--fg-mute);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 140ms, background 140ms;
+}
+.settings-popover-tab:hover:not(.is-active) { color: var(--fg); }
+.settings-popover-tab.is-active {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow:
+    0 0 0 1px var(--line-2),
+    0 1px 2px rgba(0,0,0,0.25);
+}
+html.light .settings-popover-tab.is-active {
+  box-shadow:
+    0 0 0 1px var(--line-2),
+    0 1px 2px rgba(28,25,22,0.06);
+}
+
+.settings-popover-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* spacer 失效 — saved chip 改 absolute 不需要它 push */
+.settings-popover-tabs-spacer { display: none; }
+
+/* 已儲存 chip:floats free,top-right beside close.
+   不再寄生在 tabs 內,避免擠壓最右 tab 寬度 */
+.settings-popover-saved {
+  position: absolute;
+  top: 11px;
+  right: 46px;
+  margin: 0;
+  color: var(--done);
+  background: color-mix(in srgb, var(--done) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--done) 30%, var(--line));
+  z-index: 3;
+  transition: opacity 350ms ease;
+}
+.settings-popover-saved.is-fading { opacity: 0; }
+

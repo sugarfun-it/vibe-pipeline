@@ -1,0 +1,169 @@
+/* SettingsPopover/misc.css — mobile responsive overrides (@media max-width: 767px and 480px) */
+/* ─── Mobile ─────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .settings-popover {
+    box-sizing: border-box;
+  }
+
+  .settings-popover *,
+  .settings-popover *::before,
+  .settings-popover *::after {
+    box-sizing: border-box;
+  }
+
+  .settings-popover {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    width: 100vw !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    /* refined:padding-top 56px 給 close button 獨立 header strip */
+    padding: 56px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  /* tabs:segmented pill 維持 desktop 樣式(已是內收 padding 3),不再做負 margin 撐邊 */
+  .settings-popover-tabs {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .settings-popover select,
+  .settings-popover input,
+  .settings-popover button {
+    max-width: 100%;
+  }
+
+  .settings-popover select,
+  .settings-popover input {
+    min-width: 0;
+  }
+
+  /* AI tab:mobile 維持 PC 同 layout(label 上、selects 1fr 1fr 1fr 等寬下方),
+     不再走原本「label/hint 同列 + selects 跨欄」的 grid-areas */
+  .task-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .task-row-selects {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .task-row-selects:has(.task-row-placeholder) {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  /* placeholder 占 cell 但不可見,讓 model/effort 對齊上方有 provider 的 row */
+  .task-row-selects > .task-row-placeholder {
+    display: block;
+    visibility: hidden;
+    width: auto;
+  }
+  .task-row-selects > select {
+    width: 100% !important;
+    min-width: 0;
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  /* 右上關閉 icon — mobile 全螢幕,放大 hit target */
+  .settings-popover-close {
+    top: 10px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+
+  /* saved chip:mobile 維持靠近 close 的浮動位置(top 9 比 desktop 11 略上對齊大顆 close) */
+  .settings-popover-saved {
+    top: 9px;
+    right: 52px;
+  }
+
+  /* Project tab field rows — mobile 全 row stack */
+  .settings-field-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2, 6px);
+    margin-bottom: var(--space-2, 6px);
+  }
+
+  .settings-field-label {
+    margin-bottom: 0;
+    font-size: 13px;
+  }
+
+  .settings-field-controls {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .settings-popover .form-input,
+  .settings-popover .picker-trigger {
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .settings-popover .settings-form-field--narrow .form-input,
+  .settings-popover .settings-form-field--mid .form-input,
+  .settings-popover .picker {
+    width: 100%;
+  }
+
+  .settings-inline-unit {
+    flex-basis: auto;
+    margin-left: 0;
+    white-space: nowrap;
+  }
+
+  .settings-subhint {
+    margin-left: 0;
+    padding-left: 0;
+    margin-top: var(--space-2, 6px);
+    margin-bottom: var(--space-3, 10px);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .settings-subhint-desktop { display: none; }
+  .settings-subhint-mobile { display: block; }
+
+  /* auto-merge tight row:mobile 改 stack(label 上、toggle 下),toggle 全寬 */
+  .settings-field-row--tight {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .settings-field-row--tight .toggle-pill {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+    padding: 8px 12px;
+  }
+}

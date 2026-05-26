@@ -1,0 +1,122 @@
+/* qa/bubble.css — chat bubble and suggestion rules. */
+.qadr-bubble {
+  display: block;
+  width: fit-content;
+  max-width: 92%;
+  padding: 10px 14px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  position: relative;
+}
+.qadr-bubble-ai {
+  max-width: min(100%, 31rem);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 50%, var(--line-2));
+}
+
+/* Empty-state suggestion chips — sit under the first AI welcome bubble,
+   give user clear next-step options without dumping教學文字. */
+.qadr-empty-starter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: var(--space-3, 12px);
+  margin: 8px 0 18px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--iter) 5%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--iter) 25%, var(--line));
+  border-radius: 8px;
+}
+.qadr-starter-label {
+  font-size: 10px;
+  color: var(--fg-mute);
+  line-height: 1.5;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.qadr-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.qadr-suggestion {
+  min-height: 32px;
+  border-radius: var(--radius-control, 6px);
+  padding-inline: var(--space-3, 12px);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.qadr-suggestion:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+@media (pointer: coarse), (max-width: 767.98px) {
+  /* a11y / 觸控:手機 / 觸控裝置回到 44px,維持 hit-target;桌面保留輕量 chip */
+  .qadr-suggestion {
+    min-height: 44px;
+    padding-inline: var(--space-4, 16px);
+    font-size: 12.5px;
+  }
+  /* checklist chip 是 disclosure 控制,但密度高;觸控裝置抬到 32px min-height
+     (drawer-head 內密集排,完全 44px 會撐爆 row,32 是 touch-friendly 折衷) */
+  .qadr-chip {
+    min-height: 32px;
+    padding: 6px 10px;
+  }
+}
+.qadr-bubble-role {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.qadr-bubble-msg {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--fg);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.qadr-bubble-ai {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  margin-right: auto;
+}
+.qadr-bubble-user {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  margin-left: auto;
+}
+.qadr-bubble-role {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+}
+.qadr-bubble-msg {
+  color: var(--fg);
+}
+
+.qadr-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-mute);
+  font-size: 11px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+}

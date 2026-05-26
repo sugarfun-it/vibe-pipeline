@@ -1,0 +1,152 @@
+
+
+/* prefers-reduced-motion — 關 drawer slide、split-confirm animation、spinner、transform transitions */
+@media (prefers-reduced-motion: reduce) {
+  .tdrw-split-confirm {
+    animation: none;
+  }
+  .tdrw-spinner {
+    animation: none;
+    border-top-color: var(--accent);
+    /* 仍顯示為 partial ring,但不轉 */
+  }
+  .tdrw-action {
+    transition: background 120ms, border-color 120ms;
+  }
+  .tdrw-action:active { transform: none; }
+}
+
+/* mobile:actions footer 仍 sticky;primary 群 stack 撐滿,destructive 換行到下一列、退一級
+   (不填底色) — 防誤觸,符合 user 預期「常用操作在上、危險在下」 */
+@media (max-width: 767.98px) {
+  .tdrw-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tdrw-actions-primary {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .tdrw-action {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+  /* footer 一列布局:重開 ticket 主動作占 1fr,刪除 icon-only 占固定欄。
+     不再讓 destructive break 到下一行,但寬度上仍弱於 primary。 */
+  .tdrw-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2, 8px);
+    flex-wrap: nowrap;
+    align-items: stretch;
+  }
+  .tdrw-actions-primary {
+    flex-direction: column;
+    align-items: stretch;
+    width: auto;
+    min-width: 0;
+  }
+  .tdrw-delete-icon {
+    width: auto;
+    flex: 0 0 auto;
+    margin: 0;
+    background: transparent;
+    padding-inline: var(--space-2, 8px);
+    /* TD-ITER-INVALID-006:mobile icon-only 觸控目標 ≥ 44×44 */
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* TD-COPY-005 r4:mobile hash button 提升到 44×44 觸控目標(reviewer 強制達標)*/
+  .tdrw-commit-hash-btn {
+    min-height: 44px;
+    min-width: 72px;
+    padding: 8px 12px;
+  }
+  .tdrw-delete-icon .tdrw-delete-icon-label {
+    /* mobile 只剩 trash icon,文字 sr-only */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
+/* td-003:mobile 隱藏完整 breadcrumb,改顯單行 pipeline/<name> · Ticket #N */
+.tdrw-mobile-context {
+  display: none;
+}
+@media (max-width: 640px) {
+  .tdrw-breadcrumb > .mono,
+  .tdrw-breadcrumb > .sep,
+  .tdrw-breadcrumb > .drawer-crumb-spacer {
+    display: none;
+  }
+  /* mobile:breadcrumb row 不佔 flow,close button 浮 absolute 跟 mobile-context 同高。
+     mobile `.drawer-head { padding: 12px 16px }`;absolute top 從 padding-box 邊緣(= head 外邊)算,
+     必須往下偏移 padding-top(12px)才會跟 mobile-context flow row 起點對齊。 */
+  .tdrw-breadcrumb {
+    position: absolute;
+    top: 12px;
+    right: var(--space-2, 8px);
+    z-index: 1;
+    padding: 0;
+    margin: 0;
+  }
+  .tdrw-head {
+    position: relative;
+    padding-right: 56px;  /* 留位給 close button */
+  }
+  .tdrw-mobile-context {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    /* min-height 跟 close button 同(44px),align-items:center 讓文字垂直中線對齊 icon */
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    color: var(--fg-mute);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .tdrw-mobile-context-pipeline {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .tdrw-mobile-context-sep {
+    color: var(--fg-faint);
+    flex: 0 0 auto;
+  }
+  .tdrw-mobile-context-ticket {
+    color: var(--fg);
+    flex: 0 0 auto;
+  }
+  /* td-004:mobile 把 close button 拉到 44x44 觸控目標 */
+  .tdrw-drawer .create-x,
+  .tdrw-drawer .tdrw-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* TDRW-STRUCT-001:mobile header 垂直節奏壓緊 — title 上下 margin 縮 / status row 下推縮 / body 分隔 gap 不額外撐高,
+     讓 ticket 內容更早出現在 viewport 內(repeated review 時不必每張 ticket 都先滑過大空白) */
+  .tdrw-drawer .tdrw-title {
+    margin-block: 4px 6px;
+    font-size: 20px;
+    line-height: 1.25;
+  }
+  .tdrw-status-row {
+    margin-bottom: 8px;
+  }
+  .tdrw-mobile-context {
+    min-height: 36px;
+  }
+  .tdrw-breadcrumb {
+    top: 6px;
+  }
+}

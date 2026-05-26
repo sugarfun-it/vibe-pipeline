@@ -1,0 +1,93 @@
+/* SettingsPopover/ai-task.css — AI task row layout, task-row selects, provider/effort styling */
+/* ─── AI 任務 row(refined layout:label 在上、3 個 select 1fr 等寬下方)── */
+
+.task-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+/* 同 task-group 內首列無上邊界 */
+.task-group .settings-popover-task-grid > .task-row:first-child {
+  border-top: none;
+  padding-top: 2px;
+}
+
+.task-row-head {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 8px;
+}
+
+.task-row-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.task-row-label .task-row-inline-hint {
+  font-size: 11.5px;
+  color: var(--fg-faint);
+  font-weight: 400;
+}
+
+.task-row-selects {
+  display: grid;
+  /* 三欄等寬:provider / model / effort 同寬。placeholder 仍占 grid cell */
+  grid-template-columns: 1fr 1fr 1fr;
+  column-gap: 6px;
+  align-items: stretch;
+}
+.task-row-placeholder {
+  width: auto;
+}
+
+/* refined select:appearance none + 自繪 chevron,bg var(--bg),radius 7,mono font */
+.task-row-selects > select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 24px 6px 10px;
+  background-color: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  color: var(--fg);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--fg-faint) 50%),
+    linear-gradient(135deg, var(--fg-faint) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 50%, calc(100% - 9px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 140ms, background-color 140ms;
+}
+.task-row-selects > select:hover {
+  border-color: color-mix(in srgb, var(--fg) 25%, var(--line-2));
+}
+.task-row-selects > select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+/* provider / effort 視覺次於 model:bg panel-2、字級略小 */
+.task-row-selects > select.task-row-provider {
+  background-color: var(--panel-2);
+  font-size: 11px;
+  padding-left: 8px;
+  font-weight: 500;
+}
+.task-row-selects > select.task-row-effort {
+  background-color: var(--panel-2);
+  font-size: 11px;
+  padding-left: 8px;
+}
+

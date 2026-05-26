@@ -1,0 +1,97 @@
+/* qa/chip.css — chip and chip panel rules. */
+.qadr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--line-2);
+  background: transparent;
+  color: var(--fg-faint);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: all 120ms;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.qadr-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.qadr-chip.is-expanded {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
+  color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.qadr-chip.is-filled.is-expanded {
+  background: color-mix(in srgb, var(--accent) 14%, var(--done-soft));
+  color: var(--accent);
+}
+.qadr-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-faint);
+  flex-shrink: 0;
+}
+.qadr-chip.is-filled {
+  border-color: color-mix(in srgb, var(--done) 40%, transparent);
+  background: color-mix(in srgb, var(--done) 10%, transparent);
+  color: var(--done);
+  border-style: solid;
+}
+.qadr-chip.is-filled .qadr-chip-dot {
+  background: var(--done);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--done) 18%, transparent);
+}
+.qadr-checklist-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--fg-mute);
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid var(--line);
+}
+.qadr-chip-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+}
+.qadr-chip-panel-label {
+  font-size: 9.5px;
+  color: var(--accent);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.qadr-chip-panel-value {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.qadr-chip-panel-empty {
+  color: var(--fg-faint);
+  font-style: italic;
+}
+.qadr-chip-panel-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.qadr-chip-panel-list li {
+  margin-bottom: 2px;
+}

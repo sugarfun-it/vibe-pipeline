@@ -1,0 +1,132 @@
+/* V1 Refined chip-state:state-colored capsule pill,把 source 內 .dot 的 inline state color
+   撐滿成 chip 背景(0.18 tint),不必動 JSX 就能拿到 state 色。running 時 .dot.pulse 用
+   chipStatePulse 在 0.18↔0.34 間呼吸,不縮放整個 pill */
+.focus-head-meta-row > .chip-state {
+  position: relative;
+  background: color-mix(in srgb, var(--chip-c, var(--fg-mute)) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-c, var(--fg-mute)) 35%, transparent);
+  padding: 3px 12px;
+  border-radius: 999px;
+  color: var(--chip-c, var(--fg-mute));
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.focus-head-meta-row > .chip-state .dot {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: inherit;
+  background: var(--chip-c, var(--fg-mute));
+  opacity: 0.18;
+  z-index: -1;
+}
+/* 透明 border ::before layer 預留給 hover / active 等狀態變色 hook(目前沒實際變色,
+   但 refined 設計刻意留這層,免得未來加狀態時 chip 邊界跳動)*/
+.focus-head-meta-row > .chip-state::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.focus-head-meta-row > .chip-state .dot.pulse {
+  animation: chipStatePulse 1.8s ease-in-out infinite;
+}
+/* chipStatePulse keyframe 定義在 tokens.css */
+.focus-head-meta-row > .focus-count,
+.focus-head-meta-row > .chip:not(.chip-state),
+.focus-head-meta-row > .sync-chip {
+  background: transparent;
+  border: 0;
+  padding: 0 10px;
+  color: var(--fg-mute);
+  font-size: 11px;
+  border-radius: 0;
+  position: relative;
+  min-height: auto;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-head-meta-row > .focus-count::before,
+.focus-head-meta-row > .chip:not(.chip-state)::before,
+.focus-head-meta-row > .sync-chip::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-faint);
+  opacity: 0.6;
+}
+/* 可點的 chip(diff / sync,都是 <button>)在 meta-row 純文字佈局下要靜止就看得出可點 —
+   靜止:soft border + 內距(button-like outline chip),不靠 hover 才浮出 affordance。
+   覆寫上面把 button chip 抹平成 plain text 的 rule(specificity 0,1,2 > 0,1,1)。
+   兩個 chip 共用 shape / padding / 高度,顏色色系區分:
+   - diff(viewer,中性)= --line-2 neutral outline
+   - sync(action,主動)= --queued 色系 soft fill outline */
+.focus-head-meta-row > button.chip:not(.chip-state),
+.focus-head-meta-row > button.sync-chip {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  min-height: 22px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 999px;
+  margin-left: 6px;
+  position: static;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.focus-head-meta-row > button.chip:not(.chip-state)::before,
+.focus-head-meta-row > button.sync-chip::before {
+  content: none;
+}
+/* diff:neutral outline */
+.focus-head-meta-row > button.chip:not(.chip-state) {
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--fg-mute);
+}
+.focus-head-meta-row > button.chip:not(.chip-state):hover {
+  color: var(--fg);
+  border-color: var(--line);
+  background: var(--hover);
+}
+/* sync:queued-tinted soft fill outline(action 主動 — user 知道按了會做事)*/
+.focus-head-meta-row > button.sync-chip {
+  border: 1px solid color-mix(in srgb, var(--queued) 45%, var(--line-2));
+  background: color-mix(in srgb, var(--queued) 10%, transparent);
+  color: var(--queued);
+}
+.focus-head-meta-row > button.sync-chip:hover {
+  border-color: var(--queued);
+  background: color-mix(in srgb, var(--queued) 18%, transparent);
+}
+/* shared focus / disabled */
+.focus-head-meta-row > button.chip:not(.chip-state):focus-visible,
+.focus-head-meta-row > button.sync-chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+.focus-head-meta-row > button.chip:not(.chip-state):disabled,
+.focus-head-meta-row > button.sync-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

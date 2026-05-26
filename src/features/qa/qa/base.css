@@ -1,0 +1,34 @@
+/* qa/base.css — drawer shell, stage, and body base rules. */
+/* QA drawer — content-only styles. Stage / scrim / box / mobile sizing
+   come from shared drawer.css (.drawer-stage / .drawer / mobile @media). */
+
+/* QADrawer needs viewport-fixed stage (it isn't portalled) + restricted
+   pointer-events so click-through is impossible. */
+.qadr-stage {
+  position: fixed;
+  pointer-events: none;
+}
+.qadr-stage > .drawer-scrim,
+.qadr-stage > .qadr-drawer {
+  pointer-events: auto;
+}
+
+/* QADrawer is narrower than the canonical 600px ticket drawer (520px feels
+   right for chat composer width) — override only width.
+   Wrap in min-width:768 so mobile inherits canonical .drawer 100vw rule. */
+@media (min-width: 768px) {
+  .qadr-drawer {
+    width: 520px;
+    max-width: calc(100vw - 80px);
+  }
+}
+
+.qadr-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px var(--space-5, 20px);
+  /* 鍵盤 / 程式化捲動定位時,讓 target 從 head 下緣留 12px breathing room,不貼在頂 */
+  scroll-padding-top: var(--space-3, 12px);
+  /* InlineMultiSelect / 最末 bubble 滾到底時不會被 sticky footer 吃掉送出按鈕 */
+  scroll-padding-bottom: var(--space-4, 16px);
+}

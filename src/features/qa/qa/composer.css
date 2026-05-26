@@ -1,0 +1,224 @@
+/* qa/composer.css — composer, options, multi-select, send, cancel, and input rules. */
+.qadr-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.qadr-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* 提高 specificity 釘死置左,不被 .btn 的 justify-content:center 蓋掉 */
+.btn.qadr-option {
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: 400;
+  font-size: 12.5px;
+  padding: 8px 14px;
+  min-height: 36px;
+  border-radius: 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  color: var(--fg-mute);
+  transition: all 120ms;
+  position: relative;
+}
+.qadr-options-multi .qadr-option-multi {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+.qadr-option-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--line-2);
+  font-size: 11px;
+  color: transparent;
+  flex-shrink: 0;
+  background: transparent;
+}
+.qadr-option-multi.is-picked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+.qadr-option-multi.is-picked .qadr-option-check {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: rgba(255,255,255,0.95);
+}
+.qadr-multi-send {
+  align-self: flex-start;
+  font-size: 12px;
+}
+
+/* multi 模式 inline reply block:render 在 chat body 內,跟對話脈絡黏在一起,
+   避免 mobile sticky footer 被多選 list 撐高吃掉視野 */
+.qadr-inline-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  /* 滾動到 panel 底部時,留一段呼吸空間給 sticky footer / mobile safe-area,不被吃掉送出按鈕 */
+  scroll-margin-bottom: 80px;
+  border-left: 3px solid var(--accent);
+}
+.qadr-inline-multi .qadr-options-multi {
+  margin: 0;
+}
+.qadr-inline-multi .qadr-multi-status {
+  align-self: flex-start;
+}
+.qadr-inline-multi .qadr-multi-send {
+  align-self: flex-start;
+}
+@media (max-width: 767.98px) {
+  .qadr-inline-multi .qadr-multi-send {
+    align-self: stretch;
+  }
+}
+.qadr-multi-status {
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  padding: 0 2px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+@media (pointer: coarse), (max-width: 767.98px) {
+  /* multi-select 選項 / 送出按鈕在 mobile 給足 44px hit-target,跟 starter chip 對齊 */
+  .btn.qadr-option,
+  .btn.qadr-option-multi {
+    min-height: 44px;
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    font-size: 12.5px;
+  }
+  .qadr-multi-send {
+    min-height: 44px;
+    padding-inline: var(--space-4, 16px);
+    align-self: stretch;
+  }
+  /* composer send button (icon-only) — touch-target 至少 44×44,
+     textarea min-height 同步抬高,讓 align-items:stretch 兩邊都 ≥44 */
+  .qadr-send {
+    min-width: 44px;
+    width: 44px;
+    min-height: 44px;
+  }
+  .qadr-input-multiline {
+    min-height: 44px;
+  }
+}
+.qadr-composer-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  width: 100%;
+}
+.qadr-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: rgba(255,255,255,0.95);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  transition: background 120ms, filter 120ms;
+  min-height: 40px;
+  align-self: flex-end;
+}
+.qadr-send:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 82%, #fff 18%);
+  filter: brightness(1.08);
+}
+.qadr-send:disabled, .qadr-send[aria-disabled="true"] {
+  background: var(--panel-2);
+  color: var(--fg-faint);
+  border-color: var(--line);
+  opacity: 1;
+  cursor: not-allowed;
+}
+.qadr-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+}
+.qadr-cancel-link {
+  background: transparent;
+  border: 0;
+  padding: 0 6px;
+  margin-left: -4px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--fg-faint);
+  cursor: pointer;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.qadr-cancel-link:hover:not(:disabled) {
+  color: var(--failed);
+  background: color-mix(in srgb, var(--failed) 10%, transparent);
+}
+.qadr-cancel-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.qadr-cancel-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.qadr-input {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  background: var(--bg);
+  color: var(--fg);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.qadr-input:hover {
+  border-color: var(--line-3, var(--fg-faint));
+}
+.qadr-input:focus,
+.qadr-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.qadr-composer-row .qadr-input {
+  flex: 1;
+  min-width: 0;
+}
+/* multiline composer:取消 input 預設 1 行,允許 textarea auto-grow */
+.qadr-input-multiline {
+  resize: none;
+  overflow-y: auto;
+  min-height: 32px;
+}
+.qadr-composer-hint {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  text-align: right;
+  letter-spacing: 0.02em;
+}

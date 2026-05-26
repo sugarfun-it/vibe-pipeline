@@ -1,0 +1,28 @@
+
+
+/* AuditTimeline:排序提示 — 「最新在上」放在列表頂端,讓 user 不用猜 chronological 方向 */
+.tdrw-drawer .audit-sort-hint {
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+  padding: 0 2px;
+}
+
+/* AuditTimeline toggle 視覺 focus 環(button 用了 .tdrw-section-label,別忘了 keyboard 友善) */
+.audit-toggle {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.audit-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}

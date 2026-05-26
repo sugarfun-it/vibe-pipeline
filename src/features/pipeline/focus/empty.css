@@ -1,0 +1,40 @@
+/* ─── Empty tickets(沒 ticket 時的中央 CTA)─────────────────── */
+
+.focus-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 12px;
+  /* iter-uiux 2026-05-25 focus-column.empty_pipeline (FC-EMPTY-001):
+     讓 EmptyTickets 在 header 與欄底之間垂直置中,而不是貼在 header 下方。
+     flex:1 撐滿剩餘 .focus 高度;min-height:0 防 overflow-y:auto container 計算問題。 */
+  flex: 1 1 auto;
+  min-height: 0;
+  color: var(--fg-mute);
+  text-align: center;
+}
+
+.focus-empty-title {
+  /* h2 — 重置瀏覽器預設 margin,維持與舊 div 視覺一致 */
+  margin: 0;
+  font-size: 14px;
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.focus-empty-desc {
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.6;
+  /* iter-uiux 2026-05-25 focus-column.has_active_draft r1
+     (focus-column-empty-copy-line-length-mobile):mobile 下用 min() 限制
+     line length 避免長字串撐到容器邊緣,desktop 仍 360px。 */
+  max-width: min(360px, calc(100% - 16px));
+}
+
+.focus-empty-cta {
+  margin-top: 4px;
+}

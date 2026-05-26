@@ -1,0 +1,36 @@
+
+.drawer-stage--modal.confirm-stage {
+  z-index: var(--z-confirm, 2000);
+}
+.drawer--modal.confirm-card {
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  padding: 22px 22px 16px;
+}
+.drawer--modal.confirm-card .confirm-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-bottom: 8px;
+}
+.drawer--modal.confirm-card .confirm-warning {
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.drawer--modal.confirm-card .confirm-desc {
+  font-size: 12.5px;
+  color: var(--fg-mute);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.drawer--modal.confirm-card .confirm-actions {
+  margin-top: 16px;
+  gap: 8px;
+}
+.drawer--modal.confirm-card .btn {
+  min-height: 32px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  border-radius: 7px;
+}
