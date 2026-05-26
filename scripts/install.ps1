@@ -327,9 +327,11 @@ if ($AutoStart) {
   } catch {
     Err "server start failed to launch: $_"
   }
-  # poll /api/health up to ~30s (Bun cold start on Windows ~10-15s)
+  # poll /api/health up to ~90s (Windows install pipeline 套兩層 Bun cold start:
+  # outer bun cli → inner bun server,單獨 cold start ~15s × 2 + spawn overhead 容易超 30s,
+  # 之前 60 次 ×500ms = 30s 太緊,常 timeout 但 backend 真的會起來,僅讓 user 看到誤導性 ERROR)
   $healthy = $false
-  for ($i = 0; $i -lt 60; $i++) {
+  for ($i = 0; $i -lt 180; $i++) {
     try {
       $null = Invoke-RestMethod -UseBasicParsing -Uri "http://localhost:3001/api/health" -TimeoutSec 1
       $healthy = $true; break
@@ -338,7 +340,7 @@ if ($AutoStart) {
     }
   }
   if (-not $healthy) {
-    Err "Backend did not respond on /api/health within ~30s"
+    Err "Backend did not respond on /api/health within ~90s"
     Err "Check $VpHome\server.log; retry: vbpl server start"
   } else {
     Info "OK Backend up on http://localhost:3001"
