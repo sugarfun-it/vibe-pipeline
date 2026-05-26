@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import { Popover } from "../../ui/Popover";
 import { AITab } from "./AITab";
 import { NotificationsTab } from "./NotificationsTab";

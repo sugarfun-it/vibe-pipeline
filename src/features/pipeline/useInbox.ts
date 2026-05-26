@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import { useApi } from "../../hooks/useApi";
 import { useTimeout } from "../../hooks/useTimeout";
 import type { InboxFilter, InboxState, NotifItem } from "../../types/notif";

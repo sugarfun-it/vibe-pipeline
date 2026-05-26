@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import * as api from "../../api/projects";
-import type { AuditEntry } from "../../api/projects";
+import * as api from "../../api";
+import type { AuditEntry } from "../../api";
 import { ArrowRightIcon, ChevronIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { formatDateTime } from "../../lib/format";

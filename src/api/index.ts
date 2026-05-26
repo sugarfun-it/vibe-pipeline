@@ -1,4 +1,4 @@
-// Barrel re-export — 對外維持單一 import surface(`import * as api from "../../api/projects"`),
+// Barrel re-export — 對外維持單一 import surface(`import * as api from "../api"`),
 // 內部依 domain 拆 project / pipeline / sync / diff / notifs / run 6 個檔。
 
 export { ApiError } from "./_client";

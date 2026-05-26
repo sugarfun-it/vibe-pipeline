@@ -2,7 +2,7 @@ import { memo, useMemo } from "react";
 import { CreatePlaceholder } from "./CreateCard";
 import { EmptyProject } from "./EmptyProject";
 import { FocusColumn } from "./FocusColumn";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import type { Pipeline, Ticket } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";

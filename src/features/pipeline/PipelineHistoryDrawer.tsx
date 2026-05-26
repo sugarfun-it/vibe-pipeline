@@ -5,8 +5,8 @@ import { RunHistory } from "./RunHistory";
 import { AuditTimeline } from "./AuditTimeline";
 import { Overlay } from "../../ui/Overlay";
 import { formatDateTime } from "../../lib/format";
-import * as api from "../../api/projects";
-import type { AuditEntry } from "../../api/projects";
+import * as api from "../../api";
+import type { AuditEntry } from "../../api";
 
 // Pipeline-level 執行紀錄 drawer。從 pipeline header OverflowMenu 開,
 // 顯示該 pipeline 跑過的所有 runner spawn(cost / duration / result / token)。

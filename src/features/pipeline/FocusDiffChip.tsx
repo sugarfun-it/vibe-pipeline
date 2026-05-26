@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { DiffModal } from "./DiffModal";
-import type { DiffStat } from "../../api/projects";
+import type { DiffStat } from "../../api";
 import type { Pipeline } from "../../types/pipeline";
 
 // diff stat chip + diff modal 開關 — 只在 diffStat 非空 + projectHash 有值才渲染

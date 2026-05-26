@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import { PickerSelect } from "../../ui/PickerSelect";
 import { BranchIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";

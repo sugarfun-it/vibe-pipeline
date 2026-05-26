@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { ChevronRightIcon, CloseIcon, FolderQuestionIcon, RefreshIcon, SpinnerIcon } from "../../ui/icons";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import type { Project } from "../../../shared/types";
 import { useToast } from "../../ui/Toast";
 import { Overlay } from "../../ui/Overlay";

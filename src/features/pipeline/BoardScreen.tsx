@@ -15,7 +15,7 @@ import { useApi } from "../../hooks/useApi";
 import { useTimeout } from "../../hooks/useTimeout";
 import { useUrlParam } from "../../hooks/useUrlParam";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import type { Pipeline, Ticket } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
 import { InboxColumn } from "../notifications/InboxColumn";

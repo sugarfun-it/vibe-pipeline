@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import * as api from "../../api/projects";
-import type { RunSummary } from "../../api/projects";
+import * as api from "../../api";
+import type { RunSummary } from "../../api";
 import { fmtDuration } from "../../lib/pipelines";
 import { useToast } from "../../ui/Toast";
 import { RunCard } from "./RunCard";

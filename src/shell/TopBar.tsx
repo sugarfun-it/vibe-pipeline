@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Logo } from "../ui/Logo";
 import { Popover } from "../ui/Popover";
 import { ArrowUpIcon, BranchIcon, CheckIconSm, ChevronIcon, CloseIcon, FileIcon, FolderIcon, HomeIcon, MoonIcon, PlayIcon, PlusIcon, SunIcon } from "../ui/icons";
-import * as api from "../api/projects";
+import * as api from "../api";
 import { useActiveProjectHash } from "../hooks/useActiveProject";
 import { useAsyncAction } from "../hooks/useAsyncAction";
 import { useUrlParam } from "../hooks/useUrlParam";

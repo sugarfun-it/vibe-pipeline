@@ -1,7 +1,7 @@
 import { memo, useRef, useState } from "react";
 import { GearIcon } from "../../ui/icons";
 import { SettingsPopover } from "../settings/SettingsPopover";
-import type * as api from "../../api/projects";
+import type * as api from "../../api";
 
 // Gear button + Settings popover。原本在 shell/TopBar 內,因為 SettingsPopover 屬 features/
 // 不該被 shell 認識,改由 BoardScreen 注入 TopBar 的 settingsSlot。

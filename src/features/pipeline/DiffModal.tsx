@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import { useCopiedFeedback } from "../../hooks/useCopiedFeedback";
 import { ArrowRightIcon, CloseIcon } from "../../ui/icons";
 import { Overlay } from "../../ui/Overlay";

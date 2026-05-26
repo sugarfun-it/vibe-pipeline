@@ -4,7 +4,7 @@ import type { RailMenuItem } from "../../shell/Rail";
 import { TrashIcon } from "../../ui/icons";
 import { useConfirm } from "../../ui/ConfirmDialog";
 import { CreateCard } from "./CreateCard";
-import * as api from "../../api/projects";
+import * as api from "../../api";
 import type { Pipeline } from "../../types/pipeline";
 import type { Project } from "../../../shared/types";
 import { useActiveProjectContext } from "../../contexts/ActiveProjectContext";

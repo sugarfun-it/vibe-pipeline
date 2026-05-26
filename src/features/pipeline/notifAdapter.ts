@@ -1,5 +1,5 @@
 import type { NotifItem } from "../../types/notif";
-import type * as api from "../../api/projects";
+import type * as api from "../../api";
 import { formatAgo } from "../../lib/format";
 
 // ── Notif adapter: backend NotifRecord → frontend NotifItem ──
