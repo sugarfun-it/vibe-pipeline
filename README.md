@@ -265,4 +265,4 @@ SKILL 文件分兩種,動非 trivial 改動前先讀:
 
 ## License
 
-目前未明確開放,以個人 / 協作使用為主。要釐清特定用途請開 issue。
+MIT — 見 [LICENSE](LICENSE)。
