@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { DotsHorizontalIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { Popover } from "../ui/Popover";
-import { STATE_LABEL } from "../data/pipelines";
+import { STATE_LABEL } from "../lib/pipelines";
 import { formatAgo } from "../lib/format";
 import type { Pipeline } from "../types/pipeline";
 import "../features/pipeline/rail.css";

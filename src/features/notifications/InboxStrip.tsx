@@ -2,7 +2,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BellIcon } from "../../ui/icons";
-import { SEV_COLOR } from "../../data/notifications";
+import { SEV_COLOR } from "../../lib/notifications";
 import type { NotifItem } from "../../types/notif";
 import { SEV_TEXT } from "./inboxLabels";
 

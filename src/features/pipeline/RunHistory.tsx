@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary } from "../../api/projects";
-import { fmtDuration } from "../../data/pipelines";
+import { fmtDuration } from "../../lib/pipelines";
 import { useToast } from "../../ui/Toast";
 import { RunCard } from "./RunCard";
 

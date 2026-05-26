@@ -11,7 +11,7 @@ import { Overlay } from "../../ui/Overlay";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useTimeout } from "../../hooks/useTimeout";
 
-import { TICKET_STATUS_LABEL } from "../../data/pipelines";
+import { TICKET_STATUS_LABEL } from "../../lib/pipelines";
 import { IterLimitField } from "./IterLimitField";
 import { IterRounds } from "./IterRounds";
 import { CollapsiblePrompt, ReadOnlyValue, Section } from "./TicketDrawerParts";

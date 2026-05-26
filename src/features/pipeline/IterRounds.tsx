@@ -1,5 +1,5 @@
 import type { IterRound } from "../../types/pipeline";
-import { fmtElapsed, normalizeVerdict } from "../../data/pipelines";
+import { fmtElapsed, normalizeVerdict } from "../../lib/pipelines";
 
 export function IterRounds({ rounds }: { rounds: IterRound[] }) {
   return (

@@ -1,5 +1,5 @@
 import { CheckIconSm, CloseIcon, RefreshIcon } from "../../ui/icons";
-import { fmtElapsed } from "../../data/pipelines";
+import { fmtElapsed } from "../../lib/pipelines";
 import type { Pipeline } from "../../types/pipeline";
 import "./syncStatus.css";
 

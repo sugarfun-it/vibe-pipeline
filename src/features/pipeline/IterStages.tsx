@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { normalizeVerdict } from "../../data/pipelines";
+import { normalizeVerdict } from "../../lib/pipelines";
 import { ArrowRightIcon } from "../../ui/icons";
 import type { IterStage, TicketStatus } from "../../types/pipeline";
 

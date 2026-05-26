@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { MODE_LABELS } from "../../api/qa";
-import { fmtElapsed, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../data/pipelines";
+import { fmtElapsed, TICKET_STATUS_COLOR, TICKET_STATUS_LABEL } from "../../lib/pipelines";
 import type { IterStage, Ticket, TicketStatus } from "../../types/pipeline";
 import { ChevronRightIcon } from "../../ui/icons";
 import { IterStages } from "./IterStages";

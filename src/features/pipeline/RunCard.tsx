@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 import * as api from "../../api/projects";
 import type { RunSummary, RunDetail } from "../../api/projects";
-import { fmtDuration } from "../../data/pipelines";
+import { fmtDuration } from "../../lib/pipelines";
 import { formatDateTime, formatNum } from "../../lib/format";
 import { ChevronIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";

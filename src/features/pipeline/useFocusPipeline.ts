@@ -3,7 +3,7 @@ import { useApi } from "../../hooks/useApi";
 import { useTimeout } from "../../hooks/useTimeout";
 import * as api from "../../api/projects";
 import type { RunSummary } from "../../api/projects";
-import { STATE_LABEL } from "../../data/pipelines";
+import { STATE_LABEL } from "../../lib/pipelines";
 import type { Pipeline } from "../../types/pipeline";
 
 export type UseFocusPipelineOpts = {
