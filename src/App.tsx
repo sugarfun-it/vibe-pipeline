@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BoardScreen } from "./features/pipeline/BoardScreen";
+import { BoardScreen } from "./features/pipeline/board/BoardScreen";
 import { ConfirmProvider } from "./ui/ConfirmDialog";
 import { ToastProvider, ToastStage } from "./ui/Toast";
 import { OnlineStatusBadge } from "./shell/OnlineStatusBadge";

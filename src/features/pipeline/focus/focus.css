@@ -1,0 +1,13 @@
+/* FocusColumn feature 專用 CSS — split barrel. */
+
+@import './shell.css';
+@import './head-meta.css';
+@import './list.css';
+@import './banners.css';
+@import './diff-sync.css';
+@import './empty.css';
+@import './overflow.css';
+@import './title-edit.css';
+@import './modal.css';
+@import './misc.css';
+@import './responsive.css';

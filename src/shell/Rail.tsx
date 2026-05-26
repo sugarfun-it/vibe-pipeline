@@ -4,7 +4,7 @@ import { Popover } from "../ui/Popover";
 import { STATE_LABEL } from "../lib/pipelines";
 import { formatAgo } from "../lib/format";
 import type { Pipeline } from "../../shared/types";
-import "../features/pipeline/rail.css";
+import "../features/pipeline/board/rail.css";
 
 // Rail section header 的 ⋯ menu item。array-driven 結構,未來 actions 直接 push 進去。
 // disabled + tooltip 用 disabledReason 表達(非 undefined → disabled,值就是 tooltip)。
