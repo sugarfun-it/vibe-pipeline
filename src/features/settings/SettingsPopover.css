@@ -695,7 +695,6 @@ html.light .settings-popover-tab.is-active {
 .update-success-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .update-success-title { font-weight: 500; color: var(--done); }
 .update-success-tag { color: var(--done); font-weight: 700; overflow-wrap: anywhere; }
-.update-success-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
 .update-error {
   display: flex;
