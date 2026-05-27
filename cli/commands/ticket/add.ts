@@ -3,7 +3,7 @@ import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
 import type { Ticket, TicketMode } from "../../../shared/types";
-import { jsonAcceptance, jsonText, readJsonInput, readPipeline, readTextArg, splitAcceptance } from "./_shared";
+import { jsonAcceptance, jsonText, readJsonInput, readPipeline, readTextArg, splitAcceptance, validateGoal } from "./_shared";
 
 export async function ticketAdd(args: ParsedArgs): Promise<void> {
   const proj = await resolveProject(args.flags);
@@ -22,6 +22,7 @@ export async function ticketAdd(args: ParsedArgs): Promise<void> {
 
   const goal = ((await readTextArg(args, "goal", stdinClaim)) ?? jsonText(jsonIn, "goal") ?? "").trim();
   if (!goal) fail("INVALID_ARGS", "--goal is required (一句話描述這 ticket 做什麼;runner 不用但給人 review)。多行可用 --goal-file <path> / --goal-file - / --input-json -");
+  validateGoal(goal);
 
   const prompt = ((await readTextArg(args, "prompt", stdinClaim)) ?? jsonText(jsonIn, "prompt") ?? "").trim();
   if (!prompt) fail("INVALID_ARGS", "--prompt is required (給 executor 的完整任務指示)。多行可用 --prompt-file <path> / --prompt-file - / --input-json -");

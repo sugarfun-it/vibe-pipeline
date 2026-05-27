@@ -60,6 +60,27 @@ export const TICKET_USAGE = `vbpl ticket — manage tickets within a pipeline
   更多範例 / 拆 ticket 原則:看 ~/.claude/skills/vibe-pipeline/SKILL.md
   ─────────────────────────────────────────────────────────────────`;
 
+// goal 上限 — 對應 runner 用法(UI display + git commit body + critic 不讀):
+// - runner mergeTicketPrompt.ts 已 truncate(200);超過直接被切掉
+// - git commit message 慣例 72/行;120 = 1-2 行給人類掃讀 OK
+// - 超過 = 用戶把 spec / 規則 / acceptance 全塞 goal,該分流到 --prompt / --acceptance
+// 詳見 ~/.claude/skills/vibe-pipeline/SKILL.md「三欄分流」段。
+export const MAX_GOAL_CHARS = 120;
+
+export function validateGoal(goal: string): void {
+  if (goal.length <= MAX_GOAL_CHARS) return;
+  fail(
+    "INVALID_ARGS",
+    `--goal 超過 ${MAX_GOAL_CHARS} char(實際 ${goal.length}),runner 只用 goal 做「UI display + git commit body」,寫長無效。\n\n` +
+      `三欄分流:\n` +
+      `  goal       1 句「一塊完整可交付是什麼」(≤ 80 char 最佳, ${MAX_GOAL_CHARS} hard cap)→ 給人類\n` +
+      `  prompt     實作規則 / 範圍 / 風險點 / Why → 給 executor sub-agent\n` +
+      `  acceptance array of strings,每條機械可驗 → 給 critic + executor\n\n` +
+      `修法:goal 縮成 1 句,規則 / 風險點移 --prompt,驗收條件移 --acceptance。\n` +
+      `範例見 \`vbpl ticket add --help\`(看「★ 三欄分流」段)或 ~/.claude/skills/vibe-pipeline/SKILL.md`,
+  );
+}
+
 // 讀 multi-line 文字 arg:優先 --<name>-file(path 或 "-"=stdin),fallback --<name> inline。
 // stdinClaim 共享計數,保證一條指令只一個 *-file 吃 stdin(stream 只能消費一次)。
 export async function readTextArg(

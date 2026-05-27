@@ -3,7 +3,7 @@ import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
 import type { Ticket, TicketMode, TicketStatus } from "../../../shared/types";
-import { jsonAcceptance, jsonText, readJsonInput, readPipeline, readTextArg, splitAcceptance } from "./_shared";
+import { jsonAcceptance, jsonText, readJsonInput, readPipeline, readTextArg, splitAcceptance, validateGoal } from "./_shared";
 
 export async function ticketUpdate(args: ParsedArgs): Promise<void> {
   const proj = await resolveProject(args.flags);
@@ -29,7 +29,10 @@ export async function ticketUpdate(args: ParsedArgs): Promise<void> {
   const newTitle = (await readTextArg(args, "title", stdinClaim)) ?? jsonText(jsonIn, "title");
   if (newTitle !== undefined) updated.title = newTitle;
   const newGoal = (await readTextArg(args, "goal", stdinClaim)) ?? jsonText(jsonIn, "goal");
-  if (newGoal !== undefined) updated.goal = newGoal;
+  if (newGoal !== undefined) {
+    validateGoal(newGoal.trim());
+    updated.goal = newGoal;
+  }
   const newPrompt = (await readTextArg(args, "prompt", stdinClaim)) ?? jsonText(jsonIn, "prompt");
   if (newPrompt !== undefined) updated.prompt = newPrompt;
   const newAcceptanceRaw = await readTextArg(args, "acceptance", stdinClaim);
