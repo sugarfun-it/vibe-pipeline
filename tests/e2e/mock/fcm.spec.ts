@@ -85,7 +85,15 @@ async function getTokenFileContent(request: APIRequestContext): Promise<TokenFil
   return body.data;
 }
 
-test("token registration → /api/push/tokens lists registered token and writes device_tokens.json", async ({ request }) => {
+// SKIP × 3:2026-05-19 push 改走 maintainer gateway sentinel model。
+// - device token registry SSOT 搬到 gateway 端 Firestore,VP backend 不再寫
+//   `device_tokens.json`,`tokenStore.listTokens` 永遠回 `[]`(或 gateway sentinel record)
+// - `/push/register` 改成轉發 gateway,本地不存 token list
+// - `fanoutPush` 透過 gateway URL → gateway 端 fan-out 全部 device
+// 整個 spec model(本地 device_tokens.json + listTokens 帶 user token)過時。
+// 建議 user 決定:刪這檔(gateway integration test 該在 gateway repo 跑),或
+// 重寫成「mock gateway HTTP + 驗 backend POST /push/register payload 格式正確」(範圍變得很小)。
+test.skip("token registration → /api/push/tokens lists registered token and writes device_tokens.json", async ({ request }) => {
   const token = `fake-device-token-register-${Date.now()}`;
 
   await registerToken(request, token);
@@ -103,7 +111,7 @@ test("token registration → /api/push/tokens lists registered token and writes 
   );
 });
 
-test("ticket done event → fanoutPush records fake FCM call", async ({ request }) => {
+test.skip("ticket done event → fanoutPush records fake FCM call", async ({ request }) => {
   const token = `fake-device-token-fanout-${Date.now()}`;
   await registerToken(request, token);
 
@@ -134,7 +142,7 @@ test("ticket done event → fanoutPush records fake FCM call", async ({ request 
   expect(typeof first.ts).toBe("number");
 });
 
-test("unsubscribe → /api/push/tokens removes registered token and updates device_tokens.json", async ({ request }) => {
+test.skip("unsubscribe → /api/push/tokens removes registered token and updates device_tokens.json", async ({ request }) => {
   const token = `fake-device-token-unsub-${Date.now()}`;
   await registerToken(request, token);
 

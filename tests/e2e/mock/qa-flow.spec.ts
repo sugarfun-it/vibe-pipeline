@@ -47,14 +47,15 @@ test("QA 一輪完成 → SpecReview → finalize → ticket 出現在 focus", a
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
-  // 第一個 AI 訊息(寫死)+ 第一個 option 出現
+  // 第一個 AI 訊息(寫死)+ 第一輪 starter chip 出現(.qadr-suggestion 是 starter,
+  // 後續輪的 InlineMultiSelect 才是 .qadr-option)
   await expect(page.locator(".qadr-bubble-ai").first()).toBeVisible();
-  const firstOption = page.locator(".qadr-option").first();
+  const firstOption = page.locator(".qadr-suggestion").first();
   await expect(firstOption).toBeVisible();
   await firstOption.click();
 
-  // mock 回 complete=true → SpecReview 顯示 + 「送出建立 ticket」按鈕
-  const finalizeBtn = page.locator("button", { hasText: "送出建立 ticket" });
+  // mock 回 complete=true → SpecReview 顯示 + 「送出建立需求單」按鈕
+  const finalizeBtn = page.locator("button", { hasText: "送出建立需求單" });
   await expect(finalizeBtn).toBeVisible({ timeout: 5000 });
   await finalizeBtn.click();
 
@@ -114,17 +115,24 @@ test("QA 多輪 → spec checklist 進度 → 最後一輪 complete", async ({ p
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
-  // 4 輪
+  // 4 輪 — 第一輪用 starter chip(.qadr-suggestion),後續是 InlineMultiSelect(.qadr-option)
   for (let i = 0; i < 4; i++) {
-    const opt = page.locator(".qadr-option").first();
+    const sel = i === 0 ? ".qadr-suggestion" : ".qadr-option";
+    const opt = page.locator(sel).first();
     await expect(opt).toBeVisible({ timeout: 5000 });
     await opt.click();
+    // multi-select 模式還要按「送出已選」才送出
+    if (i !== 0) {
+      const sendBtn = page.locator(".qadr-multi-send");
+      await expect(sendBtn).toBeEnabled({ timeout: 2000 });
+      await sendBtn.click();
+    }
     // 每輪後給時間 React render
     await page.waitForTimeout(200);
   }
 
   // 收尾應該 complete
-  await expect(page.locator("button", { hasText: "送出建立 ticket" })).toBeVisible({ timeout: 5000 });
+  await expect(page.locator("button", { hasText: "送出建立需求單" })).toBeVisible({ timeout: 5000 });
 });
 
 test("Esc 關 QA drawer → drawer 消失;空 draft 自動 cancel", async ({ page }) => {
@@ -133,8 +141,10 @@ test("Esc 關 QA drawer → drawer 消失;空 draft 自動 cancel", async ({ pag
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
-  // 沒打字直接關
-  await page.keyboard.press("Escape");
+  // 沒打字直接關。Overlay 的 Escape handler 對 INPUT / TEXTAREA target 不 close
+  // (交由元件自己處理),drawer mount 後焦點自動推到 composer textarea,
+  // 所以 Esc 要先把焦點移開 textarea。改用 header 上的關閉按鈕(等同 ESC 行為)。
+  await page.locator(".qadr-drawer .drawer-close").click();
   await expect(page.locator(".qadr-drawer")).not.toBeVisible();
 
   // ticket 沒有,pipeline 仍是 planning(focus list 顯示 empty)

@@ -5,7 +5,7 @@ import { resetMocks, setQAScript, type QAReply } from "../helpers/mock-control";
 // 覆蓋 2026-05-13 加的 QA reopen 流程:
 // - SpecReview「← 繼續討論」切回 chat(viewOverride='chat')
 // - chat 送訊息後不立刻跳回 SpecReview(race regression guard)
-// - chat 頂顯「→ 回最終預覽」橫條,點下去切回(viewOverride='review')
+// - chat 頂顯「→ 查看最終預覽」橫條,點下去切回(viewOverride='review')
 // - reopen 後改完 spec finalize → ticket 出現
 //
 // 對應 backend 修法:claudeCli systemPrompt rule 6 + draftStore auto-complete(wasComplete && reply.complete!==false 才 fire);
@@ -71,8 +71,9 @@ async function startQAAndReachSpecReview(page: import("@playwright/test").Page) 
   await page.goto(`/board?project=${proj.hash}`);
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
-  await page.locator(".qadr-option").first().click();
-  await expect(page.locator("button", { hasText: "送出建立 ticket" })).toBeVisible({ timeout: 5000 });
+  // 第一輪用 starter chip(.qadr-suggestion);後續輪才是 InlineMultiSelect(.qadr-option)
+  await page.locator(".qadr-suggestion").first().click();
+  await expect(page.locator("button", { hasText: "送出建立需求單" })).toBeVisible({ timeout: 5000 });
 }
 
 test("繼續討論:SpecReview → chat 視圖切換", async ({ page }) => {
@@ -81,7 +82,7 @@ test("繼續討論:SpecReview → chat 視圖切換", async ({ page }) => {
 
   // 點繼續討論 → SpecReview 消失,chat composer 顯示
   await page.locator("button", { hasText: "繼續討論" }).click();
-  await expect(page.locator("button", { hasText: "送出建立 ticket" })).not.toBeVisible();
+  await expect(page.locator("button", { hasText: "送出建立需求單" })).not.toBeVisible();
   await expect(page.locator(".qadr-composer")).toBeVisible();
 });
 
@@ -101,30 +102,30 @@ test("race regression:繼續討論後送訊息,SpecReview 不立刻跳回", asyn
   // 關鍵 regression:就算 backend 還沒處理完,SpecReview 也不能瞬間跳回
   // (前一版 forceChat 一送就清,disk 上 draft.complete=true 還沒被改,UI 會誤跳)
   // 給 1s 短 window 內檢查
-  await expect(page.locator("button", { hasText: "送出建立 ticket" })).not.toBeVisible({ timeout: 1000 });
+  await expect(page.locator("button", { hasText: "送出建立需求單" })).not.toBeVisible({ timeout: 1000 });
 
   // 等 AI 第二輪回應(complete=false)→ 仍保持 chat
   await page.waitForTimeout(800);
-  await expect(page.locator("button", { hasText: "送出建立 ticket" })).not.toBeVisible();
+  await expect(page.locator("button", { hasText: "送出建立需求單" })).not.toBeVisible();
   await expect(page.locator(".qadr-composer")).toBeVisible();
 });
 
-test("chat 頂顯「→ 回最終預覽」橫條,點下去切回 SpecReview", async ({ page }) => {
+test("chat 頂顯「→ 查看最終預覽」橫條,點下去切回 SpecReview", async ({ page }) => {
   await setQAScript(proj.hash, [COMPLETE_REPLY]);
   await startQAAndReachSpecReview(page);
 
   await page.locator("button", { hasText: "繼續討論" }).click();
 
-  // chat 頂 banner 顯「→ 回最終預覽」按鈕(spec 已 5/5 + !showReview)
-  const returnBtn = page.locator("button", { hasText: "回最終預覽" });
+  // chat 頂 banner 顯「→ 查看最終預覽」按鈕(spec 已 5/5 + !showReview)
+  const returnBtn = page.locator("button", { hasText: "查看最終預覽" });
   await expect(returnBtn).toBeVisible();
 
   // 點下去 → SpecReview 回來
   await returnBtn.click();
-  await expect(page.locator("button", { hasText: "送出建立 ticket" })).toBeVisible();
+  await expect(page.locator("button", { hasText: "送出建立需求單" })).toBeVisible();
 });
 
-test("reopen → 改 spec → 回最終預覽 → finalize → ticket 出現", async ({ page }) => {
+test("reopen → 改 spec → 查看最終預覽 → finalize → ticket 出現", async ({ page }) => {
   await setQAScript(proj.hash, [COMPLETE_REPLY, ADJUSTED_REPLY]);
   await startQAAndReachSpecReview(page);
 
@@ -139,9 +140,9 @@ test("reopen → 改 spec → 回最終預覽 → finalize → ticket 出現", a
   await page.waitForTimeout(800);
   await expect(page.locator(".qadr-composer")).toBeVisible();
 
-  // 點 回最終預覽 → SpecReview 顯
-  await page.locator("button", { hasText: "回最終預覽" }).click();
-  const finalize = page.locator("button", { hasText: "送出建立 ticket" });
+  // 點 查看最終預覽 → SpecReview 顯
+  await page.locator("button", { hasText: "查看最終預覽" }).click();
+  const finalize = page.locator("button", { hasText: "送出建立需求單" });
   await expect(finalize).toBeVisible();
 
   // 不檢查 acceptance 內容(textarea value assert 跨 form lib 不穩),直接送出

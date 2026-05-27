@@ -54,7 +54,13 @@ test("跑完 pipeline → emit pipeline_ready_to_merge → strip 顯示 unread",
   await page.locator("[data-testid='run-btn']").click();
 
   // pipeline 跑完後 emit pipeline_started + pipeline_ready_to_merge,unread 應該至少 1
-  await expect(page.locator(".inbox-strip-count.has-unread")).toBeVisible({ timeout: 10000 });
+  // 注意:.inbox-strip-count 視覺上 opacity:0(只作為 test hook),Playwright `toBeVisible`
+  // 對 opacity:0 一律回 false → 改用 has-unread class 出現作為信號(data-testid 鎖定的
+  // 元素,只看 className 不依賴可見性)。
+  await expect(page.locator("[data-testid='inbox-strip-count']")).toHaveClass(
+    /\bhas-unread\b/,
+    { timeout: 10000 }
+  );
 });
 
 test("展開 inbox panel → 看到 notif 列表 → mark-all-read 清空 unread", async ({ page }) => {

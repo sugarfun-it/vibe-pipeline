@@ -18,10 +18,12 @@ test("active project 名稱 + path 顯示在 TopBar", async ({ page }) => {
   await expect(page.locator(".proj-trigger-path", { hasText: "vp-e2e-proj-" })).toBeVisible();
 });
 
-test("git branch chip 顯示 (hasGit=true 的 fixture)", async ({ page }) => {
+test("git branch chip 不顯示 (backend toProject 不 lazy fetch currentBranch)", async ({ page }) => {
+  // 2026-05 起 server/lib/projectStore.ts `toProject` 不呼 git(避免每次 list /
+  // status 都 spawn git);chip 渲染條件是 `hasGit && currentBranch`,currentBranch
+  // 永遠 undefined → chip 不渲染。spec 改成驗證 chip 不存在,避免歷史假設誤導。
   await page.goto(`/board?project=${proj.hash}`);
-  // fixture 用 main 為 base branch
-  await expect(page.locator(".chip.mono", { hasText: "main" }).first()).toBeVisible();
+  await expect(page.locator(".topbar-current-branch")).toHaveCount(0);
 });
 
 test("theme toggle:亮 → 暗,localStorage 持久,reload 後仍 dark", async ({ page }) => {

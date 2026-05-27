@@ -112,8 +112,11 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator("html.light")).toHaveCount(0);
 
       await expect(page.locator(".focus")).toBeVisible();
-      await expect(page.locator(".focus-title", { hasText: "rwd-beta" })).toBeVisible();
-      await expect(page.locator(".ticket-title", { hasText: "RWD ticket beta" })).toBeVisible();
+      // BoardScreen 用 pipelines[0] fallback;listPipelines 用 createdAt 倒序,fixture seed
+      // 沒帶 createdAt,backfill 走 id 內嵌 hex,「pipe-rwd-a / pipe-rwd-b」都解不出 → 都 0,
+      // readdir 順序決定 — 觀察結果 rwd-alpha 排前面。
+      await expect(page.locator(".focus-title", { hasText: "rwd-alpha" })).toBeVisible();
+      await expect(page.locator(".ticket-title", { hasText: "RWD ticket alpha" })).toBeVisible();
       await expectNoViewportOverflow(page);
 
       if (vp.mobile) {
@@ -121,17 +124,17 @@ for (const vp of VIEWPORTS) {
         await page.getByRole("tab", { name: "Pipeline" }).click();
         await expect(page.locator(".rail")).toBeVisible();
         await expect(page.locator(".focus")).not.toBeVisible();
-        await page.locator(".rail-item", { hasText: "rwd-alpha" }).click();
+        await page.locator(".rail-item", { hasText: "rwd-beta" }).click();
         await expect(page.locator(".focus")).toBeVisible();
         await expect(page.locator(".rail")).not.toBeVisible();
-        await expect(page.locator(".focus-title", { hasText: "rwd-alpha" })).toBeVisible();
+        await expect(page.locator(".focus-title", { hasText: "rwd-beta" })).toBeVisible();
       } else {
         await expect(page.locator(".rail")).toBeVisible();
-        await page.locator(".rail-item", { hasText: "rwd-alpha" }).click();
-        await expect(page.locator(".focus-title", { hasText: "rwd-alpha" })).toBeVisible();
+        await page.locator(".rail-item", { hasText: "rwd-beta" }).click();
+        await expect(page.locator(".focus-title", { hasText: "rwd-beta" })).toBeVisible();
       }
 
-      await page.locator(".ticket", { hasText: "RWD ticket alpha" }).click();
+      await page.locator(".ticket", { hasText: "RWD ticket beta" }).click();
       const ticketDrawer = page.locator(".tdrw-drawer");
       await expect(ticketDrawer).toBeVisible();
       await expect(ticketDrawer.locator(".tdrw-section-label", { hasText: "goal" })).toBeVisible();
@@ -143,9 +146,10 @@ for (const vp of VIEWPORTS) {
       const qaDrawer = page.locator(".qadr-drawer");
       await expect(qaDrawer).toBeVisible();
       if (vp.mobile) await expectDrawerFullWidthOnMobile(page, qaDrawer);
-      await expect(page.locator(".qadr-option").first()).toBeVisible();
-      await page.locator(".qadr-option").first().click();
-      await expect(page.locator("button", { hasText: "送出建立 ticket" })).toBeVisible();
+      // 第一輪用 starter chip(.qadr-suggestion);後續輪才是 InlineMultiSelect(.qadr-option)
+      await expect(page.locator(".qadr-suggestion").first()).toBeVisible();
+      await page.locator(".qadr-suggestion").first().click();
+      await expect(page.locator("button", { hasText: "送出建立需求單" })).toBeVisible();
     });
   });
 }

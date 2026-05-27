@@ -81,18 +81,20 @@ test("Project / AI / 通知 / 更新 四個 tab 預設可切換", async ({ page 
   await openSettings(page);
 
   const popover = page.locator(".settings-popover");
-  // 預設停在 Project tab
+  // 預設停在 Project tab。「平行上限」會出現在 SettingsField label + NumberField 內部
+  // visually-hidden label 兩處,strict mode 會撞 → 用 SettingsField label(有 id)定位。
   await expect(popover.getByRole("tab", { name: "專案" })).toBeVisible();
-  await expect(popover.getByText("平行上限")).toBeVisible();
+  await expect(popover.locator("#proj-max-parallel-label")).toBeVisible();
 
   // 切 AI 任務
   await popover.getByRole("tab", { name: "AI 任務" }).click();
-  await expect(popover.getByText(/跨 project/)).toBeVisible();
+  await expect(popover.locator(".settings-section-title", { hasText: "全域 provider" })).toBeVisible();
 
   // 切 通知
   await popover.getByRole("tab", { name: "通知" }).click();
-  // 通知 tab 內容有「啟用通知 / 已啟用 / 尚未啟用」其中之一 — 用 hint 字串認
-  await expect(popover.getByText(/pipeline 完成/)).toBeVisible();
+  // NotificationsTab 改寫後沒有「pipeline 完成 / 失敗會推到此裝置」字串。
+  // 用「推播通知」section title 或「尚未啟用」(default state) 認 tab 切到位
+  await expect(popover.locator(".settings-section-title", { hasText: "推播通知" })).toBeVisible();
 });
 
 test("Project tab：改 max_parallel autosave → reload 持久 + 落盤 project config.json", async ({ page }) => {
@@ -130,7 +132,9 @@ test("AI 任務 tab：改 qa.model autosave → reload 持久 + GET /user/config
 
   // 第一行是 QA Spec(對應 task class "qa"),預設 claude / sonnet-4-6 / low
   // 三個 select 順序:provider / model / effort
-  const taskGrid = popover.locator(".settings-popover-task-grid");
+  // AITab 渲染兩個 task-grid(primary = qa/split/runner,secondary = executor/critic/merge),
+  // strict mode 會撞 → 用 .first() 限定 primary grid。
+  const taskGrid = popover.locator(".settings-popover-task-grid").first();
   await expect(taskGrid).toBeVisible();
   const firstRow = taskGrid.locator(".task-row").first();
   const selects = firstRow.locator("select");
@@ -155,7 +159,7 @@ test("AI 任務 tab：改 qa.model autosave → reload 持久 + GET /user/config
   await openSettings(page);
   await page.locator(".settings-popover").getByRole("tab", { name: "AI 任務" }).click();
   await expect(
-    page.locator(".settings-popover .settings-popover-task-grid .task-row").first().locator("select").nth(1)
+    page.locator(".settings-popover .settings-popover-task-grid").first().locator(".task-row").first().locator("select").nth(1)
   ).toHaveValue("claude-opus-4-7");
 });
 
@@ -164,6 +168,7 @@ test("通知 tab：切到時 push 區塊渲染(不戳真權限,只看畫面)", a
   await openSettings(page);
   const popover = page.locator(".settings-popover");
   await popover.getByRole("tab", { name: "通知" }).click();
-  // 任一狀態都會顯示 hint 字串
-  await expect(popover.getByText(/pipeline 完成 \/ 失敗會推到此裝置/)).toBeVisible();
+  // PushNotificationsSection toggle label「啟用推播通知」(default state) 或
+  // 「推播通知」section title — 用 toggle-pill 內字串確認 push UI 真的渲染了
+  await expect(popover.locator(".push-section .toggle-pill").first()).toBeVisible();
 });

@@ -80,8 +80,8 @@ test("QA finalize splitInto 三件 → board 三張 ticket + pipeline.json 各�
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
-  // 第一個 AI option(寫死 hello 開場)出現 → 點任意一個觸發第一輪 reply
-  const firstOption = page.locator(".qadr-option").first();
+  // 第一輪 starter chip(.qadr-suggestion)— 後續輪才是 InlineMultiSelect(.qadr-option)
+  const firstOption = page.locator(".qadr-suggestion").first();
   await expect(firstOption).toBeVisible();
   await firstOption.click();
 
@@ -89,10 +89,12 @@ test("QA finalize splitInto 三件 → board 三張 ticket + pipeline.json 各�
   await expect(page.locator(".qadr-split-proposal")).toBeVisible({ timeout: 5000 });
   await expect(page.locator(".qadr-split-list li")).toHaveCount(3);
 
-  // 預設勾選「送出時拆成 3 張」→ 按鈕顯示 3
+  // splitInto 提案 — 預設 `useSplit=false`(合 1 張),user 必須主動勾選才走拆分路徑。
+  // 勾起來 → 按鈕文字切「送出建立 N 張需求單」
   const splitToggle = page.locator(".qadr-split-toggle input[type=checkbox]");
-  await expect(splitToggle).toBeChecked();
-  const finalizeBtn = page.locator("button", { hasText: "送出建立 3 張 ticket" });
+  await expect(splitToggle).not.toBeChecked();
+  await splitToggle.check();
+  const finalizeBtn = page.locator("button", { hasText: "送出建立 3 張需求單" });
   await expect(finalizeBtn).toBeVisible();
   await finalizeBtn.click();
 
@@ -152,14 +154,14 @@ test("user 取消勾選拆分 → 只建 1 張合併版 ticket", async ({ page }
   await page.goto(`/board?project=${proj.hash}`);
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
-  await page.locator(".qadr-option").first().click();
+  await page.locator(".qadr-suggestion").first().click();
 
-  // 等 splitInto 提案出現後取消勾選
+  // 等 splitInto 提案出現後驗證 default unchecked(useSplit=false 是預設)
   await expect(page.locator(".qadr-split-proposal")).toBeVisible({ timeout: 5000 });
   const splitToggle = page.locator(".qadr-split-toggle input[type=checkbox]");
-  await splitToggle.uncheck();
-  // 按鈕文字退回單張版本
-  const oneBtn = page.locator("button", { hasText: /^送出建立 ticket$/ });
+  await expect(splitToggle).not.toBeChecked();
+  // 按鈕顯示單張合併版本(「送出建立 1 張合併需求單」)
+  const oneBtn = page.locator("button", { hasText: "送出建立 1 張合併需求單" });
   await expect(oneBtn).toBeVisible();
   await oneBtn.click();
 

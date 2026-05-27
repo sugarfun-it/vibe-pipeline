@@ -411,14 +411,17 @@ test("UI:sync-chip 從『落後 N · 同步』按下後變『已同步』", asyn
   // 點下去 → 走 POST /sync(無衝突 → done),polling 期間因 route inject 看到 merging
   await startBtn.click();
 
-  // 中間態:sync-chip 變 busy class + 文字「同步中… git merge」
+  // 中間態:sync-chip 變 busy class + 文字「同步中」(merging state 用「同步中」,
+  // ai_running 才用「助理處理中」)
   const busyChip = page.locator(".sync-chip.sync-chip-busy");
   await expect(busyChip).toBeVisible({ timeout: 5_000 });
   await expect(busyChip).toContainText("同步中");
-  // RunButton 也應被鎖成「同步中」(syncActive=true 路徑),button disabled
-  const runBtnLocked = page.locator(".focus-actions .btn", { hasText: "同步中" });
+  // RunButton 走 syncActive 路徑被鎖 — copy 對齊 sync chip 的「助理處理中」,aria-disabled=true
+  // (用 aria-disabled 不用 native disabled,讓 SR / keyboard 仍可 focus 看到 reason)
+  const runBtnLocked = page.locator(".focus-actions .run-btn-sync-busy");
   await expect(runBtnLocked).toBeVisible();
-  await expect(runBtnLocked).toBeDisabled();
+  await expect(runBtnLocked).toContainText("助理處理中");
+  await expect(runBtnLocked).toHaveAttribute("aria-disabled", "true");
 
   // 關掉 inject,讓真實 polling 走 → 最終態 = sync-chip-done
   injectMerging = false;
