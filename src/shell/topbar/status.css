@@ -1,0 +1,22 @@
+/* ─── ParallelChip(右上 running/max chip)──────────────────── */
+
+.parallel-chip {
+  /* color 動態(inline);border 統一灰線 */
+  border-color: var(--line);
+}
+
+/* overload 視覺強化 — 從只有 "!" 改成 pill 「超載」文字,
+   不只靠 color 傳達(advisor 2026-05-24:overload-chip-ambiguous) */
+.parallel-chip-overload {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 0 6px;
+  background: var(--failed);
+  color: var(--bg);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}

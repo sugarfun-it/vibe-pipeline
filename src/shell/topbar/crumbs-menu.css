@@ -1,0 +1,98 @@
+/* ─── proj-menu 內元素(以下為 popover row + X 等內細部樣式) ───────── */
+
+/* 空狀態 — 用一般 body 樣式而非 section label,語意上是 status / help */
+.proj-menu-empty {
+  padding: 10px 10px 6px;
+  font-size: 12px;
+  color: var(--fg-mute);
+  line-height: 1.45;
+}
+
+.proj-menu-shortcut {
+  margin-left: auto;
+}
+
+/* touch / coarse pointer:鍵盤快捷字片無實際用途,隱藏避免吃寬 */
+@media (hover: none), (pointer: coarse) {
+  .proj-menu-shortcut {
+    display: none;
+  }
+}
+
+.proj-menu-error {
+  color: var(--accent);
+  padding: 8px 12px;
+}
+
+/* Recent project row:wrapper 內含主 button + X 移除 button。
+   X 預設隱藏(opacity:0),hover row 時淡入。active project X disabled 仍隱藏。
+   不用 0s transition 以免被 HIDE_CSS / fade-up 規則影響(雷區 #4)。 */
+.proj-menu-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.proj-menu-row .proj-menu-item {
+  flex: 1;
+  min-width: 0;
+  padding-right: 32px;
+}
+
+.proj-menu-remove {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.proj-menu-row:hover .proj-menu-remove:not(:disabled),
+.proj-menu-row:focus-within .proj-menu-remove:not(:disabled),
+.proj-menu-remove:focus-visible {
+  opacity: 1;
+}
+
+/* touch / coarse pointer:X 永遠顯示(沒有 hover affordance,不能藏)
+   advisor topbar-r1:把 opacity 拉到 1,touch 用戶才有可靠的移除入口 */
+@media (hover: none), (pointer: coarse) {
+  .proj-menu-remove:not(:disabled) {
+    opacity: 1;
+  }
+}
+
+.proj-menu-remove:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--failed);
+}
+
+.proj-menu-remove:disabled {
+  cursor: not-allowed;
+}
+
+/* ─── 共用小元素 ──────────────────────────────────────────────── */
+
+.topbar-branch-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fg-mute);
+}
+
+.topbar-reveal-folder {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

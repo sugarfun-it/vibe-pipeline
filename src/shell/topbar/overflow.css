@@ -1,0 +1,320 @@
+/* ─── Folder browse modal ────────────────────────────────────── */
+
+.browse-modal-card {
+  max-width: 600px;
+  width: 100%;
+  /* mobile vertical 防止 actions 被推出視窗;list 內部 scroll(advisor browse-loading-r1) */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+  min-height: 0;
+}
+
+.browse-modal-card .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 標題列 + 右上 X 關閉按鈕(modal a11y 標準:可見的 close affordance) */
+.browse-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.browse-modal-close {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--fg-mute);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.browse-modal-close:hover:not(:disabled),
+.browse-modal-close:focus-visible {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.browse-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* 目前位置:強化 hierarchy(label + 路徑)— directory-picker 味,讓 user 一眼定位
+   比舊版單行 mono 灰字更易掃描(advisor topbar-006:browse modal 太薄弱,需要更明顯的
+   current-folder emphasis;r2 補:border-left 從 3px 降到 2px 避免整個 modal 視覺過重) */
+.browse-path-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  background: var(--panel-2, var(--bg));
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  /* 用中性 line-2 而非 accent — accent 留給真正可點 / 焦點(advisor browse-loaded-r1) */
+  border-left: 2px solid var(--line-2, var(--line));
+}
+
+.browse-path-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.browse-current-path {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}
+
+/* loading 狀態 — value 改成 mute 顏色 + italic,避免看起來像真實 path
+   (advisor browse-loading-r1) */
+.browse-current-path.is-loading {
+  color: var(--fg-faint);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* error 狀態的 path 欄 — 用 mute 顏色標示「尚未取得位置」,跟 loading 區分
+   (advisor browse-error-r1) */
+.browse-current-path.is-error-path {
+  color: var(--fg-faint);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.browse-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* coarse pointer / touch:統一 ≥ 44px 觸控目標(advisor browse-loaded r2:
+   不要混用 36/40/44,iOS HIG / Material 都建議 44px 起跳)。modal 內所有可點控件,
+   含 close、toolbar 導覽、drive chip、entry row、footer btn,全部對齊。 */
+@media (hover: none), (pointer: coarse) {
+  .browse-toolbar .btn,
+  .browse-drive-btn,
+  .browse-modal-card .modal-actions .btn {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .browse-modal-close {
+    width: 44px;
+    height: 44px;
+  }
+  .browse-entry {
+    min-height: 44px;
+  }
+}
+
+/* 把磁碟分組視覺收緊,避免和導覽 btn 混為同一群 */
+.browse-drives-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 8px;
+  margin-left: 4px;
+  border-left: 1px solid var(--line);
+}
+
+.browse-drives-label {
+  font-size: 11px;
+  color: var(--fg-faint);
+  margin-right: 2px;
+}
+
+.browse-drive-btn {
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.browse-drive-btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* list 容器:`<ul role="list">` 變語意化,reset 預設 padding/margin */
+.browse-list {
+  flex: 1 1 auto;
+  min-height: 200px;
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.browse-list > li {
+  display: block;
+}
+
+/* placeholder li 必須 override block display 才能 flex 置中
+   (advisor browse-loading-r1) */
+.browse-list > li.browse-list-placeholder--center {
+  display: flex;
+}
+
+.browse-list-placeholder {
+  padding: 16px;
+  color: var(--fg-mute);
+  list-style: none;
+}
+
+/* placeholder centered 視覺 — loading / empty / error 三種狀態用 icon + 文字,
+   避免左上純文字看起來像 "壞掉"(advisor 2026-05-24:browse-list-placeholder-weak) */
+.browse-list-placeholder--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* 佔滿 .browse-list 整個高度,避免 loading / empty / error 文字偏左上看起來像沒置中
+     (advisor topbar browse-loading-r1) */
+  min-height: 100%;
+  height: 100%;
+  padding: 24px;
+}
+
+.browse-list-placeholder-folder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--fg-faint);
+  opacity: 0.7;
+}
+
+.browse-list-placeholder-folder svg {
+  width: 28px;
+  height: 28px;
+}
+
+.browse-list-placeholder-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: browse-spin 0.7s linear infinite;
+}
+
+@keyframes browse-spin {
+  to { transform: rotate(360deg); }
+}
+
+.browse-list-placeholder--error {
+  color: var(--failed);
+}
+
+.browse-list-placeholder-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--failed);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* error placeholder 的「重試」鍵:不從外部 .btn 變數覆寫,
+   直接用 sm 變體(現有 button-sm 沒有,自己 inline 小一點)
+   advisor browse-error-r1:retry 升 primary,讓它比 disabled 主按鈕更顯眼 */
+.browse-list-placeholder--error .btn {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+
+/* error placeholder 的 title + detail:title 為錯誤摘要,detail 為原始錯誤訊息
+   合進同一塊,避免 footer 重複(advisor browse-error-r1) */
+.browse-list-placeholder-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.browse-list-placeholder-detail {
+  font-size: 11.5px;
+  color: var(--fg-mute);
+  max-width: 360px;
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.browse-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 13.5px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-faint, var(--line));
+}
+
+.browse-entry:disabled {
+  color: var(--fg-faint);
+  cursor: default;
+}
+
+.browse-entry:hover:not(:disabled) {
+  background: var(--hover, rgba(0, 0, 0, 0.04));
+  /* 加 inset accent indicator,強化 row 是可點(advisor browse-loaded-r1) */
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.browse-entry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.browse-entry-name {
+  /* 單行 ellipsis,避免長 folder 名 break-all 把 row 撐高
+     (advisor browse-loaded-r1);full name 仍在 aria-label */
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-error {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--failed);
+  word-break: break-word;
+}

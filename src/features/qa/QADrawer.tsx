@@ -1,22 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import "../../styles/drawer.css";
 import "./qa.css";
 import type { Draft, TicketSpec } from "../../api/qa";
-import { ArrowRightIcon } from "../../ui/icons";
 import { Overlay } from "../../ui/Overlay";
-import { Bubble, ThinkingDots } from "./Bubble";
-import { InlineMultiSelect } from "./InlineMultiSelect";
-import { FIELD_LABELS, SpecChecklist } from "./SpecChecklist";
-import { Composer } from "./Composer";
+import { PendingCloseConfirm } from "./PendingCloseConfirm";
+import { QADrawerHeader } from "./QADrawerHeader";
+import { QAFooter } from "./QAFooter";
+import { QATranscript } from "./QATranscript";
+import { SpecReadyBar } from "./SpecReadyBar";
 import { SpecReview } from "./SpecReview";
-
-const FIRST_AI_MESSAGE = "描述需求、完成標準與限制條件，我會整理成需求單規格。";
-const FIRST_AI_OPTIONS = [
-  "建立功能需求",
-  "整理錯誤回報",
-  "盤點可建立的需求單",
-];
-const BOOTSTRAP_LABEL = "啟動需求整理";
+import { usePendingClose } from "./usePendingClose";
+import { useQADrawerFocus } from "./useQADrawerFocus";
+import { useQAViewState } from "./useQAViewState";
+import { useTranscriptScroll } from "./useTranscriptScroll";
 
 export function QADrawer({
   pipelineName,
@@ -42,94 +38,21 @@ export function QADrawer({
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const titleId = "qadr-title";
 
-  // View override:user 顯式選擇要看哪個視圖,蓋過 draft.complete 自動切的邏輯。
-  // - "chat" :user 在 SpecReview 點「繼續討論」,即使 draft.complete=true 也回 chat
-  // - "review":user 在 chat 點「回最終預覽」,即使 draft.complete=false 也跳預覽(spec 仍須 5/5)
-  // - null :跟 draft.complete 自動切
-  // 切 draft(draftId 變)清掉
-  const [viewOverride, setViewOverride] = useState<"chat" | "review" | null>(null);
-  useEffect(() => {
-    setViewOverride(null);
-  }, [draft?.draftId]);
-
-  const specComplete = isSpecComplete(draft?.spec ?? null);
-  // 最終 review 視圖條件:spec 5/5 齊,且(override="review" 或 draft.complete=true 且未 override="chat")
-  const showReview =
-    specComplete &&
-    (viewOverride === "review" || (draft?.complete === true && viewOverride !== "chat"));
-  const hasAnyTurn = (draft?.turns.length ?? 0) > 0;
-
-  // a11y:對話建立流程開場焦點應落在輸入區,而不是「關閉」按鈕。
-  // Overlay initialFocus="root" 後立即把焦點推給 composer textarea(若 draft 已存在且非 review 視圖)。
-  // 切草稿 / 切視圖會再觸發。restoreFocus 由 Overlay 卸載時負責還給 opener。
-  useEffect(() => {
-    if (!draft) return;
-    if (showReview) return;
-    const id = requestAnimationFrame(() => {
-      composerInputRef.current?.focus({ preventScroll: true });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [draft?.draftId, showReview]);
-  // 空狀態:剛開 drawer 還沒任何對話 — 不顯示一排灰色 checklist,避免把首次體驗變成「驗證失敗」表
-  const showChecklist = !!draft && (hasAnyTurn || specComplete);
-
-  // turns 增加 / 切回 chat 視圖時自動 scroll 到底,但首次掛載一律 anchor 頂(welcome bubble 完整可見),
-  // 避免 mid-bubble 卡在 body 頂端產生視覺切斷感。user 想看歷史末段自己捲;新 turn 之後跟著黏底
-  // showReview=true 期間 transcriptRef 沒掛(SpecReview 渲染);切回 chat 後新 ref 掛上才 scroll
-  const prevTurnsLenRef = useRef<number>(-1);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: draftId 變(切草稿)reset
-  useEffect(() => {
-    prevTurnsLenRef.current = -1;
-  }, [draft?.draftId]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: turns.length / showReview 是觸發訊號
-  useEffect(() => {
-    if (showReview) return;
-    const turnsLen = draft?.turns.length ?? 0;
-    const prev = prevTurnsLenRef.current;
-    prevTurnsLenRef.current = turnsLen;
-    const id = requestAnimationFrame(() => {
-      const el = transcriptRef.current;
-      if (!el) return;
-      // 首次掛載(prev===-1):一律 scroll 頂,welcome bubble 完整 + 後面對話展開狀讓 user 自己捲
-      // 後續 turn 增加(prev≥0 且 turnsLen>prev):scroll 到底跟著新訊息(chat 慣例)
-      if (prev === -1) {
-        el.scrollTo({ top: 0 });
-        return;
-      }
-      if (turnsLen > prev) el.scrollTo({ top: el.scrollHeight });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [draft?.turns.length, draft?.draftId, showReview]);
-
-  // 未送出文字確認用 in-drawer 彈窗(不用 window.confirm,避免破壞抽屜視覺一致)
-  const [pendingClose, setPendingClose] = useState(false);
-  const pendingCancelBtnRef = useRef<HTMLButtonElement>(null);
-  const requestClose = () => {
-    if (composerTextRef.current.trim().length > 0) {
-      setPendingClose(true);
-      return;
-    }
-    onClose();
-  };
-  // pendingClose:把焦點推到「繼續編輯」(預設安全動作 = 留下);
-  // 同時 ESC 在 pending 期間視為「繼續編輯」(避免 ESC 再次 requestClose 進無限迴圈)
-  useEffect(() => {
-    if (!pendingClose) return;
-    const id = requestAnimationFrame(() => {
-      pendingCancelBtnRef.current?.focus({ preventScroll: true });
-    });
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setPendingClose(false);
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener("keydown", onKey, true);
-    };
-  }, [pendingClose]);
+  const {
+    specComplete,
+    showReview,
+    hasAnyTurn,
+    showChecklist,
+    setViewOverride,
+  } = useQAViewState(draft);
+  useQADrawerFocus({ draft, showReview, composerInputRef });
+  useTranscriptScroll({ draft, showReview, transcriptRef });
+  const {
+    pendingClose,
+    setPendingClose,
+    pendingCancelBtnRef,
+    requestClose,
+  } = usePendingClose({ composerTextRef, onClose });
 
   return (
     <Overlay
@@ -142,307 +65,67 @@ export function QADrawer({
       stageClassName="qadr-stage"
       surfaceClassName="qadr-drawer"
     >
-        <div className="drawer-head qadr-head">
-          <div className="drawer-crumb qadr-crumb">
-            <span className="qadr-crumb-text">
-              <span className="mono qadr-crumb-project" title={pipelineName}>
-                {pipelineName}
-              </span>
-              <span className="qadr-crumb-current">新需求單</span>
-            </span>
-            <button type="button"
-              ref={closeBtnRef}
-              className="drawer-close create-x"
-              onClick={requestClose}
-              title={hasAnyTurn ? "關閉並保留草稿（下次可接續）" : "關閉並取消空白草稿"}
-              aria-label={hasAnyTurn ? "關閉並保留草稿" : "關閉並取消空白草稿"}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" focusable="false">
-                <path d="M6 6l12 12M18 6 6 18" />
-              </svg>
-            </button>
-          </div>
-          <div className="drawer-titlerow">
-            <div className="drawer-title" id={titleId}>
-              {draft?.spec?.title
-                || (draft
-                  ? hasAnyTurn
-                    ? "收斂中…"
-                    : "新需求單"
-                  : "新需求單")}
-            </div>
-          </div>
-          <div className="drawer-meta mono">
-            <span>{draft ? `${draft.turns.length} 輪對話` : "啟動中…"}</span>
-            {draft && (
-              <>
-                <span className="sep">·</span>
-                <span
-                  className="qadr-draft-status"
-                  title={`draftId: ${draft.draftId}`}
-                  aria-label={hasAnyTurn ? "草稿已自動保留,關閉後可接續" : "尚未對話,關閉會自動取消空白草稿"}
-                >
-                  {hasAnyTurn ? "草稿已自動保留" : "空白草稿"}
-                </span>
-              </>
-            )}
-          </div>
-          {showChecklist && <SpecChecklist spec={draft?.spec ?? null} />}
+      <QADrawerHeader
+        pipelineName={pipelineName}
+        draft={draft}
+        hasAnyTurn={hasAnyTurn}
+        showChecklist={showChecklist}
+        titleId={titleId}
+        closeBtnRef={closeBtnRef}
+        onRequestClose={requestClose}
+      />
+
+      {pendingClose && (
+        <PendingCloseConfirm
+          pendingCancelBtnRef={pendingCancelBtnRef}
+          onContinue={() => setPendingClose(false)}
+          onClose={() => {
+            setPendingClose(false);
+            onClose();
+          }}
+        />
+      )}
+
+      {showReview ? (
+        <div className="drawer-body qadr-body qadr-spec-body">
+          <SpecReview
+            spec={draft!.spec as TicketSpec}
+            splitInto={draft?.splitInto}
+            busy={busy}
+            onCancel={onCancel}
+            onFinalize={onFinalize}
+            onResumeChat={() => setViewOverride("chat")}
+          />
         </div>
-
-        {pendingClose && (
-          <section
-            className="qadr-close-confirm"
-            role="group"
-            aria-labelledby="qadr-close-confirm-msg"
-          >
-            <p
-              id="qadr-close-confirm-msg"
-              className="qadr-close-confirm-msg"
-              role="status"
-              aria-live="polite"
-            >
-              輸入框還有未送出的內容，要關閉嗎？（草稿仍會保留，下次可接續）
-            </p>
-            <div className="qadr-close-confirm-actions">
-              <button
-                ref={pendingCancelBtnRef}
-                type="button"
-                className="btn"
-                onClick={() => setPendingClose(false)}
-              >
-                繼續編輯
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  setPendingClose(false);
-                  onClose();
-                }}
-              >
-                關閉並保留草稿
-              </button>
-            </div>
-          </section>
-        )}
-
-        {showReview ? (
-          <div className="drawer-body qadr-body qadr-spec-body">
-            <SpecReview
-              spec={draft!.spec as TicketSpec}
-              splitInto={draft?.splitInto}
+      ) : (
+        <>
+          {/* spec 5/5 齊但 user 在 chat(被 override 或 backend complete=false)→ 顯示「回最終預覽」橫條 */}
+          {specComplete && !showReview && (
+            <SpecReadyBar
               busy={busy}
-              onCancel={onCancel}
-              onFinalize={onFinalize}
-              onResumeChat={() => setViewOverride("chat")}
+              onReview={() => setViewOverride("review")}
             />
-          </div>
-        ) : (
-          <>
-            {/* spec 5/5 齊但 user 在 chat(被 override 或 backend complete=false)→ 顯示「回最終預覽」橫條 */}
-            {specComplete && !showReview && (
-              <div className="qadr-spec-ready-bar">
-                <span
-                  className="qadr-spec-ready-bar-text"
-                  role="status"
-                  aria-live="polite"
-                >
-                  規格已備齊，可隨時送出建立需求單。
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-primary qadr-spec-ready-bar-btn"
-                  onClick={() => setViewOverride("review")}
-                  disabled={busy}
-                >
-                  查看最終預覽
-                  <ArrowRightIcon aria-hidden focusable="false" />
-                </button>
-              </div>
-            )}
-            <div
-              className="drawer-body qadr-body"
-              ref={transcriptRef}
-              aria-busy={
-                (!draft && busy) ||
-                (draft &&
-                  (busy || draft.turns[draft.turns.length - 1]?.role === "user"))
-                  ? true
-                  : undefined
-              }
-            >
-              {!draft && busy && (
-                <div className="qadr-bootstrap" role="status" aria-live="polite">
-                  <ThinkingDots />
-                  <span className="qadr-bootstrap-label">{BOOTSTRAP_LABEL}</span>
-                  <span className="qadr-bootstrap-sub">
-                    正在準備這次的需求對話，稍候即可開始描述。
-                  </span>
-                </div>
-              )}
-              {draft && (() => {
-                const lastTurn = draft.turns[draft.turns.length - 1];
-                // last 是 user → AI 還在跑(或 user 中途關 drawer 再回來,backend 仍 pending),
-                // 顯思考中。useQA 會 poll 把 AI 回覆寫回 state.draft
-                const waitingForAI = lastTurn?.role === "user";
-                const showThinking = busy || waitingForAI;
-                const emptyTurns = draft.turns.length === 0;
-                const last = lastAiOptions(draft);
-                const showInlineMulti =
-                  !emptyTurns &&
-                  !showThinking &&
-                  last.mode === "multi" &&
-                  last.options.length > 0;
-                return (
-                  <>
-                    <Bubble kind="ai" message={FIRST_AI_MESSAGE} />
-                    {emptyTurns && (
-                      <div className="qadr-empty-starter">
-                        <div className="qadr-starter-label" id="qadr-starter-label">
-                          快速起點（可直接點選，或在下方輸入自訂內容）
-                        </div>
-                        <div
-                          className="qadr-suggestions"
-                          role="group"
-                          aria-labelledby="qadr-starter-label"
-                        >
-                          {FIRST_AI_OPTIONS.map((o) => (
-                            <button
-                              type="button"
-                              key={o}
-                              className="vp-chip vp-chip--action qadr-suggestion"
-                              onClick={() => onSendTurn(o)}
-                              disabled={busy}
-                            >
-                              {o}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {draft.turns.map((t) => (
-                      <Bubble key={t.ts + ":" + t.role} kind={t.role} message={t.message} />
-                    ))}
-                    {showInlineMulti && (
-                      <InlineMultiSelect
-                        options={last.options}
-                        busy={busy}
-                        onSendMulti={(picks) => onSendTurn(picks.join("、"))}
-                      />
-                    )}
-                    {showThinking && (
-                      <div
-                        className="qadr-loading"
-                        role="status"
-                        aria-live="polite"
-                        id="qadr-thinking-status"
-                      >
-                        <span>助理思考中</span>
-                        <ThinkingDots />
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-            {/* bootstrap 階段(尚未有 draft)整個 footer 都收掉:沒 draft 沒有合法 input,
-                composer / cancel / hint 出現只會誤導 user 以為可輸入。等 startQA 回來才掛 footer。 */}
-            {draft && (
-              <div className="drawer-foot qadr-foot">
-                {/* spec 進度提示:防 AI 嘴砲「可以建 ticket」但實際還沒齊讓 user 困惑 */}
-                {draft.spec && (() => {
-                  const missing = FIELD_LABELS.filter((f) => {
-                    const v = draft.spec?.[f.key];
-                    if (v == null || v === "") return true;
-                    if (Array.isArray(v) && v.length === 0) return true;
-                    if (f.key === "mode") return v !== "step" && v !== "iter";
-                    return false;
-                  });
-                  if (missing.length === 0) return null;
-                  const filled = FIELD_LABELS.length - missing.length;
-                  const labels = missing.map((m) => m.label);
-                  const srSentence = `規格已完成 ${filled} / ${FIELD_LABELS.length}，待補：${labels.join("、")}。`;
-                  return (
-                    <div
-                      className="qadr-progress mono"
-                      role="status"
-                      aria-live="polite"
-                      aria-label={srSentence}
-                    >
-                      <span aria-hidden="true">
-                        規格 {filled}/{FIELD_LABELS.length} · 待補
-                      </span>
-                      {missing.map((m, i) => (
-                        <span
-                          key={m.key}
-                          className="qadr-progress-missing"
-                          aria-hidden="true"
-                        >
-                          {m.label}
-                          {i < missing.length - 1 ? "" : ""}
-                        </span>
-                      ))}
-                    </div>
-                  );
-                })()}
-                {(() => {
-                  const last = lastAiOptions(draft);
-                  const isFirstTurn = draft.turns.length === 0;
-                  // multi 模式 options 改 render 成 inline reply block(InlineMultiSelect)在對話脈絡內,
-                  // composer 只保留輸入列。mobile 不會再被 sticky footer 整組選項吃掉視野。
-                  // single 模式 options 維持塞在 footer(短 list 排在輸入上方;首輪也走 inline starter)。
-                  const composerOptions =
-                    isFirstTurn || last.mode === "multi" ? [] : last.options;
-                  // chat_thinking:last turn 是 user → AI 還在跑,把 textarea / send / options 一併鎖,
-                  // 避免 user 再連送一輪(對 backend 也沒意義,turnQA 還沒回來)
-                  const lastTurn = draft.turns[draft.turns.length - 1];
-                  const waitingForAI = lastTurn?.role === "user";
-                  const composerBusy = busy || waitingForAI;
-                  return (
-                    <Composer
-                      options={composerOptions}
-                      optionsMode={last.mode}
-                      busy={composerBusy}
-                      onSend={(msg) => {
-                        onSendTurn(msg);
-                      }}
-                      onCancel={onCancel}
-                      onTextChange={(v) => {
-                        composerTextRef.current = v;
-                      }}
-                      inputRef={composerInputRef}
-                    />
-                  );
-                })()}
-              </div>
-            )}
-          </>
-        )}
+          )}
+          <QATranscript
+            draft={draft}
+            busy={busy}
+            transcriptRef={transcriptRef}
+            onSendTurn={onSendTurn}
+          />
+          {/* bootstrap 階段(尚未有 draft)整個 footer 都收掉:沒 draft 沒有合法 input,
+              composer / cancel / hint 出現只會誤導 user 以為可輸入。等 startQA 回來才掛 footer。 */}
+          {draft && (
+            <QAFooter
+              draft={draft}
+              busy={busy}
+              composerTextRef={composerTextRef}
+              composerInputRef={composerInputRef}
+              onSendTurn={onSendTurn}
+              onCancel={onCancel}
+            />
+          )}
+        </>
+      )}
     </Overlay>
   );
 }
-
-function isSpecComplete(s: Partial<TicketSpec> | null): boolean {
-  if (!s) return false;
-  return (
-    !!s.title &&
-    !!s.goal &&
-    Array.isArray(s.acceptance) &&
-    s.acceptance.length > 0 &&
-    !!s.prompt &&
-    (s.mode === "step" || s.mode === "iter")
-  );
-}
-
-function lastAiOptions(
-  draft: Draft | null
-): { options: string[]; mode: "single" | "multi" } {
-  if (!draft) return { options: [], mode: "single" };
-  if (draft.turns.length === 0) return { options: FIRST_AI_OPTIONS, mode: "single" };
-  const last = draft.turns[draft.turns.length - 1];
-  if (last.role !== "ai") return { options: [], mode: "single" };
-  return { options: last.options ?? [], mode: last.optionsMode ?? "single" };
-}
-
-

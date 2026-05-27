@@ -1,0 +1,83 @@
+/* ─── Mobile(topbar / proj menu)─── */
+@media (max-width: 767.98px) {
+  /* mobile icon-btn 升級為 ≥40x40 touch target(advisor topbar-001 — WCAG 2.5.5) */
+  .topbar .icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+  }
+
+  .topbar {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .topbar-brand,
+  .topbar-sep,
+  .topbar-spacer {
+    display: none;
+  }
+  /* topbar-active-meta(branch chip + 開啟資料夾)mobile 仍 inline,不收進 overflow
+     flex-shrink:0 + 確保 reveal chip 可見(advisor topbar.active_meta_localhost r1:
+     proj-trigger 在 mobile 是 flex:1 1 auto 會把這個 cluster 擠到 0 寬,要顯式保留空間) */
+  .topbar-active-meta {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .topbar-active-meta .chip {
+    padding: 3px 7px;
+    font-size: 11px;
+  }
+  /* 「開啟專案資料夾」在 mobile 上:不直接隱藏(會吃掉 isLocalHost 時唯一的 file explorer 入口
+     — advisor topbar.active_meta_localhost r1),改成 icon-only 節省寬度。
+     文字 hidden,圖示保留,aria-label / title 不變。
+     用 !important 抵銷舊版的 display:none 殘留(若有) */
+  .topbar-reveal-folder {
+    display: inline-flex !important;
+    padding: 6px 8px;
+    flex-shrink: 0;
+  }
+  .topbar-reveal-folder > span {
+    display: none;
+  }
+  .topbar-left {
+    gap: 0;
+    min-width: 0;
+  }
+
+  .topbar-right {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .proj-switcher {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+  }
+
+  /* 專案 chip 撐滿 .proj-switcher 但 name 仍 ellipsis;cap 視覺寬度避免吃掉右側 cluster */
+  .proj-trigger {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 4px 8px;
+    display: flex;
+  }
+
+  .proj-trigger-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .proj-trigger-path {
+    display: none;
+  }
+
+  .proj-menu {
+    width: min(320px, calc(100vw - 20px));
+  }
+
+}
