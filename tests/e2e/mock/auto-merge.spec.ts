@@ -230,7 +230,9 @@ test("autoMerge=true:全 ticket done → 自動 merge → pipeline.state=merged"
   expect(onDisk.state).toBe("merged");
   expect(onDisk.autoMerge).toBe(true);
   expect(onDisk.mergeCommit?.hash).toBeTruthy();
-  expect((onDisk.tickets ?? []).some((t) => t.mode === "merge" && t.status === "done")).toBe(true);
+  // autoMergeNoAI (2026-05-13 二段式) clean 路徑走 git merge --no-ff,不 append synthetic merge ticket。
+  // 只有 AI fallback path 才會 append merge ticket。原 ticket 保持 done。
+  expect((onDisk.tickets ?? []).every((t) => t.mode !== "merge")).toBe(true);
 });
 
 test("autoMerge=false:全 ticket done → ready 後不自動 merge,等手動", async ({ request }) => {

@@ -14,7 +14,12 @@ import { fileURLToPath } from "node:url";
 
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const TEST_TMP = join(ROOT_DIR, ".tmp", "e2e");
-const TEST_HOME = join(TEST_TMP, `vp-e2e-home-${Date.now()}`);
+// TEST_HOME 必須在 config 多次 import(worker + webServer)之間共用同一條 path,
+// 否則 spec process 寫的 VP_HOME_OVERRIDE != backend process 用的 → worktree 看不到 wt。
+// 用環境變數傳遞,首次 eval 設,後續 import 重用同條 path;CI 上 PW_TEST_HOME_TS 也可外帶。
+const HOME_TS = process.env.PW_TEST_HOME_TS ?? String(Date.now());
+process.env.PW_TEST_HOME_TS = HOME_TS;
+const TEST_HOME = join(TEST_TMP, `vp-e2e-home-${HOME_TS}`);
 const FRONTEND_PORT = process.env.E2E_FRONTEND_PORT ?? "5175";
 const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? "3002";
 mkdirSync(TEST_HOME, { recursive: true });
@@ -25,6 +30,7 @@ mkdirSync(TEST_TMP, { recursive: true });
 const TEST_ENV: Record<string, string> = {
   VP_TEST_MODE: "mock",
   VP_HOME_OVERRIDE: TEST_HOME,
+  PW_TEST_HOME_TS: HOME_TS,
   PORT: BACKEND_PORT,
   E2E_FRONTEND_PORT: FRONTEND_PORT,
   E2E_BACKEND_PORT: BACKEND_PORT,

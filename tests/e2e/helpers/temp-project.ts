@@ -43,6 +43,9 @@ export async function createTempProject(opts?: {
   const init = gitIn(dir, ["init", "-b", baseBranch]);
   if (!init.ok) throw new Error(`git init failed: ${init.err}`);
   writeFileSync(join(dir, "README.md"), "# vp-e2e fixture\n");
+  // .vibe-pipeline/ 一律 ignore — register-project 會在 .vibe-pipeline/ 寫 config + pipeline json,
+  // 不寫 .gitignore 會讓 merge / sync dirty preflight 全卡 untracked。
+  writeFileSync(join(dir, ".gitignore"), ".vibe-pipeline/\n");
   const add = gitIn(dir, ["add", "."]);
   if (!add.ok) throw new Error(`git add failed: ${add.err}`);
   const commit = gitIn(dir, ["commit", "-m", "init"]);

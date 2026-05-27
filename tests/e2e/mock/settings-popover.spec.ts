@@ -82,15 +82,15 @@ test("Project / AI / 通知 / 更新 四個 tab 預設可切換", async ({ page 
 
   const popover = page.locator(".settings-popover");
   // 預設停在 Project tab
-  await expect(popover.getByRole("button", { name: "Project" })).toBeVisible();
+  await expect(popover.getByRole("tab", { name: "專案" })).toBeVisible();
   await expect(popover.getByText("平行上限")).toBeVisible();
 
   // 切 AI 任務
-  await popover.getByRole("button", { name: "AI 任務" }).click();
+  await popover.getByRole("tab", { name: "AI 任務" }).click();
   await expect(popover.getByText(/跨 project/)).toBeVisible();
 
   // 切 通知
-  await popover.getByRole("button", { name: "通知" }).click();
+  await popover.getByRole("tab", { name: "通知" }).click();
   // 通知 tab 內容有「啟用通知 / 已啟用 / 尚未啟用」其中之一 — 用 hint 字串認
   await expect(popover.getByText(/pipeline 完成/)).toBeVisible();
 });
@@ -106,7 +106,7 @@ test("Project tab：改 max_parallel autosave → reload 持久 + 落盤 project
   await input.fill("5");
 
   // 等「已儲存」chip 出現確認 autosave 落地
-  await expect(popover.getByText("已儲存 ✓")).toBeVisible({ timeout: 5000 });
+  await expect(popover.locator(".settings-popover-saved", { hasText: "已儲存" })).toBeVisible({ timeout: 5000 });
 
   // 驗 project config 透過 GET /api/projects/<hash>/config 落盤可讀
   await expect
@@ -126,7 +126,7 @@ test("AI 任務 tab：改 qa.model autosave → reload 持久 + GET /user/config
   await openSettings(page);
   const popover = page.locator(".settings-popover");
 
-  await popover.getByRole("button", { name: "AI 任務" }).click();
+  await popover.getByRole("tab", { name: "AI 任務" }).click();
 
   // 第一行是 QA Spec(對應 task class "qa"),預設 claude / sonnet-4-6 / low
   // 三個 select 順序:provider / model / effort
@@ -141,7 +141,7 @@ test("AI 任務 tab：改 qa.model autosave → reload 持久 + GET /user/config
   await expect(modelSelect).toHaveValue("claude-sonnet-4-6");
   await modelSelect.selectOption("claude-opus-4-7");
 
-  await expect(popover.getByText("已儲存 ✓")).toBeVisible({ timeout: 5000 });
+  await expect(popover.locator(".settings-popover-saved", { hasText: "已儲存" })).toBeVisible({ timeout: 5000 });
 
   // 驗 user config 透過 GET /api/user/config 落盤可讀
   await expect
@@ -153,7 +153,7 @@ test("AI 任務 tab：改 qa.model autosave → reload 持久 + GET /user/config
   // reload 後仍是 opus
   await page.reload();
   await openSettings(page);
-  await page.locator(".settings-popover").getByRole("button", { name: "AI 任務" }).click();
+  await page.locator(".settings-popover").getByRole("tab", { name: "AI 任務" }).click();
   await expect(
     page.locator(".settings-popover .settings-popover-task-grid .task-row").first().locator("select").nth(1)
   ).toHaveValue("claude-opus-4-7");
@@ -163,7 +163,7 @@ test("通知 tab：切到時 push 區塊渲染(不戳真權限,只看畫面)", a
   await page.goto(`/board?project=${proj.hash}`);
   await openSettings(page);
   const popover = page.locator(".settings-popover");
-  await popover.getByRole("button", { name: "通知" }).click();
+  await popover.getByRole("tab", { name: "通知" }).click();
   // 任一狀態都會顯示 hint 字串
   await expect(popover.getByText(/pipeline 完成 \/ 失敗會推到此裝置/)).toBeVisible();
 });

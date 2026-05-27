@@ -44,7 +44,7 @@ test("QA 一輪完成 → SpecReview → finalize → ticket 出現在 focus", a
   await page.goto(`/board?project=${proj.hash}`);
 
   // 開 QA drawer:點 + ticket
-  await page.locator("button", { hasText: /^.*ticket$/ }).first().click();
+  await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
   // 第一個 AI 訊息(寫死)+ 第一個 option 出現
@@ -111,7 +111,7 @@ test("QA 多輪 → spec checklist 進度 → 最後一輪 complete", async ({ p
 
   await setQAScript(proj.hash, [partial1, partial2, partial3, final]);
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button", { hasText: /^.*ticket$/ }).first().click();
+  await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
   // 4 輪
@@ -130,7 +130,7 @@ test("QA 多輪 → spec checklist 進度 → 最後一輪 complete", async ({ p
 test("Esc 關 QA drawer → drawer 消失;空 draft 自動 cancel", async ({ page }) => {
   await setQAScript(proj.hash, [COMPLETE_REPLY]);
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button", { hasText: /^.*ticket$/ }).first().click();
+  await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
   // 沒打字直接關

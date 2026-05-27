@@ -211,29 +211,26 @@ export async function start(opts: {
     }
   };
 
+  // testMode:走 polling-only,完全不開 fs.watch — Windows 下 fs.watch 持 file handle
+  // 會跟 atomicWrite rename(EPERM)互打,讓 mock runner 改 pipeline.json 失敗。
+  // 真執行下 fs.watch 才能省 CPU + 即時;test mode 反正 mock workMs 短,200ms polling 夠快。
+  let w: FSWatcher = { close() {} } as FSWatcher;
   if (testMode.isTestMode()) {
     poll = setInterval(() => void checkForChanges(), 200);
-  }
-
-  let w: FSWatcher;
-  try {
-    w = watch(file, () => {
-      if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(() => void checkForChanges(), 200);
-    });
-    w.on("error", (e) => {
-      console.error(`[ticketWatcher ${opts.pipelineId}] watch error:`, e);
-      if (!testMode.isTestMode()) {
+  } else {
+    try {
+      w = watch(file, () => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(() => void checkForChanges(), 200);
+      });
+      w.on("error", (e) => {
+        console.error(`[ticketWatcher ${opts.pipelineId}] watch error:`, e);
         stop({ projectHash: opts.projectHash, pipelineId: opts.pipelineId });
-      }
-    });
-  } catch (e) {
-    console.error(`[ticketWatcher ${opts.pipelineId}] watch failed:`, e);
-    if (!testMode.isTestMode()) {
-      if (poll) clearInterval(poll);
+      });
+    } catch (e) {
+      console.error(`[ticketWatcher ${opts.pipelineId}] watch failed:`, e);
       return;
     }
-    w = { close() {} } as FSWatcher;
   }
 
   watchers.set(k, {

@@ -69,7 +69,7 @@ const ADJUSTED_REPLY: QAReply = {
 
 async function startQAAndReachSpecReview(page: import("@playwright/test").Page) {
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button", { hasText: /^.*ticket$/ }).first().click();
+  await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
   await page.locator(".qadr-option").first().click();
   await expect(page.locator("button", { hasText: "送出建立 ticket" })).toBeVisible({ timeout: 5000 });

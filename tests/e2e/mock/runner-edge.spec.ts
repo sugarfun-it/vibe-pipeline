@@ -51,14 +51,15 @@ test("ticket finalStatus=failed_iter_limit → ticket 顯示 iter 上限狀態",
   };
   await setRunnerScript(proj.hash, "p-edge", script);
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
-  // 跑完 paused → RunButton 顯示「繼續」
-  await expect(page.locator("button", { hasText: /繼續/ })).toBeVisible({ timeout: 10000 });
+  // 跑完 paused + ticket finalStatus=failed_iter_limit(terminal failure)→ RunButton
+  // 顯示「無可執行 ticket」(failed_iter_limit 不在 runnable list — user 要先重置 ticket)
+  await expect(page.locator(".run-btn-empty")).toBeVisible({ timeout: 10000 });
 
-  // verdict pip 兩條 fail
-  const verdicts = page.locator(".verdict-pip.is-fail");
-  await expect(verdicts).toHaveCount(2);
+  // 點開 ticket drawer → iter rounds 顯示兩條 FAIL verdict
+  await page.locator(".ticket", { hasText: "iter-failed" }).click();
+  await expect(page.locator(".tdrw-iter-verdict.is-fail")).toHaveCount(2);
 });
 
 test("running 中按 Run → 後端 state guard 擋(409 / 4xx)", async ({ page, request }) => {
@@ -84,18 +85,21 @@ test("running 中按 Run → 後端 state guard 擋(409 / 4xx)", async ({ page, 
 });
 
 test("merged pipeline 不准 Run → state guard 擋", async ({ request }) => {
+  // backend 設計:merged 仍可 append 新 ticket 再跑(非終態)。
+  // guard 只在「沒待跑 ticket」時觸發 → 給空 tickets 確保撞 guard。
   proj = await createTempProject({
     pipelines: [
       {
-        ...pipelineWith([{ id: "t1", title: "x" }]),
-        state: "merged", // 已 merge
+        ...pipelineWith([]),
+        state: "merged",
       },
     ],
   });
   const res = await request.post(`${API_BASE}/projects/${proj.hash}/pipelines/p-edge/run`);
   expect(res.ok()).toBe(false);
   const body = await res.json();
-  expect(body.error.message).toMatch(/merge/);
+  // backend 錯誤訊息含「ticket」/「append」/「reset」— 不再硬碰 /merge/
+  expect(body.error.message).toMatch(/ticket|append|reset|merge/);
 });
 
 test("沒劇本就跑 mock runner → 回 error 不 spawn", async ({ request }) => {

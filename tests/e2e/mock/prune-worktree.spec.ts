@@ -34,7 +34,8 @@ function seedStaleWorktreeDir(projHash: string, pipelineId: string): string {
   return wt;
 }
 
-test("endpoint:POST /worktree/prune 砍 stale worktree dir + 回 ok", async ({ request }) => {
+test("endpoint:POST /worktree/cleanup 砍 stale worktree dir + 回 ok", async ({ request }) => {
+  // backend cleanup endpoint 規定 state=merged(未 merged 一律 409,防誤砍未落地改動)
   proj = await createTempProject({
     pipelines: [
       {
@@ -42,7 +43,7 @@ test("endpoint:POST /worktree/prune 砍 stale worktree dir + 回 ok", async ({ r
         name: "ep-pipe",
         branch: "pipeline/ep-pipe",
         baseBranch: "main",
-        state: "planning",
+        state: "merged",
         tickets: [
           {
             id: "t1",
@@ -52,7 +53,7 @@ test("endpoint:POST /worktree/prune 砍 stale worktree dir + 回 ok", async ({ r
             acceptance: ["a"],
             prompt: "p",
             mode: "step",
-            status: "ready",
+            status: "done",
           },
         ],
       },
@@ -63,7 +64,7 @@ test("endpoint:POST /worktree/prune 砍 stale worktree dir + 回 ok", async ({ r
   expect(existsSync(wt)).toBe(true);
 
   const pruneRes = await request.post(
-    `${API}/projects/${proj.hash}/pipelines/p-ep/worktree/prune`,
+    `${API}/projects/${proj.hash}/pipelines/p-ep/worktree/cleanup`,
     { headers: { "content-type": "application/json; charset=utf-8" } }
   );
   expect(pruneRes.ok()).toBe(true);
@@ -84,7 +85,7 @@ test("endpoint:dir 不存在也 OK(idempotent)", async ({ request }) => {
         name: "noop-pipe",
         branch: "pipeline/noop-pipe",
         baseBranch: "main",
-        state: "planning",
+        state: "merged",
         tickets: [],
       },
     ],
@@ -95,7 +96,7 @@ test("endpoint:dir 不存在也 OK(idempotent)", async ({ request }) => {
   expect(existsSync(wt)).toBe(false);
 
   const pruneRes = await request.post(
-    `${API}/projects/${proj.hash}/pipelines/p-noop/worktree/prune`,
+    `${API}/projects/${proj.hash}/pipelines/p-noop/worktree/cleanup`,
     { headers: { "content-type": "application/json; charset=utf-8" } }
   );
   expect(pruneRes.ok()).toBe(true);
@@ -150,7 +151,7 @@ test("endpoint:running 中 prune 被擋 409", async ({ request }) => {
   expect(running, "mock runner 應進 running").toBe(true);
 
   const pruneRes = await request.post(
-    `${API}/projects/${proj.hash}/pipelines/p-busy/worktree/prune`,
+    `${API}/projects/${proj.hash}/pipelines/p-busy/worktree/cleanup`,
     { headers: { "content-type": "application/json; charset=utf-8" } }
   );
   expect(pruneRes.status()).toBe(409);
@@ -193,7 +194,7 @@ test("UI:⋯ menu → 清除 worktree → confirm 取消 → worktree 仍在 + e
 
   // 監聽是否真呼叫 endpoint
   let prunePosted = false;
-  await page.route("**/api/projects/*/pipelines/*/worktree/prune", async (route) => {
+  await page.route("**/api/projects/*/pipelines/*/worktree/cleanup", async (route) => {
     prunePosted = true;
     await route.continue();
   });
@@ -256,7 +257,7 @@ test("UI:⋯ menu → 清除 worktree → confirm 確認 → endpoint 呼叫 + w
 
   // 監聽 prune endpoint
   let prunePosted = false;
-  await page.route("**/api/projects/*/pipelines/*/worktree/prune", async (route) => {
+  await page.route("**/api/projects/*/pipelines/*/worktree/cleanup", async (route) => {
     prunePosted = true;
     await route.continue();
   });

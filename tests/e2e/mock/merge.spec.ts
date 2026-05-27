@@ -15,8 +15,7 @@ test.afterEach(() => {
 });
 
 // 在 fixture 內預建 branch + commit,讓 merge endpoint 真有東西可 squash
-// 注意:.vibe-pipeline/ 是 untracked,不能用 `git add .`(會把它一起塞進 branch
-// 的 tree,switch back 時 working dir 那批 file 會被 git 刪掉)— 只 add 特定檔。
+// .vibe-pipeline/ 已在 helper init 階段 commit 進 .gitignore,merge dirty preflight 不會卡。
 function preBuildBranch(projectPath: string, branch: string, fileName: string): void {
   gitIn(projectPath, ["checkout", "-b", branch]);
   writeFileSync(join(projectPath, fileName), `// added on ${branch}\n`);
@@ -57,13 +56,14 @@ test("squash merge:全 ticket done + ready → POST /merge → state=merged + me
   if (!res.ok()) {
     throw new Error(`merge failed: status=${res.status()} body=${JSON.stringify(body)}`);
   }
-  expect(body.data.commitHash).toMatch(/^[a-f0-9]{40}$/);
+  // backend 2026-05-13 改:回 { mode:'mechanical', mergeCommit:{hash,subject,ts} }
+  expect(body.data.mergeCommit.hash).toMatch(/^[a-f0-9]{40}$/);
 
   // 後端應該已經把 pipeline state 寫成 merged
   const pipeRes = await request.get(`${API_BASE}/projects/${proj.hash}/pipelines/p-merge`);
   const pipeBody = await pipeRes.json();
   expect(pipeBody.data.state).toBe("merged");
-  expect(pipeBody.data.mergeCommit.hash).toBe(body.data.commitHash);
+  expect(pipeBody.data.mergeCommit.hash).toBe(body.data.mergeCommit.hash);
 });
 
 test("merge 完 base 真的有那個 commit", async ({ request }) => {

@@ -77,7 +77,7 @@ test("QA finalize splitInto 三件 → board 三張 ticket + pipeline.json 各�
   await page.goto(`/board?project=${proj.hash}`);
 
   // 開 QA drawer
-  await page.locator("button", { hasText: /^.*ticket$/ }).first().click();
+  await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
   // 第一個 AI option(寫死 hello 開場)出現 → 點任意一個觸發第一輪 reply
@@ -150,7 +150,7 @@ test("user 取消勾選拆分 → 只建 1 張合併版 ticket", async ({ page }
   await setQAScript(proj.hash, [SPLIT_REPLY]);
 
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button", { hasText: /^.*ticket$/ }).first().click();
+  await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
   await page.locator(".qadr-option").first().click();
 

@@ -26,6 +26,7 @@ test.afterEach(() => {
 
 test("PUT non-existent pipeline → 404", async ({ request }) => {
   const res = await request.put(`${API_BASE}/projects/${proj.hash}/pipelines/never-existed`, {
+    headers: { "content-type": "application/json; charset=utf-8" },
     data: {
       id: "never-existed",
       name: "x",

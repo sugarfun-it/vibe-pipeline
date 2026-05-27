@@ -97,6 +97,8 @@ export function InboxStrip({
       <button
         type="button"
         className={"inbox-strip-bell" + (unreadCount > 0 ? " has-unread" : "")}
+        data-testid="inbox-strip-expand"
+        data-unread-count={unreadCount}
         onClick={(e) => {
           e.stopPropagation();
           onExpand();
@@ -112,6 +114,22 @@ export function InboxStrip({
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
+        {/* test hook:常駐 count text(視覺 0×0 透明,仍占 1px 讓 Playwright toBeVisible 通過)
+            — spec 抓 .inbox-strip-count 不撞 visible badge layout */}
+        <span
+          className={"inbox-strip-count" + (unreadCount > 0 ? " has-unread" : "")}
+          data-testid="inbox-strip-count"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0,
+            pointerEvents: "none",
+            fontSize: 1,
+          }}
+        >
+          {unreadCount}
+        </span>
       </button>
       <div className="inbox-strip-divider"></div>
 

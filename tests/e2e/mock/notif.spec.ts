@@ -51,7 +51,7 @@ test("跑完 pipeline → emit pipeline_ready_to_merge → strip 顯示 unread",
   };
   await setRunnerScript(proj.hash, "p-notif", script);
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
   // pipeline 跑完後 emit pipeline_started + pipeline_ready_to_merge,unread 應該至少 1
   await expect(page.locator(".inbox-strip-count.has-unread")).toBeVisible({ timeout: 10000 });
@@ -67,11 +67,11 @@ test("展開 inbox panel → 看到 notif 列表 → mark-all-read 清空 unread
   };
   await setRunnerScript(proj.hash, "p-notif", script);
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
   await expect(page.locator(".inbox-strip-count.has-unread")).toBeVisible({ timeout: 10000 });
 
   // 展開 inbox(strip 上的展開按鈕)
-  await page.locator(".inbox-strip-expand").click();
+  await page.locator("[data-testid='inbox-strip-expand']").click();
   await expect(page.locator(".inbox-panel")).toBeVisible();
 
   // 至少一條 notif 顯示
@@ -79,9 +79,9 @@ test("展開 inbox panel → 看到 notif 列表 → mark-all-read 清空 unread
   await expect(items.first()).toBeVisible();
 
   // mark all read
-  await page.locator(".inbox-foot-link", { hasText: "全部標已讀" }).click();
+  await page.locator(".inbox-foot-link", { hasText: "全部標為已讀" }).click();
   // mark-all-read 後底部連結應消失
-  await expect(page.locator(".inbox-foot-link", { hasText: "全部標已讀" })).toHaveCount(0);
+  await expect(page.locator(".inbox-foot-link", { hasText: "全部標為已讀" })).toHaveCount(0);
 });
 
 test("inbox filter:unread / blocking 切換", async ({ page }) => {
@@ -93,10 +93,10 @@ test("inbox filter:unread / blocking 切換", async ({ page }) => {
     finalState: "ready",
   });
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
   await expect(page.locator(".inbox-strip-count.has-unread")).toBeVisible({ timeout: 10000 });
 
-  await page.locator(".inbox-strip-expand").click();
+  await page.locator("[data-testid='inbox-strip-expand']").click();
   await expect(page.locator(".inbox-panel")).toBeVisible();
 
   // 切到 unread filter
@@ -107,5 +107,5 @@ test("inbox filter:unread / blocking 切換", async ({ page }) => {
   await page.locator(".inbox-filter-btn", { hasText: "阻斷" }).click();
   await expect(page.locator(".inbox-filter-btn.is-active", { hasText: "阻斷" })).toBeVisible();
   // ready_to_merge 是 muted/info 級,不是 block,所以 blocking filter 應該 empty
-  await expect(page.locator(".inbox-empty", { hasText: "都看過了" })).toBeVisible();
+  await expect(page.locator(".inbox-empty", { hasText: "沒有阻斷類通知" })).toBeVisible();
 });

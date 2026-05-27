@@ -53,6 +53,8 @@ export function RunButton({
       <button
         type="button"
         className="btn btn-danger run-btn-stop-now"
+        data-testid="run-btn"
+        data-run-state="running"
         onClick={() => onStop?.(pipeline.id)}
         aria-label="停止 pipeline"
         title={syncActive ? "同步進行中,但 runner 仍可停止" : undefined}
@@ -184,6 +186,8 @@ export function RunButton({
       return (
         <button type="button"
           className="btn btn-primary"
+          data-testid="run-btn"
+          data-run-state={s}
           onClick={() => onRun?.(pipeline.id)}
           aria-label={ariaLabel}
         >

@@ -97,11 +97,20 @@ export async function setSplitScript(req: Request): Promise<Response> {
 }
 
 // POST /api/__test/reset
-// 清所有 in-memory mock state(QA / runner script)。
-// 不動 fs(每 spec 自己用獨立 tmpdir,不靠 reset)。
+// 清所有 in-memory mock state(QA / runner script + fake FCM calls)。
+// device_tokens.json 也清(避免 fcm spec 在共享 TEST_HOME 下 token 累積汙染下一個 case)。
 export async function reset(): Promise<Response> {
   testMode.resetMocks();
   resetFakeFcmCalls();
+  try {
+    const tokensPath = join(vibeHome(), ".vibe-pipeline", "device_tokens.json");
+    if (existsSync(tokensPath)) {
+      const { unlinkSync } = await import("node:fs");
+      unlinkSync(tokensPath);
+    }
+  } catch {
+    // best-effort
+  }
   return ok({});
 }
 

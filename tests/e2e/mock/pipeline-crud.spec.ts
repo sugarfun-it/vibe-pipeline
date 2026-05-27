@@ -44,7 +44,7 @@ test("名稱重複 → 建立按鈕 disabled + 錯誤提示", async ({ page }) =
   // 再開一次,填同名
   await page.locator(".rail-add").click();
   await page.locator(".create-card input.mono").fill("first");
-  await expect(page.locator(".create-error", { hasText: "已存在" })).toBeVisible();
+  await expect(page.locator(".form-hint--error", { hasText: "已存在" })).toBeVisible();
   await expect(page.locator(".create-submit")).toBeDisabled();
 });
 
@@ -53,7 +53,7 @@ test("名稱不合法 → 提示 + 建立 disabled", async ({ page }) => {
 
   await page.locator(".rail-add").click();
   await page.locator(".create-card input.mono").fill("Bad Name!");
-  await expect(page.locator(".create-error", { hasText: "a-z" })).toBeVisible();
+  await expect(page.locator(".form-hint--error", { hasText: "小寫英文" })).toBeVisible();
   await expect(page.locator(".create-submit")).toBeDisabled();
 });
 
@@ -119,14 +119,14 @@ test("delete pipeline 從 overflow menu → 確認 → Rail 消失", async ({ pa
   await page.goto(`/board?project=${proj.hash}`);
   await expect(page.locator(".rail-item-name", { hasText: "to-delete" })).toBeVisible();
 
-  // overflow ⋯ menu
-  const overflowBtn = page.locator("button[title='更多操作']");
+  // overflow ⋯ menu(用 aria-label 區隔 TopBar 上的「更多操作」)
+  const overflowBtn = page.locator("button[aria-label='更多 pipeline 操作']");
   await expect(overflowBtn).toBeVisible();
   await overflowBtn.click();
 
-  // 確認 dialog:用 page.on("dialog") 監聽 window.confirm
-  page.on("dialog", (d) => d.accept());
-  await page.locator("[role='menu'] button", { hasText: "刪除" }).click();
+  // 點 menu 內「刪除 pipeline」→ 跳 ConfirmDialog → 點 confirm button(planning state confirmLabel=「強制刪除」)
+  await page.locator("[role='menu'] button", { hasText: "刪除 pipeline" }).click();
+  await page.locator(".confirm-card button", { hasText: /強制刪除|^刪除$/ }).click();
 
   await expect(page.locator(".rail-item-name", { hasText: "to-delete" })).toHaveCount(0);
 });

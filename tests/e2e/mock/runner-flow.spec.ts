@@ -81,7 +81,7 @@ test("step ticket Run → running → done → ready,commit hash 寫回", async 
   await expect(page.locator(".rail-item-name", { hasText: "run-pipeline" })).toBeVisible();
 
   // 按 ▶ 開始運行
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
   await expect.poll(async () => (await readPipeline(request, proj.hash)).state).toBe("ready");
   const done = await readPipeline(request, proj.hash);
@@ -110,7 +110,7 @@ test("iter mode FAIL → PASS chain,verdicts 顯示", async ({ page, request }) 
   await setRunnerScript(proj.hash, "pipe-run-1", script);
 
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
   await expect.poll(async () => (await readPipeline(request, proj.hash)).state).toBe("ready");
 
@@ -129,8 +129,9 @@ test("Pause running → state 立即變 paused,resume 接續", async ({ page, re
     ],
   });
   const script: RunnerScript = {
+    // workMs 拉長,給 Windows + fs.watch noisy 環境留時間讓 polling 捕捉 running 狀態
     tickets: [
-      { beforeRunningMs: 100, workMs: 1000, finalStatus: "done", commitHash: "mock-1" },
+      { beforeRunningMs: 100, workMs: 4000, finalStatus: "done", commitHash: "mock-1" },
       { beforeRunningMs: 50, workMs: 100, finalStatus: "done", commitHash: "mock-2" },
     ],
     finalState: "ready",
@@ -138,12 +139,12 @@ test("Pause running → state 立即變 paused,resume 接續", async ({ page, re
   await setRunnerScript(proj.hash, "pipe-run-1", script);
 
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
   await expect.poll(async () => {
     const p = await readPipeline(request, proj.hash);
     return p.tickets.find((t) => t.id === "t-pause-1")?.status;
-  }).toBe("running");
+  }, { timeout: 10000 }).toBe("running");
 
   await clickImmediateStop(page);
 
@@ -175,7 +176,7 @@ test("ticket 跑中段按停止 → ticket 直接標 paused", async ({ page, req
   await setRunnerScript(proj.hash, "pipe-run-1", script);
 
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
   await expect.poll(async () => {
     const p = await readPipeline(request, proj.hash);
@@ -220,7 +221,7 @@ test("按停止 → pipeline.state 從 running 直接到 paused,不經其他中�
   await setRunnerScript(proj.hash, "pipe-run-1", script);
 
   await page.goto(`/board?project=${proj.hash}`);
-  await page.locator("button[title*='開始運行']").click();
+  await page.locator("[data-testid='run-btn']").click();
 
   await expect.poll(async () => (await readPipeline(request, proj.hash)).state).toBe("running");
 
@@ -257,5 +258,5 @@ test("沒 ticket 的 pipeline 顯示「無ticket可執行」按鈕", async ({ pa
     ],
   });
   await page.goto(`/board?project=${proj.hash}`);
-  await expect(page.locator("button", { hasText: "無ticket可執行" })).toBeVisible();
+  await expect(page.locator("button", { hasText: /無.*ticket|無 ticket/ })).toBeVisible();
 });

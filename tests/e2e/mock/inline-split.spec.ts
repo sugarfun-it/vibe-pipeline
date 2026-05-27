@@ -88,8 +88,9 @@ async function openDrawerAndTriggerSplit(page: import("@playwright/test").Page):
   await splitBtn.click();
   // inline 確認卡出現
   await expect(page.locator(".tdrw-split-confirm")).toBeVisible();
+  // confirm title 是固定文字「以 AI 拆分並取代這張 ticket」(不含 ticket title)
   await expect(
-    page.locator(".tdrw-split-confirm-title", { hasText: "Settings 大改造" })
+    page.locator(".tdrw-split-confirm-title", { hasText: "以 AI 拆分" })
   ).toBeVisible();
 }
 
@@ -98,9 +99,9 @@ test("inline AI 拆分 → 確認 → 原 ticket 被替換成 3 張", async ({ p
 
   await openDrawerAndTriggerSplit(page);
 
-  // 確認鈕(內含 ScissorsIcon)
-  const confirmBtn = page.locator(".tdrw-split-confirm-actions .tdrw-action-primary", {
-    hasText: "確認 AI 拆分",
+  // 確認鈕(內含 ScissorsIcon)— class 已改 .tdrw-action-danger + .tdrw-split-confirm-cta
+  const confirmBtn = page.locator(".tdrw-split-confirm-cta", {
+    hasText: "拆分並取代原 ticket",
   });
   await expect(confirmBtn).toBeVisible();
   await confirmBtn.click();
