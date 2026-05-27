@@ -8,6 +8,48 @@ import { createPortal } from "react-dom";
 // 4. 關閉時把焦點還給打開前的 trigger(try-catch 包,trigger 可能在 overlay 開期間從 DOM 拔掉)
 // 5. scrim 點擊 → onRequestClose(caller 決定是否真的 close,例:有未存草稿先彈確認)
 // 6. portal(預設 true):render through createPortal to document.body;false → in-place(QADrawer 現行就 inline,scrim 蓋的是 board 區域)
+// 7. body scroll lock(預設只在 portal=true 鎖):module-level ref-count,multi-overlay
+//    (例 TicketDrawer 內按 split → ConfirmDialog)時內層 close 不會誤拔外層的 lock;
+//    最後一個 close 才還原 body 樣式並把 scrollY 還回去。lockBodyScroll=false 可 opt-out
+//    (in-place QADrawer scrim 只蓋 board 區,本來就不該鎖 body)。
+
+// ── Module-level scroll lock ref-count ─────────────────────────────
+// 多個 overlay 同時開時,只在「第一個 acquire」改 body,「最後一個 release」還原。
+// 用 position:fixed + top:-scrollY 模式(非 overflow:hidden):
+//   - iOS Safari overflow:hidden 對 body 不鎖 touch scroll;fixed 才鎖
+//   - 還原時 window.scrollTo(0, savedScrollY) 回到原位
+let scrollLockCount = 0;
+let savedScrollY = 0;
+let savedBodyPosition = "";
+let savedBodyTop = "";
+let savedBodyWidth = "";
+let savedBodyOverflow = "";
+
+function acquireScrollLock() {
+  if (scrollLockCount === 0) {
+    savedScrollY = window.scrollY;
+    savedBodyPosition = document.body.style.position;
+    savedBodyTop = document.body.style.top;
+    savedBodyWidth = document.body.style.width;
+    savedBodyOverflow = document.body.style.overflow;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${savedScrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+  }
+  scrollLockCount += 1;
+}
+
+function releaseScrollLock() {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount === 0) {
+    document.body.style.position = savedBodyPosition;
+    document.body.style.top = savedBodyTop;
+    document.body.style.width = savedBodyWidth;
+    document.body.style.overflow = savedBodyOverflow;
+    window.scrollTo(0, savedScrollY);
+  }
+}
 
 export type OverlayProps = {
   /** dialog | alertdialog */
@@ -20,6 +62,9 @@ export type OverlayProps = {
   describedBy?: string;
   /** 是否 portal 到 document.body(預設 true);false 時 in-place 渲染 */
   portal?: boolean;
+  /** 是否鎖 body scroll(預設跟隨 portal:portal=true → 鎖,portal=false → 不鎖)。
+   * multi-overlay 場景由 module-level ref-count 保證最後一個 close 才還原。 */
+  lockBodyScroll?: boolean;
   /** 是否在卸載時還焦點給打開前的 trigger(預設 true) */
   restoreFocus?: boolean;
   /** 初始 focus 的元素;預設 focus drawer root(tabindex=-1) */

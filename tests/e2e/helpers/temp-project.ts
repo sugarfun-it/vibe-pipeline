@@ -33,6 +33,11 @@ export function gitIn(cwd: string, args: string[]): { ok: boolean; out: string; 
 
 // 建一個 temp git repo + .vibe-pipeline/(可選 seed pipelines),註冊進 backend recents。
 // 回 path + hash,後續 spec 用 ?project=<hash> 進 board。
+//
+// seed pipeline 排序契約:**seed array 順序 = 新增順序**,index 0 = 最舊、index N-1 = 最新。
+// 未顯式帶 createdAt 的 pipeline 一律 backfill 遞增 ts,確保 backend listPipelines
+// (用 createdAt 倒序)拿到的「最新」= seed[N-1],UI 預設 active 行為才穩定。
+// 若 spec 自己給 createdAt 則尊重(spec 自控)。
 export async function createTempProject(opts?: {
   baseBranch?: string;
   pipelines?: Array<Record<string, unknown>>;
@@ -51,13 +56,21 @@ export async function createTempProject(opts?: {
   const commit = gitIn(dir, ["commit", "-m", "init"]);
   if (!commit.ok) throw new Error(`git commit failed: ${commit.err}`);
 
+  const rawPipelines = opts?.pipelines ?? [];
+  const now = Date.now();
+  const N = rawPipelines.length;
+  const seedPipelines = rawPipelines.map((p, i) => {
+    if (typeof p.createdAt === "number") return p;
+    return { ...p, createdAt: now - (N - 1 - i) * 1000 };
+  });
+
   const res = await fetch(`${API}/__test/register-project`, {
     method: "POST",
     headers: { "content-type": "application/json; charset=utf-8" },
     body: JSON.stringify({
       path: dir,
       ensureInit: true,
-      seedPipelines: opts?.pipelines ?? [],
+      seedPipelines,
     }),
   });
   const body = (await res.json()) as { ok: boolean; data?: { hash: string }; error?: { message: string } };

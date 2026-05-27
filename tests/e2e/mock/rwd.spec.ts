@@ -22,26 +22,10 @@ const COMPLETE_REPLY: QAReply = {
 };
 
 function seedPipelines() {
+  // seed 順序 = 新增順序;index N-1 = 最新 = 預設 active。
+  // rwd-beta 放 index 0(舊)、rwd-alpha 放 index 1(新)→ 預設 focus 顯 rwd-alpha,
+  // spec 後續再點 rail 切到 rwd-beta 驗 nav。
   return [
-    {
-      id: "pipe-rwd-a",
-      name: "rwd-alpha",
-      branch: "pipeline/rwd-alpha",
-      baseBranch: "main",
-      state: "planning",
-      tickets: [
-        {
-          id: "rwd-t-1",
-          n: 1,
-          title: "RWD ticket alpha",
-          goal: "驗證 TicketDrawer",
-          acceptance: ["TicketDrawer visible", "TicketDrawer close works"],
-          prompt: "檢查 ticket drawer RWD",
-          mode: "step",
-          status: "ready",
-        },
-      ],
-    },
     {
       id: "pipe-rwd-b",
       name: "rwd-beta",
@@ -56,6 +40,25 @@ function seedPipelines() {
           goal: "驗證 Board",
           acceptance: ["Board visible"],
           prompt: "檢查 board RWD",
+          mode: "step",
+          status: "ready",
+        },
+      ],
+    },
+    {
+      id: "pipe-rwd-a",
+      name: "rwd-alpha",
+      branch: "pipeline/rwd-alpha",
+      baseBranch: "main",
+      state: "planning",
+      tickets: [
+        {
+          id: "rwd-t-1",
+          n: 1,
+          title: "RWD ticket alpha",
+          goal: "驗證 TicketDrawer",
+          acceptance: ["TicketDrawer visible", "TicketDrawer close works"],
+          prompt: "檢查 ticket drawer RWD",
           mode: "step",
           status: "ready",
         },
@@ -113,9 +116,9 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator("html.light")).toHaveCount(0);
 
       await expect(page.locator(".focus")).toBeVisible();
-      // BoardScreen 用 pipelines[0] fallback;listPipelines 用 createdAt 倒序,fixture seed
-      // 沒帶 createdAt,backfill 走 id 內嵌 hex,「pipe-rwd-a / pipe-rwd-b」都解不出 → 都 0,
-      // readdir 順序決定 — 觀察結果 rwd-alpha 排前面。
+      // BoardScreen 用 pipelines[0] fallback;listPipelines 用 createdAt 倒序。
+      // createTempProject backfill 遞增 createdAt(seed 順序 = 新增順序),seed[N-1]=rwd-alpha
+      // 是最新 → 排第一 → 預設 active。
       await expect(page.locator(".focus-title", { hasText: "rwd-alpha" })).toBeVisible();
       await expect(page.locator(".ticket-title", { hasText: "RWD ticket alpha" })).toBeVisible();
       await expectNoViewportOverflow(page);
