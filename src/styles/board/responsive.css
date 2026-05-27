@@ -1,4 +1,4 @@
-/* board/responsive.css */
+/* styles/board/responsive.css — mobile board shell overrides */
 
 /* Landmark wrappers added by AppShell (<nav>/<main>/<aside>) must propagate
    the grid cell's height to their inner pane (.rail / .focus / .inbox-col) so

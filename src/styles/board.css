@@ -1,10 +1,3 @@
-/* board.css — barrel; all rules in ./board/ */
-
-@import './board/layout-base.css';
-@import './board/btn-disabled.css';
-@import './board/chip-meta.css';
-@import './board/btn-extras.css';
-@import './board/toggle-pill.css';
-@import './board/modal.css';
-@import './board/body-grid.css';
+@import './board/layout.css';
+@import './board/mobile-tabs.css';
 @import './board/responsive.css';

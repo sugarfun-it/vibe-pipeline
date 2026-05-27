@@ -1,0 +1,6 @@
+/* styles/board/layout.css — board root and shared primitive controls */
+
+@import './layout-base.css';
+@import './btn-disabled.css';
+@import './chip-meta.css';
+@import './btn-extras.css';
