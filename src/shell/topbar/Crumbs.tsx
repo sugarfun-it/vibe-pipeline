@@ -15,10 +15,9 @@ type CrumbsProps = {
   open: boolean;
   projTriggerRef: RefObject<HTMLButtonElement>;
   recents: Project[];
-  loadBrowse: (path?: string) => Promise<void>;
+  openBrowse: () => void;
   removeRecentEntry: (p: Project) => void;
   selectExisting: (p: Project) => void;
-  setBrowseOpen: (open: boolean) => void;
   setError: (error: string | null) => void;
   setOpen: (open: boolean | ((open: boolean) => boolean)) => void;
 };
@@ -31,10 +30,9 @@ export function Crumbs({
   open,
   projTriggerRef,
   recents,
-  loadBrowse,
+  openBrowse,
   removeRecentEntry,
   selectExisting,
-  setBrowseOpen,
   setError,
   setOpen,
 }: CrumbsProps) {
@@ -130,8 +128,7 @@ export function Crumbs({
                 onClick={() => {
                   setOpen(false);
                   setError(null);
-                  setBrowseOpen(true);
-                  void loadBrowse();
+                  openBrowse();
                 }}
                 disabled={busy}
                 title="瀏覽器內導覽 host 上目錄(local + Tailscale 遠端都用同一套)"

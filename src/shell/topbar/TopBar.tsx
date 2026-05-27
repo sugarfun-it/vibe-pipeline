@@ -4,10 +4,11 @@ import { useActiveProjectHash } from "../../hooks/useActiveProject";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
 import { useUrlParam } from "../../hooks/useUrlParam";
+import { useProjectPicker } from "../../contexts/ProjectPickerContext";
 import type { Project } from "../../../shared/types";
 import { Crumbs } from "./Crumbs";
 import { Actions } from "./Actions";
-import { FolderBrowseModal } from "./Overflow";
+import { BrowseProjectModal } from "./BrowseProjectModal";
 import "../topbar.css";
 
 export function TopBar({
@@ -28,8 +29,10 @@ export function TopBar({
   const projTriggerRef = useRef<HTMLButtonElement>(null);
   const browseCloseRef = useRef<HTMLButtonElement>(null);
   // Browser folder picker — remote(Tailscale)用,native picker 在 host 上跳 user 看不到,
-  // 改成 client-side browse:抓 host 上目錄列表,UI 點擊導覽 + 選擇
-  const [browseOpen, setBrowseOpen] = useState(false);
+  // 改成 client-side browse:抓 host 上目錄列表,UI 點擊導覽 + 選擇。
+  // browseOpen 升到 ProjectPickerContext,EmptyProject CTA 也能直接 trigger;modal 內部
+  // fetch / focus / keyboard 仍歸 TopBar 管(透過觀察 context 訊號 driver)。
+  const { browseOpen, setBrowseOpen, openBrowse, openRequestNonce } = useProjectPicker();
   const [browseData, setBrowseData] = useState<api.BrowseResult | null>(null);
   const [browseLoading, setBrowseLoading] = useState(false);
   // 失敗時保留試過的 path,讓「重試」可以重打同一個 path,而非變成 dead-end(advisor 2026-05-24 r1)
@@ -108,7 +111,8 @@ export function TopBar({
       .catch((e: Error) => setError(e.message));
   }, []);
 
-  // ⌘O / Ctrl+O 開瀏覽資料夾 modal(對應 menu 裡的 kbd hint)
+  // ⌘O / Ctrl+O 開瀏覽資料夾 modal(對應 menu 裡的 kbd hint)。openBrowse() 是 context API,
+  // bump openRequestNonce 觸發下方 effect 跑 initial loadBrowse。
   // biome-ignore lint/correctness/useExhaustiveDependencies: 不放 deps 避免每 render 重綁聽器
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -117,13 +121,21 @@ export function TopBar({
         e.preventDefault();
         if (busy) return;
         setError(null);
-        setBrowseOpen(true);
-        void loadBrowse();
+        openBrowse();
       }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
+
+  // openRequestNonce 每次 openBrowse() 都遞增 → 觸發 initial loadBrowse。涵蓋三個 caller:
+  // (1) ⌘O 快捷 (2) Crumbs popover「選擇專案資料夾…」(3) EmptyProject CTA
+  // 不依賴 browseOpen 從 false→true,因為 user 在已開狀態再點也該重打 root listing。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 只在 nonce 變動時觸發
+  useEffect(() => {
+    if (openRequestNonce === 0) return;
+    void loadBrowse();
+  }, [openRequestNonce]);
 
   // Browse modal:Escape 關閉 + 開啟時 initial focus 落在 modal body 第一個可導覽 button
   // (上層 / 首頁 / 磁碟切換),沒有可用導覽時 fallback 到「取消」。比舊版直接落 「取消」
@@ -216,17 +228,16 @@ export function TopBar({
         open={open}
         projTriggerRef={projTriggerRef}
         recents={recents}
-        loadBrowse={loadBrowse}
+        openBrowse={openBrowse}
         removeRecentEntry={removeRecentEntry}
         selectExisting={selectExisting}
-        setBrowseOpen={setBrowseOpen}
         setError={setError}
         setOpen={setOpen}
       />
       <span className="topbar-spacer" />
       <Actions hash={hash} isDark={isDark} maxParallel={maxParallel} runningCount={runningCount} settingsSlot={settingsSlot} toggleTheme={toggleTheme} />
       {browseOpen && (
-        <FolderBrowseModal
+        <BrowseProjectModal
           browseCloseRef={browseCloseRef}
           browseData={browseData}
           browseDialogRef={browseDialogRef}

@@ -3,7 +3,7 @@ import type { Dispatch, RefObject, SetStateAction } from "react";
 import { ArrowUpIcon, CloseIcon, FileIcon, FolderIcon, HomeIcon } from "../../ui/icons";
 import type * as api from "../../api";
 
-type FolderBrowseModalProps = {
+type BrowseProjectModalProps = {
   browseCloseRef: RefObject<HTMLButtonElement>;
   browseData: api.BrowseResult | null;
   browseDialogRef: RefObject<HTMLDivElement>;
@@ -14,11 +14,11 @@ type FolderBrowseModalProps = {
   loadBrowse: (path?: string) => Promise<void>;
   openByPath: (path: string) => void;
   setBrowseData: Dispatch<SetStateAction<api.BrowseResult | null>>;
-  setBrowseOpen: Dispatch<SetStateAction<boolean>>;
+  setBrowseOpen: (v: boolean) => void;
   setError: Dispatch<SetStateAction<string | null>>;
 };
 
-export function FolderBrowseModal({
+export function BrowseProjectModal({
   browseCloseRef,
   browseData,
   browseDialogRef,
@@ -31,7 +31,7 @@ export function FolderBrowseModal({
   setBrowseData,
   setBrowseOpen,
   setError,
-}: FolderBrowseModalProps) {
+}: BrowseProjectModalProps) {
   return createPortal(
         <div
           role="dialog"
