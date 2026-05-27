@@ -2,13 +2,24 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import { createTempProject, cleanupTempProject, type TempProject } from "../helpers/temp-project";
 import { resetMocks, setRunnerScript, type RunnerScript } from "../helpers/mock-control";
 import { API_BASE } from "../helpers/api-base";
+import { getGatewayRecords, resetGatewayRecords, type GatewayRecord } from "../helpers/mock-gateway";
 
 const API = API_BASE;
 
 let proj: TempProject | null = null;
 
+// 2026-05-19 push 改走 maintainer gateway,本 spec 在 PUSH_GATEWAY_URL 指向 mock gateway
+// (`tests/e2e/helpers/mock-gateway.ts`,playwright config webServer 啟動於 port 3004)的前提下驗:
+//
+// 1. token 註冊 → backend 對 mock gateway 呼 `/tokens/auto-issue` + `/push/register`,
+//    本地 `~/.vibe-pipeline/gateway-token` 寫入
+// 2. ticket 完成 → 觸發 `fanoutPush`;mock 模式下走 in-process fakeFcmCalls 短路(production
+//    code 路徑,本 spec 不動)— 驗 fakeFcmCalls 收到 ticket 完成的 payload
+// 3. unregister → backend 對 mock gateway 呼 `/push/unregister`(本地 gateway-token 不刪,
+//    跟 production 邏輯一致 — unregister 是 device 級,不是這個 backend instance 級)
 test.beforeEach(async ({ request }) => {
   await resetMocks();
+  await resetGatewayRecords();
   proj = null;
   await request.post(`${API}/__test/fcm/reset`);
 });
@@ -77,43 +88,58 @@ async function getFcmCalls(request: APIRequestContext): Promise<FakeFcmCall[]> {
   return body.calls;
 }
 
-async function getTokenFileContent(request: APIRequestContext): Promise<TokenFileContent> {
-  const res = await request.get(`${API}/__test/push/file-content`);
+async function getTokenFileContent(
+  request: APIRequestContext,
+  file?: string
+): Promise<TokenFileContent> {
+  const url = file
+    ? `${API}/__test/push/file-content?file=${encodeURIComponent(file)}`
+    : `${API}/__test/push/file-content`;
+  const res = await request.get(url);
   expect(res.ok()).toBeTruthy();
   const body = (await res.json()) as { ok: boolean; data: TokenFileContent };
   expect(body.ok).toBe(true);
   return body.data;
 }
 
-// SKIP × 3:2026-05-19 push 改走 maintainer gateway sentinel model。
-// - device token registry SSOT 搬到 gateway 端 Firestore,VP backend 不再寫
-//   `device_tokens.json`,`tokenStore.listTokens` 永遠回 `[]`(或 gateway sentinel record)
-// - `/push/register` 改成轉發 gateway,本地不存 token list
-// - `fanoutPush` 透過 gateway URL → gateway 端 fan-out 全部 device
-// 整個 spec model(本地 device_tokens.json + listTokens 帶 user token)過時。
-// 建議 user 決定:刪這檔(gateway integration test 該在 gateway repo 跑),或
-// 重寫成「mock gateway HTTP + 驗 backend POST /push/register payload 格式正確」(範圍變得很小)。
-test.skip("token registration → /api/push/tokens lists registered token and writes device_tokens.json", async ({ request }) => {
-  const token = `fake-device-token-register-${Date.now()}`;
+function recordsMatching(records: GatewayRecord[], path: string): GatewayRecord[] {
+  return records.filter((r) => r.path === path);
+}
 
-  await registerToken(request, token);
+test("token registration → mock gateway 收到 auto-issue + push/register,本地寫入 gateway-token", async ({
+  request,
+}) => {
+  // 確認初始狀態:gateway-token 不存在(reset 已清)
+  const before = await getTokenFileContent(request, "gateway-token");
+  expect(before.filename).toBe("gateway-token");
+  expect(before.content).toBe("");
 
-  const res = await request.get(`${API}/push/tokens`);
-  expect(res.ok()).toBeTruthy();
-  const body = (await res.json()) as { tokens: Array<{ token: string }> };
-  expect(body.tokens.map((t) => t.token)).toContain(token);
+  const deviceToken = `fake-device-token-register-${Date.now()}`;
+  await registerToken(request, deviceToken);
 
-  const file = await getTokenFileContent(request);
-  expect(file.filename).toBe("device_tokens.json");
-  const parsed = JSON.parse(file.content) as { tokens: Array<{ token: string; platform: string }> };
-  expect(parsed.tokens).toEqual(
-    expect.arrayContaining([expect.objectContaining({ token, platform: "e2e" })])
-  );
+  // mock gateway 應收到一筆 /tokens/auto-issue(lazy ensureToken)+ 一筆 /push/register
+  const records = await getGatewayRecords();
+  const autoIssue = recordsMatching(records, "/tokens/auto-issue");
+  const pushRegister = recordsMatching(records, "/push/register");
+  expect(autoIssue.length).toBe(1);
+  expect(pushRegister.length).toBe(1);
+  expect(pushRegister[0]!.body).toMatchObject({
+    deviceToken,
+    label: "e2e",
+  });
+
+  // 本地 gateway-token 應寫入,內容對應 mock gateway 發的 token(test-token-<uuid>)
+  const after = await getTokenFileContent(request, "gateway-token");
+  expect(after.content.length).toBeGreaterThan(0);
+  expect(after.content.startsWith("test-token-")).toBe(true);
 });
 
-test.skip("ticket done event → fanoutPush records fake FCM call", async ({ request }) => {
-  const token = `fake-device-token-fanout-${Date.now()}`;
-  await registerToken(request, token);
+test("ticket done → fanoutPush 觸發,fakeFcmCalls 收到 ticket 完成 payload", async ({
+  request,
+}) => {
+  // 先註冊 token(讓 listTokens 不回 [])
+  const deviceToken = `fake-device-token-fanout-${Date.now()}`;
+  await registerToken(request, deviceToken);
 
   proj = await createTempProject({ pipelines: [pipelineWithTickets()] });
   const script: RunnerScript = {
@@ -128,13 +154,14 @@ test.skip("ticket done event → fanoutPush records fake FCM call", async ({ req
   const runRes = await request.post(`${API}/projects/${proj.hash}/pipelines/pipe-fcm-1/run`);
   expect(runRes.ok()).toBeTruthy();
 
+  // mock 模式 fanoutPush 短路到 in-process fakeFcmCalls(production code 行為,本 spec 不改),
+  // 所以驗 fakeFcmCalls 而非 mock gateway records
   await expect
     .poll(async () => (await getFcmCalls(request)).length, { timeout: 5000 })
     .toBeGreaterThanOrEqual(1);
 
   const calls = await getFcmCalls(request);
   const first = calls[0]!;
-  expect(first.tokens).toContain(token);
   expect(first.payload.notification?.title).toBe("✅ Ticket 完成");
   expect(first.payload.notification?.body).toBe("first-push-ticket");
   expect(first.payload.data?.workUnitId).toBe("fcm-t-1");
@@ -142,22 +169,28 @@ test.skip("ticket done event → fanoutPush records fake FCM call", async ({ req
   expect(typeof first.ts).toBe("number");
 });
 
-test.skip("unsubscribe → /api/push/tokens removes registered token and updates device_tokens.json", async ({ request }) => {
-  const token = `fake-device-token-unsub-${Date.now()}`;
-  await registerToken(request, token);
+test("unregister → mock gateway 收到 push/unregister(本地 gateway-token 保留)", async ({
+  request,
+}) => {
+  const deviceToken = `fake-device-token-unsub-${Date.now()}`;
+  await registerToken(request, deviceToken);
 
-  const before = await getTokenFileContent(request);
-  expect(before.content).toContain(token);
+  // 確認 register 路徑寫入 gateway-token
+  const beforeUnregister = await getTokenFileContent(request, "gateway-token");
+  expect(beforeUnregister.content.length).toBeGreaterThan(0);
 
-  const unregister = await request.post(`${API}/push/unregister`, { data: { token } });
+  await resetGatewayRecords(); // 隔離 register 階段的 records
+
+  const unregister = await request.post(`${API}/push/unregister`, { data: { token: deviceToken } });
   expect(unregister.ok()).toBeTruthy();
 
-  const res = await request.get(`${API}/push/tokens`);
-  expect(res.ok()).toBeTruthy();
-  const body = (await res.json()) as { tokens: Array<{ token: string }> };
-  expect(body.tokens.map((t) => t.token)).not.toContain(token);
+  const records = await getGatewayRecords();
+  const unregisterCalls = recordsMatching(records, "/push/unregister");
+  expect(unregisterCalls.length).toBe(1);
+  expect(unregisterCalls[0]!.body).toMatchObject({ deviceToken });
 
-  const after = await getTokenFileContent(request);
-  const parsed = JSON.parse(after.content) as { tokens: Array<{ token: string }> };
-  expect(parsed.tokens.map((t) => t.token)).not.toContain(token);
+  // unregister 是 device 級操作,backend instance 的 gateway-token 不該被刪
+  // (gateway-token 是 backend 自己對 gateway 的 bearer,跟 device 解綁無關)
+  const afterUnregister = await getTokenFileContent(request, "gateway-token");
+  expect(afterUnregister.content).toBe(beforeUnregister.content);
 });

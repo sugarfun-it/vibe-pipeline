@@ -22,6 +22,9 @@ process.env.PW_TEST_HOME_TS = HOME_TS;
 const TEST_HOME = join(TEST_TMP, `vp-e2e-home-${HOME_TS}`);
 const FRONTEND_PORT = process.env.E2E_FRONTEND_PORT ?? "5175";
 const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? "3002";
+// Mock gateway 固定 port(option a:不撞 BACKEND 3002 / dev 3001 / FRONTEND 5175);
+// backend 透過 PUSH_GATEWAY_URL env 導向這條 mock gateway,fcm spec 才能驗 register / auto-issue payload。
+const MOCK_GATEWAY_PORT = process.env.MOCK_GATEWAY_PORT ?? "3004";
 mkdirSync(TEST_HOME, { recursive: true });
 mkdirSync(TEST_TMP, { recursive: true });
 
@@ -35,6 +38,8 @@ const TEST_ENV: Record<string, string> = {
   E2E_FRONTEND_PORT: FRONTEND_PORT,
   E2E_BACKEND_PORT: BACKEND_PORT,
   VITE_E2E_API_TARGET: `http://127.0.0.1:${BACKEND_PORT}`,
+  MOCK_GATEWAY_PORT,
+  PUSH_GATEWAY_URL: `http://127.0.0.1:${MOCK_GATEWAY_PORT}`,
   TMP: TEST_TMP,
   TEMP: TEST_TMP,
   // Windows 上 Bun 的 process.env 也讀 USERPROFILE,但 vibeHome() 走 VP_HOME_OVERRIDE 優先,所以只設它就夠
@@ -58,6 +63,14 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: [
+    {
+      command: `bun run ./tests/e2e/helpers/mock-gateway.ts`,
+      cwd: ROOT_DIR,
+      url: `http://127.0.0.1:${MOCK_GATEWAY_PORT}/health`,
+      timeout: 15_000,
+      reuseExistingServer: !process.env.CI,
+      env: TEST_ENV,
+    },
     {
       command: `node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${FRONTEND_PORT}`,
       cwd: ROOT_DIR,

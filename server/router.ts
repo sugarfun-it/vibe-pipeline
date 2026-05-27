@@ -148,7 +148,7 @@ export async function handle(req: Request): Promise<Response> {
     if (pathname === "/api/__test/fcm/calls" && method === "GET") return test.fcmCalls();
     if (pathname === "/api/__test/fcm/reset" && method === "POST") return test.fcmReset();
     if (pathname === "/api/__test/push/file-content" && method === "GET")
-      return test.pushFileContent();
+      return test.pushFileContent(req);
     return notFound();
   }
 

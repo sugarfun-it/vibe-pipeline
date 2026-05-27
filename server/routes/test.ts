@@ -98,16 +98,16 @@ export async function setSplitScript(req: Request): Promise<Response> {
 
 // POST /api/__test/reset
 // 清所有 in-memory mock state(QA / runner script + fake FCM calls)。
-// device_tokens.json 也清(避免 fcm spec 在共享 TEST_HOME 下 token 累積汙染下一個 case)。
+// device_tokens.json + gateway-token 也清(避免 fcm spec 在共享 TEST_HOME 下 token 累積汙染下一個 case)。
 export async function reset(): Promise<Response> {
   testMode.resetMocks();
   resetFakeFcmCalls();
   try {
+    const { unlinkSync } = await import("node:fs");
     const tokensPath = join(vibeHome(), ".vibe-pipeline", "device_tokens.json");
-    if (existsSync(tokensPath)) {
-      const { unlinkSync } = await import("node:fs");
-      unlinkSync(tokensPath);
-    }
+    if (existsSync(tokensPath)) unlinkSync(tokensPath);
+    const gatewayTokenPath = join(vibeHome(), ".vibe-pipeline", "gateway-token");
+    if (existsSync(gatewayTokenPath)) unlinkSync(gatewayTokenPath);
   } catch {
     // best-effort
   }
@@ -155,9 +155,14 @@ export function fcmReset(): Response {
   return Response.json({ ok: true });
 }
 
-// GET /api/__test/push/file-content
-export async function pushFileContent(): Promise<Response> {
-  const filename = "device_tokens.json";
+// GET /api/__test/push/file-content?file=<name>
+// 預設讀 device_tokens.json(legacy);fcm spec 可帶 ?file=gateway-token 讀 lazy 取得的 bearer token。
+// 只允許白名單避免變成任意檔讀。
+export async function pushFileContent(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const requested = url.searchParams.get("file") ?? "device_tokens.json";
+  const allowed = new Set(["device_tokens.json", "gateway-token"]);
+  const filename = allowed.has(requested) ? requested : "device_tokens.json";
   const path = join(vibeHome(), ".vibe-pipeline", filename);
   const content = existsSync(path) ? await Bun.file(path).text() : "";
   return ok({ filename, content });
