@@ -49,15 +49,6 @@
     min-width: 72px;
     padding: 8px 12px;
   }
-  .tdrw-delete-icon .tdrw-delete-icon-label {
-    /* mobile 只剩 trash icon,文字 sr-only */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
 }
 
 /* mobile breadcrumb 內 pipelineName 在窄寬下 ellipsis,X 始終可見。
