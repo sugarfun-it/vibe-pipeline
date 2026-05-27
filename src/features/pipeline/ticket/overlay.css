@@ -11,6 +11,17 @@
   border-radius: 0;
   box-shadow: var(--shadow-drawer-accent);
 }
+/* mobile fullwidth restored 2026-05-27 — overlay.css `max-width: calc(100vw - 32px)`
+   was leaking into mobile and capping drawer at ~343px on 375vw. Restore the
+   canonical mobile take-over (matches shared `.drawer` mobile rule + qa drawer). */
+@media (max-width: 767.98px) {
+  .tdrw-drawer {
+    width: 100vw;
+    max-width: 100vw;
+    border-left: 0;
+    box-shadow: none;
+  }
+}
 .drawer-head.tdrw-head {
   padding: 14px 22px 14px 22px;
   border-bottom: 1px solid var(--line);

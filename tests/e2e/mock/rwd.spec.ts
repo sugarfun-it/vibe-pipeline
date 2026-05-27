@@ -75,12 +75,12 @@ async function expectNoViewportOverflow(page: Page) {
 }
 
 async function expectDrawerFullWidthOnMobile(_page: Page, drawer: Locator) {
-  // tdrw-drawer / qadr-drawer 在 mobile 不再 100vw fullwidth,改成 `max-width: 100vw - 32px`
-  // (16px 左右 gutter)— 視覺上更像 sheet。375vw → drawer ≈ 343px。
-  // 仍驗證 drawer 從靠右(或靠左)邊緣展開,看起來「佔滿可用空間」:寬度貼近 viewport 上限。
+  // mobile fullwidth restored 2026-05-27 — tdrw-drawer / qadr-drawer 在 mobile
+  // 要 100vw 滿版 take-over(無左右 gutter),跟 shared `.drawer` mobile contract 一致。
+  // 375vw viewport → drawer 寬度 ≈ 375px。
   const box = await drawer.boundingBox();
   expect(box).not.toBeNull();
-  expect(box!.width).toBeGreaterThanOrEqual(300);
+  expect(box!.width).toBeGreaterThanOrEqual(374);
   expect(box!.width).toBeLessThanOrEqual(376);
 }
 
