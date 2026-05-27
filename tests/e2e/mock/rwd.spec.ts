@@ -74,7 +74,7 @@ async function expectNoViewportOverflow(page: Page) {
   expect(metrics.docScrollWidth).toBeLessThanOrEqual(metrics.innerWidth + 1);
 }
 
-async function expectDrawerFullWidthOnMobile(page: Page, drawer: Locator) {
+async function expectDrawerFullWidthOnMobile(_page: Page, drawer: Locator) {
   await expect.poll(async () => (await drawer.boundingBox())?.x ?? Number.POSITIVE_INFINITY)
     .toBeLessThanOrEqual(1);
   const box = await drawer.boundingBox();

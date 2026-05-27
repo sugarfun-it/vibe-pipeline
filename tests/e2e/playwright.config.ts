@@ -20,9 +20,7 @@ const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? "3002";
 mkdirSync(TEST_HOME, { recursive: true });
 mkdirSync(TEST_TMP, { recursive: true });
 
-// e2e backend 跑 3003 不撞 dev backend 的 3001
 // (避免 playwright 中斷時 child bun 留下 zombie 鎖死 dev port)
-const E2E_PORT = "3003";
 
 const TEST_ENV: Record<string, string> = {
   VP_TEST_MODE: "mock",

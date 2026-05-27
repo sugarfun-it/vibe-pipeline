@@ -352,7 +352,7 @@ async function waitAndFinish(opts: {
 
   const stdoutPromise = (async () => {
     if (!proc.stdout) return;
-    for await (const chunk of proc.stdout as ReadableStream<Uint8Array>) {
+    for await (const chunk of proc.stdout as unknown as AsyncIterable<Uint8Array>) {
       const s = new TextDecoder().decode(chunk);
       stdoutBuf += s;
       logStream?.write(s);
@@ -360,7 +360,7 @@ async function waitAndFinish(opts: {
   })();
   const stderrPromise = (async () => {
     if (!proc.stderr) return;
-    for await (const chunk of proc.stderr as ReadableStream<Uint8Array>) {
+    for await (const chunk of proc.stderr as unknown as AsyncIterable<Uint8Array>) {
       const s = new TextDecoder().decode(chunk);
       stderrBuf += s;
       logStream?.write("[stderr] " + s);

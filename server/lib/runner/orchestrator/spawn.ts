@@ -239,7 +239,7 @@ export async function spawnDirect(opts: {
       logStream = createWriteStream(logFile, { flags: "a" });
       const stdoutPromise = (async () => {
         if (!proc.stdout) return;
-        for await (const chunk of proc.stdout as ReadableStream<Uint8Array>) {
+        for await (const chunk of proc.stdout as unknown as AsyncIterable<Uint8Array>) {
           const s = new TextDecoder().decode(chunk);
           stdoutText += s;
           logStream?.write(s);
@@ -247,7 +247,7 @@ export async function spawnDirect(opts: {
       })();
       const stderrPromise = (async () => {
         if (!proc.stderr) return;
-        for await (const chunk of proc.stderr as ReadableStream<Uint8Array>) {
+        for await (const chunk of proc.stderr as unknown as AsyncIterable<Uint8Array>) {
           stderrText += new TextDecoder().decode(chunk);
         }
       })();

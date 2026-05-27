@@ -46,7 +46,7 @@ export async function resetPipelineRoute(hash: string, pipelineId: string): Prom
         if (!isTerminal) return t;
         const { iter: _i, commits: _c, liveLog: _l, reason: _r, ...rest } = t;
         void _i; void _c; void _l; void _r;
-        return { ...rest, status: "draft" };
+        return { ...rest, status: "draft" as const };
       });
       return { ...p, state: "planning", tickets };
     }, {

@@ -44,7 +44,10 @@ export function buildProgressHint(spec: PartialSpec | null, turnNumber: number):
 
 
 
-export async function projectFor(hash: string) {
+type ProjectFor =
+  | { error: Response }
+  | { project: NonNullable<Awaited<ReturnType<typeof projectStore.findByHash>>> };
+export async function projectFor(hash: string): Promise<ProjectFor> {
   const p = await projectStore.findByHash(hash);
   if (!p) return { error: err("not_found", `Project not found: ${hash}`, 404) };
   if (!pipelineDir.hasInit(p.path))

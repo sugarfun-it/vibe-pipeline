@@ -161,7 +161,7 @@ test("endpoint:running 中 prune 被擋 409", async ({ request }) => {
   });
 });
 
-test("UI:⋯ menu → 清除 worktree → confirm 取消 → worktree 仍在 + endpoint 沒呼叫", async ({ page, request }) => {
+test("UI:⋯ menu → 清除 worktree → confirm 取消 → worktree 仍在 + endpoint 沒呼叫", async ({ page }) => {
   proj = await createTempProject({
     pipelines: [
       {

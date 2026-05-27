@@ -5,7 +5,7 @@
 //
 // Returns null if user cancels.
 
-import { runCapture, spawnFireForget, spawnGuiFireForget } from "./spawn";
+import { runCapture, spawnGuiFireForget } from "./spawn";
 
 // PowerShell 7+ + .NET 8 → 現代 WPF OpenFolderDialog;舊環境 fallback 老的 FolderBrowserDialog。
 const PS_SCRIPT = `

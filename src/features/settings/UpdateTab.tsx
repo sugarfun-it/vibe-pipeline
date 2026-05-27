@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSystemVersion, triggerSystemUpdate, type VersionStatus } from "../../api/system";
 import { ApiError } from "../../api/_client";
-import { ArrowRightIcon, CheckIconSm, ExternalLinkIcon, SpinnerIcon } from "../../ui/icons";
+import { CheckIconSm, ExternalLinkIcon, SpinnerIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { formatLastChecked } from "../../lib/format";

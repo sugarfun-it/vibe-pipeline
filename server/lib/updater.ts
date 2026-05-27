@@ -174,7 +174,6 @@ export async function spawnInstallScript(): Promise<void> {
         stdout: stdoutFd,
         stderr: stderrFd,
         stdin: "ignore",
-        // @ts-expect-error Bun 支援 detached 但 TS 型別未必載入
         detached: true,
       });
     } catch (e) {

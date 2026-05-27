@@ -1,13 +1,9 @@
 import { resolve } from "node:path";
-import { existsSync } from "node:fs";
 import * as projectStore from "../lib/projectStore";
 import * as pipelineDir from "../lib/pipelineDir";
 import * as git from "../lib/git";
 import * as orchestrator from "../lib/runner/orchestrator";
-import * as worktree from "../lib/git/worktree";
-import * as notifs from "../lib/notifs/store";
 import * as auditLog from "../lib/auditLog";
-import { triggerMerge, autoMergeNoAI } from "../lib/pipelineMerge";
 import { pickFolder, revealFolder } from "../lib/dialog";
 import { projectHash } from "../lib/hash";
 import { isExistingDirectory } from "../lib/fs";

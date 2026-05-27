@@ -3,6 +3,7 @@ import * as orchestrator from '../../lib/runner/orchestrator';
 import { ok, err, withProject, withUserAudit } from '../_http';
 import type { ApiErrorCode } from '../../../shared/types';
 import { detectVia } from '../projects';
+import { isExistingDirectory as validProjectPath } from '../../lib/fs';
 
 export async function runPipeline(hash: string, pipelineId: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>

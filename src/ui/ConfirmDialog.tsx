@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useState } from "react";
 import { WarnIcon } from "./icons";
 import { Overlay } from "./Overlay";
 import "../styles/drawer.css";
