@@ -1,0 +1,38 @@
+/* features/pipeline/ticket/ticketCard/chip.css — ticket mode chip styles */
+
+/* V1 Refined mode chip:outline pill(999 radius),不再實心 panel-2 */
+.ticket-mode {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--fg-mute);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+.ticket-mode.is-iter {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--iter) 45%, transparent);
+  color: var(--iter);
+  font-weight: 500;
+}
+/* mode chip 可切換時(button 元素)— hover 加邊框 + 浮起,看得出可點 */
+button.ticket-mode {
+  /* button 預設樣式重置,跟 chip 對齊 */
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, transform 80ms;
+}
+.ticket-mode.is-toggle {
+  border-color: var(--line);
+}
+.ticket-mode.is-toggle:hover {
+  border-color: var(--accent);
+  background: var(--hover);
+}
+.ticket-mode.is-iter.is-toggle:hover {
+  background: color-mix(in srgb, var(--iter) 24%, transparent);
+}
+.ticket-mode.is-toggle:active { transform: translateY(0.5px); }
+

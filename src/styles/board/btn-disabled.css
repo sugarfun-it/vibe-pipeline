@@ -1,0 +1,78 @@
+/* board/btn-disabled.css */
+
+/* ─── Phase 4 cross-unit primitives ─────────────────────────────
+   tokens (--control-h, --control-pad-x, --radius-control, --focus-ring,
+   --danger-bg-soft, --danger-border, --shadow-popover, --danger-fg,
+   --z-popover, --z-drawer, --z-modal, --z-settings, --z-toast, --z-banner,
+   --scrim-modal, --scrim-drawer, --scrim-popover,
+   --accent-fg, --success-fg, --warning-fg, --inverse-fg, --status-dark-fg,
+   --space-1..6)
+   are added by tokens.css. Fallbacks here so this file degrades gracefully
+   if tokens.css updates land in a separate commit. */
+
+/* phase4-cross-010 — global screen-reader utility. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+/* Shared base for button-like controls (phase4-control-001).
+   .btn / .tdrw-action / .qadr-send selectors remain stable;
+   we just align disabled/hover/active/focus. */
+.btn:disabled,
+.btn[aria-disabled="true"],
+.tdrw-action:disabled,
+.tdrw-action[aria-disabled="true"],
+.qadr-send:disabled,
+.qadr-send[aria-disabled="true"] {
+  opacity: 0.48;
+  cursor: not-allowed;
+  color: var(--fg-faint);
+}
+.btn[aria-disabled="true"]:hover,
+.tdrw-action[aria-disabled="true"]:hover,
+.qadr-send[aria-disabled="true"]:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+/* phase4-2026-05-23-005 — aria-disabled reason hint surfacing on keyboard focus.
+   Pattern: caller sets `title="…"` describing why the action is disabled; on
+   keyboard focus we render that title as a tooltip-like pseudo so keyboard /
+   touch users see the reason without relying on hover. */
+.btn[aria-disabled="true"][title]:focus-visible::after,
+.tdrw-action[aria-disabled="true"][title]:focus-visible::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  white-space: pre;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control, 6px);
+  padding: 6px 10px;
+  box-shadow: var(--shadow-popover);
+  z-index: var(--z-popover, 100);
+  pointer-events: none;
+  max-width: min(280px, calc(100vw - 32px));
+  text-wrap: pretty;
+}
+.btn[aria-disabled="true"][title]:focus-visible,
+.tdrw-action[aria-disabled="true"][title]:focus-visible {
+  position: relative;
+}
+.btn:active:not(:disabled):not([aria-disabled="true"]),
+.tdrw-action:active:not(:disabled):not([aria-disabled="true"]),
+.qadr-send:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0.5px);
+}
+

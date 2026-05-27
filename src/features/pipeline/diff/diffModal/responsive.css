@@ -1,0 +1,80 @@
+/* features/pipeline/diff/diffModal/responsive.css — mobile diff modal layout overrides */
+
+@media (max-width: 767.98px) {
+  .diff-modal.drawer--modal {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 32px);
+    height: calc(100dvh - 32px);
+  }
+  /* mobile terminal state:height 跟著內容收(短訊息不再撐成全屏 drawer),
+     一律保留 close + retry tap target(rwd-loading-002 / rwd-empty-002 / error-r2-001) */
+  .diff-modal.drawer--modal.is-terminal-state {
+    height: auto;
+    max-height: min(420px, calc(100dvh - 32px));
+    min-height: 220px;
+  }
+
+  /* mobile head 用 grid:第一行 title (含 branch) 佔左、actions(複製 + ✕)永遠固定右上,
+     summary 排第二行整列 — 不讓 ✕ 在 flex-wrap 後跑到第二行 (issue diff-modal-007) */
+  .diff-modal-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title actions"
+      "summary summary";
+    gap: var(--space-1, 4px) var(--space-2, 8px);
+    align-items: center;
+  }
+  .diff-modal-title {
+    grid-area: title;
+    min-width: 0;
+    flex: initial;
+  }
+  .diff-modal-actions {
+    grid-area: actions;
+    justify-self: end;
+  }
+  .diff-modal-summary {
+    grid-area: summary;
+    margin-left: 0;
+    justify-self: start;
+  }
+
+  .diff-modal-body {
+    grid-template-columns: 1fr;
+    /* auto = file nav 跟著內容高度(單檔時不再撐出 132px 空白),1fr = diff content 填剩餘 */
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .diff-modal-files {
+    /* 多檔時用 max-height + 內部捲;單檔 / 少檔 fit-content 即可。
+       原本 132px 約 3 row,>3 檔時第 4 檔被截但沒提示(rwd-003)。
+       拉到 30dvh 留 ~5-6 row 緩衝,再用 mask 暗示下方有更多。 */
+    max-height: 30dvh;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    align-self: start;
+    /* mask gradient — 內容超過視窗時告訴 user 還有下面(interaction-002 with_diff) */
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  }
+
+  /* 單檔 diff:mobile 把 file nav 整段藏掉,讓 diff content 直接靠 head,
+     避免「一行 file row + 半屏空白 + 才看到 diff」的破碎感(rwd-001 + structure-001) */
+  .diff-modal-body.is-single-file .diff-modal-files {
+    display: none;
+  }
+
+  .diff-modal-content,
+  .diff-modal-file-block {
+    min-width: 0;
+  }
+
+  .diff-modal-pre {
+    overflow-x: auto;
+    white-space: pre;
+    max-width: 100%;
+  }
+}

@@ -1,0 +1,89 @@
+/* board/chip-meta.css */
+
+/* Shared :focus-visible (phase4-focus-001) — single ring token, no outline:none dead-ends.
+   Components keep their own border/background; we layer the ring via box-shadow so it
+   never gets clipped by overflow:hidden parents. */
+:where(.btn, .tdrw-action, .qadr-send,
+       .chip, .status-pill, .vp-chip, .sync-chip,
+       .picker-trigger, .create-x, .create-cancel, .create-submit,
+       .pipeline-overflow-menu-item,
+       .rail-item, .rail-add,
+       .ticket.is-clickable, .ticket-mode,
+       .proj-trigger, .proj-menu-item, .picker-item,
+       .toggle-pill, .action-toast-close,
+       [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 2px var(--bg), 0 0 0 4px var(--accent));
+}
+
+/* Unified chip primitive (phase4-chip-001).
+   .vp-chip / .chip 走共用 neutral base;.status-pill / .tdrw-status-chip / .tdrw-run-status
+   有自己的 var(--chip-c) SSOT 樣式(各 feature CSS),不該被 neutral base 蓋過 ── 移出列表。 */
+.vp-chip,
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs, 4px);
+  font: 500 11px/1.4 var(--font-mono);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--fg-mute);
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.status-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.vp-chip--success { color: var(--done); border-color: color-mix(in srgb, var(--done) 40%, var(--line-2)); background: color-mix(in srgb, var(--done) 12%, transparent); }
+.vp-chip--info    { color: var(--iter); border-color: color-mix(in srgb, var(--iter) 40%, var(--line-2)); background: color-mix(in srgb, var(--iter) 12%, transparent); }
+
+/* phase4-2026-05-23-010 — atomic metadata row utility.
+   Use on any meta line where developer tokens (branch names / commit counts /
+   timestamps / paths) must wrap as units. Container flex-wraps at separators,
+   atoms stay together via display:inline-flex + nowrap. */
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1, 4px) var(--space-2, 8px);
+  min-width: 0;
+}
+.meta-atom {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meta-sep {
+  color: var(--fg-faint);
+  user-select: none;
+}
+
+/* phase4-cross-005 — chip taxonomy split.
+   --action   : clickable command (commit copy, reveal-folder, sync). hover/active feedback */
+.vp-chip--action {
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms, transform 80ms;
+}
+.vp-chip--action:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--hover);
+  border-color: var(--line);
+  color: var(--fg);
+}
+.vp-chip--action:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(0.5px);
+}
+.vp-chip--action:disabled,
+.vp-chip--action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+

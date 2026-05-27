@@ -1,0 +1,102 @@
+/* board/responsive.css */
+
+/* Landmark wrappers added by AppShell (<nav>/<main>/<aside>) must propagate
+   the grid cell's height to their inner pane (.rail / .focus / .inbox-col) so
+   internal overflow:auto kicks in. Without this, .rail-list / .inbox-list
+   grow past viewport and lose scroll. */
+.board-body > nav,
+.board-body > main,
+.board-body > aside {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.board-body > nav > .rail,
+.board-body > main > .focus,
+.board-body > aside > .inbox-col {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.board-mobile-tabs {
+  display: none;
+}
+
+.board-mobile-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg-mute);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+.board-mobile-tab:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.board-mobile-tab.is-active {
+  background: var(--selected);
+  border-color: var(--line-2);
+  color: var(--fg);
+}
+
+/* ─── Mobile shell(board layout / shared overlay 契約)─── */
+@media (max-width: 767.98px) {
+  .board-root.is-mobile-board .board-body {
+    grid-template-columns: 1fr;
+  }
+
+  .board-root.is-mobile-board .rail,
+  .board-root.is-mobile-board .focus {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .board-root.is-mobile-board .inbox-col,
+  .board-root.is-mobile-board .board-body > aside {
+    display: none;
+  }
+
+  /* Phase 4 landmark wave 把 .rail / .focus 包進 <nav> / <main>;
+     mobile tab 切換時內層用 display:none 隱藏,wrapper 也得連動隱藏,
+     否則 grid 仍幫空 nav 留欄、視覺像佔位 */
+  .board-root.is-mobile-tab-focus .rail,
+  .board-root.is-mobile-tab-rail .focus,
+  .board-root.is-mobile-tab-focus .board-body > nav,
+  .board-root.is-mobile-tab-rail .board-body > main {
+    display: none;
+  }
+
+  .board-mobile-tabs {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-banner, 40);
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    border-top: 1px solid var(--line);
+    background: var(--bg-elevated);
+  }
+
+  /* coarse pointer mobile target promotion */
+  .vp-chip--action,
+  .toggle-pill,
+  .create-x,
+  .action-toast-close {
+    min-height: 40px;
+    min-width: 40px;
+  }
+}
+
+

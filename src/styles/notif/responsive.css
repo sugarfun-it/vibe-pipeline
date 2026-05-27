@@ -1,0 +1,24 @@
+/* styles/notif/responsive.css — touch hover behavior overrides */
+
+@media (hover: none) {
+  .inbox-strip-pip {
+    opacity: 1;
+  }
+
+  .inbox-item.is-muted {
+    opacity: 1;
+  }
+
+  /* touch:X 預設可見(沒有 hover 可觸發) */
+  .inbox-item-x {
+    display: inline-flex;
+  }
+
+  .inbox-item:not(.is-block) .inbox-item-actions {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 50px;
+    margin-top: 6px;
+    pointer-events: auto;
+  }
+}

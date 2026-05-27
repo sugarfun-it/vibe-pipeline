@@ -1,0 +1,56 @@
+/* styles/notif/push-state.css — inbox empty and footer controls */
+
+.inbox-empty {
+  padding: 60px 24px; text-align: center;
+  color: var(--fg-faint);
+  font-size: 12.5px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.inbox-empty-icon {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2, var(--line));
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-mute);
+}
+
+.inbox-foot {
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  font-size: 11px;
+  color: var(--fg-faint);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+/* footer link 用 button reset + 真正 hit area,不再純文字樣;
+   nowrap + flex-shrink:0 避免中文 label 在 narrow inbox 寬度下被斷字(「清除全部通」/「知」) */
+.inbox-foot-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 100ms, color 100ms;
+}
+.inbox-foot-link:hover { color: var(--fg); background: var(--hover); }
+.inbox-foot-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-foot-link-danger {
+  color: var(--fg-faint);
+}
+.inbox-foot-link-danger:hover {
+  color: var(--failed, var(--paused));
+  background: color-mix(in srgb, var(--failed, var(--paused)) 10%, transparent);
+}

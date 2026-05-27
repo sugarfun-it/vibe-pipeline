@@ -1,0 +1,26 @@
+/* board/layout-base.css */
+
+/* Board / shell shared primitives.
+
+   Component-specific styles 已 colocate 到 src/features/pipeline/:
+     - .ticket-*, .iter-*, .verdict-*, .status-pill        → ticketCard.css
+     - .rail-*                                              → rail.css
+     - .create-*, .picker-*, .focus-create-empty            → createPipeline.css
+     - .focus, .focus-head, .focus-list, .banner            → focus.css
+     - .audit-*                                             → auditTimeline.css
+     - .tdrw-*                                              → ticketDrawer.css
+     - .diff-modal 內元素                                    → diffModal.css
+
+   本檔留:跨 feature 共用的 button / chip / form primitives、modal base、
+   topbar / proj-menu base、board layout shell、mobile overlay 共用契約、
+   .sr-only / .action-toast / shimmer keyframe 等。
+*/
+
+.board-root {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  color: var(--fg);
+}
+

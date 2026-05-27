@@ -1,0 +1,96 @@
+/* styles/notif/inbox-panel.css — expanded inbox panel header, filters, and list */
+
+/* ─── expanded panel ─── */
+.inbox-panel {
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+  animation: fadeUp 220ms ease-out both;
+}
+
+.inbox-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 12px 11px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.inbox-head h3 {
+  margin: 0; font-size: 13.5px; font-weight: 600;
+}
+.inbox-head-count {
+  font-size: 10.5px; padding: 2px 7px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 4px;
+  font-weight: 600;
+}
+.inbox-head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.inbox-head-actions .icon-btn { width: 32px; height: 32px; }
+.inbox-collapse-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.inbox-filter {
+  /* <fieldset> reset:去掉預設 border/margin/padding,維持 inbox 視覺 */
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+  display: flex; gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.inbox-filter-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  font-size: 11.5px; padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--fg-mute);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.inbox-filter-btn.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+  font-weight: 600;
+}
+.inbox-filter-btn:hover:not(.is-active) { background: var(--hover); color: var(--fg); }
+.inbox-filter-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-filter-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  opacity: 0.75;
+}
+.inbox-filter-btn.is-active .inbox-filter-count {
+  opacity: 1;
+}
+
+.inbox-list {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 16px;
+  /* ul reset — list-style off, margin 0 */
+  list-style: none;
+  margin: 0;
+}
+.inbox-list-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inbox-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  list-style: none;
+}
+
+/* .inbox-section-* 已 dead — panel 改 flat 後不再分組 */
+

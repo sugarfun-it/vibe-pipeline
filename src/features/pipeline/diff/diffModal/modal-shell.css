@@ -1,0 +1,165 @@
+/* features/pipeline/diff/diffModal/modal-shell.css — diff modal shell, header, and actions */
+
+/* Shared overlay contract provides .drawer-stage--modal / .drawer--modal stage,
+   scrim, z-index, centering, base modal box, and mobile sizing.
+   This file only carries diff-specific overrides + body / file-list / hunk styles. */
+
+/* Diff modal is wider than the default 540px confirm/sync modal:
+   it needs two-column layout (file nav + diff content).
+   Sizing:小 diff(單檔 / 少量 hunks)不再強撐 90vh — 改用 min-height + max-height,
+   讓 modal 跟著內容收(視覺上不會被整片白底淹沒),大 diff 仍能伸展到 90vh。 */
+.diff-modal.drawer--modal {
+  max-width: 1100px;
+  min-height: 320px;
+  max-height: 90vh;
+}
+
+/* terminal state(loading / empty / error)— desktop 不撐 1100px,mobile 不吃滿 dvh。
+   避免「整片大白底 + 中間一行字」的視覺浪費(rwd-loading-001 / rwd-empty-001 / visual-empty-001 / error-005 / error-006)。
+   r3:max-height 從 70vh 改成 auto + 內容 fit-content,徹底避免「短內容仍撐高」(rwd-loading-002 / rwd-empty-002 / error-r2-001)。 */
+.diff-modal.drawer--modal.is-terminal-state {
+  max-width: 560px;
+  min-height: 200px;
+  max-height: 70vh;
+  height: auto;
+}
+
+.diff-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-3, 12px) 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.diff-modal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fg);
+  /* 讓 long branch 在這個 group 內 truncate;不讓 group 撐爆 head 把 ✕ 推出可視範圍 */
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* 標題 "差異" 永不換行 / 永不縮 — 之前 mobile 多檔 / 長 path 時被擠到逐字換行
+   (rwd-002);只讓 branch segment 在剩餘寬度裡 ellipsis */
+.diff-modal-title-label {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.diff-modal-branch {
+  font-size: 11px;
+  color: var(--fg-mute);
+  font-weight: 400;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* head 段名(pipeline branch)可 ellipsis;base 永不縮 — 即使 mobile 窄屏 user 也看得到對比對象
+   (rwd-008 / copy-002)。 */
+.diff-modal-branch-head {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.diff-modal-branch-arrow {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.diff-modal-branch-base {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.diff-modal-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fg-mute);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.diff-modal-summary-sep {
+  color: var(--fg-faint);
+}
+.diff-modal-stat-added {
+  color: var(--done);
+}
+.diff-modal-stat-deleted {
+  color: var(--failed);
+}
+.diff-modal-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.diff-modal-x {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: background 100ms, color 100ms;
+  flex-shrink: 0;
+}
+.diff-modal-x:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+.diff-modal-copy {
+  height: 26px;
+  padding: 0 10px;
+  /* 已複製 / 複製差異 label 寬差異最多 1 個全形字 → min-width 鎖住寬,
+     避免 toggle 後 header 抖動(尤其 mobile head grid actions 那欄會跳寬度) */
+  min-width: 84px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--fg-mute);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background 100ms, color 100ms, border-color 100ms;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.diff-modal-copy:hover {
+  background: var(--hover);
+  color: var(--fg);
+  border-color: var(--line-strong, var(--line));
+}
+/* copy success 不只改字 — 換背景 + 邊 + 字色,sighted user 才看得到成功訊號
+   (copied-visual-001)。已複製字色換 done token,跟 +A token 一致。 */
+.diff-modal-copy.is-copied {
+  background: var(--done-soft);
+  border-color: var(--done);
+  color: var(--done);
+}
+.diff-modal-copy.is-copied:hover {
+  background: var(--done-soft);
+}
+.diff-modal-x:focus-visible,
+.diff-modal-copy:focus-visible,
+.diff-modal-retry:focus-visible,
+.diff-modal-file-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+

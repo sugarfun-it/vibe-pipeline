@@ -1,0 +1,162 @@
+/* features/pipeline/ticket/ticketCard/status.css — status pill and iteration stage states */
+
+/* V1 Refined status-pill:dot + text only,卸 bg,跟外卡 status-tint 不重複 */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  padding: 0;
+  border-radius: 0;
+  color: var(--chip-c, var(--fg-mute));
+  background: transparent;
+}
+.status-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.ticket-meta {
+  /* tk-006:contrast 拉高(fg-faint → fg-mute) */
+  font-size: 10.5px; color: var(--fg-mute);
+}
+
+/* ── iter row ──
+   V1 Refined:卸內層 panel chrome(border / bg / padding),iter rows 跟 ticket 內容 inline 排列,
+   不再是「卡中卡」結構。stage chip / round-num / iter-meta 字級全壓低,讓密度提升。 */
+.ticket-iter {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 4px;
+  margin-left: var(--ticket-content-indent);
+  padding: 4px 0 0;
+  border: 0;
+  background: transparent;
+  font-size: 10.5px;
+  flex-wrap: wrap;
+}
+/* TICKET-003:stage chain 允許 wrap;narrow mobile + 長 verdict label 不再 overflow */
+.iter-stages { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.iter-stage {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line-2);
+  color: var(--fg-faint);
+  background: transparent;
+}
+/* TICKET-004:past 階段 chip 視覺降噪 — border 去掉(用內襯 panel-2 區隔),only active/error 保留邊框 */
+.iter-stage.is-past { color: var(--fg-mute); border-color: transparent; background: var(--panel); }
+.iter-stage.is-active {
+  color: var(--fg); border-color: var(--iter);
+  background: var(--iter-soft);
+  font-weight: 600;
+}
+.iter-stage.is-paused { color: var(--paused); border-color: var(--paused); background: var(--paused-soft); }
+.iter-stage-arrow { color: var(--fg-faint); font-size: 11px; }
+/* iter rounds 多 row 排列 —
+   V1 Refined 每輪整行加 1px 外框 + panel-2 微底色 + 6px radius,讓多輪歷史像一條 status log */
+.ticket-iter-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel-2) 40%, transparent);
+  /* margin-left 由 .ticket-iter 處理(JSX 永遠是 "ticket-iter ticket-iter-row" 並用) */
+}
+.ticket-iter-row + .ticket-iter-row {
+  margin-top: 4px;
+}
+/* step / merge / sync ticket 單次任務,無 round-num,卸 chrome 維持原 inline 視覺 */
+.ticket-iter-row--single {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.ticket-iter-summary {
+  margin-left: var(--ticket-content-indent);
+}
+.iter-round-num {
+  font-size: 10px;
+  min-width: 44px;
+  font-weight: 500;
+  color: var(--fg-mute);
+}
+.ticket-iter-summary {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  font-family: var(--font-mono);
+}
+
+/* 階段標記:past=✓ / current=▶或⏸或 verdict / future=? */
+.iter-stage-mark {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+.iter-stage-mark.is-running {
+  color: var(--running);
+  animation: iter-stage-mark-pulse 1.2s ease-in-out infinite;
+}
+.iter-stage-mark.is-paused {
+  color: var(--paused);
+  opacity: 0.9;
+}
+.iter-stage-mark.is-past-mark {
+  color: var(--done);
+  opacity: 0.85;
+}
+.iter-stage-mark.is-future-mark {
+  color: var(--fg-faint);
+  opacity: 0.55;
+}
+.iter-stage-mark.is-result-pass {
+  color: var(--done);
+  font-weight: 600;
+}
+.iter-stage-mark.is-result-fail {
+  color: var(--failed);
+  font-weight: 600;
+}
+.iter-stage-mark.is-result-part {
+  color: var(--paused);
+  font-weight: 600;
+}
+/* TG-404:terminal failed 卡片裡 in-progress round 的 current stage 顯 ✕,跟 ⏸/✓/▶ 同層
+   權重 — 用 failed token 表明該 stage 失手,不再讓 active highlight 被誤讀成「正在跑」。
+   配合 .iter-stage.is-active.is-failed 把 chip 主色從 iter 改成 failed 系列,視覺一致。 */
+.iter-stage-mark.is-failed-mark {
+  color: var(--failed);
+  font-weight: 600;
+  opacity: 0.9;
+}
+.ticket.is-failed .iter-stage.is-active {
+  border-color: var(--failed);
+  background: color-mix(in srgb, var(--failed) 12%, transparent);
+  color: var(--fg);
+}
+@keyframes iter-stage-mark-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+.iter-meta {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-left: auto;
+  font-size: 9.5px; color: var(--fg-faint);
+}
+.iter-meta strong { color: var(--fg); font-weight: 600; }
+.ticket-iter-summary {
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.75;
+  color: var(--fg-mute);
+  border-top: 0;
+  padding-top: 0;
+  text-align: right;
+}
+

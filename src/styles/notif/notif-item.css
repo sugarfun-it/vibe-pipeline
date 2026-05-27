@@ -1,0 +1,225 @@
+/* styles/notif/notif-item.css — notification item card and actions */
+
+.inbox-item {
+  position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 9px 36px 10px 14px; /* right 留給 X(28px + 8px gap);bottom 給 meta row */
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.inbox-item:hover { background: var(--hover); }
+/* focus-visible 走 .inbox-item-open(真正的 button);用 :has 讓 outer card 也顯示 focus state。 */
+.inbox-item:has(.inbox-item-open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+/* .inbox-item-open:click-anywhere fill,在最底層;X / actions 在它之上 */
+.inbox-item-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+.inbox-item-open:focus-visible {
+  /* outline 由 parent .inbox-item:has(...) 提供;這層內含 outline 反而會雙描 */
+  outline: none;
+}
+/* 內容元素都浮在 open button 之上;但只有可互動子元素需要 pointer-events */
+.inbox-item-head,
+.inbox-item-sub,
+.inbox-item-meta {
+  position: relative;
+  z-index: 1;
+  pointer-events: none; /* 讓 click 落到底下的 open button */
+}
+.inbox-item-x,
+.inbox-item-action {
+  position: relative;
+  z-index: 2;
+}
+/* 未讀 block:強提示底色與描邊 */
+.inbox-item.is-block.is-unread {
+  background: color-mix(in srgb, var(--paused) 8%, transparent);
+  border-color: color-mix(in srgb, var(--paused) 32%, transparent);
+}
+.inbox-item.is-block.is-unread:hover { background: color-mix(in srgb, var(--paused) 14%, transparent); }
+/* 已讀 block:卡片應低調(避免讀過的 block 仍視覺壓過未讀 item) */
+.inbox-item.is-block:not(.is-unread) {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--paused) 14%, transparent);
+}
+.inbox-item.is-block:not(.is-unread):hover { background: var(--hover); }
+.inbox-item.is-muted { opacity: 0.78; }
+.inbox-item.is-muted:hover { opacity: 1; }
+.inbox-item.is-muted:focus-within { opacity: 1; }
+
+/* highlight 動畫:focusNotif 後 1.6s 的「you-came-from-here」echo;
+   不留 final halo,讀完後與其他 read item 視覺對齊 */
+.inbox-item.fade-up {
+  animation: inboxItemFlash 1.6s ease-out both;
+}
+@keyframes inboxItemFlash {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--item-color) 50%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--item-color) 50%, transparent); }
+  18%  { box-shadow: 0 0 0 4px color-mix(in srgb, var(--item-color) 28%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--item-color) 38%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent, inset 0 0 0 1px transparent; }
+}
+/* phase4-2026-05-24-cross-G1 — reduced-motion: inbox flash + fade-up animations
+   collapse to non-motion equivalents. Static rest-state still encodes unread via
+   .inbox-item-dot color + .is-unread halo so semantics survive. */
+@media (prefers-reduced-motion: reduce) {
+  .inbox-item.fade-up,
+  .inbox-strip-preview,
+  .inbox-panel { animation: none; }
+}
+
+/* 單 dot:同時表 sev(顏色)+ read 狀態(實心/空心)。 */
+.inbox-item-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin-top: 5px;
+  transition: background 120ms, border-color 120ms, opacity 120ms;
+}
+.inbox-item-dot.is-unread {
+  background: var(--item-color);
+  border: 1px solid var(--item-color);
+}
+.inbox-item-dot.is-read {
+  background: transparent;
+  border: 1.5px solid var(--item-color);
+  opacity: 0.75;
+}
+.inbox-item-x {
+  position: absolute;
+  right: 4px; top: 4px;
+  width: 28px; height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-faint);
+  cursor: pointer;
+  border-radius: 6px;
+  /* display:none 預設,排除 tab order(避免不可見控件被 Tab 命中) */
+  display: none;
+  transition: background 120ms, color 120ms;
+}
+.inbox-item:hover .inbox-item-x,
+.inbox-item:focus-within .inbox-item-x {
+  display: inline-flex;
+}
+.inbox-item-x:hover {
+  background: var(--panel-2);
+  color: var(--fg);
+}
+.inbox-item-x:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.inbox-item-x svg { width: 10px; height: 10px; }
+.inbox-item-head {
+  display: flex; align-items: flex-start; gap: 9px;
+}
+.inbox-item-title {
+  flex: 1; min-width: 0;
+  font-size: 12.5px;
+  color: var(--fg);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.inbox-item.is-unread .inbox-item-title { font-weight: 600; }
+.inbox-item.is-muted .inbox-item-title { color: var(--fg-mute); font-weight: 400; }
+/* meta row:ts 在 normal flow,長本地化字串自然 wrap 或佔 row 寬,不再 ellipsis 截斷重要資訊 */
+.inbox-item-meta {
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 17px;
+  margin-top: 2px;
+  min-height: 14px;
+}
+.inbox-item-ts {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  line-height: 1.2;
+  /* 長本地化時間(如完整日期 / DE 月名)允許 wrap;不再 nowrap 防水平溢出 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.inbox-item.is-unread .inbox-item-ts { color: var(--accent); }
+/* sub / actions 對齊 title:dot 8px + gap 9px = 17px */
+.inbox-item-sub {
+  font-size: 11px; color: var(--fg-mute);
+  padding-left: 17px;
+  line-height: 1.4;
+}
+.inbox-item-actions {
+  display: flex; gap: 6px;
+  padding-left: 17px;
+  margin-top: 6px;
+  position: relative;
+  z-index: 2;
+}
+.inbox-item:not(.is-block) .inbox-item-actions {
+  opacity: 0; transform: translateY(-2px);
+  transition: opacity 140ms, transform 140ms;
+  max-height: 0;
+  pointer-events: none;
+  margin-top: 0;
+  overflow: hidden;
+}
+.inbox-item:not(.is-block):hover .inbox-item-actions {
+  opacity: 1; transform: translateY(0);
+  max-height: 50px; margin-top: 6px;
+  pointer-events: auto;
+}
+.inbox-item:not(.is-block):focus-within .inbox-item-actions {
+  opacity: 1; transform: translateY(0);
+  max-height: 50px; margin-top: 6px;
+  pointer-events: auto;
+}
+
+.inbox-item-action {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--line-2);
+  color: var(--fg);
+  background: var(--bg-elevated);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+}
+.inbox-item-action:hover { background: var(--panel-2); border-color: var(--fg-mute); }
+.inbox-item-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inbox-item-action.is-primary {
+  background: var(--paused);
+  color: var(--warning-fg, #1c1208);
+  border-color: var(--paused);
+}
+.inbox-item-action.is-primary:hover { filter: brightness(1.1); }
+.inbox-item-action.is-primary-info {
+  background: var(--done); border-color: var(--done); color: var(--banner-success-fg, #0e1f0f);
+}
+.inbox-item-action.is-primary-info:hover { filter: brightness(1.1); }
+

@@ -1,0 +1,169 @@
+/* features/pipeline/ticket/ticketCard/card-base.css — ticket card base, header, title, and goal layout */
+
+/* TicketCard — ticket 卡片、iter stages、verdict、status pill、density / mobile overrides。
+   從 src/styles/board.css 拆出來;非 ticket 共用的 primitives(.vp-chip / .btn / .sr-only)留 board.css。 */
+
+.ticket {
+  position: relative;
+  /* V1 Refined:padding 加寬,radius 10(對齊 banner 10px elevation 層級) */
+  padding: 13px 16px 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: border-color 100ms ease, background 100ms ease, transform 120ms, box-shadow 120ms;
+  animation: fadeUp 280ms ease-out both;
+  /* tk-001c:content indent token — header num 欄寬 + header grid gap;sub/goal/progress/iter-row 等
+     ticket 內容類 row 全部 margin-left 引用同一個值,避免 num 左緣與內容欄左緣產生多條 indent。 */
+  --ticket-num-width: 24px;
+  --ticket-header-gap: 8px;
+  --ticket-content-indent: calc(var(--ticket-num-width) + var(--ticket-header-gap));
+}
+.ticket:hover { border-color: var(--line-2); background: var(--panel-2); }
+/* V1 Refined:可點擊 hover 用 panel-2(原本 hover),affordance 仍清楚 */
+.ticket.is-clickable:hover {
+  border-color: var(--line-2);
+  background: var(--panel-2);
+}
+.ticket.is-clickable:hover .ticket-card__chevron { color: var(--fg); transform: translateX(2px); }
+/* TICKET-008:active(pressed)狀態 — 按下時微微下沉 + 邊框收緊,讓點擊回饋更明確 */
+.ticket.is-clickable:active {
+  transform: translateY(0.5px);
+  border-color: var(--accent);
+  background: var(--hover);
+}
+/* TICKET-002:keyboard focus 顯示 ring — 對齊 design system 強對比,light/dark 都看得到 */
+.ticket.is-clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+.ticket.is-paused { border-color: color-mix(in srgb, var(--paused) 35%, var(--line-2)); }
+.ticket.is-draft { opacity: 0.6; }
+.ticket.is-draft:hover { opacity: 1; }
+
+/* status tint(不搶眼,只給視覺上 quick scan)— hover 仍走 panel-2 */
+.ticket.is-running { background: color-mix(in srgb, var(--running) 7%, var(--panel)); }
+.ticket.is-paused  { background: color-mix(in srgb, var(--paused)  6%, var(--panel)); }
+.ticket.is-done    { background: color-mix(in srgb, var(--done)    5%, var(--panel)); }
+.ticket.is-failed  { background: color-mix(in srgb, var(--failed)  8%, var(--panel)); }
+
+/* AI 拆分中 — accent 邊框 pulse,提示「卡片正在被處理」 */
+.ticket.is-splitting {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2));
+  animation: ticket-splitting-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ticket-splitting-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  50%      { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+}
+.chip.ticket-splitting {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line-2));
+  color: var(--accent);
+  font-weight: 600;
+}
+.ticket-splitting-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  animation: ticket-splitting-spin 700ms linear infinite;
+}
+@keyframes ticket-splitting-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ticket-band {
+  /* V1 Refined:band 3px(精煉),inset 略內縮(left:6 top:12 bottom:12),
+     running 加 18% 同色光暈強化「正在跑」感 */
+  position: absolute;
+  left: 6px; top: 12px; bottom: 12px;
+  width: 3px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+.ticket.is-running .ticket-band {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--running) 18%, transparent);
+}
+
+.ticket-row {
+  display: flex; align-items: center; gap: 10px;
+}
+/* tk-001:header 排成 grid,first row 只放 [num] [title] [trailing(status+chevron)],
+   mode chip 不再搶 header — 降到 .ticket-card__sub。*/
+.ticket-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ticket-header-gap);
+}
+.ticket-card__trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* tk-003:chevron affordance,提示卡片可開 drawer */
+.ticket-card__chevron {
+  color: var(--fg-mute);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: color 120ms, transform 120ms, opacity 120ms;
+}
+.ticket.is-clickable:hover .ticket-card__chevron { opacity: 1; }
+/* tk-005:sub row 只保留給 step+meta 用(iter 改去 iter-row,chip 已 inline 到 title) */
+.ticket-card__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-left: var(--ticket-content-indent);
+  flex-wrap: wrap;
+}
+/* tk-001b:chip 與 title 同一行(取代原 sub row 排版),省下純 step 卡多出的一行高度 */
+.ticket-card__titleline {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.ticket-card__titleline > .ticket-mode {
+  flex: 0 0 auto;
+  align-self: center;
+}
+.ticket-num {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-faint);
+  width: var(--ticket-num-width);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.ticket-title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--fg);
+  min-width: 0;
+  /* 中英混合 + 全形括弧 / 「/」沒空白時 browser 不知斷行,title 撐爆 row 蓋住 chip */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.ticket-goal {
+  margin-top: 6px;
+  margin-left: var(--ticket-content-indent);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-mute);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+

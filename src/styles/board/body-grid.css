@@ -1,0 +1,62 @@
+/* board/body-grid.css */
+
+/* phase4-cross-014 — toggle visual contract.
+   Unify Project auto-merge, Notifications push, CreateCard auto-merge toggles
+   under a single set of modifiers. Existing `.toggle-pill.is-on` keeps working;
+   new BEM-style modifiers added so SettingsPopover/NotificationsTab/CreateCard
+   can adopt without duplicating disabled/blocked visuals. */
+.toggle-pill {
+  /* coarse pointer target — promote to 40px on touch devices below */
+  min-height: var(--control-h, 32px);
+  padding: 0 var(--control-pad-x, 12px);
+}
+.toggle-pill.is-on {
+  color: var(--done);
+  border-color: var(--done);
+  background: color-mix(in srgb, var(--done) 12%, transparent);
+}
+.toggle-pill[aria-disabled="true"],
+.toggle-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+.toggle-pill[aria-disabled="true"]:hover,
+.toggle-pill:disabled:hover {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+}
+@media (pointer: coarse) {
+  .toggle-pill { min-height: 40px; }
+}
+
+/* ─── Modal(SyncConflictModal 等共用基礎)─── */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: var(--z-modal, 1000);
+  background: var(--scrim-modal, color-mix(in srgb, #000 72%, transparent));
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.modal-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel, 10px);
+  max-width: 520px; width: 100%;
+  padding: 20px 22px;
+  box-shadow: var(--shadow-overlay, var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.4)));
+}
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--fg); }
+.modal-body { color: var(--fg); font-size: 14px; line-height: 1.55; }
+.modal-actions {
+  margin-top: 18px;
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+
+/* ─── body grid ─── */
+:root { --rail-w: 296px; }
+.board-body {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+}
+

@@ -1,0 +1,116 @@
+/* features/pipeline/ticket/ticketCard/responsive.css — ticket card mobile overrides */
+
+/* ─── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  .ticket-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  /* chips/meta past the title flow to a full-width second row */
+  .ticket-row > .chip,
+  .ticket-row > .status-pill,
+  .ticket-row > .ticket-mode,
+  .ticket-row > .ticket-meta {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  /* tk-001:header grid 在 mobile 維持 3 欄(num / title / trailing),trailing 不擠到第二列 —
+     title 自己 ellipsis,讓 status + chevron 永遠看得到 */
+  .ticket-card__header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .ticket-card__header > .ticket-card__trailing {
+    grid-column: auto;
+    justify-self: end;
+  }
+  /* TICKET-SG-005:窄 viewport title 改 2 行 clamp(原 nowrap+ellipsis 在中文標題只剩前 7-10 字,
+     使用者看不到關鍵動作詞)。chevron + status pill 仍靠右靠住,因 header grid 是 auto/1fr/auto */
+  .ticket-card__header .ticket-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.35;
+  }
+  /* TG-408:mobile 把 mode chip 從 titleline inline 拆到上面一列,title 才有完整寬度做 2-line clamp。
+     原本「迭代任務 chip + 中文長 title」共擠 1fr column 結果 chip 把 title 推到只剩 50% 寬,
+     失敗系列 status pill 又佔右側 → title 只看得到「把舊」+ `architecture...` ellipsis,使用者
+     完全看不到動作 / 受詞 / 目的地。整個 status pill 結構性重排是 cross-unit Phase 4,但 mode chip
+     stack 是純 ticket-card 本地優化,不動 status pill 位置即可解大半問題。 */
+  .ticket-card__titleline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .ticket-card__titleline > .ticket-mode {
+    align-self: flex-start;
+  }
+  .ticket-card__description {
+    margin-top: 6px;
+  }
+  /* TG-405:terminal multi-round(failed_iter_limit / done multi-round)在 mobile 把整段
+     iter rows 全攤開會吃光首屏 — 對歷史 round row 做密度壓縮(padding / gap / font 一律收緊),
+     不改顯示邏輯(不折疊隱藏),純視覺密度。current in-progress row 跟 summary 保持原尺寸。 */
+  .ticket.is-failed .ticket-iter-row,
+  .ticket.is-done .ticket-iter-row {
+    padding: 5px 8px;
+    gap: 10px;
+    margin-top: 3px;
+    font-size: 11px;
+  }
+  .ticket.is-failed .ticket-iter-row .iter-stage,
+  .ticket.is-done .ticket-iter-row .iter-stage {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+  .ticket.is-failed .ticket-iter-row .iter-meta,
+  .ticket.is-done .ticket-iter-row .iter-meta {
+    font-size: 10px;
+  }
+}
+
+/* tk-007:極窄 viewport(<=480px)再緊一點 padding */
+@media (max-width: 480px) {
+  .ticket {
+    padding: 10px 12px 12px 18px;
+  }
+  /* tk-001c:mobile 只改 indent token,所有 row 自動跟著變;不再個別重寫 margin-left */
+  .ticket {
+    --ticket-num-width: 20px;
+    --ticket-header-gap: 10px;
+  }
+}
+
+/* ─── Ultra-narrow(<540px,小手機)── V1 Refined:
+   ticket card padding/radius 收緊;header 允許 wrap(title 自動到第二行);
+   iter row flex-wrap + stages wrap;livelog 字級壓低 */
+@media (max-width: 539.98px) {
+  .ticket {
+    padding: 11px 12px 12px 14px;
+    border-radius: 8px;
+  }
+  .ticket-band { left: 4px; top: 10px; bottom: 10px; }
+  .ticket-card__header { flex-wrap: wrap; row-gap: 4px; }
+  .ticket-card__titleline { flex-basis: 100%; min-width: 0; }
+  .ticket-card__trailing { margin-left: auto; }
+  .ticket-title { font-size: 13px; line-height: 1.35; }
+  .ticket-num { font-size: 10px; width: 22px; }
+  .ticket-iter-row {
+    flex-wrap: wrap;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+  .iter-stages { flex-wrap: wrap; }
+  .iter-meta { margin-left: auto; }
+  .ticket-goal { font-size: 11.5px; }
+  .ticket-livelog { font-size: 10px; padding: 4px 7px; }
+}
+
+@media (hover: none) {
+  .ticket.is-draft {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,130 @@
+/* features/pipeline/diff/diffModal/status.css — loading, empty, and error states */
+
+/* loading / empty / error → 撐滿 modal body 高度,訊息垂直水平居中,
+   避免「整塊大白底,訊息靠頂端 40px」的不平衡感(issue diff-modal-001) */
+.diff-modal-loading,
+.diff-modal-empty,
+.diff-modal-err {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6, 24px);
+  text-align: center;
+  color: var(--fg-mute);
+  font-size: 13px;
+  gap: var(--space-2, 8px);
+  min-height: 0;
+}
+/* empty / err 都用 column 排版 — 跟 loading 視覺一致(loading dot + 載入中 一行)
+   後二者多 title + desc + action 入口,避免「孤一行」破碎感(design-empty-001) */
+.diff-modal-empty {
+  flex-direction: column;
+  gap: 10px;
+  color: var(--fg);
+}
+.diff-modal-empty-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.diff-modal-empty-desc {
+  color: var(--fg-mute);
+  max-width: 70%;
+  line-height: 1.5;
+  font-size: 12px;
+}
+.diff-modal-err {
+  color: var(--failed);
+  flex-direction: column;
+  gap: 10px;
+}
+.diff-modal-err-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+.diff-modal-err-detail {
+  font-size: 12px;
+  color: var(--fg);
+  max-width: 80%;
+  word-break: break-word;
+  line-height: 1.5;
+}
+/* 技術細節折疊區 — 預設收起,只在 user 主動展開時看到 backend / mock 原字串
+   (issue diff-modal-008:不把技術字串裸露在 user-facing body 上) */
+.diff-modal-err-tech-wrap {
+  font-size: 11px;
+  color: var(--fg-mute);
+  max-width: 80%;
+}
+.diff-modal-err-tech-wrap > summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px dashed var(--line);
+  color: var(--fg-mute);
+  user-select: none;
+  list-style: none;
+  font-size: 11px;
+  transition: background 100ms, color 100ms, border-color 100ms;
+}
+/* 展開後 summary 自己看起來像「已選中」狀態,跟其他 inline UI control 視覺一致(error-r2-002) */
+.diff-modal-err-tech-wrap[open] > summary {
+  background: var(--panel-2);
+  border-style: solid;
+  color: var(--fg);
+}
+.diff-modal-err-tech-wrap > summary::-webkit-details-marker { display: none; }
+.diff-modal-err-tech-wrap > summary:hover { color: var(--fg); background: var(--hover); }
+.diff-modal-err-tech-wrap > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.diff-modal-err-tech {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fg-mute);
+  word-break: break-word;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+.diff-modal-retry {
+  margin-top: 4px;
+  height: 28px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 100ms, color 100ms, border-color 100ms;
+}
+.diff-modal-retry:hover {
+  background: var(--hover);
+  border-color: var(--line-strong, var(--accent));
+}
+/* 真正的 indeterminate spinner — 比單色 pulse dot 傳達「處理中」感更強(interaction-loading-002)。
+   border-top 用 accent token,其餘 muted,旋轉 0.8s。 */
+.diff-modal-loading-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  animation: diff-modal-spin 0.8s linear infinite;
+}
+@keyframes diff-modal-spin {
+  to { transform: rotate(360deg); }
+}
+/* reduced-motion:不轉,留靜態圓環當「載入指示器」(issue diff-modal-006) */
+@media (prefers-reduced-motion: reduce) {
+  .diff-modal-loading-spinner {
+    animation: none;
+    border-top-color: var(--accent);
+  }
+}

@@ -1,0 +1,45 @@
+/* board/btn-extras.css */
+
+/* Component aliases — keep existing class names but bind them to taxonomy.
+   Result: ReadyBanner / TicketCard / Topbar continue to emit their own class,
+   while the visual contract converges. */
+.status-pill,
+.tdrw-status-chip,
+.tdrw-run-status { cursor: default; }
+.ticket-mode.is-toggle { cursor: pointer; }
+.parallel-chip,
+.focus-count,
+.rail-qa-badge {
+  font-weight: 600;
+}
+
+/* Unified danger (phase4-danger-001) — semantic tokens, no hardcoded hex.
+   --danger-fg / --danger-bg-soft / --danger-border come from tokens.css. */
+.btn-danger {
+  background: var(--failed);
+  color: var(--danger-fg, #fff);
+  border-color: var(--failed);
+}
+.btn-danger:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--failed) 85%, #000);
+  border-color: color-mix(in srgb, var(--failed) 85%, #000);
+}
+.btn-danger.btn-ghost {
+  background: transparent;
+  color: var(--failed);
+  border-color: color-mix(in srgb, var(--failed) 35%, var(--line-2));
+}
+.btn-danger.btn-ghost:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--danger-bg-soft, color-mix(in srgb, var(--failed) 12%, transparent));
+  border-color: var(--danger-border, color-mix(in srgb, var(--failed) 55%, var(--line-2)));
+}
+
+.kbd {
+  font-size: 10.5px; padding: 1px 5px;
+  border: 1px solid var(--line-2); border-radius: 4px;
+  color: var(--fg-mute);
+}
+
+.icon-btn { position: relative; }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+

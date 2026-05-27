@@ -1,0 +1,109 @@
+/* features/pipeline/diff/diffModal/file-list.css — diff body grid and file navigation list */
+
+.diff-modal-body {
+  flex: 1;
+  display: grid;
+  /* min-width:0 + minmax(0,1fr) 兩層保險 → 右欄不被 inner content 撐爆,長路徑 / 長 line 才不會
+     沖出 modal 邊界(issue diff-modal-002) */
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+}
+
+.diff-modal-files {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  padding: 8px 0;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.diff-modal-file-row {
+  /* 兩行版面:basename + ext 在第一行不縮(只 basename 可 ellipsis),dir 第二行 muted (issue diff-modal-003) */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  color: var(--fg);
+  text-decoration: none;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms;
+  font-family: var(--font-mono);
+  min-width: 0;
+}
+.diff-modal-file-row:hover {
+  background: var(--hover);
+  border-left-color: var(--accent);
+}
+.diff-modal-file-row.is-active {
+  background: var(--selected);
+  border-left-color: var(--accent);
+  color: var(--fg);
+}
+.diff-modal-file-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+.diff-modal-file-line1 {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.diff-modal-file-dir {
+  /* 父目錄獨佔第二行,subtle 顏色,長路徑 ellipsis */
+  color: var(--fg-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+.diff-modal-file-base {
+  /* 檔名 stem 是主資訊,只在容器極窄時才 ellipsis;ext 永不縮 */
+  color: var(--fg);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.diff-modal-file-ext {
+  color: var(--fg);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* SR-only utility — 用 clip-path 而非 display:none(後者 SR 會跳過) */
+.diff-modal .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.diff-modal-file-stat {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
