@@ -45,6 +45,14 @@ export async function pipelineDelete(args: ParsedArgs): Promise<void> {
   }
 
   await ensureBackend();
+
+  // backend cascade(git worktree remove --force 含 node_modules → branch -D → rm json)Windows 上
+  // 常 2-30 秒(fs rm + AV 介入),期間沒 feedback user 會以為死掉。non-JSON mode 印 progress hint
+  // 到 stderr(JSON mode 保持乾淨 stdout 給 agent 解析)。
+  if (!isJsonMode()) {
+    process.stderr.write(`刪除中…(清 worktree + branch + pipeline.json,含 node_modules 在 Windows 可能 2-30 秒)\n`);
+  }
+
   type DeleteResp = {
     ok: true;
     partial: boolean;
