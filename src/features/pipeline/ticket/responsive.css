@@ -16,40 +16,26 @@
   .tdrw-action:active { transform: none; }
 }
 
-/* mobile:actions footer 仍 sticky;primary 群 stack 撐滿,destructive 換行到下一列、退一級
-   (不填底色) — 防誤觸,符合 user 預期「常用操作在上、危險在下」 */
+/* mobile:footer 一列布局 — 重開 ticket 主動作占 1fr 撐滿,刪除 icon-only 占固定欄。
+   destructive 仍視覺退一級(不填底色),user 預期「常用操作大、危險小」。 */
 @media (max-width: 767.98px) {
-  .tdrw-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .tdrw-actions-primary {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-  .tdrw-action {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-  /* footer 一列布局:重開 ticket 主動作占 1fr,刪除 icon-only 占固定欄。
-     不再讓 destructive break 到下一行,但寬度上仍弱於 primary。 */
   .tdrw-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-2, 8px);
-    flex-wrap: nowrap;
     align-items: stretch;
   }
   .tdrw-actions-primary {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    width: auto;
     min-width: 0;
+  }
+  .tdrw-action {
+    width: 100%;
   }
   .tdrw-delete-icon {
     width: auto;
-    flex: 0 0 auto;
     margin: 0;
     background: transparent;
     padding-inline: var(--space-2, 8px);
@@ -57,7 +43,7 @@
     min-width: 44px;
     min-height: 44px;
   }
-  /* TD-COPY-005 r4:mobile hash button 提升到 44×44 觸控目標(reviewer 強制達標)*/
+  /* TD-COPY-005 r4:mobile hash button 提升到 44×44 觸控目標 */
   .tdrw-commit-hash-btn {
     min-height: 44px;
     min-width: 72px;
