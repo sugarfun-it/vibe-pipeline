@@ -31,7 +31,34 @@ export const TICKET_USAGE = `vbpl ticket — manage tickets within a pipeline
     範例(agent heredoc,markdown 含 backtick / $ / ! 全部安全):
       vbpl ticket add --pipeline X --input-json - --json <<'EOF'
       {"title":"...","goal":"...","prompt":"...","acceptance":["a","b"]}
-      EOF`;
+      EOF
+
+  ─────────────────────────────────────────────────────────────────
+  ★ 三欄分流(寫對才不會白跑 — runner 對 goal/prompt/acceptance 讀法不同)
+
+  goal        UI display + git commit body + critic 不讀
+              → 給「人類」看(列表 preview / git log)
+              → 1 句「一塊完整可交付是什麼」
+              → 上限:≤ 80 char(120 hard cap)
+  prompt      executor sub-agent 真實讀的指示(runnerPrompt.ts:173)
+              → 給「executor AI」看
+              → 實作規則 / 範圍 / 風險點 / Why
+              → 上限:不限,中等(500-2000 char 合理)
+  acceptance  critic 結構化驗收 + executor 一併收到「驗收條件」
+              → 給「executor + critic」看
+              → array of strings,每條 1 行可機械驗(grep / tsc / build / 行為等價)
+              → 上限:5-10 條,每條 ≤ 100 char
+
+  踩雷:把整份 spec 塞 goal → executor 收到空白 prompt + critic 收空 acceptance,兩個 AI 都在猜。
+
+  建 ticket 前自查:
+    1. goal 一句塞得下嗎?塞不下 → 內容該移 prompt(或拆 ticket)
+    2. prompt 是 executor 該怎麼動手嗎?(規則 / 範圍 / 風險點)
+    3. acceptance 每條 critic 能機械驗嗎?(寫「程式碼乾淨」這種主觀條件 = critic 抓不到)
+    4. 用 --input-json - <<'EOF' heredoc(別 inline 各 flag,避 shell quoting + 一次填齊三欄)
+
+  更多範例 / 拆 ticket 原則:看 ~/.claude/skills/vibe-pipeline/SKILL.md
+  ─────────────────────────────────────────────────────────────────`;
 
 // 讀 multi-line 文字 arg:優先 --<name>-file(path 或 "-"=stdin),fallback --<name> inline。
 // stdinClaim 共享計數,保證一條指令只一個 *-file 吃 stdin(stream 只能消費一次)。

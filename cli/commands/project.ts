@@ -8,11 +8,31 @@ import type { Project } from "../../shared/types";
 
 const PROJECT_USAGE = `vbpl project — manage known projects
 
-  vbpl project list
-  vbpl project show   [--project <hash> | --project-path <path>]   (defaults to last opened)
-  vbpl project add    <path>
-  vbpl project init   <path> | --here
-  vbpl project remove <hash|path>`;
+SYNOPSIS
+  vbpl project <sub> [args] [flags]
+
+SUBCOMMANDS
+  list                    列已知 project(顯示 hash / name / path / 最後開啟時間)
+  show                    看單一 project 全文(預設用最後開啟,可指定)
+  add <path>              加 project 但不 init(只記錄,沒 .vibe-pipeline/)
+  init <path>|--here      加 + init(建 .vibe-pipeline/ 結構)
+  remove <hash|path>      從清單拔掉(不刪 fs)
+
+OPTIONS
+  --project <hash>        【show 用】指定 project hash
+  --project-path <path>   【show 用】指定 project 路徑(會自動算 hash)
+  --here                  【init 用】init 當前 cwd 為 project
+
+EXAMPLES
+  vbpl project list                       # 看全部 project
+  vbpl project init --here                # init 當前目錄
+  vbpl project init /path/to/repo         # init 指定路徑
+  vbpl project show --project b2dda010    # 看單一 project 細節
+  vbpl project list --json                # structured output 給 agent
+
+SEE ALSO
+  vbpl pipeline --help    # 在 project 內建 pipeline
+  vbpl server --help      # backend 怎麼跟 project 互動`;
 
 export async function runProject(sub: string | undefined, args: ParsedArgs): Promise<void> {
   if (sub === "help" || args.flags["help"] === true) {

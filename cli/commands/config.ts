@@ -5,11 +5,45 @@ import { TASK_CLASSES } from "../../shared/types";
 
 const CONFIG_USAGE = `vbpl config — user-level per-task-class model defaults (~/.vibe-pipeline/config.json)
 
-  vbpl config list
-  vbpl config get <key>             e.g. runner.model
-  vbpl config set <key> <value>     e.g. runner.model claude-opus-4-7
+SYNOPSIS
+  vbpl config <sub> [key] [value]
 
-  key 形式:<taskClass>.<field>,taskClass = qa|split|runner|executor|critic|merge,field = provider|model|effort`;
+SUBCOMMANDS
+  list                   列全部 config(連同預設值)
+  get <key>              讀單一 key
+  set <key> <value>      改單一 key,寫回 ~/.vibe-pipeline/config.json
+
+OPTIONS
+  (config 用 positional key/value,沒 flag;全域 --json 仍可用)
+
+KEY FORMAT
+  <taskClass>.<field>
+
+  taskClass = qa|split|runner|executor|critic|merge
+  field     = provider|model|effort
+
+  taskClass 解釋:
+    qa        QA drawer 對話收斂 spec 的 AI
+    split     AI 拆 ticket 用的 AI
+    runner    pipeline 主 orchestrator(高 reasoning,長 plan)
+    executor  寫 code 的 sub-agent(可貴 model)
+    critic    驗收的 sub-agent(便宜 model 即可)
+    merge     git 衝突 AI 解
+  field 解釋:
+    provider  claude | codex(影響呼叫的 CLI binary)
+    model     model ID,例 claude-opus-4-7 / claude-sonnet-4-6 / gpt-5
+    effort    reasoning effort hint(low / medium / high),只 codex 用
+
+EXAMPLES
+  vbpl config list                                  # 全部 + 預設值
+  vbpl config get runner.model                      # 看單 key
+  vbpl config set runner.model claude-opus-4-7      # 改 runner model
+  vbpl config set critic.model claude-haiku-4-5     # 省 token:critic 走便宜 model
+  vbpl config set executor.provider codex           # executor 換 codex
+  vbpl config set executor.effort high              # codex 用 high reasoning
+
+SEE ALSO
+  vbpl pipeline --help    # 這些 config 在 pipeline run 時生效`;
 
 export async function runConfig(sub: string | undefined, args: ParsedArgs): Promise<void> {
   if (sub === "help" || args.flags["help"] === true) {

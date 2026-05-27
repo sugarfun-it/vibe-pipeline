@@ -35,16 +35,31 @@ import { bool } from "../lib/args";
 import { fail, isJsonMode, okJson, print } from "../lib/output";
 import { localServerBase } from "../lib/serverBase";
 
+const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "sugarfun-it/vibe-pipeline";
+
 const USAGE = `vbpl update — fetch + apply latest VP release
 
-  vbpl update             Run install script (stops backend, swaps to new version, restarts)
-  vbpl update --check     Only check (print current / latest / hasUpdate, no install)
-  vbpl update --yes       Skip interactive prompts in install script
+SYNOPSIS
+  vbpl update [flags]
 
-Underlying install script: scripts/install.{ps1,sh} — same script used by README one-liner.
-`;
+OPTIONS
+  (none)            預設行為:跑 install script(stop backend → 下載 tarball → swap → restart)
+  --check           只查不裝(印 current / latest / hasUpdate)
+  --yes             跳過 install script 內的 interactive prompt(unattended 用)
 
-const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "sugarfun-it/vibe-pipeline";
+EXAMPLES
+  vbpl update                  # 拉最新 release 裝起來
+  vbpl update --check          # 只看有沒有新版,不裝
+  vbpl update --check --json   # JSON 給 agent 解析「該不該升」
+  vbpl update --yes            # CI / cron 跑(不問 confirm)
+
+NOTES
+  - 走的 install script:scripts/install.{ps1,sh}(跟 README one-liner 同一條)
+  - 過程會短暫殺 backend,running pipeline 會 → state=paused,update 完按「繼續」接續
+  - tarball 從 GitHub release 抓:${GITHUB_REPO}(可 VP_GITHUB_REPO env 改)
+
+SEE ALSO
+  vbpl server --help    # update 期間 backend 流程`;
 const GITHUB_RAW_INSTALL_PS1 = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/scripts/install.ps1`;
 const GITHUB_RAW_INSTALL_SH = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/scripts/install.sh`;
 
