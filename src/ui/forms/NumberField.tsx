@@ -27,6 +27,8 @@ export type NumberFieldProps = {
   ariaLabel?: string;
   // inline:見 TextFieldProps.inline 註解 — 取代 consumer 各自蓋 width 的 hack。
   inline?: boolean;
+  // variant:見 TextFieldProps.variant 註解。
+  variant?: "default" | "ghost-underline";
 };
 
 export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(function NumberField(

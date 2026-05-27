@@ -93,3 +93,53 @@
   border: 0;
 }
 
+/* variant: ghost-underline — input 只露底線(borderless + 透明背景 + bottom accent line),
+   給「跟 chip / meta 共處的緊湊行內」場合(如 ticket drawer iter-limit)。
+   primitive 直接持有這套樣式 — consumer 不再用 .form-input.<scoped-class> 整段重寫。 */
+.form-field--ghost-underline {
+  display: inline-flex;
+  gap: var(--space-1, 4px);
+}
+.form-input--ghost-underline {
+  width: var(--space-8, 32px);
+  min-height: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 2px;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  border-bottom: 1.5px solid var(--accent);
+}
+.form-input--ghost-underline:focus,
+.form-input--ghost-underline:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: none;
+  border-bottom-color: var(--accent);
+}
+.form-input--ghost-underline[aria-invalid="true"],
+.form-input--ghost-underline.is-invalid {
+  border-color: var(--failed);
+  background: transparent;
+  border-bottom-color: var(--failed);
+  color: var(--failed);
+}
+.form-input--ghost-underline::-webkit-inner-spin-button,
+.form-input--ghost-underline::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+/* mobile / touch — primitive 自帶 a11y touch density(min-height 44px / 加大 padding / 字級),
+   consumer 不再各自 @media 重複。ghost-underline variant 是緊湊行內排版,不適用。 */
+@media (pointer: coarse), (max-width: 767.98px) {
+  .form-input:not(.form-input--ghost-underline) {
+    min-height: 44px;
+    padding: 10px 10px;
+    font-size: 13px;
+  }
+}
+

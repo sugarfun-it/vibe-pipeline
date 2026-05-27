@@ -44,14 +44,7 @@ export function PipelineHistoryDrawer({
     };
   }, [projectHash, pipelineId]);
 
-  // Body scroll lock(Overlay 不做,因為各 overlay 對 body 鎖法可能差異 — 例如 modal 不一定要鎖)
-  useEffect(() => {
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, []);
+  // Body scroll lock 由 Overlay primitive 統一管(ref-counted),不再各自實作
 
   return (
     <Overlay

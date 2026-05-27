@@ -90,6 +90,7 @@ export function Overlay({
   labelledBy,
   describedBy,
   portal = true,
+  lockBodyScroll,
   restoreFocus = true,
   initialFocus = "root",
   scrimClassName,
@@ -103,6 +104,20 @@ export function Overlay({
     internalSurfaceRef.current = el;
     if (surfaceRef) surfaceRef.current = el;
   };
+
+  // Body scroll lock(ref-counted)。default 跟 portal 同調:
+  //   portal=true(全屏 modal/drawer)→ 鎖 body 避免背景捲動穿透
+  //   portal=false(in-place,例 QADrawer 只蓋 board 區)→ 不鎖
+  // multi-overlay(例 TicketDrawer 內開 ConfirmDialog)同時 acquire,內層 close 只 dec
+  // count,最後一個 close 才還原 body 樣式 + 跳回 savedScrollY。
+  const shouldLock = lockBodyScroll ?? portal;
+  useEffect(() => {
+    if (!shouldLock) return;
+    acquireScrollLock();
+    return () => {
+      releaseScrollLock();
+    };
+  }, [shouldLock]);
 
   // 開時把 stage 兄弟標 inert + aria-hidden,卸載時還原。
   // 從 surface 往上走到 body,每一層把不含自己的兄弟元素都標掉(同時涵蓋 portal=true:root 直接掛 body 下,

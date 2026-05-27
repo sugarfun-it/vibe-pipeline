@@ -29,6 +29,9 @@ export type TextFieldProps = {
   // inline:wrapper 不撐父容器(width:auto + flex:0 0 auto),配合 inputClassName 設固定寬。
   // 用於跟其他控件並排在 row 內的場合(settings / iter-limit)— 取代過去 consumer 各自蓋 width 的 hack。
   inline?: boolean;
+  // variant:預設帶 panel bg + border + radius;ghost-underline 是只露底線的緊湊行內款,
+  // primitive 直接持有樣式(forms.css),consumer 不再用 inputClassName 整段重寫 .form-input。
+  variant?: "default" | "ghost-underline";
 };
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
@@ -58,6 +61,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     ariaLabel,
     ariaDescribedBy,
     inline,
+    variant = "default",
   },
   ref,
 ) {
@@ -73,6 +77,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
       className={
         "form-field" +
         (inline ? " form-field--inline" : "") +
+        (variant === "ghost-underline" ? " form-field--ghost-underline" : "") +
         (fieldClassName ? ` ${fieldClassName}` : "")
       }
     >
@@ -89,7 +94,12 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         id={id}
         name={name}
         type={type}
-        className={"form-input" + (inputClassName ? ` ${inputClassName}` : "") + (className ? ` ${className}` : "")}
+        className={
+          "form-input" +
+          (variant === "ghost-underline" ? " form-input--ghost-underline" : "") +
+          (inputClassName ? ` ${inputClassName}` : "") +
+          (className ? ` ${className}` : "")
+        }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
