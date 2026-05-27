@@ -16,31 +16,12 @@
   .tdrw-action:active { transform: none; }
 }
 
-/* mobile:footer 一列布局 — 重開 ticket 主動作占 1fr 撐滿,刪除 icon-only 占固定欄。
-   destructive 仍視覺退一級(不填底色),user 預期「常用操作大、危險小」。 */
+/* mobile:footer 排版跟 PC 同 flex layout(.tdrw-actions / .tdrw-actions-primary 預設),
+   按鈕走 .tdrw-action max-content 寬度,不撐滿。destructive 仍用 margin-left:auto 推右端。
+   只調觸控目標到 44×44。 */
 @media (max-width: 767.98px) {
-  .tdrw-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--space-2, 8px);
-    align-items: stretch;
-  }
-  .tdrw-actions-primary {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    min-width: 0;
-  }
-  .tdrw-action {
-    width: 100%;
-  }
   .tdrw-delete-icon {
-    width: auto;
-    margin: 0;
-    background: transparent;
-    padding-inline: var(--space-2, 8px);
-    /* TD-ITER-INVALID-006:mobile icon-only 觸控目標 ≥ 44×44 */
-    min-width: 44px;
+    /* TD-ITER-INVALID-006:mobile 觸控目標 ≥ 44×44 */
     min-height: 44px;
   }
   /* TD-COPY-005 r4:mobile hash button 提升到 44×44 觸控目標 */
