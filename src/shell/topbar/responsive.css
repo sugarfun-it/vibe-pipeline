@@ -7,6 +7,13 @@
     border-radius: 8px;
   }
 
+  /* parallel-chip 視覺對齊兩個 icon-btn 高度,gap 6px 才看起來等距 */
+  .topbar .parallel-chip {
+    min-height: 40px;
+    padding: 4px 12px;
+    border-radius: 8px;
+  }
+
   .topbar {
     gap: 8px;
     padding: 0 10px;
