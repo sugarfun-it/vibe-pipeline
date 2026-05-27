@@ -84,19 +84,16 @@
     padding-bottom: 8px;
   }
 
-  /* 右上關閉 icon — mobile 全螢幕,放大 hit target */
+  /* 右上關閉 icon — size(44×44)走 shared `.drawer-close` mobile @media,本層只 override 定位。 */
   .settings-popover-close {
-    top: 10px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+    top: 6px;
+    right: 8px;
   }
 
-  /* saved chip:mobile 維持靠近 close 的浮動位置(top 9 比 desktop 11 略上對齊大顆 close) */
+  /* saved chip:mobile 維持靠近 close 的浮動位置(top 略上對齊大顆 close) */
   .settings-popover-saved {
-    top: 9px;
-    right: 52px;
+    top: 14px;
+    right: 60px;
   }
 
   /* Project tab field rows — mobile 全 row stack */

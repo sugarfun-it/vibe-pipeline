@@ -137,49 +137,13 @@ export function TopBar({
     void loadBrowse();
   }, [openRequestNonce]);
 
-  // Browse modal:Escape 關閉 + 開啟時 initial focus 落在 modal body 第一個可導覽 button
-  // (上層 / 首頁 / 磁碟切換),沒有可用導覽時 fallback 到「取消」。比舊版直接落 「取消」
-  // 更符合 "user 是為了瀏覽 / 選資料夾才開這個 modal" 的常見路徑(advisor topbar-009)
-  // + Tab/Shift+Tab 焦點 trap 在 modal 內(無障礙 modal 標準行為)
-  // + 關閉時 focus 還給 proj-trigger
+  // Browse modal:focus trap / ESC / aria-modal / scroll-lock / restoreFocus 都歸 Overlay primitive。
+  // 這裡只保留 modal 開啟時的 initial focus(優先「上層 / 首頁 / 磁碟切換」之類導覽 button)+
+  // browseData 載入完之後的 focus 校正(race:Overlay 預設 focus root 後若 data 尚未到、nav 都 disabled,
+  // user 無從導覽,等 data 到再把 focus 推到第一個可用 nav button)。
   const browseDialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!browseOpen) return;
-    function getFocusable(): HTMLElement[] {
-      const root = browseDialogRef.current;
-      if (!root) return [];
-      const nodes = root.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      return Array.from(nodes).filter((el) => !el.hasAttribute("aria-hidden") && el.offsetParent !== null);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !busy) {
-        setBrowseOpen(false);
-        setBrowseData(null);
-        setError(null);
-        return;
-      }
-      if (e.key === "Tab") {
-        const focusables = getFocusable();
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        const activeEl = document.activeElement as HTMLElement | null;
-        if (e.shiftKey) {
-          if (activeEl === first || !browseDialogRef.current?.contains(activeEl)) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (activeEl === last || !browseDialogRef.current?.contains(activeEl)) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    }
-    document.addEventListener("keydown", onKey);
     const focusTimer = window.setTimeout(() => {
       const root = browseDialogRef.current;
       const navBtn = root?.querySelector<HTMLButtonElement>(".browse-toolbar button:not([disabled])");
@@ -187,15 +151,14 @@ export function TopBar({
       else browseCloseRef.current?.focus();
     }, 50);
     return () => {
-      document.removeEventListener("keydown", onKey);
       window.clearTimeout(focusTimer);
     };
-  }, [browseOpen, busy]);
+  }, [browseOpen]);
 
   // browse data 載入完(toolbar 上層 / 首頁 / drive 才會 enabled)後,若 focus 還停在 fallback
-  // 「取消」上,把 focus 推到第一個可用的導覽 button — 修 advisor r2 topbar-009 的 race:
-  // 50ms timeout 觸發時可能 browseData 還沒到,nav 都 disabled,fallback 到取消後 user 卡死在
-  // 末端 action。等資料到再校正一次。
+  // 「取消」上或在 Overlay surface root 上,把 focus 推到第一個可用的導覽 button — 修
+  // advisor r2 topbar-009 的 race:50ms timeout 觸發時可能 browseData 還沒到,nav 都 disabled,
+  // fallback 到取消後 user 卡死在末端 action。等資料到再校正一次。
   useEffect(() => {
     if (!browseOpen || !browseData) return;
     const root = browseDialogRef.current;
@@ -203,19 +166,10 @@ export function TopBar({
     const navBtn = root.querySelector<HTMLButtonElement>(".browse-toolbar button:not([disabled])");
     if (!navBtn) return;
     const activeEl = document.activeElement as HTMLElement | null;
-    if (activeEl === browseCloseRef.current) {
+    if (activeEl === browseCloseRef.current || activeEl === root) {
       navBtn.focus();
     }
   }, [browseOpen, browseData]);
-
-  // modal 關掉後把 focus 還給 proj-trigger(只在從 open → closed 轉換時)
-  const wasBrowseOpen = useRef(false);
-  useEffect(() => {
-    if (wasBrowseOpen.current && !browseOpen) {
-      projTriggerRef.current?.focus();
-    }
-    wasBrowseOpen.current = browseOpen;
-  }, [browseOpen]);
 
   const active = recents.find((p) => p.hash === hash) ?? null;
   return (

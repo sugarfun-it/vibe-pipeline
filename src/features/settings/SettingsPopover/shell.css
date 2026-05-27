@@ -31,29 +31,13 @@ html.light .settings-popover {
     0 4px 18px rgba(28,25,22,0.10);
 }
 
-/* 右上關閉 icon — 桌面也顯示,放在獨立 header strip 內(top:8) */
+/* 右上關閉 icon — 視覺(size / padding / border / hover / focus)走 shared `.drawer-close`
+   (drawer.css);本層只負責定位(popover header strip 內 absolute top-right)+ z-index。 */
 .settings-popover-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--fg-mute);
-  cursor: pointer;
+  top: 4px;
+  right: 6px;
   z-index: 2;
-}
-.settings-popover-close:hover,
-.settings-popover-close:focus-visible {
-  background: var(--hover);
-  color: var(--fg);
-  outline: none;
 }
 
 /* ─── Tab bar(segmented pill control)──────────────────────────── */
@@ -112,8 +96,8 @@ html.light .settings-popover-tab.is-active {
    不再寄生在 tabs 內,避免擠壓最右 tab 寬度 */
 .settings-popover-saved {
   position: absolute;
-  top: 11px;
-  right: 46px;
+  top: 15px;
+  right: 54px;
   margin: 0;
   color: var(--done);
   background: color-mix(in srgb, var(--done) 14%, transparent);

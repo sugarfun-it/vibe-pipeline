@@ -8,6 +8,7 @@ import { UpdateTab } from "./UpdateTab";
 import { useUserConfig } from "./useUserConfig";
 import { CheckIconSm } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
+import "../../styles/drawer.css";
 import "./SettingsPopover.css";
 
 const SAVED_VISIBLE_MS = 3000;
@@ -123,7 +124,7 @@ export function SettingsPopover({
     >
       <button
         type="button"
-        className="settings-popover-close"
+        className="drawer-close settings-popover-close"
         onClick={onClose}
         aria-label="關閉設定"
         title="關閉"

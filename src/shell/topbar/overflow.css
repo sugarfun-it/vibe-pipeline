@@ -1,13 +1,9 @@
 /* ─── Folder browse modal ────────────────────────────────────── */
-
+/* Surface 走 `.drawer--modal` primitive(drawer.css):flex column / max-height /
+   border / shadow / animation 都由 primitive 提供。本 card 只 override max-width(默認 540 → 600)
+   + body padding(用 `.modal-card` 的 20/22 padding;需要 list 內部 scroll 才把 modal-body 改成 flex column)。*/
 .browse-modal-card {
   max-width: 600px;
-  width: 100%;
-  /* mobile vertical 防止 actions 被推出視窗;list 內部 scroll(advisor browse-loading-r1) */
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100dvh - 48px);
-  min-height: 0;
 }
 
 .browse-modal-card .modal-body {
@@ -25,10 +21,6 @@
   gap: 8px;
   margin-bottom: 4px;
 }
-
-/* browse modal close X 完全走 shared `.drawer-close`(drawer.css)。
-   舊 28×28 + 自己 hover/focus/disabled 共 50 行 ad-hoc 規則(含 coarse-pointer 44×44 拷貝)已拔,
-   coarse-pointer 44×44 改由 shared mobile @media 提供。本 file 不再持有 close button 視覺。 */
 
 /* 目前位置:強化 hierarchy(label + 路徑)— directory-picker 味,讓 user 一眼定位
    比舊版單行 mono 灰字更易掃描(advisor topbar-006:browse modal 太薄弱,需要更明顯的
@@ -99,7 +91,6 @@
     padding-top: 10px;
     padding-bottom: 10px;
   }
-  /* .browse-modal-close 44×44 已由 shared .drawer-close mobile @media 提供,本層不再 override */
   .browse-entry {
     min-height: 44px;
   }
