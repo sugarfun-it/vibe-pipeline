@@ -18,7 +18,11 @@ export type AtomicWriteOpts = {
 };
 
 async function renameWithWindowsRetry(tmp: string, path: string): Promise<void> {
-  const delays = process.platform === "win32" ? [0, 20, 50, 100, 200] : [0];
+  // Windows EPERM / EBUSY 來源:防毒 / Explorer indexer / fs.watch reader / Bun.spawn child
+  // 持 file handle。舊版 [0,20,50,100,200]ms total 370ms 對重 fs.watch 的 e2e 太短;
+  // 拉長到 [0,30,80,160,320,640,1200,2000]ms total ~4.4s,exponential backoff。
+  // 仍 EPERM = 真死鎖,讓 caller 處理。
+  const delays = process.platform === "win32" ? [0, 30, 80, 160, 320, 640, 1200, 2000] : [0];
   let lastErr: unknown;
   for (const delay of delays) {
     if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
