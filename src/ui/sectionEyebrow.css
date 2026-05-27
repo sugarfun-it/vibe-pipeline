@@ -1,0 +1,11 @@
+/* SectionEyebrow — 區塊小標(uppercase / 字級小、letter-spacing 大、color faint)。
+   多處(CreatePipeline rail card / 之後其他 section)共用 — 抽 primitive 不再借 form-label 充當。 */
+.section-eyebrow {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding-left: 1px;
+  display: block;
+}

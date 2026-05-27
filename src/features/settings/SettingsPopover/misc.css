@@ -120,7 +120,8 @@
     min-width: 0;
   }
 
-  .settings-popover .form-input,
+  /* .form-input mobile a11y(min-height / padding)已收回 primitive forms.css(44px / 10px / 13px)。
+     picker-trigger 不是 form primitive,獨留。 */
   .settings-popover .picker-trigger {
     min-height: 40px;
     padding-top: 8px;

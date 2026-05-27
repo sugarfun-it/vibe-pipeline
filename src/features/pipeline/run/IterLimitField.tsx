@@ -63,8 +63,8 @@ export function IterLimitField({
         // TD-ITER-INVALID-004:標點全形 + 拆兩句,把 Esc 提示獨立(不擠在驗證訊息裡)
         error={invalid ? "請輸入 1 至 5 的整數。按 Esc 還原" : undefined}
         inline
+        variant="ghost-underline"
         fieldClassName="tdrw-iter-limit-field"
-        inputClassName={"tdrw-iter-limit" + (invalid ? " is-invalid" : "")}
       />
       <span className="tdrw-iter-limit-unit">輪（1 至 5）</span>
     </span>

@@ -90,13 +90,8 @@ html.light .create-card { background: var(--bg-elevated); }
    contract (forms.css) plus .create-field-form is-error wrapper. */
 
 .create-field { display: flex; flex-direction: column; gap: 4px; }
-/* V2 chip:label 對齊 PIPELINES section-label 樣式(quieter),跟 chip / mono content 同節奏 */
-.create-field-label,
-.create-card .form-label {
-  font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--fg-faint);
-  padding-left: 1px;
-}
+/* section eyebrow 樣式由 <SectionEyebrow> primitive 持有(src/ui/sectionEyebrow.css)。
+   先前借 .form-label 充 eyebrow → primitive visual hijack,已拔。 */
 .create-field-desc {
   font-size: 10.5px;
   line-height: 1.45;
@@ -325,11 +320,7 @@ html.light .focus-create-empty {
     font-size: 13px;
   }
   .create-card .toggle-pill { min-height: 44px; padding: 8px 10px; }
-  .create-card .create-field-name .form-input {
-    min-height: 44px;
-    padding: 10px 10px;
-    font-size: 13px;
-  }
+  /* .form-input mobile a11y(44px / padding / 字級)已收回 primitive forms.css 處理。 */
 
   .create-actions { gap: 8px; margin-top: 4px; }
   .create-cancel,

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PickerSelect } from "../../../ui/PickerSelect";
 import { BranchIcon, CloseIcon } from "../../../ui/icons";
 import { TextField } from "../../../ui/forms/TextField";
+import { SectionEyebrow } from "../../../ui/SectionEyebrow";
 import "./createPipeline.css";
 
 const FALLBACK_BRANCHES = ["main"];
@@ -105,10 +106,12 @@ export function CreateCard({
       </div>
 
       <div className="create-field create-field-name">
+        <SectionEyebrow aria-hidden>名稱</SectionEyebrow>
         <TextField
           ref={inputRef}
           id={inputId}
           label="名稱"
+          labelHidden
           value={name}
           onChange={setName}
           placeholder="my-feature"
@@ -155,7 +158,7 @@ export function CreateCard({
       </div>
 
       <div className="create-field">
-        <div id={baseLabelId} className="create-field-label">基底分支</div>
+        <SectionEyebrow id={baseLabelId}>基底分支</SectionEyebrow>
         <PickerSelect
           open={baseOpen}
           setOpen={setBaseOpen}

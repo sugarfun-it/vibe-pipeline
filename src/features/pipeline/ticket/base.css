@@ -7,33 +7,16 @@
   inset: 0;
 }
 
-/* td-004:關閉 X — desktop 40x40,mobile 44x44 觸控目標;圖示視覺保 16x16,padding 補出可點範圍 */
-.tdrw-drawer .create-x,
-.tdrw-drawer .tdrw-close {
-  min-width: var(--space-10, 40px);
-  min-height: var(--space-10, 40px);
-  display: grid;
-  place-items: center;
+/* td-004:close X 走 shared `.drawer-close`(40×40 desktop / 44×44 mobile 在 drawer.css)。
+   只留 ticket-specific tweaks:icon 周圍 padding + 推右半字、focus 環用 outline(比 shared box-shadow 更顯眼)。 */
+.tdrw-drawer .drawer-close.tdrw-close {
   padding: var(--space-3, 12px);
-  border-radius: var(--radius-control, 6px);
-  border: 1px solid transparent;
-  background: transparent;
-  cursor: pointer;
-  color: var(--fg-mute);
-  transition: background 120ms, border-color 120ms, color 120ms;
   margin-inline-end: -6px;
 }
-.tdrw-drawer .create-x:hover,
-.tdrw-drawer .tdrw-close:hover {
-  background: var(--hover);
-  color: var(--fg);
-}
-/* hist-009:focus 環沿用 canonical token,offset 2px,讓鍵盤焦點更顯眼 */
-.tdrw-drawer .create-x:focus-visible,
-.tdrw-drawer .tdrw-close:focus-visible {
+.tdrw-drawer .drawer-close.tdrw-close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: var(--radius-control, 6px);
+  box-shadow: none;
 }
 .tdrw-stage > .drawer-scrim {
   pointer-events: auto;
@@ -41,10 +24,10 @@
 /* tdrw-drawer no longer redefines positioning / size / shell — inherited
    from canonical .drawer. Override only when ticket-specific tweaks needed. */
 
-/* width / flex 由 .form-field--inline 處理(NumberField 帶 inline prop 自動加)。
-   這裡只保留 wrapper display 微調(inline-flex 跟 row 內 chip 對齊)+ gap。 */
+/* iter-limit field — input 視覺(width / border / underline / spinner)由 primitive variant
+   "ghost-underline" 持有(src/ui/forms/forms.css)。此處只 override 跟 drawer chip 對齊用的 gap,
+   及 hint 文字行內排版(form-hint 預設不換行、顏色 / 行高)。 */
 .tdrw-iter-limit-field {
-  display: inline-flex;
   gap: 2px;
 }
 .tdrw-iter-limit-field .form-hint {
@@ -52,38 +35,6 @@
   color: var(--failed);
   white-space: nowrap;
   line-height: 1.3;
-}
-/* iter 上限 input — 跟 drawer-meta 內 chip 共處,小巧,只露數字 */
-.form-input.tdrw-iter-limit {
-  width: 32px;
-  min-height: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
-  padding: 0 2px;
-  border-radius: 0;
-  border: 0;
-  background: transparent;
-  color: var(--fg);
-  border-bottom: 1.5px solid var(--accent);
-}
-.form-input.tdrw-iter-limit:focus, .form-input.tdrw-iter-limit:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: none;
-  border-bottom-color: var(--accent);
-}
-.form-input.tdrw-iter-limit.is-invalid {
-  border-color: var(--failed);
-  background: transparent;
-  border-bottom-color: var(--failed);
-  color: var(--failed);
-}
-/* 隱藏 number input 的上下 spinner 預設樣式(各瀏覽器醜) */
-.tdrw-iter-limit::-webkit-inner-spin-button,
-.tdrw-iter-limit::-webkit-outer-spin-button {
-  opacity: 0.5;
 }
 
 /* td-001:actions 從 header 下方移到 drawer 底部 sticky footer。

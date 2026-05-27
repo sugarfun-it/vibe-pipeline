@@ -127,12 +127,7 @@
     color: var(--fg);
     flex: 0 0 auto;
   }
-  /* td-004:mobile 把 close button 拉到 44x44 觸控目標 */
-  .tdrw-drawer .create-x,
-  .tdrw-drawer .tdrw-close {
-    min-width: 44px;
-    min-height: 44px;
-  }
+  /* td-004:mobile 44×44 觸控目標由 shared `.drawer-close` mobile @media 提供,本層不再 override */
   /* TDRW-STRUCT-001:mobile header 垂直節奏壓緊 — title 上下 margin 縮 / status row 下推縮 / body 分隔 gap 不額外撐高,
      讓 ticket 內容更早出現在 viewport 內(repeated review 時不必每張 ticket 都先滑過大空白) */
   .tdrw-drawer .tdrw-title {

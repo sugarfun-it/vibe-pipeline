@@ -28,17 +28,10 @@
     padding: 3px 7px;
     font-size: 11px;
   }
-  /* 「開啟專案資料夾」在 mobile 上:不直接隱藏(會吃掉 isLocalHost 時唯一的 file explorer 入口
-     — advisor topbar.active_meta_localhost r1),改成 icon-only 節省寬度。
-     文字 hidden,圖示保留,aria-label / title 不變。
-     用 !important 抵銷舊版的 display:none 殘留(若有) */
+  /* 「開啟專案資料夾」mobile 上隱藏 — 手機通常 Tailscale 連遠端 backend,
+     file explorer 開在遠端 user 看不到;手機當 backend(LocalHost)是 unrealistic 情境。 */
   .topbar-reveal-folder {
-    display: inline-flex !important;
-    padding: 6px 8px;
-    flex-shrink: 0;
-  }
-  .topbar-reveal-folder > span {
-    display: none;
+    display: none !important;
   }
   .topbar-left {
     gap: 0;

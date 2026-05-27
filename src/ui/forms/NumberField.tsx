@@ -57,6 +57,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
     title,
     ariaLabel,
     inline,
+    variant = "default",
   },
   ref,
 ) {
@@ -70,6 +71,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
       className={
         "form-field" +
         (inline ? " form-field--inline" : "") +
+        (variant === "ghost-underline" ? " form-field--ghost-underline" : "") +
         (fieldClassName ? ` ${fieldClassName}` : "")
       }
     >
@@ -87,7 +89,12 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
         name={name}
         type="number"
         inputMode="numeric"
-        className={"form-input" + (inputClassName ? ` ${inputClassName}` : "") + (className ? ` ${className}` : "")}
+        className={
+          "form-input" +
+          (variant === "ghost-underline" ? " form-input--ghost-underline" : "") +
+          (inputClassName ? ` ${inputClassName}` : "") +
+          (className ? ` ${className}` : "")
+        }
         value={value === "" ? "" : String(value)}
         onChange={(e) => {
           const raw = e.target.value;
