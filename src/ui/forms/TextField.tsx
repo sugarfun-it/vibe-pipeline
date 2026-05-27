@@ -26,6 +26,9 @@ export type TextFieldProps = {
   spellCheck?: boolean;
   ariaLabel?: string;
   ariaDescribedBy?: string;
+  // inline:wrapper 不撐父容器(width:auto + flex:0 0 auto),配合 inputClassName 設固定寬。
+  // 用於跟其他控件並排在 row 內的場合(settings / iter-limit)— 取代過去 consumer 各自蓋 width 的 hack。
+  inline?: boolean;
 };
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
@@ -54,6 +57,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     spellCheck,
     ariaLabel,
     ariaDescribedBy,
+    inline,
   },
   ref,
 ) {
@@ -65,7 +69,13 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   const describedText = error ?? hint;
 
   return (
-    <div className={"form-field" + (fieldClassName ? ` ${fieldClassName}` : "")}>
+    <div
+      className={
+        "form-field" +
+        (inline ? " form-field--inline" : "") +
+        (fieldClassName ? ` ${fieldClassName}` : "")
+      }
+    >
       <label htmlFor={id} className={"form-label" + (labelHidden ? " form-label--sr" : "")}>
         <span>{label}</span>
         {required && (

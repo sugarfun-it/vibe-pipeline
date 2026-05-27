@@ -1,0 +1,16 @@
+/* Shared menu surface — Popover-portaled menu / listbox 共用視覺基礎。
+   bg / border / shadow / radius / padding / inner gap 全在這。
+   Per-consumer variant(.focus-overflow-menu / .proj-menu / .picker-menu)只設
+   size(width / max-width / per-variant 色)— 禁設 position / top / right / left / z-index
+   (定位與層級由 <Popover> primitive + .popover-surface 負責,設了會打架)。 */
+
+.menu-surface {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control, 6px);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

@@ -70,7 +70,7 @@ export function Crumbs({
             offset={6}
             role="dialog"
             ariaLabel="切換專案"
-            className="proj-menu fade-up"
+            className="menu-surface proj-menu fade-up"
             id="proj-menu-popover"
             autoFocusFirstItem={false}
             manageRovingFocus={false}

@@ -198,7 +198,7 @@ function RailSectionMenu({ items }: { items: RailMenuItem[] }) {
         offset={8}
         role="menu"
         ariaLabel="Rail section 操作"
-        className="focus-overflow-menu rail-section-overflow-menu"
+        className="menu-surface focus-overflow-menu rail-section-overflow-menu"
       >
         {items.map((it) => (
           <button

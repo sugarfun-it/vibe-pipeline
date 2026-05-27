@@ -251,7 +251,7 @@ export function PickerSelect({
         <div
           ref={menuRef}
           id={listboxId}
-          className="picker-menu fade-up"
+          className="menu-surface picker-menu fade-up"
           role="listbox"
           tabIndex={-1}
           aria-labelledby={baseId}

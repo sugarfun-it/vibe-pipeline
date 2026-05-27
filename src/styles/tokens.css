@@ -254,6 +254,14 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
 
 .mono { font-family: var(--font-mono); font-feature-settings: "ss01", "cv11"; }
 
+/* ─── Popover primitive surface ─────────────────────────────────
+   <Popover> portal 到 body 時自動帶 .popover-surface — primitive 自己負責 z-index。
+   Consumer className 不該再設 z-index / position(會跟 Popover JS-computed fixed top/left
+   打架,或被 stacking context 高的兄弟蓋)。
+   特殊 layer(--z-settings / --z-picker-popover)由 consumer override,
+   靠 source order(tokens.css 最早 import,feature css 後到 → 同 specificity 後勝出)。 */
+.popover-surface { z-index: var(--z-popover, 100); }
+
 /* ─── reusable bits ─────────────────────────────────────────── */
 .chip {
   display: inline-flex; align-items: center; gap: 5px;

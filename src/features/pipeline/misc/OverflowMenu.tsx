@@ -55,7 +55,7 @@ export function OverflowMenu({
         placement="bottom-end"
         role="menu"
         ariaLabel={`pipeline ${pipeline.name} 操作`}
-        className="focus-overflow-menu"
+        className="menu-surface focus-overflow-menu"
       >
           {onToggleAutoMerge && (
             <MenuItem

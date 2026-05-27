@@ -27,9 +27,9 @@
   word-break: break-word;
 }
 
-/* form primitive 包進 .settings-field-controls 的限寬版型 */
-.settings-popover .settings-form-field { width: auto; flex: 0 0 auto; }
-/* 三控件(平行上限 / 基礎分支 / 單次成本上限)鎖同寬,右邊緣對齊 */
+/* form primitive 包進 .settings-field-controls 的限寬版型 — wrapper 走 form-field--inline
+   (TextField / NumberField 帶 inline prop 自動加),不再 specificity 蓋 width。
+   三控件(平行上限 / 基礎分支 / 單次成本上限)鎖同寬,右邊緣對齊。 */
 .settings-popover .settings-form-field--narrow .form-input,
 .settings-popover .settings-form-field--mid .form-input { width: 140px; }
 .settings-popover .picker { width: 140px; }

@@ -25,6 +25,8 @@ export type NumberFieldProps = {
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   title?: string;
   ariaLabel?: string;
+  // inline:見 TextFieldProps.inline 註解 — 取代 consumer 各自蓋 width 的 hack。
+  inline?: boolean;
 };
 
 export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(function NumberField(
@@ -52,6 +54,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
     onKeyDown,
     title,
     ariaLabel,
+    inline,
   },
   ref,
 ) {
@@ -61,7 +64,13 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
   const describedText = error ?? hint;
 
   return (
-    <div className={"form-field" + (fieldClassName ? ` ${fieldClassName}` : "")}>
+    <div
+      className={
+        "form-field" +
+        (inline ? " form-field--inline" : "") +
+        (fieldClassName ? ` ${fieldClassName}` : "")
+      }
+    >
       <label htmlFor={id} className={"form-label" + (labelHidden ? " form-label--sr" : "")}>
         <span>{label}</span>
         {required && (

@@ -1,10 +1,10 @@
 /* SettingsPopover/shell.css — popover frame, close button, tab bar, saved chip */
 /* ─── Desktop popover root ────────────────────────────────────── */
 
+/* 定位由 <Popover> primitive(fixed + JS-computed top/left)負責,不設 position / top / right。
+   z-index 自帶 --z-settings(1500)— popover-surface 預設 --z-popover(100)在 tokens.css,
+   features css 後 import,同 specificity 後勝出 override。 */
 .settings-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
   /* 固定寬度,各 tab 切換時 popover 不會抖動;520 容得下 AI 任務 3-equal select grid */
   width: min(520px, calc(100vw - 32px));
   max-height: calc(100vh - 80px);

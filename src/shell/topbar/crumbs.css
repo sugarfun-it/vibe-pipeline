@@ -26,15 +26,16 @@
 .proj-trigger > svg:last-child { color: var(--fg-faint); flex-shrink: 0; transition: transform 160ms; }
 .proj-trigger.is-open > svg:last-child { transform: rotate(180deg); }
 
+/* Per-consumer size + visual tweaks only — visual base 走 .menu-surface,
+   定位 / z-index 由 <Popover> primitive 負責(禁設 position / top / left / z-index)。
+   保留 padding / radius / border / shadow override(proj-menu 視覺與通用 menu 不同:
+   radius 10、shadow-md、padding 6px)。 */
 .proj-menu {
-  position: absolute; top: calc(100% + 6px); left: 0;
   width: 320px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--line-2);
+  border-color: var(--line-2);
   border-radius: 10px;
   box-shadow: var(--shadow-md);
   padding: 6px;
-  z-index: var(--z-popover, 100);
 }
 .proj-menu-label {
   font-size: 10px; font-weight: 600;

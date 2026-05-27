@@ -274,6 +274,7 @@ export function ProjectTab({
                 );
               }}
               disabled={!cfg}
+              inline
               fieldClassName="settings-form-field settings-form-field--narrow"
               inputClassName="mono"
             />
@@ -355,6 +356,7 @@ export function ProjectTab({
               }}
               disabled={!cfg}
               placeholder="0"
+              inline
               fieldClassName="settings-form-field settings-form-field--mid"
               inputClassName="mono"
             />

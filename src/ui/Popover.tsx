@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import "./menu/menu.css";
 
 export type PopoverPlacement =
   | "bottom-end"
@@ -231,6 +232,13 @@ export function Popover({
       }
     : { position: "fixed", visibility: "hidden", ...style };
 
+  // popover-surface:primitive 自己負責 z-index 跟 fixed 定位語意,
+  // consumer 端 className 不該再設 z-index / position(會跟 Popover 計算的 fixed top/left 打架,
+  // 或讓 Popover 被 stacking context 高的兄弟蓋掉)。
+  // 特殊 layer(--z-settings / --z-picker-popover)由 consumer 自己 className override(source order:
+  // tokens.css 載最早,feature css 後到 → 同 specificity 後勝出)。
+  const mergedClassName = className ? `popover-surface ${className}` : "popover-surface";
+
   return createPortal(
     <div
       ref={menuRef}
@@ -238,7 +246,7 @@ export function Popover({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
       id={id}
-      className={className}
+      className={mergedClassName}
       style={mergedStyle}
     >
       {children}

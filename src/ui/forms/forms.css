@@ -1,10 +1,20 @@
 /* Shared form primitives — TextField / NumberField */
 
+/* form-field 預設 block(width: 100%)— 多數場合 input 撐滿父容器。
+   consumer 想要 inline(input 自帶固定寬,wrapper 不撐父容器)走 .form-field--inline,
+   不要靠 specificity 蓋 width(過去 .settings-form-field / .tdrw-iter-limit-field
+   各自蓋 width:auto;flex:0 0 auto 是同一個語意 — 抽 variant 一處 SSOT)。
+   TextField / NumberField 帶 `inline` prop 自動加 modifier。 */
 .form-field {
   display: flex;
   flex-direction: column;
   gap: var(--space-1, 4px);
   width: 100%;
+}
+
+.form-field--inline {
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .form-label {

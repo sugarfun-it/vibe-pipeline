@@ -23,21 +23,12 @@
 .focus-overflow > .btn:hover,
 .rail-section-overflow > .btn:hover { color: var(--fg); }
 
-/* Menu surface — visual only. 定位由 <Popover> primitive(portal + JS-computed left/top)負責,
-   這裡禁設 position / top / right(會跟 Popover 計算的座標打架,造成 menu 拉伸到 viewport 邊界)。
-   z-index 仍要設 — Popover 是 position: fixed portal 到 body,沒設會被 stacking context 高的兄弟蓋。 */
+/* Per-consumer size variant only — visual base(bg / border / shadow / radius / padding)
+   走 .menu-surface(src/ui/menu/menu.css),z-index / position 由 <Popover> primitive 負責。
+   禁設 position / top / right / left / z-index — 會跟 Popover JS-computed fixed top/left 打架。 */
 .focus-overflow-menu {
   min-width: 180px;
   max-width: min(280px, calc(100vw - 16px));
-  background: var(--bg-elevated);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow-lg);
-  padding: 4px;
-  z-index: var(--z-popover, 100);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .focus-overflow-item {

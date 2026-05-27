@@ -41,12 +41,10 @@
 /* tdrw-drawer no longer redefines positioning / size / shell — inherited
    from canonical .drawer. Override only when ticket-specific tweaks needed. */
 
-/* 套 NumberField 後保留 inline 行為:field wrapper 不撐滿、保持 row 內顯示 */
+/* width / flex 由 .form-field--inline 處理(NumberField 帶 inline prop 自動加)。
+   這裡只保留 wrapper display 微調(inline-flex 跟 row 內 chip 對齊)+ gap。 */
 .tdrw-iter-limit-field {
-  width: auto;
-  flex: 0 0 auto;
   display: inline-flex;
-  flex-direction: column;
   gap: 2px;
 }
 .tdrw-iter-limit-field .form-hint {
