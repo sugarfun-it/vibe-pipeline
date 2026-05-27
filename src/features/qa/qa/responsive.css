@@ -9,7 +9,7 @@ html.light .qadr-drawer .qadr-spec-ready-bar {
     color-mix(in srgb, var(--accent) 6%, var(--bg-elevated)));
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767.98px) {
   .qadr-stage > .qadr-drawer,
   .qadr-drawer {
     width: 100vw !important;

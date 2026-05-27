@@ -253,7 +253,7 @@
 .tdrw-iter-limit-wrap.is-invalid .tdrw-iter-limit-unit {
   color: var(--failed);
 }
-@media (max-width: 720px) {
+@media (max-width: 767.98px) {
   /* TD-ITER-INVALID-003:窄寬度下把 label / input / unit 排第一行,error 文字落到全寬第二行,
      不再把整個 status row baseline 撐爛 */
   .tdrw-iter-limit-wrap {

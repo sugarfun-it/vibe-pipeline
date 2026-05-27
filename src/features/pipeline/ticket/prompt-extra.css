@@ -25,7 +25,7 @@
   background: linear-gradient(to bottom, transparent, var(--panel));
   pointer-events: none;
 }
-@media (max-width: 720px) {
+@media (max-width: 767.98px) {
   .tdrw-prompt-md.is-collapsed { max-height: 14em; }
   .tdrw-prompt-fade { height: 4em; }
 
