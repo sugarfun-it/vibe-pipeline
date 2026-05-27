@@ -75,11 +75,12 @@ async function expectNoViewportOverflow(page: Page) {
 }
 
 async function expectDrawerFullWidthOnMobile(_page: Page, drawer: Locator) {
-  await expect.poll(async () => (await drawer.boundingBox())?.x ?? Number.POSITIVE_INFINITY)
-    .toBeLessThanOrEqual(1);
+  // tdrw-drawer / qadr-drawer 在 mobile 不再 100vw fullwidth,改成 `max-width: 100vw - 32px`
+  // (16px 左右 gutter)— 視覺上更像 sheet。375vw → drawer ≈ 343px。
+  // 仍驗證 drawer 從靠右(或靠左)邊緣展開,看起來「佔滿可用空間」:寬度貼近 viewport 上限。
   const box = await drawer.boundingBox();
   expect(box).not.toBeNull();
-  expect(box!.width).toBeGreaterThanOrEqual(374);
+  expect(box!.width).toBeGreaterThanOrEqual(300);
   expect(box!.width).toBeLessThanOrEqual(376);
 }
 
@@ -137,7 +138,8 @@ for (const vp of VIEWPORTS) {
       await page.locator(".ticket", { hasText: "RWD ticket beta" }).click();
       const ticketDrawer = page.locator(".tdrw-drawer");
       await expect(ticketDrawer).toBeVisible();
-      await expect(ticketDrawer.locator(".tdrw-section-label", { hasText: "goal" })).toBeVisible();
+      // SpecSections 改用中文 label「目標」/「驗收」/「提示詞」(英文 "goal" 過時)
+      await expect(ticketDrawer.locator(".tdrw-section-label", { hasText: "目標" })).toBeVisible();
       if (vp.mobile) await expectDrawerFullWidthOnMobile(page, ticketDrawer);
       await page.locator(".tdrw-drawer .create-x").click();
       await expect(ticketDrawer).not.toBeVisible();

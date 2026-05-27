@@ -115,18 +115,14 @@ test("QA 多輪 → spec checklist 進度 → 最後一輪 complete", async ({ p
   await page.locator(".focus-add-ticket").click();
   await expect(page.locator(".qadr-drawer")).toBeVisible();
 
-  // 4 輪 — 第一輪用 starter chip(.qadr-suggestion),後續是 InlineMultiSelect(.qadr-option)
+  // 4 輪 — 第一輪用 starter chip(.qadr-suggestion);後續輪 partial reply 沒帶
+  // optionsMode → default "single" → Composer 渲染 .qadr-option chips,點即送
+  // (multi-mode 才用 InlineMultiSelect + 「送出已選」)
   for (let i = 0; i < 4; i++) {
     const sel = i === 0 ? ".qadr-suggestion" : ".qadr-option";
     const opt = page.locator(sel).first();
     await expect(opt).toBeVisible({ timeout: 5000 });
     await opt.click();
-    // multi-select 模式還要按「送出已選」才送出
-    if (i !== 0) {
-      const sendBtn = page.locator(".qadr-multi-send");
-      await expect(sendBtn).toBeEnabled({ timeout: 2000 });
-      await sendBtn.click();
-    }
     // 每輪後給時間 React render
     await page.waitForTimeout(200);
   }
