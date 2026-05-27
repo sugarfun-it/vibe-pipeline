@@ -4,6 +4,7 @@ import { PickerSelect } from "../../ui/PickerSelect";
 import { BranchIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { NumberField } from "../../ui/forms/NumberField";
+import { SettingsField } from "./SettingsField";
 import "./SettingsPopover.css";
 
 const BASE_BRANCH_FALLBACK = ["main", "master"];
@@ -249,136 +250,122 @@ export function ProjectTab({
   return (
     <div className="settings-tab-content">
       <div className="task-group task-group--primary">
-        <div className="settings-field-row">
-          <span className="settings-field-label" id="proj-max-parallel-label">平行上限</span>
-          <div className="settings-field-controls">
-            <NumberField
-              label="平行上限"
-              labelHidden
-              min={MIN}
-              max={MAX}
-              step={1}
-              value={draftMaxParallel}
-              onChange={(v) => {
-                const nextValue = v === "" ? MIN : v;
-                const clamped = Math.max(MIN, Math.min(MAX, Math.floor(nextValue || MIN)));
-                setDraftMaxParallel(nextValue);
-                scheduleProjectSave(
-                  "max_parallel",
-                  { defaults: { max_parallel: clamped } },
-                  (next) => applyProjectDisplay("max_parallel", next),
-                  () => {
-                    const confirmedValue = confirmedProjectValuesRef.current?.max_parallel;
-                    if (confirmedValue !== undefined) setDraftMaxParallel(confirmedValue);
-                  }
-                );
-              }}
-              disabled={!cfg}
-              inline
-              fieldClassName="settings-form-field settings-form-field--narrow"
-              inputClassName="mono"
-            />
-            <span className="mono settings-inline-unit">
-              {MIN}–{MAX} 條
-            </span>
-            {savingFields.max_parallel && (
-              <span className="settings-field-status" aria-live="polite">儲存中…</span>
-            )}
-          </div>
-        </div>
-        {fieldErrors.max_parallel ? (
-          <div className="settings-subhint settings-subhint--error" role="alert">
-            {fieldErrors.max_parallel}
-          </div>
-        ) : (
-          <div className="settings-subhint">達到上限後，新執行會排隊，前一個完成後自動開始。</div>
-        )}
+        <SettingsField
+          label="平行上限"
+          labelId="proj-max-parallel-label"
+          saving={savingFields.max_parallel}
+          error={fieldErrors.max_parallel}
+          hint="達到上限後，新執行會排隊，前一個完成後自動開始。"
+        >
+          <NumberField
+            label="平行上限"
+            labelHidden
+            min={MIN}
+            max={MAX}
+            step={1}
+            value={draftMaxParallel}
+            onChange={(v) => {
+              const nextValue = v === "" ? MIN : v;
+              const clamped = Math.max(MIN, Math.min(MAX, Math.floor(nextValue || MIN)));
+              setDraftMaxParallel(nextValue);
+              scheduleProjectSave(
+                "max_parallel",
+                { defaults: { max_parallel: clamped } },
+                (next) => applyProjectDisplay("max_parallel", next),
+                () => {
+                  const confirmedValue = confirmedProjectValuesRef.current?.max_parallel;
+                  if (confirmedValue !== undefined) setDraftMaxParallel(confirmedValue);
+                }
+              );
+            }}
+            disabled={!cfg}
+            inline
+            fieldClassName="settings-form-field settings-form-field--narrow"
+            inputClassName="mono"
+          />
+          <span className="mono settings-inline-unit">
+            {MIN}–{MAX} 條
+          </span>
+        </SettingsField>
 
-        <div className="settings-field-row">
-          <label className="settings-field-label" htmlFor="proj-base-branch">基礎分支</label>
-          <div className="settings-field-controls">
-            <PickerSelect
-              id="proj-base-branch"
-              open={basePickerOpen}
-              setOpen={setBasePickerOpen}
-              value={draftBaseBranch}
-              onChange={(next) => {
-                setDraftBaseBranch(next);
-                scheduleProjectSave(
-                  "default_base_branch",
-                  { defaults: { default_base_branch: next.trim() } },
-                  (saved) => applyProjectDisplay("default_base_branch", saved),
-                  () => {
-                    const confirmedValue = confirmedProjectValuesRef.current?.default_base_branch;
-                    if (confirmedValue !== undefined) setDraftBaseBranch(confirmedValue);
-                  }
-                );
-              }}
-              icon={<span className="mono" style={{ color: "var(--fg-mute)", display: "inline-flex" }}><BranchIcon /></span>}
-              options={(branches.length > 0 ? branches : BASE_BRANCH_FALLBACK).map((b) => ({ id: b, label: b, mono: true }))}
-              disabled={!cfg}
-              placeholder={cfg?.defaults.base_branch || "main"}
-            />
-            {savingFields.default_base_branch && (
-              <span className="settings-field-status" aria-live="polite">儲存中…</span>
-            )}
-          </div>
-        </div>
-        {fieldErrors.default_base_branch ? (
-          <div className="settings-subhint settings-subhint--error" role="alert">
-            {fieldErrors.default_base_branch}
-          </div>
-        ) : (
-          <div className="settings-subhint">新 pipeline 預設從此 branch 建立。</div>
-        )}
+        <SettingsField
+          label="基礎分支"
+          htmlFor="proj-base-branch"
+          saving={savingFields.default_base_branch}
+          error={fieldErrors.default_base_branch}
+          hint="新 pipeline 預設從此 branch 建立。"
+        >
+          <PickerSelect
+            id="proj-base-branch"
+            open={basePickerOpen}
+            setOpen={setBasePickerOpen}
+            value={draftBaseBranch}
+            onChange={(next) => {
+              setDraftBaseBranch(next);
+              scheduleProjectSave(
+                "default_base_branch",
+                { defaults: { default_base_branch: next.trim() } },
+                (saved) => applyProjectDisplay("default_base_branch", saved),
+                () => {
+                  const confirmedValue = confirmedProjectValuesRef.current?.default_base_branch;
+                  if (confirmedValue !== undefined) setDraftBaseBranch(confirmedValue);
+                }
+              );
+            }}
+            icon={<span className="mono" style={{ color: "var(--fg-mute)", display: "inline-flex" }}><BranchIcon /></span>}
+            options={(branches.length > 0 ? branches : BASE_BRANCH_FALLBACK).map((b) => ({ id: b, label: b, mono: true }))}
+            disabled={!cfg}
+            placeholder={cfg?.defaults.base_branch || "main"}
+          />
+        </SettingsField>
 
-        <div className="settings-field-row">
-          <span className="settings-field-label" id="proj-cost-limit-label">單次成本上限</span>
-          <div className="settings-field-controls">
-            <NumberField
-              label="單條 pipeline 成本上限"
-              labelHidden
-              min={0}
-              step={0.01}
-              value={draftCostLimit === "" ? "" : Number(draftCostLimit)}
-              onChange={(v) => {
-                const nextValue = v === "" ? "" : String(v);
-                setDraftCostLimit(nextValue);
-                scheduleProjectSave(
-                  "cost_limit_usd",
-                  { defaults: { cost_limit_usd: Number(nextValue) } },
-                  (next) => applyProjectDisplay("cost_limit_usd", next),
-                  () => {
-                    const confirmedValue = confirmedProjectValuesRef.current?.cost_limit_usd;
-                    if (confirmedValue !== undefined) setDraftCostLimit(confirmedValue);
-                  }
-                );
-              }}
-              disabled={!cfg}
-              placeholder="0"
-              inline
-              fieldClassName="settings-form-field settings-form-field--mid"
-              inputClassName="mono"
-            />
-            <span className="mono settings-inline-unit">USD</span>
-            {savingFields.cost_limit_usd && (
-              <span className="settings-field-status" aria-live="polite">儲存中…</span>
-            )}
-          </div>
-        </div>
-        {fieldErrors.cost_limit_usd ? (
-          <div className="settings-subhint settings-subhint--error" role="alert">
-            {fieldErrors.cost_limit_usd}
-          </div>
-        ) : (
-          <>
-            <div className="settings-subhint settings-subhint-desktop">每條 pipeline 的成本上限,0 代表不限制。超過時只阻止該 pipeline 的下一次執行,不影響其他 pipeline。</div>
-            <div className="settings-subhint settings-subhint-mobile">每條 pipeline 的上限,0 代表不限制。超過時只阻止下一次執行。</div>
-          </>
-        )}
+        <SettingsField
+          label="單次成本上限"
+          labelId="proj-cost-limit-label"
+          saving={savingFields.cost_limit_usd}
+          error={fieldErrors.cost_limit_usd}
+          hint={
+            <>
+              <span className="settings-subhint-desktop">每條 pipeline 的成本上限,0 代表不限制。超過時只阻止該 pipeline 的下一次執行,不影響其他 pipeline。</span>
+              <span className="settings-subhint-mobile">每條 pipeline 的上限,0 代表不限制。超過時只阻止下一次執行。</span>
+            </>
+          }
+        >
+          <NumberField
+            label="單條 pipeline 成本上限"
+            labelHidden
+            min={0}
+            step={0.01}
+            value={draftCostLimit === "" ? "" : Number(draftCostLimit)}
+            onChange={(v) => {
+              const nextValue = v === "" ? "" : String(v);
+              setDraftCostLimit(nextValue);
+              scheduleProjectSave(
+                "cost_limit_usd",
+                { defaults: { cost_limit_usd: Number(nextValue) } },
+                (next) => applyProjectDisplay("cost_limit_usd", next),
+                () => {
+                  const confirmedValue = confirmedProjectValuesRef.current?.cost_limit_usd;
+                  if (confirmedValue !== undefined) setDraftCostLimit(confirmedValue);
+                }
+              );
+            }}
+            disabled={!cfg}
+            placeholder="0"
+            inline
+            fieldClassName="settings-form-field settings-form-field--mid"
+            inputClassName="mono"
+          />
+          <span className="mono settings-inline-unit">USD</span>
+        </SettingsField>
 
-        <div className="settings-field-row settings-field-row--tight">
-          <span className="settings-field-label">自動合併</span>
+        <SettingsField
+          label="自動合併"
+          tight
+          saving={savingFields.auto_merge}
+          error={fieldErrors.auto_merge}
+          hint="每條 pipeline 仍可個別覆寫此設定。"
+        >
           <label
             className={"toggle-pill" + (draftAutoMerge ? " is-on" : "")}
             title="全 ticket done → backend 自動 append merge ticket 走 runner 流程"
@@ -407,17 +394,7 @@ export function ProjectTab({
             </span>
             新 pipeline 預設啟用
           </label>
-          {savingFields.auto_merge && (
-            <span className="settings-field-status" aria-live="polite">儲存中…</span>
-          )}
-        </div>
-        {fieldErrors.auto_merge ? (
-          <div className="settings-subhint settings-subhint--error" role="alert">
-            {fieldErrors.auto_merge}
-          </div>
-        ) : (
-          <div className="settings-subhint">每條 pipeline 仍可個別覆寫此設定。</div>
-        )}
+        </SettingsField>
       </div>
     </div>
   );
