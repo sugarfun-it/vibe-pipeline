@@ -9,17 +9,5 @@ html.light .qadr-drawer .qadr-spec-ready-bar {
     color-mix(in srgb, var(--accent) 6%, var(--bg-elevated)));
 }
 
-@media (max-width: 767.98px) {
-  .qadr-stage > .qadr-drawer,
-  .qadr-drawer {
-    width: 100vw !important;
-    max-width: none;
-    border-radius: 0;
-    border-left: 0;
-    box-shadow: none;
-  }
-  .qadr-drawer .drawer-head.qadr-head { padding: 12px 16px; }
-  .qadr-drawer .drawer-body.qadr-body { padding: 14px 16px; }
-  .qadr-drawer .drawer-foot.qadr-foot { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
-  /* close X 統一走 shared .drawer-close base — 不在這層 override */
-}
+/* QA drawer mobile fullwidth / head / body / foot padding 全走 SSOT(drawer.css mobile @media)。
+   過去 width:100vw !important + head/body/foot padding override 拔除。 */

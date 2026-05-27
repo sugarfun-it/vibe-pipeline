@@ -77,13 +77,9 @@
   color: var(--fg-faint);
   border-color: var(--line);
 }
-.drawer-foot.qadr-foot {
-  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
-  background: var(--bg-elevated);
-  border-top: 1px solid var(--line);
-  box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--accent) 14%, transparent);
-  gap: 10px;
-}
+/* drawer-foot padding / background / border-top / box-shadow / gap 全走 SSOT(drawer.css)。
+   此處只留 QA chat 專屬 footer hint(accent shadow)— 但 SSOT 已有 border-top,不另疊。
+   過去自訂 padding 18px / bg-elevated / accent shadow 拔除。 */
 .qadr-progress.mono {
   display: flex;
   align-items: center;

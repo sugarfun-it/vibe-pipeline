@@ -1,56 +1,19 @@
-/* qa/overlay-base.css — overlay drawer, header, status, and body polish rules. */
-/* ─── Overlay-only rules (no source counterpart, prefix stripped) ─── */
+/* qa/overlay-base.css — QA-specific rules only. 全 drawer / drawer-head / drawer-body /
+   drawer-title / drawer-titlerow / drawer-meta / drawer-crumb / drawer-scrim 的 size /
+   padding / margin / font / scrollbar 由 SSOT(src/styles/drawer.css)持有,此 file 不再
+   override(過去散落的 .drawer-titlerow / .drawer-title 無前綴 override 會污染所有 drawer)。
+   只留 QA 自己的 surface treatment(head 漸層 bg)+ QA 專屬子元件樣式。 */
 
-.qadr-stage > .drawer-scrim {
-  background: var(--scrim-drawer);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-.qadr-stage > .qadr-drawer, .qadr-drawer {
-  width: var(--drawer-w-qa, 560px) !important;
-  max-width: calc(100vw - 32px);
-  background: var(--bg-elevated);
-  border-left: 1px solid var(--line-2);
-  border-radius: 0;
-  box-shadow: var(--shadow-drawer-accent);
-  overflow: hidden;
-}
 .drawer-head.qadr-head {
-  padding: 14px 22px 16px;
-  border-bottom: 1px solid var(--line);
+  /* QA-specific accent overlay on head — 不動 padding / sizing,只加漸層 bg */
   background: linear-gradient(180deg,
       color-mix(in srgb, var(--accent) 4%, transparent) 0%,
       transparent 100%),
     var(--bg-elevated);
 }
-.drawer-crumb.qadr-crumb {
-  min-height: 24px;
-  margin-bottom: 8px;
-  font-size: 11px;
-  color: var(--fg-faint);
-}
 .qadr-crumb .sep {
   color: var(--fg-faint);
   opacity: 0.5;
-}
-.drawer-titlerow {
-  gap: 12px;
-  margin-bottom: 6px;
-}
-.drawer-title {
-  margin: 4px 0 0;
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.018em;
-  line-height: 1.25;
-  color: var(--fg);
-}
-.drawer-meta.mono {
-  margin-top: 2px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--fg-faint);
-  gap: 6px;
 }
 .drawer-meta .sep {
   color: var(--fg-faint);
@@ -150,16 +113,4 @@
 }
 .qadr-close-confirm-actions .btn-primary:hover {
   filter: brightness(1.08);
-}
-.drawer-body.qadr-body {
-  padding: 18px 22px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
-}
-.drawer-body.qadr-body::-webkit-scrollbar {
-  width: 8px;
-}
-.drawer-body.qadr-body::-webkit-scrollbar-thumb {
-  background: var(--line-2);
-  border-radius: 4px;
 }
