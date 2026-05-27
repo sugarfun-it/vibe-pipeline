@@ -150,28 +150,14 @@ export function TicketDrawer({
         />
 
         <div className="drawer-body tdrw-body">
-          {/* td-006:done 狀態下 outcome(結果)優先,spec(目標 / 驗收 / 提示詞)排後面 */}
-          {isDone ? (
-            <>
-              <OutcomeSections ticket={ticket} />
-              <SpecSections
-                goal={spec.goal}
-                acceptance={spec.acceptance}
-                prompt={spec.prompt}
-                isDone={isDone}
-              />
-            </>
-          ) : (
-            <>
-              <SpecSections
-                goal={spec.goal}
-                acceptance={spec.acceptance}
-                prompt={spec.prompt}
-                isDone={isDone}
-              />
-              <OutcomeSections ticket={ticket} />
-            </>
-          )}
+          {/* outcome / iter rounds 永遠優先(user 主要關心動態進度 / 結果),spec 排後面 */}
+          <OutcomeSections ticket={ticket} />
+          <SpecSections
+            goal={spec.goal}
+            acceptance={spec.acceptance}
+            prompt={spec.prompt}
+            isDone={isDone}
+          />
           {/* pipeline 執行紀錄已移到 pipeline header OverflowMenu「執行紀錄」(整 pipeline scope,不該塞 ticket drawer) */}
           <AuditTimeline
             projectHash={projectHash}
