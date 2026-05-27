@@ -4,10 +4,36 @@
 import * as pipelineDir from "./pipelineDir";
 import * as orchestrator from "./runner/orchestrator";
 import * as git from "./git";
+import * as worktree from "./git/worktree";
+import * as notifs from "./notifs/store";
 import { mergeTicketPrompt } from "./runner/mergeTicketPrompt";
 import { getTaskConfig } from "./userConfig";
 import { ensureDepsAfterMerge, type DepInstallResult } from "./depInstall";
 import { runCapture } from "./spawn";
+
+// Merge 完 worktree 已沒實質用途(branch 已併進 base,fs 是死副本)。
+// 不刪 branch ref — 之後加新 ticket 仍可重新 attach worktree。
+// 失敗只 warn + emit notif,不影響 mergeResult 成功訊號(Windows EPERM / fs lock 不該拖 merge 結果)。
+async function autoCleanWorktreeAfterMerge(
+  projectPath: string,
+  pipelineId: string,
+  pipelineName: string
+): Promise<void> {
+  try {
+    const r = await worktree.removeQuiet(projectPath, pipelineId);
+    if (!r.ok) {
+      console.warn(`[merge ${pipelineId}] worktree prune failed: ${r.error}`);
+      notifs.emit(projectPath, {
+        type: "pipeline_merge_cleanup_failed",
+        title: `${pipelineName} merge 後 worktree 清理失敗`,
+        sub: r.error,
+        pipelineId,
+      });
+    }
+  } catch (e) {
+    console.warn(`[merge ${pipelineId}] worktree prune threw:`, e);
+  }
+}
 
 export type TriggerMergeResult =
   | { ok: true; ticketId: string; reused: boolean }
@@ -208,6 +234,7 @@ export async function autoMergeNoAI(opts: {
     } catch {
       // pipeline 不見就算了
     }
+    await autoCleanWorktreeAfterMerge(projectPath, pipelineId, pipeline.name || pipelineId);
     return { ok: true, alreadyMerged: true };
   }
 
@@ -250,6 +277,7 @@ export async function autoMergeNoAI(opts: {
     }
     const aheadNum = Number(ahead.out) || 0;
     const depInstall = await ensureDepsAfterMerge(projectPath, mergeCommit.hash);
+    await autoCleanWorktreeAfterMerge(projectPath, pipelineId, pipeline.name || pipelineId);
     return { ok: true, mergeCommit, behindCount: aheadNum, depInstall };
   }
 
