@@ -40,27 +40,8 @@
     box-shadow: none;
     overflow: hidden;
   }
-  .drawer-head.tdrw-head {
-    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
-    background: var(--bg-elevated);
-  }
-  .drawer-crumb.tdrw-breadcrumb {
-    min-height: 28px;
-    margin-bottom: 8px;
-    font-size: 10.5px;
-    flex-wrap: nowrap;
-    overflow: hidden;
-  }
-  .tdrw-breadcrumb > * {
-    flex-shrink: 0;
-  }
-  .tdrw-breadcrumb > [style*="fg-mute"] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-    flex: 1 1 auto;
-  }
+  /* tdrw-head / tdrw-breadcrumb mobile padding / sizing 全走 default .drawer-head / .drawer-crumb
+     的 mobile @media(drawer.css),跟 RunHistory / QA drawer 對齊。 */
   .drawer-titlerow.tdrw-titlerow {
     margin-bottom: 12px;
   }

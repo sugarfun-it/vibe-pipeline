@@ -22,31 +22,11 @@
     box-shadow: none;
   }
 }
+/* tdrw-head / tdrw-breadcrumb 的 padding / sizing / font / colour 全走 default
+   .drawer-head / .drawer-crumb(drawer.css),跟 RunHistory / QA drawer 對齊。
+   此處只留 ticket-specific surface treatment(bg-elevated 強化 head 跟 body 的分隔)。 */
 .drawer-head.tdrw-head {
-  padding: 14px 22px 14px 22px;
-  border-bottom: 1px solid var(--line);
   background: var(--bg-elevated);
-}
-.drawer-crumb.tdrw-breadcrumb {
-  min-height: 24px;
-  margin-bottom: 6px;
-  font-size: 11px;
-  color: var(--fg-faint);
-  gap: 6px;
-}
-.tdrw-breadcrumb .mono {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.01em;
-}
-.tdrw-breadcrumb .sep {
-  color: var(--fg-faint);
-  opacity: 0.5;
-  margin: 0 2px;
-}
-.tdrw-breadcrumb > [style*="fg-mute"] {
-  color: var(--fg) !important;
-  font-weight: 600;
 }
 .drawer-titlerow.tdrw-titlerow {
   gap: 12px;
