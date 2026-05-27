@@ -96,16 +96,30 @@ export const BoardMain = memo(function BoardMain({
         }
       }}
       onDelete={async (pid) => {
-        const targetName = pipelines.find((p) => p.id === pid)?.name ?? pid;
+        const target = pipelines.find((p) => p.id === pid);
+        const targetName = target?.name ?? pid;
+        // Optimistic remove — 立刻從 list 拔掉(視覺立即反應),DELETE 在背景跑;
+        // backend cleanup(worktree rm 含 node_modules)Windows 可能 2-30 秒,user 不必盯著等。
+        // 失敗才 rollback 加回去。
+        const prevIndex = pipelines.findIndex((p) => p.id === pid);
+        const wasActive = pid === activeId;
+        setPipelines((arr) => {
+          const next = arr.filter((p) => p.id !== pid);
+          if (wasActive) setActiveId(next[0]?.id ?? "");
+          return next;
+        });
         try {
           await api.deletePipeline(project.hash, pid);
-          setPipelines((arr) => {
-            const next = arr.filter((p) => p.id !== pid);
-            if (pid === activeId) setActiveId(next[0]?.id ?? "");
-            return next;
-          });
           notifyInfo(`✓ pipeline "${targetName}" 已刪除`, { pipelineId: pid });
         } catch (e) {
+          if (target) {
+            setPipelines((arr) => {
+              const next = [...arr];
+              next.splice(Math.min(prevIndex, next.length), 0, target);
+              return next;
+            });
+            if (wasActive) setActiveId(pid);
+          }
           notifyError(`刪除失敗: ${e instanceof Error ? e.message : String(e)}`, {
             pipelineId: pid,
           });
