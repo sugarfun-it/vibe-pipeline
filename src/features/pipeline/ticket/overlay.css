@@ -1,45 +1,11 @@
 
 
 
-/* ─── TicketDrawer V1 overlay-only rules(prefix stripped, no source counterpart)─── */
-
-.tdrw-drawer {
-  width: var(--drawer-w-ticket, 620px);
-  max-width: calc(100vw - 32px);
-  background: var(--bg-elevated);
-  border-left: 1px solid var(--line-2);
-  border-radius: 0;
-  box-shadow: var(--shadow-drawer-accent);
-}
-/* mobile fullwidth restored 2026-05-27 — overlay.css `max-width: calc(100vw - 32px)`
-   was leaking into mobile and capping drawer at ~343px on 375vw. Restore the
-   canonical mobile take-over (matches shared `.drawer` mobile rule + qa drawer). */
-@media (max-width: 767.98px) {
-  .tdrw-drawer {
-    width: 100vw;
-    max-width: 100vw;
-    border-left: 0;
-    box-shadow: none;
-  }
-}
-/* tdrw-head / tdrw-breadcrumb 的 padding / sizing / font / colour 全走 default
-   .drawer-head / .drawer-crumb(drawer.css),跟 RunHistory / QA drawer 對齊。
-   此處只留 ticket-specific surface treatment(bg-elevated 強化 head 跟 body 的分隔)。 */
-.drawer-head.tdrw-head {
-  background: var(--bg-elevated);
-}
-.drawer-titlerow.tdrw-titlerow {
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.drawer-title.tdrw-title {
-  margin: 4px 0 0;
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.018em;
-  line-height: 1.25;
-  color: var(--fg);
-}
+/* ─── TicketDrawer overlay-only rules ───
+   .tdrw-drawer / .tdrw-head / .tdrw-titlerow / .tdrw-title 的 size / padding / margin /
+   width / shadow / font 全走 SSOT(src/styles/drawer.css)。此 file 不再 override。
+   過去用 .tdrw-drawer { width 620 / shadow accent }、.tdrw-title { 21px } 等差異化,
+   跟 RunHistory / QA drawer 看起來不一致;一律收回 SSOT 18px / 600px / shadow-overlay。 */
 .drawer-meta.tdrw-status-row {
   gap: 8px;
   margin: 0;
@@ -113,18 +79,8 @@
   font-size: 11px;
   color: var(--fg-faint);
 }
-.drawer-body.tdrw-body {
-  padding: 6px 22px 24px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-2) transparent;
-}
-.drawer-body.tdrw-body::-webkit-scrollbar {
-  width: 8px;
-}
-.drawer-body.tdrw-body::-webkit-scrollbar-thumb {
-  background: var(--line-2);
-  border-radius: 4px;
-}
+/* .tdrw-body padding / scrollbar 全走 SSOT(.drawer-body)。過去 padding 6px 22px 24px
+   跟自訂 scrollbar 拔除。 */
 .tdrw-section-label.tdrw-section-title {
   display: inline-flex;
   align-items: center;

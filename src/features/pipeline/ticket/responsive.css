@@ -74,19 +74,9 @@
   }
 }
 
-/* mobile:breadcrumb 走 normal flow(pipelineName › Ticket #N + X 同 row),跟 RunHistory / QA
-   drawer 同 head 結構。原 absolute X + 獨立 mobile-context row 設計拔掉 — 跨 drawer family 統一。
-   title / status row 仍壓緊垂直節奏,讓 ticket 內容更早進 viewport(TDRW-STRUCT-001 保留)。 */
-@media (max-width: 640px) {
-  .tdrw-drawer .tdrw-title {
-    margin-block: 4px 6px;
-    font-size: 20px;
-    line-height: 1.25;
-  }
-  .tdrw-status-row {
-    margin-bottom: 8px;
-  }
-  /* breadcrumb 內 pipelineName 在窄寬下可 ellipsis,X 始終可見 */
+/* mobile breadcrumb 內 pipelineName 在窄寬下 ellipsis,X 始終可見。
+   title / status row 的 mobile sizing 全走 SSOT,不在此 file override。 */
+@media (max-width: 767.98px) {
   .tdrw-breadcrumb > .mono:first-child {
     overflow: hidden;
     text-overflow: ellipsis;
