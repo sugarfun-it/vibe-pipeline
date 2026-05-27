@@ -288,4 +288,11 @@
     min-width: 44px;
     min-height: 44px;
   }
+  /* --lg 的 12px padding 是 desktop「inline 接 long breadcrumb 拉開誤觸」用的;
+     mobile breadcrumb 已 display:none(只剩 X),保留 padding 會讓 TicketDrawer X
+     比其他 drawer(RunHistory / QA / Settings / BrowseModal)大一圈視覺不一致。
+     mobile 一律砍回 0 → 全 drawer family X 都 44×44。 */
+  .drawer-close.drawer-close--lg {
+    padding: 0;
+  }
 }
