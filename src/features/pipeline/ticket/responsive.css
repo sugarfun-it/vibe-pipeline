@@ -74,62 +74,10 @@
   }
 }
 
-/* td-003:mobile 隱藏完整 breadcrumb,改顯單行 pipeline/<name> · Ticket #N */
-.tdrw-mobile-context {
-  display: none;
-}
+/* mobile:breadcrumb 走 normal flow(pipelineName › Ticket #N + X 同 row),跟 RunHistory / QA
+   drawer 同 head 結構。原 absolute X + 獨立 mobile-context row 設計拔掉 — 跨 drawer family 統一。
+   title / status row 仍壓緊垂直節奏,讓 ticket 內容更早進 viewport(TDRW-STRUCT-001 保留)。 */
 @media (max-width: 640px) {
-  .tdrw-breadcrumb > .mono,
-  .tdrw-breadcrumb > .sep,
-  .tdrw-breadcrumb > .drawer-crumb-spacer {
-    display: none;
-  }
-  /* mobile:breadcrumb row 不佔 flow,close button 浮 absolute 跟 mobile-context 同高。
-     mobile `.drawer-head { padding: 12px 16px }`;absolute top 從 padding-box 邊緣(= head 外邊)算,
-     必須往下偏移 padding-top(12px)才會跟 mobile-context flow row 起點對齊。 */
-  .tdrw-breadcrumb {
-    position: absolute;
-    top: 12px;
-    right: var(--space-2, 8px);
-    z-index: 1;
-    padding: 0;
-    margin: 0;
-  }
-  .tdrw-head {
-    position: relative;
-    padding-right: 56px;  /* 留位給 close button */
-  }
-  .tdrw-mobile-context {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2, 8px);
-    /* min-height 跟 close button 同(44px),align-items:center 讓文字垂直中線對齊 icon */
-    min-height: 44px;
-    padding: 0;
-    margin: 0;
-    font-size: 12px;
-    color: var(--fg-mute);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .tdrw-mobile-context-pipeline {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-  .tdrw-mobile-context-sep {
-    color: var(--fg-faint);
-    flex: 0 0 auto;
-  }
-  .tdrw-mobile-context-ticket {
-    color: var(--fg);
-    flex: 0 0 auto;
-  }
-  /* td-004:mobile 44×44 觸控目標由 shared `.drawer-close` mobile @media 提供,本層不再 override */
-  /* TDRW-STRUCT-001:mobile header 垂直節奏壓緊 — title 上下 margin 縮 / status row 下推縮 / body 分隔 gap 不額外撐高,
-     讓 ticket 內容更早出現在 viewport 內(repeated review 時不必每張 ticket 都先滑過大空白) */
   .tdrw-drawer .tdrw-title {
     margin-block: 4px 6px;
     font-size: 20px;
@@ -138,10 +86,11 @@
   .tdrw-status-row {
     margin-bottom: 8px;
   }
-  .tdrw-mobile-context {
-    min-height: 36px;
-  }
-  .tdrw-breadcrumb {
-    top: 6px;
+  /* breadcrumb 內 pipelineName 在窄寬下可 ellipsis,X 始終可見 */
+  .tdrw-breadcrumb > .mono:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 }

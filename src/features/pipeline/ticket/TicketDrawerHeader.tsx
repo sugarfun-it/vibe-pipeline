@@ -24,7 +24,6 @@ export function TicketDrawerHeader({
 }) {
   return (
     <div className="drawer-head tdrw-head">
-      {/* td-003:desktop 顯完整 breadcrumb;mobile 改 single-line context meta */}
       <div className="drawer-crumb tdrw-breadcrumb">
         <span className="mono">{pipelineName}</span>
         <span className="sep" style={{ color: "var(--fg-faint)" }}>›</span>
@@ -33,7 +32,7 @@ export function TicketDrawerHeader({
         </span>
         <span className="drawer-crumb-spacer" />
         <button type="button"
-          className="drawer-close drawer-close--lg drawer-close--focus-accent create-x tdrw-close"
+          className="drawer-close create-x tdrw-close"
           onClick={onRequestClose}
           title="關閉 (Esc)"
           aria-label="關閉 ticket drawer"
@@ -43,19 +42,9 @@ export function TicketDrawerHeader({
           </svg>
         </button>
       </div>
-      <div className="tdrw-mobile-context" aria-hidden="true">
-        <span className="mono tdrw-mobile-context-pipeline" title={pipelineName}>
-          pipeline/{pipelineName}
-        </span>
-        <span className="tdrw-mobile-context-sep">·</span>
-        <span className="mono tdrw-mobile-context-ticket">
-          Ticket #{String(ticket.n).padStart(2, "0")}
-        </span>
-      </div>
       <div className="drawer-titlerow tdrw-titlerow">
         <div className="drawer-title tdrw-title" id={titleId}>{ticket.title}</div>
       </div>
-      {/* td-005 / td-008:status chip 保留 filled tone 為主狀態,mode/iter 改 meta 文字退一級 */}
       <TicketStatusMeta
         ticket={ticket}
         iterLimit={iterLimit}

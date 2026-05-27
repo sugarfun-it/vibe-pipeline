@@ -7,10 +7,8 @@
   inset: 0;
 }
 
-/* td-004:close X 完全走 shared `.drawer-close` + 變體(drawer.css)。
-   舊版 negative margin-inline-end:-6px 在 mobile 會把 close 蓋到 .tdrw-mobile-context 文字 → 拔掉,
-   roomy padding 改套 .drawer-close--lg、accent outline 改套 .drawer-close--focus-accent。
-   本 file 不再 override close button 的任何視覺(width/height/padding/margin/focus)— 加新規範請改 drawer.css。 */
+/* close X 完全走 shared `.drawer-close`(drawer.css),不在此 file override 任何視覺。
+   加新規範請改 drawer.css。 */
 .tdrw-stage > .drawer-scrim {
   pointer-events: auto;
 }
