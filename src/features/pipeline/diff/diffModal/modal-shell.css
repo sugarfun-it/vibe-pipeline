@@ -102,24 +102,8 @@
   gap: 6px;
   flex-shrink: 0;
 }
-.diff-modal-x {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-  border: 0;
-  background: transparent;
-  color: var(--fg-mute);
-  cursor: pointer;
-  transition: background 100ms, color 100ms;
-  flex-shrink: 0;
-}
-.diff-modal-x:hover {
-  background: var(--hover);
-  color: var(--fg);
-}
+/* diff modal close X 完全走 shared `.drawer-close` + `.drawer-close--focus-accent`(drawer.css)。
+   舊 28×28 / radius:5 / hover 自畫的 36 行 self class 已拔,本 file 不再持有 close button 視覺。 */
 .diff-modal-copy {
   height: 26px;
   padding: 0 10px;
@@ -155,7 +139,6 @@
 .diff-modal-copy.is-copied:hover {
   background: var(--done-soft);
 }
-.diff-modal-x:focus-visible,
 .diff-modal-copy:focus-visible,
 .diff-modal-retry:focus-visible,
 .diff-modal-file-row:focus-visible {

@@ -7,17 +7,10 @@
   inset: 0;
 }
 
-/* td-004:close X 走 shared `.drawer-close`(40×40 desktop / 44×44 mobile 在 drawer.css)。
-   只留 ticket-specific tweaks:icon 周圍 padding + 推右半字、focus 環用 outline(比 shared box-shadow 更顯眼)。 */
-.tdrw-drawer .drawer-close.tdrw-close {
-  padding: var(--space-3, 12px);
-  margin-inline-end: -6px;
-}
-.tdrw-drawer .drawer-close.tdrw-close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  box-shadow: none;
-}
+/* td-004:close X 完全走 shared `.drawer-close` + 變體(drawer.css)。
+   舊版 negative margin-inline-end:-6px 在 mobile 會把 close 蓋到 .tdrw-mobile-context 文字 → 拔掉,
+   roomy padding 改套 .drawer-close--lg、accent outline 改套 .drawer-close--focus-accent。
+   本 file 不再 override close button 的任何視覺(width/height/padding/margin/focus)— 加新規範請改 drawer.css。 */
 .tdrw-stage > .drawer-scrim {
   pointer-events: auto;
 }

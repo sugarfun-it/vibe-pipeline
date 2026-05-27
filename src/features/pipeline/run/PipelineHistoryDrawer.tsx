@@ -62,7 +62,7 @@ export function PipelineHistoryDrawer({
           <span className="drawer-crumb-spacer" />
           <button
             type="button"
-            className="create-x"
+            className="drawer-close create-x"
             onClick={onClose}
             title="關閉執行紀錄 (Esc)"
             aria-label="關閉執行紀錄"

@@ -51,7 +51,7 @@ export function BrowseProjectModal({
               <div id="browse-modal-title" className="modal-title">選擇專案資料夾</div>
               <button
                 type="button"
-                className="icon-btn browse-modal-close"
+                className="drawer-close"
                 onClick={() => {
                   if (busy) return;
                   setBrowseOpen(false);

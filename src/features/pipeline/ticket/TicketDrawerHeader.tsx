@@ -33,7 +33,7 @@ export function TicketDrawerHeader({
         </span>
         <span className="drawer-crumb-spacer" />
         <button type="button"
-          className="drawer-close create-x tdrw-close"
+          className="drawer-close drawer-close--lg drawer-close--focus-accent create-x tdrw-close"
           onClick={onRequestClose}
           title="關閉 (Esc)"
           aria-label="關閉 ticket drawer"

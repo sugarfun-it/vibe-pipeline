@@ -70,7 +70,7 @@ export function DiffModalHeader({
         )}
         <button
           type="button"
-          className="drawer-close diff-modal-x"
+          className="drawer-close drawer-close--focus-accent"
           onClick={onClose}
           title="關閉 (Esc)"
           aria-label="關閉差異視窗 (Esc)"

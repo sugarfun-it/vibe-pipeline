@@ -26,30 +26,9 @@
   margin-bottom: 4px;
 }
 
-.browse-modal-close {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  color: var(--fg-mute);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease;
-}
-
-.browse-modal-close:hover:not(:disabled),
-.browse-modal-close:focus-visible {
-  background: var(--hover);
-  color: var(--fg);
-}
-
-.browse-modal-close:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
+/* browse modal close X 完全走 shared `.drawer-close`(drawer.css)。
+   舊 28×28 + 自己 hover/focus/disabled 共 50 行 ad-hoc 規則(含 coarse-pointer 44×44 拷貝)已拔,
+   coarse-pointer 44×44 改由 shared mobile @media 提供。本 file 不再持有 close button 視覺。 */
 
 /* 目前位置:強化 hierarchy(label + 路徑)— directory-picker 味,讓 user 一眼定位
    比舊版單行 mono 灰字更易掃描(advisor topbar-006:browse modal 太薄弱,需要更明顯的
@@ -120,10 +99,7 @@
     padding-top: 10px;
     padding-bottom: 10px;
   }
-  .browse-modal-close {
-    width: 44px;
-    height: 44px;
-  }
+  /* .browse-modal-close 44×44 已由 shared .drawer-close mobile @media 提供,本層不再 override */
   .browse-entry {
     min-height: 44px;
   }

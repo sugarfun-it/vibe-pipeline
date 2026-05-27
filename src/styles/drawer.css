@@ -140,9 +140,16 @@
 /* Canonical sizing + visual treatment. Positioning is left to the component:
    - Drawers (Ticket / PipelineHistory / QA): inline at end of .drawer-crumb,
      pushed right by .drawer-crumb-spacer.
-   - Modals (Diff / Confirm / SyncConflict): inline within their head row.
+   - Modals (Diff / Confirm / SyncConflict / Browse): inline within their head row.
    - Mobile: components may switch to absolute positioning (see TicketDrawer
-     mobile rule). Sizing bumps to 44x44 touch target. */
+     mobile rule). Sizing bumps to 44x44 touch target.
+
+   LINT: consumers MUST NOT override width / height / min-* / padding / margin /
+   border / border-radius / background / color / focus-ring of .drawer-close.
+   For larger touch padding (e.g. TicketDrawer) add the .drawer-close--lg variant.
+   For a sharper accent focus ring (e.g. TicketDrawer / DiffModal historical
+   look) add the .drawer-close--focus-accent variant. Anything else: extend this
+   block, do not patch from the consumer. */
 .drawer-close,
 .drawer-head .create-x {
   min-width: 40px;
@@ -166,6 +173,27 @@
 .drawer-head .create-x:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+.drawer-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* --lg variant: roomier hit padding for drawers whose close X sits inline with
+   a long breadcrumb (TicketDrawer). Padding still expands the box from the same
+   shared baseline — desktop 40+24 / mobile 44+24 — so vertical alignment stays
+   consistent with non-lg drawers. */
+.drawer-close.drawer-close--lg {
+  padding: var(--space-3, 12px);
+}
+
+/* --focus-accent variant: 2px solid accent outline instead of the canonical
+   box-shadow focus-ring. Used where the drawer surface already carries a
+   strong drop shadow (TicketDrawer, DiffModal) and the soft ring blends in. */
+.drawer-close.drawer-close--focus-accent:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 /* ── Body ───────────────────────────────────────────────────── */
