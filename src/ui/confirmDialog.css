@@ -118,14 +118,8 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 1px var(--panel, #fff);
 }
-.btn-danger {
-  background: var(--failed);
-  color: var(--danger-fg, var(--status-dark-fg, #1c0808));
-  border-color: var(--failed);
-}
-.btn-danger:hover {
-  filter: brightness(1.08);
-}
+/* .btn-danger 走 SSOT(src/styles/board/btn-extras.css)。
+   過去這裡 redefine background / color / hover,跟 RunButton 等其他 .btn-danger 不一致 — 拔除。 */
 /* iter-uiux-2026-05-24 confirm-dialog.standard r2 std-chip-strengthen —
    原本 font-size:10px + opacity:0.7 chip 視覺像裝飾符,讀不出是按鍵提示。
    套上 panel-2 背景 + 細邊框,明顯成「鍵盤按鍵」chip;字級略升、opacity 拿掉

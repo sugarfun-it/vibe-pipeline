@@ -120,7 +120,7 @@ export function TicketActions({
       {/* td-011:delete 走 ConfirmDialog 「永久刪除」label + danger tone(bg-soft + danger-border) */}
       {onDeleteTicket && isDeletable(ticket) && (
         <button type="button"
-          className="tdrw-action tdrw-action-danger tdrw-delete-btn tdrw-delete-icon"
+          className="tdrw-action btn-danger btn-ghost tdrw-delete-icon"
           disabled={deletePending}
           aria-busy={deletePending || undefined}
           aria-label={`刪除 ticket「${ticket.title}」`}
