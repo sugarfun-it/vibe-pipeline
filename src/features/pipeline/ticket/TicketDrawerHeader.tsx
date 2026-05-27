@@ -26,10 +26,6 @@ export function TicketDrawerHeader({
     <div className="drawer-head tdrw-head">
       <div className="drawer-crumb tdrw-breadcrumb">
         <span className="mono">{pipelineName}</span>
-        <span className="sep" style={{ color: "var(--fg-faint)" }}>›</span>
-        <span className="mono" style={{ color: "var(--fg-mute)" }}>
-          Ticket #{String(ticket.n).padStart(2, "0")}
-        </span>
         <span className="drawer-crumb-spacer" />
         <button type="button"
           className="drawer-close create-x tdrw-close"
