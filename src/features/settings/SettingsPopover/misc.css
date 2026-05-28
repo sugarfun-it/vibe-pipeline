@@ -28,8 +28,9 @@
     max-height: 100vh !important;
     max-height: 100dvh !important;
     margin: 0 !important;
-    /* refined:padding-top 56px 給 close button 獨立 header strip */
-    padding: 56px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    /* close button 已併入 .settings-popover-header 同排,不再需要 top strip;
+       top padding 改 safe-area-aware,避免撞瀏海 / status bar */
+    padding: max(14px, env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom)) !important;
     border-radius: 0 !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
@@ -84,17 +85,8 @@
     padding-bottom: 8px;
   }
 
-  /* 右上關閉 icon — size(44×44)走 shared `.drawer-close` mobile @media,本層只 override 定位。 */
-  .settings-popover-close {
-    top: 6px;
-    right: 8px;
-  }
-
-  /* saved chip:mobile 維持靠近 close 的浮動位置(top 略上對齊大顆 close) */
-  .settings-popover-saved {
-    top: 14px;
-    right: 60px;
-  }
+  /* close icon size(44×44)走 shared `.drawer-close` mobile @media;
+     定位已不需要 — close 跟 saved chip 都在 .settings-popover-header flex row 內(非 absolute)。 */
 
   /* Project tab field rows — mobile 全 row stack */
   .settings-field-row {
