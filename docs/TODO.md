@@ -47,26 +47,12 @@ Phase 8 候選清單。動工時搬進 pipeline ticket(`vbpl ticket add --pipeli
 - 同樣問題也存在主 agent 派 Task sub-agent(無 critic 全靠 user review);本 TODO 先解 VP path,Task 路徑靠紀律
 - 規格待寫;先補 ref doc 拆設計細節
 
-### 6. Primitive ownership cleanup — Popover / form-field 共用元件職責邊界
+### 6. Primitive polish 殘留(ownership cleanup 主體已落地)
 
-- 2026-05-24 iter-uiux 6 輪 review SettingsPopover + Rail + OverflowMenu 後浮出的設計系統成熟度議題:T4-T11 refactor 把 overlay / popover / form primitive 拉出來,但 consumer 端的舊 CSS 沒同步清乾淨,跟 primitive 內部邏輯打架。已撞過至少 3 次 regression:
-  - **r5**: `.focus-overflow-menu` 留 `position: absolute; right: 0;` 跟 Popover JS-computed `left` 打架 → menu 拉伸到 viewport 邊
-  - **r6**: 修 r5 順手把 `z-index: 1000` 一起刪 → Popover portal 沒 z-index 被頁面 stacking 蓋
-  - **r3**: `.form-field { width: 100% }`(forms.css)蓋過 `.settings-form-field { width: auto }` → input wrapper 撐滿欄寬擠掉 inline-unit
-- 共通根因:**primitive 對「自己該負責什麼」沒講清楚**,consumer 還自己處理位置 / 寬度 / z-index 等,加新 consumer 就重複踩雷
-- 範圍(本 ticket 處理):
-  1. **Popover 自己負責 z-index** — primitive 該設,不該散在 8 個 `.xxx-menu` class。可走 `--popover-z` CSS var on root,或 Popover 內加 wrapper class `.popover-surface` 帶 z-index;React `CSSProperties` 對 CSS var string 不友善要 cast hack,所以走 CSS class 比 inline style 乾淨
-  2. **拆 `.focus-overflow-menu` 職責** — 一份共用 `.menu-surface`(背景 / 邊框 / 陰影 / 內距),consumer 各自 `.xxx-menu` 只放 size / variant。**禁設 position / top / right / left**(注釋 + lint?)
-  3. **`.form-field` 跟 `.settings-form-field` width 衝突** — 系統化處理:form primitive 提供 `inline` / `block` variant prop,不靠 consumer 用 specificity 蓋
-  4. **settings field group primitive** — codex round 3 P3-08 / round 2 P3-04 都提過:`.settings-field-row` + label col 寬度 + hint 對齊 + mobile stack 重複出現在 ProjectTab / AITab / NotificationsTab / UpdateTab。抽成 `<SettingsField label="..." hint="...">` component
-  5. **audit 其他 primitive** — Overlay / TextField / NumberField / PickerSelect 各自有沒有類似 consumer 端 stale CSS leak
-- 落點:`src/ui/Popover.tsx` / `src/ui/forms/forms.css` / `src/features/pipeline/focus.css` / 新增 `src/ui/menu/menu.css`(or 類似)/ 新增 `src/ui/forms/SettingsField.tsx`
-- 規模:中(~5 個檔變動,~15 處 consumer 改),iter 模式 critic 多輪查 visual regression
-- 風險:動既有共用 class 會波及多處(Rail / OverflowMenu / SettingsPopover / 各 Settings tab)— ship 前要全 popover 開一遍 + 全 settings tab 切一遍人工 visual 驗
-- **2026-05-24 iter-uiux Phase 4 補加項**(同一根因):
-  - **Overlay primitive rename + ref-counted scroll-lock** — 6 個 overlay caller 各自 inert / scroll-lock 自己管,沒中央 ref-count → 多重 overlay open 時 race。primitive 該擁有
-  - **toggle-pill iOS-switch 重設計** — 目前 `.toggle-pill` 在 disabled / off 之間視覺難分,Phase 4 只加 scope hack;真解是換 native iOS-switch pattern(track / thumb / labels 對齊),全 app `.toggle-pill` consumer 跟著改
-  - **OverflowMenu copy migration to `descriptionRich`** — ConfirmDialog 在 Phase 4 加了 `descriptionRich?: ReactNode` API,但 OverflowMenu 內部 confirm 還用舊 string 字串,沒享 rich text(粗體 / 行高 / icon)— 屬 primitive consumer migration
+> 核心 ownership cleanup(Popover z-index / `.menu-surface` 拆 / form-field inline-block variant / 抽 `<SettingsField>` / Overlay ref-counted scroll-lock)已落地,見「已落地」段。只剩兩個 Phase-4 polish:
+
+- **toggle-pill 換 native iOS-switch pattern** — 目前 `.toggle-pill`(`src/styles/board/toggle-pill.css`)是 pill + border 變色,`is-on` 靠邊框/底色區分,off / disabled 視覺仍偏弱。真解換 track / thumb / labels 的 iOS-switch,全 app `.toggle-pill` consumer 跟著改。規模:小-中(1 個 css + ~14 處 consumer 視覺驗)
+- **OverflowMenu copy migration to `descriptionRich`** — ConfirmDialog 已有 `descriptionRich?: ReactNode` API,但 OverflowMenu 內部 confirm 還用舊 string,沒享 rich text(粗體 / 行高 / icon)。規模:小(consumer migration)
 
 ### 7. EmptyProject CTA → 提升 shared context
 
@@ -121,4 +107,6 @@ Phase 8 候選清單。動工時搬進 pipeline ticket(`vbpl ticket add --pipeli
 - ~~FCM push gateway~~ — fcm-gateway pipeline t1-t5 落地(2026-05-19);Cloud Run asia-east1 / Firestore per-token registry / max-instances=1 / $1 budget alert / backend 拔 firebase-admin 改 POST gateway(hard cutover)。ref → [`refs/archive/fcm-push-gateway-2026-05-17.md`](refs/archive/fcm-push-gateway-2026-05-17.md)
 - ~~pause-simplify 8 follow-up bug~~ — 2026-05-19 verify 後全 ship。B1-B5 已落地 / B6-B7 pause-simplify 主軸已 ship / B8 phase8 t5 順手覆蓋 / B9 = TODO #2 runner lifecycle。ref → [`refs/pause-simplify-run-postmortem-2026-05-17.md`](refs/pause-simplify-run-postmortem-2026-05-17.md)
 - ~~Runner + QA spawn 限制鬆綁:MCP + slash commands 拿掉~~ — 2026-05-23 ship。`claudeAdapter.ts` spawnRunner / spawnQA 拿掉 `--strict-mcp-config` + `--mcp-config` + `--disable-slash-commands`。Runner / QA 現在能用 user 配的 MCP(codegraph)+ `superpowers:*` / project skill;QA 仍禁 Edit/Write/Task。Split / codex path 不動。
+- ~~Primitive ownership cleanup 主體(#6)~~ — `frontend-primitives-refactor` pipeline(17 tickets,merged)+ 後續 follow-up 落地。Overlay / Popover / TextField / NumberField primitive 抽出 + consumer migration;Popover 自帶 `.popover-surface` z-index(`tokens.css`);`.focus-overflow-menu` 拆共用 `.menu-surface`(`src/ui/menu/menu.css`);form-field 改 `.form-field--inline` modifier + `inline` prop 取代 specificity hack;抽 `<SettingsField>`(`src/features/settings/SettingsField.tsx`);Overlay module-level `scrollLockCount` ref-count。殘留 toggle-pill iOS-switch + OverflowMenu descriptionRich 兩小項留 active #6。
+- ~~server/lib 五層分層重構~~ — 2026-05-28 落地(push 至 `248c8aa`)。io / domain / remote / system / services 分層 + `pipelineDir.ts` 拆 `domain/{projectDir,projectConfig,pipeline,mergeTicket}`;186 import 改寫,build + e2e 93 passed。design / plan → [`refs/2026-05-28-server-lib-restructure-design.md`](refs/2026-05-28-server-lib-restructure-design.md)。
 - ~~Merge 前 secret 洩漏偵測~~ — 2026-05-19 決定不做(scope creep)。`.worktreeinclude` 第一層已落地(消除 AI hardcode 誘因);plan B 自製 secret scanner 越界(VP 是 pipeline orchestrator,不該管 user repo 安全)。建議 user 自己裝 gitleaks pre-commit hook(廣 pattern + 業界標準)。ref → [`refs/archive/worktree-env-2026-05-15.md`](refs/archive/worktree-env-2026-05-15.md)
