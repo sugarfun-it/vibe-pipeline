@@ -18,8 +18,8 @@
     0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent) inset,
     0 32px 96px rgba(0,0,0,0.45),
     0 4px 18px rgba(0,0,0,0.35);
-  /* padding-top 44 保 close button 獨立 strip,不跟 segmented tabs 撞 */
-  padding: 44px 18px 14px;
+  /* close button + tabs + saved chip 同排於 .settings-popover-header,不再需要 top strip */
+  padding: 14px 18px 14px;
   z-index: var(--z-settings, 1500);
   font-size: 13px;
 }
@@ -31,25 +31,31 @@ html.light .settings-popover {
     0 4px 18px rgba(28,25,22,0.10);
 }
 
+/* ─── Header row(segmented tabs + saved chip + close 同一排)─────── */
+.settings-popover-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
 /* 右上關閉 icon — 視覺(size / padding / border / hover / focus)走 shared `.drawer-close`
-   (drawer.css);本層只負責定位(popover header strip 內 absolute top-right)+ z-index。 */
+   (drawer.css);本層只負責它在 header row 內的位置(normal flow,不縮)。 */
 .settings-popover-close {
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  z-index: 2;
+  flex-shrink: 0;
 }
 
 /* ─── Tab bar(segmented pill control)──────────────────────────── */
 
-/* 不再 position: relative — 讓 saved chip 的 absolute 錨點走 popover,
-   chip 浮在 close button 旁的 header strip 內,不擠壓 tabs 寬度 */
+/* header row 內 flex:1 撐開;margin 由 .settings-popover-header 負責 */
 .settings-popover-tabs {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 3px;
-  margin: 0 0 16px;
+  margin: 0;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -89,20 +95,14 @@ html.light .settings-popover-tab.is-active {
   border-radius: 6px;
 }
 
-/* spacer 失效 — saved chip 改 absolute 不需要它 push */
-.settings-popover-tabs-spacer { display: none; }
-
-/* 已儲存 chip:floats free,top-right beside close.
-   不再寄生在 tabs 內,避免擠壓最右 tab 寬度 */
+/* 已儲存 chip:header row 內 inline,X 左側;不縮、不換行 */
 .settings-popover-saved {
-  position: absolute;
-  top: 15px;
-  right: 54px;
+  flex-shrink: 0;
   margin: 0;
+  white-space: nowrap;
   color: var(--done);
   background: color-mix(in srgb, var(--done) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--done) 30%, var(--line));
-  z-index: 3;
   transition: opacity 350ms ease;
 }
 .settings-popover-saved.is-fading { opacity: 0; }

@@ -122,45 +122,34 @@ export function SettingsPopover({
       autoFocusFirstItem={false}
       manageRovingFocus={false}
     >
-      <button
-        type="button"
-        className="drawer-close settings-popover-close"
-        onClick={onClose}
-        aria-label="關閉設定"
-        title="關閉"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-          <path d="M6 6l12 12M18 6 6 18" />
-        </svg>
-      </button>
-
-      <div
-        ref={tablistRef}
-        className="settings-popover-tabs"
-        role="tablist"
-        aria-label="設定分頁"
-      >
-        {tabs.map((t, idx) => {
-          const isActive = activeTab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              id={tabId(t.key)}
-              aria-selected={isActive}
-              aria-controls={panelId(t.key)}
-              tabIndex={isActive ? 0 : -1}
-              data-tab-key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              onKeyDown={(e) => onTabKey(e, idx)}
-              className={"settings-popover-tab" + (isActive ? " is-active" : "")}
-            >
-              {t.label}
-            </button>
-          );
-        })}
-        <span className="settings-popover-tabs-spacer" />
+      <div className="settings-popover-header">
+        <div
+          ref={tablistRef}
+          className="settings-popover-tabs"
+          role="tablist"
+          aria-label="設定分頁"
+        >
+          {tabs.map((t, idx) => {
+            const isActive = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                id={tabId(t.key)}
+                aria-selected={isActive}
+                aria-controls={panelId(t.key)}
+                tabIndex={isActive ? 0 : -1}
+                data-tab-key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                onKeyDown={(e) => onTabKey(e, idx)}
+                className={"settings-popover-tab" + (isActive ? " is-active" : "")}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
         {savedVisible && (
           <span
             className={"chip settings-popover-saved" + (savedFading ? " is-fading" : "")}
@@ -171,6 +160,17 @@ export function SettingsPopover({
             已儲存 <CheckIconSm aria-hidden />
           </span>
         )}
+        <button
+          type="button"
+          className="drawer-close settings-popover-close"
+          onClick={onClose}
+          aria-label="關閉設定"
+          title="關閉"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
       </div>
 
       <div
