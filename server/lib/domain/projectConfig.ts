@@ -3,8 +3,8 @@
 
 import { join } from "node:path";
 import { existsSync } from "node:fs";
-import { atomicWriteJson } from "../atomicWrite";
-import { currentBranch } from "../git";
+import { atomicWriteJson } from "../io/atomicWrite";
+import { currentBranch } from "../io/git";
 import * as projectDir from "./projectDir";
 
 export const DEFAULT_MAX_PARALLEL = 2;
