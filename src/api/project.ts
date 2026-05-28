@@ -14,10 +14,6 @@ export function removeRecent(hash: string): Promise<{ removed: boolean }> {
   return call<{ removed: boolean }>(`/api/projects/${hash}`, { method: "DELETE" });
 }
 
-export function selectFolder(): Promise<{ path: string }> {
-  return call<{ path: string }>("/api/projects/select", { method: "POST" });
-}
-
 export type BrowseResult = {
   path: string;
   parent: string | null;
@@ -88,10 +84,4 @@ export function updateConfig(
     body: patch,
     signal,
   });
-}
-
-export type RuntimeStats = { runningCount: number; maxParallel: number };
-
-export function getRuntime(hash: string): Promise<RuntimeStats> {
-  return call<RuntimeStats>(`/api/projects/${hash}/runtime`);
 }

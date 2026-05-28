@@ -341,11 +341,3 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
     </div>
   );
 }
-
-// 給外部「手動 render stage」的需求(若 ToastProvider 之外想另外擺位置可單獨用)。
-// 預設 ToastProvider 已內含 stage,正常情況不需要再 render 這個。
-export function ToastStage() {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("ToastStage 要在 ToastProvider 內用");
-  return null;
-}

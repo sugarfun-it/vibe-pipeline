@@ -17,7 +17,6 @@ export function InboxItem({
   onDismiss: (id: string) => void;
   onClick: () => void;
 }) {
-  void onMarkRead;
   const c = SEV_COLOR[item.sev];
   const ariaLabel = (() => {
     const parts: string[] = [];

@@ -7,18 +7,6 @@ export function listNotifs(hash: string): Promise<NotifRecord[]> {
   return call<NotifRecord[]>(`/api/projects/${hash}/notifs`);
 }
 
-export type PostNotifBody = {
-  type: "frontend_action_failed" | "frontend_action_warn" | "frontend_action_info";
-  title: string;
-  sub?: string;
-  pipelineId?: string;
-  sev?: "block" | "info" | "muted";
-};
-
-export function postNotif(hash: string, body: PostNotifBody): Promise<NotifRecord> {
-  return call<NotifRecord>(`/api/projects/${hash}/notif`, { method: "POST", body });
-}
-
 export function markNotifRead(hash: string, id: string): Promise<{ ok: true }> {
   return call<{ ok: true }>(`/api/projects/${hash}/notifs/${id}/read`, { method: "POST" });
 }

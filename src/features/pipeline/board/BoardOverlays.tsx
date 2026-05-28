@@ -50,7 +50,7 @@ export const BoardOverlays = memo(function BoardOverlays({
   actionError: string | null;
   setActionError: (msg: string | null) => void;
 }) {
-  const { setProject, bumpReload, notifyError, notifyWarn, notifyInfo } = useActiveProjectContext();
+  const { setProject, bumpReload, notifyError, notifyInfo } = useActiveProjectContext();
 
   const initOverlay = !project.hasInit && !popupDismissed ? (
     <InitPopup
@@ -213,9 +213,6 @@ export const BoardOverlays = memo(function BoardOverlays({
       </button>
     </div>
   ) : null;
-
-  // Suppress unused warning for notifyWarn (kept in case caller wants symmetry)
-  void notifyWarn;
 
   return (
     <>

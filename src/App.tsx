@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { BoardScreen } from "./features/pipeline/board/BoardScreen";
 import { ConfirmProvider } from "./ui/ConfirmDialog";
-import { ToastProvider, ToastStage } from "./ui/Toast";
+import { ToastProvider } from "./ui/Toast";
 import { OnlineStatusBadge } from "./shell/OnlineStatusBadge";
 import { ProjectPickerProvider } from "./contexts/ProjectPickerContext";
 import { initFCM, setupForegroundHandler } from "./lib/fcm";
@@ -81,7 +81,6 @@ export default function App() {
         <ProjectPickerProvider>
           <OnlineStatusBadge />
           <BoardRoute />
-          <ToastStage />
         </ProjectPickerProvider>
       </ToastProvider>
     </ConfirmProvider>

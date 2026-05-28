@@ -153,9 +153,6 @@ export const DotsHorizontalIcon = (p: IconProps) => (
   </svg>
 );
 
-// alias used by codex spec
-export const MoreHorizontalIcon = DotsHorizontalIcon;
-
 // 取代 raw glyph `⎇`(branch / worktree)— Lucide `git-branch` 官方路徑:
 // 主幹上端線(無 dot)、右上分支點、左下主 commit 點、分支弧線回主幹。
 // 比 3-dot 版視覺更乾淨,12×12 對齊 CJK 高度。
@@ -235,12 +232,6 @@ export const FileIcon = (p: IconProps) => (
     <path d="M14 3v5h5" />
   </svg>
 );
-
-// 取代 raw glyph `⚠`(warning;同 WarnIcon,提供與 codex spec 對齊的命名)
-export const WarningIcon = WarnIcon;
-
-// alias used by codex spec
-export const AlertTriangleIcon = WarnIcon;
 
 // 取代外連結 glyph(↗ 等)
 export const ExternalLinkIcon = (p: IconProps) => (
