@@ -84,15 +84,8 @@ export function TicketDrawer({
     onClose();
   }
 
-  const spec = ticket as unknown as {
-    goal?: string;
-    acceptance?: string[];
-    prompt?: string;
-    iterLimit?: number;
-    iterStopAtLimit?: boolean;
-  };
   const isDone = ticket.status === "done";
-  const iterLimit = spec.iterLimit ?? 5;
+  const iterLimit = ticket.iterLimit ?? 5;
   const iterCurrent = ticket.iter?.current ?? 0;
 
   const showActions =
@@ -153,9 +146,9 @@ export function TicketDrawer({
           {/* outcome / iter rounds 永遠優先(user 主要關心動態進度 / 結果),spec 排後面 */}
           <OutcomeSections ticket={ticket} />
           <SpecSections
-            goal={spec.goal}
-            acceptance={spec.acceptance}
-            prompt={spec.prompt}
+            goal={ticket.goal}
+            acceptance={ticket.acceptance}
+            prompt={ticket.prompt}
             isDone={isDone}
           />
           {/* pipeline 執行紀錄已移到 pipeline header OverflowMenu「執行紀錄」(整 pipeline scope,不該塞 ticket drawer) */}

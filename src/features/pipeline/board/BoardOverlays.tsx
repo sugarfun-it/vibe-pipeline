@@ -6,20 +6,9 @@ import * as api from "../../../api";
 import * as qaApi from "../../../api/qa";
 import type { Pipeline, Ticket } from "../../../../shared/types";
 import type { Project } from "../../../../shared/types";
+import type { TicketSpec } from "../../../api/qa";
+import type { QAApi } from "../../qa/useQA";
 import { useActiveProjectContext } from "../../../contexts/ActiveProjectContext";
-
-type QaLike = {
-  state: {
-    open: boolean;
-    pipelineId: string | null;
-    draft?: any;
-    busy?: boolean;
-  };
-  sendTurn: (...args: any[]) => any;
-  cancel: (...args: any[]) => any;
-  close: (...args: any[]) => any;
-  finalize: (edits: any, splitInto: any) => Promise<unknown>;
-};
 
 export const BoardOverlays = memo(function BoardOverlays({
   project,
@@ -40,7 +29,7 @@ export const BoardOverlays = memo(function BoardOverlays({
   pipelines: Pipeline[];
   setPipelines: React.Dispatch<React.SetStateAction<Pipeline[]>>;
   active: Pipeline | undefined;
-  qa: QaLike;
+  qa: QAApi;
   openTicket: Ticket | null;
   setOpenTicket: (t: Ticket | null) => void;
   splittingTicketId: string | null;
@@ -73,11 +62,9 @@ export const BoardOverlays = memo(function BoardOverlays({
       onSendTurn={qa.sendTurn}
       onCancel={qa.cancel}
       onClose={qa.close}
-      onFinalize={async (edits: any, splitInto: any) => {
+      onFinalize={async (edits?: Partial<TicketSpec>, splitInto?: TicketSpec[]) => {
         try {
-          const result = (await qa.finalize(edits, splitInto)) as
-            | { pipeline: Pipeline; tickets: Array<{ id: string }>; splitCount: number }
-            | null;
+          const result = await qa.finalize(edits, splitInto);
           if (result) {
             setPipelines((arr) =>
               arr.map((p) => (p.id === result.pipeline.id ? result.pipeline : p))

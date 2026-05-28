@@ -1,21 +1,32 @@
 // Pipeline CRUD + lifecycle actions(worktree / reset / run / pause / merge)。
 
 import { call } from "./_client";
+import type { Pipeline } from "../../shared/types";
 
-export function listPipelines(hash: string): Promise<unknown[]> {
-  return call<unknown[]>(`/api/projects/${hash}/pipelines`);
+// createPipeline 送的 body:無 id(backend 生),其餘 pipeline 欄位可帶
+export type CreatePipelineBody = {
+  name: string;
+  branch: string;
+  baseBranch?: string;
+  state?: Pipeline["state"];
+  tickets?: Pipeline["tickets"];
+  autoMerge?: boolean;
+};
+
+export function listPipelines(hash: string): Promise<Pipeline[]> {
+  return call<Pipeline[]>(`/api/projects/${hash}/pipelines`);
 }
 
-export function createPipeline(hash: string, body: unknown): Promise<unknown> {
-  return call<unknown>(`/api/projects/${hash}/pipelines`, { method: "POST", body });
+export function createPipeline(hash: string, body: CreatePipelineBody): Promise<Pipeline> {
+  return call<Pipeline>(`/api/projects/${hash}/pipelines`, { method: "POST", body });
 }
 
-export function getPipeline(hash: string, id: string): Promise<unknown> {
-  return call<unknown>(`/api/projects/${hash}/pipelines/${id}`);
+export function getPipeline(hash: string, id: string): Promise<Pipeline> {
+  return call<Pipeline>(`/api/projects/${hash}/pipelines/${id}`);
 }
 
-export function savePipeline(hash: string, id: string, body: unknown): Promise<unknown> {
-  return call<unknown>(`/api/projects/${hash}/pipelines/${id}`, { method: "PUT", body });
+export function savePipeline(hash: string, id: string, body: Pipeline): Promise<Pipeline> {
+  return call<Pipeline>(`/api/projects/${hash}/pipelines/${id}`, { method: "PUT", body });
 }
 
 export function deletePipeline(hash: string, id: string): Promise<{ ok: true }> {

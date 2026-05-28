@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import * as qaApi from "../../api/qa";
-import type { Draft, TicketSpec } from "../../api/qa";
+import type { Draft, TicketSpec, FinalizeResp } from "../../api/qa";
 import { useApi } from "../../hooks/useApi";
 import { useToast } from "../../ui/Toast";
 
@@ -193,7 +193,7 @@ export function useQA(projectHash: string | null) {
   // finalize: splitInto 帶就寫 N 張,沒帶就寫 1 張(原本 spec)。
   // 寫成功後關 drawer
   const finalize = useCallback(
-    async (edits?: Partial<TicketSpec>, splitInto?: TicketSpec[]): Promise<unknown | null> => {
+    async (edits?: Partial<TicketSpec>, splitInto?: TicketSpec[]): Promise<FinalizeResp | null> => {
       if (!projectHash || !state.draft) return null;
       const draftId = state.draft.draftId;
       setState((s) => ({ ...s, busy: true }));
@@ -224,3 +224,5 @@ export function useQA(projectHash: string | null) {
     refreshDrafts,
   };
 }
+
+export type QAApi = ReturnType<typeof useQA>;
