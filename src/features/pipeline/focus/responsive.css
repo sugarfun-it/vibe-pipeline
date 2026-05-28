@@ -113,11 +113,11 @@
     display: none !important;
   }
 
-  /* FC-002:ready(merge-ready)pipeline 在 mobile 也隱藏 disabled 「無可執行」—
-     showMergeBanner 已提供「合併入 main」CTA,header 內 disabled button 形同重複 +
-     讓 +ticket 主動作視覺權重被稀釋。透過 .focus-run-wrap[data-pipeline-state="ready"] 鎖定。 */
-  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="ready"],
-  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
+  /* FC-002:showMergeBanner 時 mobile 也隱藏 disabled「無可執行」run button
+     (banner 已提供「合併入 main」CTA,disabled 鈕重複)。
+     只認 .run-btn-empty 變體 — merged/ready 仍可有新 draft/ready ticket 讓 RunButton
+     變可點「執行」,那種要保留(否則無法啟動)。 */
+  .focus-actions[data-show-merge-banner="1"] .focus-run-wrap:has(.run-btn-empty) {
     display: none !important;
   }
 

@@ -72,11 +72,11 @@
   display: inline-flex;
   align-items: center;
 }
-/* FC-003 / FC-009:desktop 也統一 — ready / merged + showMergeBanner 時隱藏 disabled
-   「無可執行 ticket」。ReadyBanner 已是當下唯一 primary CTA,header 的 disabled run
-   button 跨斷點都是冗餘。視覺一致避免 desktop/mobile 兩種版型。 */
-.focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="ready"],
-.focus-actions[data-show-merge-banner="1"] .focus-run-wrap[data-pipeline-state="merged"] {
+/* FC-003 / FC-009:showMergeBanner 時隱藏 disabled「無可執行 ticket」run button
+   (ReadyBanner 已是 primary CTA,disabled 鈕冗餘)。
+   只認 .run-btn-empty 變體 — 不靠 state,因為 merged/ready pipeline 仍可有新加的
+   draft/ready ticket → RunButton 變成可點的「執行」,那種不可藏(否則無法啟動)。 */
+.focus-actions[data-show-merge-banner="1"] .focus-run-wrap:has(.run-btn-empty) {
   display: none;
 }
 /* FC-006(2026-05-25 重寫):inner content 直接 100% 填滿 focus 容器,不再 cap max-width。
