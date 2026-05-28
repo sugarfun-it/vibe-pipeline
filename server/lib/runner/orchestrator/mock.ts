@@ -1,6 +1,6 @@
-import * as pipelineDir from "../../pipelineDir";
-import * as worktree from "../../git/worktree";
-import * as notifs from "../../notifs/store";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
+import * as worktree from "../../io/git/worktree";
+import * as notifs from "../../remote/notifs";
 import * as ticketWatcher from "../ticketWatcher";
 import * as testMode from "../../testMode";
 import { maybeAutoMerge } from "./autoMerge";
@@ -29,7 +29,7 @@ export async function startMockRunner(opts: {
     };
   }
 
-  const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const pipeline = (await readPipeline(projectPath, pipelineId)) as {
     name?: string;
     tickets?: Array<{ id?: string; status?: string; mode?: string; [key: string]: unknown }>;
     [key: string]: unknown;
@@ -159,7 +159,7 @@ export async function startMockRunner(opts: {
         : mockMergeDone
           ? "merged"
           : (script.finalState ?? "ready");
-      const final = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+      const final = (await readPipeline(projectPath, pipelineId)) as {
         tickets?: Array<{ mode?: string; commits?: Array<{ hash?: string }> }>;
         [k: string]: unknown;
       } | null;
@@ -172,7 +172,7 @@ export async function startMockRunner(opts: {
           if (hash) next.mergeCommit = { hash, mergedAt: Date.now() };
         }
         const finalState_ = (final as { state?: unknown }).state;
-        await pipelineDir.writePipeline(projectPath, pipelineId, next, {
+        await writePipeline(projectPath, pipelineId, next, {
           source: "mock-runner-finalize",
           sourceDetail: `mock runner final state=${finalState}`,
           prevStateHint: typeof finalState_ === "string" ? finalState_ : undefined,

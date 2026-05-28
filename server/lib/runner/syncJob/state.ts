@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../pipelineDir";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
 import type { SyncJob } from "../../../../shared/types";
 
 export type PipelineLike = {
@@ -15,19 +15,19 @@ export async function writeSyncJob(
   pipelineId: string,
   job: SyncJob | null
 ): Promise<void> {
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLike | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p) return;
   const prevState = typeof p.state === "string" ? p.state : undefined;
   const source = job === null ? "sync-dismiss" : `sync-${job.state}`;
   if (job === null) {
     const { syncJob: _drop, ...rest } = p;
     void _drop;
-    await pipelineDir.writePipeline(projectPath, pipelineId, rest, {
+    await writePipeline(projectPath, pipelineId, rest, {
       source,
       prevStateHint: prevState,
     });
   } else {
-    await pipelineDir.writePipeline(projectPath, pipelineId, { ...p, syncJob: job }, {
+    await writePipeline(projectPath, pipelineId, { ...p, syncJob: job }, {
       source,
       sourceDetail: job.reason,
       prevStateHint: prevState,

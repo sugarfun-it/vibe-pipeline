@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../lib/pipelineDir";
+import * as pipelineStore from "../../lib/domain/pipeline";
 import { splitTicketSpec, SplitError } from "../../lib/qa/splitTicket";
 import { ok, err } from "../_http";
 import type { Ticket, TicketSpec } from "../../../shared/types";
@@ -16,7 +16,7 @@ export async function splitTicket(
   if ("error" in r) return r.error;
   const { project } = r;
 
-  const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
+  const pipeline = (await pipelineStore.readPipeline(project.path, pipelineId)) as {
     tickets?: Array<Record<string, unknown>>;
     [k: string]: unknown;
   } | null;
@@ -70,7 +70,7 @@ export async function splitTicket(
   let notFound = false;
   let stateConflict = false;
   try {
-    await pipelineDir.mutatePipeline(project.path, pipelineId, (p) => {
+    await pipelineStore.mutatePipeline(project.path, pipelineId, (p) => {
       const cur = Array.isArray(p.tickets) ? p.tickets : [];
       const curIdx = cur.findIndex((t) => t.id === ticketId);
       if (curIdx === -1) {

@@ -10,7 +10,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runTurn } from "../../server/lib/qa/claudeCli";
-import { patchUserConfig, loadUserConfig, writeUserConfig } from "../../server/lib/userConfig";
+import { patchUserConfig, loadUserConfig, writeUserConfig } from "../../server/lib/domain/userConfig";
 
 const cwd = mkdtempSync(join(tmpdir(), "vp-qa-codex-"));
 const userMessage = "想把 vibe-pipeline 的 TopBar 加個 keyboard shortcuts cheatsheet 浮窗,按 ? 開";

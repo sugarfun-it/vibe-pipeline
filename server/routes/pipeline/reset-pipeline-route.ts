@@ -1,7 +1,7 @@
-import * as pipelineDir from '../../lib/pipelineDir';
-import * as git from '../../lib/git';
+import * as pipelineStore from '../../lib/domain/pipeline';
+import * as git from '../../lib/io/git';
 import * as orchestrator from '../../lib/runner/orchestrator';
-import * as worktree from '../../lib/git/worktree';
+import * as worktree from '../../lib/io/git/worktree';
 import { ok, err, withPipeline } from '../_http';
 
 // POST /api/projects/:hash/pipelines/:id/reset
@@ -37,7 +37,7 @@ export async function resetPipelineRoute(hash: string, pipelineId: string): Prom
     }
 
     // 3. reset pipeline state + tickets
-    await pipelineDir.mutatePipeline(project.path, pipelineId, (p) => {
+    await pipelineStore.mutatePipeline(project.path, pipelineId, (p) => {
       const tickets = (p.tickets ?? []).map((t) => {
         const status = t.status;
         const isTerminal =

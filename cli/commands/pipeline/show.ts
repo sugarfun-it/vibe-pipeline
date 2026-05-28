@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print, printLines, table } from "../../lib/output";
@@ -9,7 +9,7 @@ export async function pipelineShow(args: ParsedArgs): Promise<void> {
   await requireInit(proj.path);
   const id = args.positional[0];
   if (!id) fail("INVALID_ARGS", "Usage: vbpl pipeline show <id>");
-  const pipeline = (await pipelineDir.readPipeline(proj.path, id)) as Pipeline | null;
+  const pipeline = (await pipelineStore.readPipeline(proj.path, id)) as Pipeline | null;
   if (!pipeline) fail("NO_PIPELINE", `Pipeline not found: ${id}`);
   if (isJsonMode()) {
     okJson(pipeline);

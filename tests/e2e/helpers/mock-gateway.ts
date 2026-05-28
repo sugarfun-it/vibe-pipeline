@@ -3,7 +3,7 @@
 // 兩種用法:
 // 1. 被 playwright config webServer 啟動:`bun run tests/e2e/helpers/mock-gateway.ts`
 //    在 PORT(default 3004)起 Bun.serve,模擬 production gateway
-//    (`server/lib/push/gatewayToken.ts` + `server/lib/push/tokenStore.ts` 對接的 endpoint)。
+//    (`server/lib/remote/push/gatewayToken.ts` + `server/lib/remote/push/tokenStore.ts` 對接的 endpoint)。
 // 2. spec 內 import:`getRecords()` / `resetRecords()` 透過 HTTP 控制 mock 狀態。
 //
 // Endpoint 對齊真 gateway:

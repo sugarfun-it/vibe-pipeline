@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
@@ -20,7 +20,7 @@ export async function ticketRemove(args: ParsedArgs): Promise<void> {
   if (idx === -1) fail("NO_TICKET", `Ticket ${ticketRef} not found`);
 
   const removed = tickets[idx];
-  await pipelineDir.mutatePipeline(proj.path, pipelineId!, (p) => ({
+  await pipelineStore.mutatePipeline(proj.path, pipelineId!, (p) => ({
     ...p,
     tickets: (p.tickets ?? []).filter((t) => !(String(t.n) === ticketRef || t.id === ticketRef)),
   }), {

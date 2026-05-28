@@ -1,5 +1,5 @@
-import * as userConfig from "../lib/userConfig";
-import { UserConfigPatchError } from "../lib/userConfig";
+import * as userConfig from "../lib/domain/userConfig";
+import { UserConfigPatchError } from "../lib/domain/userConfig";
 import { requireJsonUtf8, ok, err, readJson } from "./_http";
 import type { ApiErrorCode } from "../../shared/types";
 

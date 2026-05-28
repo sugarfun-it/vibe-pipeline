@@ -3,13 +3,13 @@
 // 主 agent 透過 Bash 寫 pipeline.json,我們不依賴主 agent 主動 emit。
 
 import { watch, type FSWatcher } from "node:fs";
-import * as pipelineDir from "../pipelineDir";
-import * as notifs from "../notifs/store";
-import { fanoutPush } from "../fcm/index";
-import * as tokenStore from "../push/tokenStore";
+import { pipelineFile, readPipeline } from "../domain/pipeline";
+import * as notifs from "../remote/notifs";
+import { fanoutPush } from "../remote/fcm";
+import * as tokenStore from "../remote/push/tokenStore";
 import * as testMode from "../testMode";
-import { loadUserConfig } from "../userConfig";
-import { appendStateChange, listAudit } from "../auditLog";
+import { loadUserConfig } from "../domain/userConfig";
+import { appendStateChange, listAudit } from "../domain/auditLog";
 import type { NotifEventType, PushEventKey } from "../../../shared/types";
 
 type Active = { unwatch: () => void };
@@ -39,7 +39,7 @@ type Snapshot = {
 };
 
 async function snapshot(projectPath: string, pipelineId: string): Promise<Snapshot> {
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLite | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLite | null;
   const ticketStatuses = new Map<string, string>();
   if (p && Array.isArray(p.tickets)) {
     for (const t of p.tickets) {
@@ -102,7 +102,7 @@ export async function start(opts: {
   const k = key(opts.projectHash, opts.pipelineId);
   if (watchers.has(k)) return;
 
-  const file = pipelineDir.pipelineFile(opts.projectPath, opts.pipelineId);
+  const file = pipelineFile(opts.projectPath, opts.pipelineId);
   let last = await snapshot(opts.projectPath, opts.pipelineId);
   let debounce: ReturnType<typeof setTimeout> | null = null;
   let poll: ReturnType<typeof setInterval> | null = null;
@@ -113,7 +113,7 @@ export async function start(opts: {
     checking = true;
     try {
       const cur = await snapshot(opts.projectPath, opts.pipelineId);
-      const p = (await pipelineDir.readPipeline(
+      const p = (await readPipeline(
         opts.projectPath,
         opts.pipelineId
       )) as PipelineLite | null;
@@ -155,7 +155,7 @@ export async function start(opts: {
           });
         }
       }
-      // Audit fallback:disk 上 state 變了但 pipelineDir.writePipeline 沒寫 audit
+      // Audit fallback:disk 上 state 變了但 writePipeline 沒寫 audit
       // (代表是 runner 主 agent 透過 Edit/Write 直接改 pipeline.json,沒走 backend)。
       // 比對 audit.jsonl 最新一筆,若 (from,to) 跟 disk diff 一致 → backend 已記錄,跳過;
       // 否則補一筆 source='runner-self-detected'。

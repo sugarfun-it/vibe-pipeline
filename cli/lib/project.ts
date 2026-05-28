@@ -1,7 +1,7 @@
 // Resolve active project from flags or state.json lastProject.
-import * as projectStore from "../../server/lib/projectStore";
-import * as projectDir from "../../server/lib/pipelineDir";
-import { projectHash } from "../../server/lib/hash";
+import * as projectStore from "../../server/lib/domain/project";
+import * as projectDir from "../../server/lib/domain/projectDir";
+import { projectHash } from "../../server/lib/io/hash";
 import { resolve } from "node:path";
 import { fail } from "./output";
 

@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import type { ParsedArgs } from "../../lib/args";
 import { fail } from "../../lib/output";
 import type { Ticket } from "../../../shared/types";
@@ -173,7 +173,7 @@ export function getPipelineId(args: ParsedArgs): string {
 }
 
 export async function readPipeline(projectPath: string, pipelineId: string) {
-  const pipeline = await pipelineDir.readPipeline(projectPath, pipelineId) as {
+  const pipeline = await pipelineStore.readPipeline(projectPath, pipelineId) as {
     id: string;
     name: string;
     state: string;

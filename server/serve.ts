@@ -8,7 +8,7 @@
 
 import { join } from "node:path";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { vibeHome } from "./lib/paths";
+import { vibeHome } from "./lib/io/paths";
 import { handle, logAccess, withCors } from "./router";
 
 const DESIRED_PORT = Number(process.env.PORT ?? 3001);

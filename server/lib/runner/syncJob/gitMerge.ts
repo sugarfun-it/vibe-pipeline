@@ -9,9 +9,9 @@
 //   - confirmAi(): user 同意 AI 解衝突,spawn claude/codex,註冊進 running map
 //   - cancelSync(): kill AI(若有)+ git merge --abort + 標 failed
 
-import * as pipelineDir from "../../pipelineDir";
-import * as worktree from "../../git/worktree";
-import * as notifs from "../../notifs/store";
+import { readPipeline } from "../../domain/pipeline";
+import * as worktree from "../../io/git/worktree";
+import * as notifs from "../../remote/notifs";
 import * as orchestrator from "../orchestrator";
 import type { SyncJob, SyncJobState } from "../../../../shared/types";
 import type { PipelineLike } from "./state";
@@ -38,7 +38,7 @@ export async function startSync(opts: {
   if (orchestrator.isRunning(projectHash, pipelineId)) {
     return { ok: false, error: "Pipeline 在跑或同步中,先完成或取消" };
   }
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLike | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p) return { ok: false, error: "Pipeline not found" };
   const baseBranch = p.baseBranch || "main";
 

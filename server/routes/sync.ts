@@ -1,7 +1,7 @@
-import * as pipelineDir from "../lib/pipelineDir";
+import * as pipelineStore from "../lib/domain/pipeline";
 import * as orchestrator from "../lib/runner/orchestrator";
 import * as syncJob from "../lib/runner/syncJob";
-import * as worktree from "../lib/git/worktree";
+import * as worktree from "../lib/io/git/worktree";
 import { ok, err, withProject, withPipeline, withUserAudit } from "./_http";
 
 // GET sync 狀態:回 worktree 落後 base 幾個 commit
@@ -29,7 +29,7 @@ export async function syncPipeline(hash: string, pipelineId: string): Promise<Re
       if (orchestrator.isRunning(hash, pipelineId)) {
         return err("invalid_path", "Pipeline 在跑,先 pause 才能 sync", 409);
       }
-      const pipeline = (await pipelineDir.readPipeline(project.path, pipelineId)) as {
+      const pipeline = (await pipelineStore.readPipeline(project.path, pipelineId)) as {
         state?: string;
         branch?: string;
         baseBranch?: string;
@@ -75,7 +75,7 @@ export async function syncDismiss(hash: string, pipelineId: string): Promise<Res
     }
     const { syncJob: _drop, ...rest } = p;
     void _drop;
-    await pipelineDir.writePipeline(project.path, pipelineId, rest, {
+    await pipelineStore.writePipeline(project.path, pipelineId, rest, {
       source: "api-sync-dismiss",
       sourceDetail: "user dismissed syncJob",
       prevStateHint: typeof (p as { state?: string }).state === "string" ? (p as { state: string }).state : undefined,

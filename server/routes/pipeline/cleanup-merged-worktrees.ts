@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import * as pipelineDir from '../../lib/pipelineDir';
-import * as git from '../../lib/git';
-import * as worktree from '../../lib/git/worktree';
+import * as pipelineStore from '../../lib/domain/pipeline';
+import * as git from '../../lib/io/git';
+import * as worktree from '../../lib/io/git/worktree';
 import { ok, withProject, withUserAudit } from '../_http';
 
 // POST /api/projects/:hash/worktrees/cleanup-merged
@@ -11,7 +11,7 @@ import { ok, withProject, withUserAudit } from '../_http';
 export async function cleanupMergedWorktrees(hash: string): Promise<Response> {
   return withProject(hash, async (project) =>
     withUserAudit(project.path, { action: "project.worktrees.cleanupMerged" }, async () => {
-      const pipelines = await pipelineDir.listPipelines(project.path) as Array<{
+      const pipelines = await pipelineStore.listPipelines(project.path) as Array<{
         id: string;
         state?: string;
         branch?: string;

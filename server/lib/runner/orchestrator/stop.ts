@@ -1,5 +1,5 @@
-import * as pipelineDir from "../../pipelineDir";
-import * as notifs from "../../notifs/store";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
+import * as notifs from "../../remote/notifs";
 import * as ticketWatcher from "../ticketWatcher";
 import { dispatch } from "./queue";
 import { key, running } from "./state";
@@ -17,7 +17,7 @@ export async function stopImmediate(opts: {
   const { projectPath, projectHash, pipelineId } = opts;
   const k = key(projectHash, pipelineId);
 
-  const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const pipeline = (await readPipeline(projectPath, pipelineId)) as {
     state?: string;
     tickets?: Array<{ status?: string; [k: string]: unknown }>;
     [k: string]: unknown;
@@ -59,7 +59,7 @@ export async function stopImmediate(opts: {
   ticketWatcher.stop({ projectHash, pipelineId });
 
   // 重讀 pipeline(exit handler 可能已寫一輪)→ 校正狀態
-  const cur = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const cur = (await readPipeline(projectPath, pipelineId)) as {
     state?: string;
     name?: string;
     tickets?: Array<{ status?: string; [k: string]: unknown }>;
@@ -69,7 +69,7 @@ export async function stopImmediate(opts: {
     const tickets = (cur.tickets ?? []).map((t) =>
       t.status === "running" ? { ...t, status: "paused" } : t
     );
-    await pipelineDir.writePipeline(projectPath, pipelineId, {
+    await writePipeline(projectPath, pipelineId, {
       ...cur,
       state: "paused",
       tickets,

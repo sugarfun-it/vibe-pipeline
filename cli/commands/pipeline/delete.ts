@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import { ensureBackend } from "../../lib/ensureBackend";
 import type { ParsedArgs } from "../../lib/args";
@@ -31,7 +31,7 @@ export async function pipelineDelete(args: ParsedArgs): Promise<void> {
   const force = args.flags["force"] === true || isJsonMode();
 
   // 先撈 pipeline 確認存在(讓 confirm 訊息可以顯示 name + branch)
-  const pipeline = (await pipelineDir.readPipeline(proj.path, id)) as Pipeline | null;
+  const pipeline = (await pipelineStore.readPipeline(proj.path, id)) as Pipeline | null;
   if (!pipeline) fail("NO_PIPELINE", `Pipeline not found: ${id}`);
 
   if (!force) {

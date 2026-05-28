@@ -1,8 +1,8 @@
-import * as pipelineDir from '../../lib/pipelineDir';
-import * as git from '../../lib/git';
+import * as pipelineStore from '../../lib/domain/pipeline';
+import * as git from '../../lib/io/git';
 import * as orchestrator from '../../lib/runner/orchestrator';
-import * as worktree from '../../lib/git/worktree';
-import * as notifs from '../../lib/notifs/store';
+import * as worktree from '../../lib/io/git/worktree';
+import * as notifs from '../../lib/remote/notifs';
 import { ok, err, withProject, withUserAudit } from '../_http';
 
 // DELETE /api/projects/:hash/pipelines/:id — cascade 清 worktree + branch + json
@@ -26,7 +26,7 @@ export async function deletePipeline(hash: string, id: string): Promise<Response
     }
 
     // 撈 pipeline.json 拿 branch 名 — 若連 pipeline.json 都沒,worktree / branch 也大概沒(走 best-effort)
-    const pipeline = (await pipelineDir.readPipeline(project.path, id)) as {
+    const pipeline = (await pipelineStore.readPipeline(project.path, id)) as {
       name?: string;
       branch?: string;
     } | null;
@@ -61,7 +61,7 @@ export async function deletePipeline(hash: string, id: string): Promise<Response
     // 3. pipeline.json — 唯一一條「沒就 404」的;前 2 步即使壞了 json 還是要試
     let jsonExisted = false;
     try {
-      const removed = pipelineDir.deletePipeline(project.path, id);
+      const removed = pipelineStore.deletePipeline(project.path, id);
       jsonExisted = removed;
       steps.json = removed ? { ok: true } : { ok: false, error: "pipeline.json not found" };
     } catch (e) {

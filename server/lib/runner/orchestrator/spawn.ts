@@ -1,15 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
-import * as pipelineDir from "../../pipelineDir";
-import * as worktree from "../../git/worktree";
-import * as notifs from "../../notifs/store";
+import { mutatePipeline, readPipeline, writePipeline } from "../../domain/pipeline";
+import { getMaxParallel, getResolvedDefaults } from "../../domain/projectConfig";
+import { ensureRuntime } from "../../domain/projectDir";
+import * as worktree from "../../io/git/worktree";
+import * as notifs from "../../remote/notifs";
 import * as ticketWatcher from "../ticketWatcher";
 import * as runLog from "../runLog";
 import * as testMode from "../../testMode";
 import { buildRunnerBehaviorPrompt } from "../runnerPrompt";
-import { loadUserConfig, getTaskConfigWithAdapter } from "../../userConfig";
-import { ensureDepsAfterMerge } from "../../depInstall";
+import { loadUserConfig, getTaskConfigWithAdapter } from "../../domain/userConfig";
+import { ensureDepsAfterMerge } from "../../system/depInstall";
 import { maybeAutoMerge } from "./autoMerge";
 import { dispatch, enqueue } from "./queue";
 import { computePipelineSpent, endStream, patchRunnerLogExitCode, runnerLogHeader, snapshotTickets } from "./helpers";
@@ -40,7 +42,7 @@ export async function start(opts: {
     return { ok: false, error: "Pipeline 已在排隊" };
   }
 
-  const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const pipeline = (await readPipeline(projectPath, pipelineId)) as {
     branch?: string;
     baseBranch?: string;
     name?: string;
@@ -70,7 +72,7 @@ export async function start(opts: {
 
   // Budget check:cost_limit_usd > 0 且該 pipeline 累積 spent >= limit 時擋下。
   // 不改 pipeline state(維持當前)。emit pipeline_blocked_budget notif。
-  const resolved = await pipelineDir.getResolvedDefaults(projectPath);
+  const resolved = await getResolvedDefaults(projectPath);
   const limit = resolved.cost_limit_usd;
   if (limit > 0) {
     const spent = await computePipelineSpent(projectPath, pipelineId);
@@ -92,10 +94,10 @@ export async function start(opts: {
   }
 
   // Slot 檢查:滿了改進 queue
-  const max = await pipelineDir.getMaxParallel(projectPath);
+  const max = await getMaxParallel(projectPath);
   if (runningCount(projectHash) >= max) {
     enqueue({ projectPath, projectHash, pipelineId, enqueuedAt: Date.now() });
-    await pipelineDir.mutatePipeline(projectPath, pipelineId, (p) => ({
+    await mutatePipeline(projectPath, pipelineId, (p) => ({
       ...p,
       state: "queued",
     }), {
@@ -125,7 +127,7 @@ export async function spawnDirect(opts: {
   const { projectPath, projectHash, pipelineId } = opts;
   const k = key(projectHash, pipelineId);
 
-  const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const pipeline = (await readPipeline(projectPath, pipelineId)) as {
     branch?: string;
     baseBranch?: string;
     name?: string;
@@ -147,7 +149,7 @@ export async function spawnDirect(opts: {
   }
 
   // 2. 標 pipeline running 寫回(用 mutatePipeline 避免覆蓋 worktree.ensure 期間 user 改的欄位)
-  await pipelineDir.mutatePipeline(projectPath, pipelineId, (p) => ({
+  await mutatePipeline(projectPath, pipelineId, (p) => ({
     ...p,
     state: "running",
   }), {
@@ -222,7 +224,7 @@ export async function spawnDirect(opts: {
   await ticketWatcher.start({ projectPath, projectHash, pipelineId });
 
   // log file: <target>/.vibe-pipeline/.runtime/logs/<pipelineId>-<ts>.log
-  const logsDir = pipelineDir.ensureRuntime(projectPath, "logs");
+  const logsDir = ensureRuntime(projectPath, "logs");
   mkdirSync(logsDir, { recursive: true });
   const logFile = join(logsDir, `${pipelineId}-${Date.now()}.log`);
   await Bun.write(logFile, runnerLogHeader(pipelineId, "active") + "--- stdout ---\n");
@@ -257,7 +259,7 @@ export async function spawnDirect(opts: {
       logStream.write("\n--- stderr ---\n");
       logStream.write(stderrText);
       // P5: 寫 ticket snapshot meta(before spawn snapshot + after exit re-read)
-      const finalForMeta = (await pipelineDir.readPipeline(projectPath, pipelineId).catch(() => null)) as {
+      const finalForMeta = (await readPipeline(projectPath, pipelineId).catch(() => null)) as {
         tickets?: Array<{ id?: string; status?: string }>;
       } | null;
       const ticketsAfter = snapshotTickets(finalForMeta?.tickets ?? []);
@@ -279,7 +281,7 @@ export async function spawnDirect(opts: {
       const isTransient = (exitCode !== null && exitCode !== 0) || hasTurnFailed;
       if (isTransient) {
         try {
-          const cur = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+          const cur = (await readPipeline(projectPath, pipelineId)) as {
             state?: string;
             name?: string;
             tickets?: Array<{ status?: string; [k: string]: unknown }>;
@@ -292,7 +294,7 @@ export async function spawnDirect(opts: {
                 ? { ...t, status: "failed_transient", endedAt: now }
                 : t
             );
-            await pipelineDir.writePipeline(projectPath, pipelineId, {
+            await writePipeline(projectPath, pipelineId, {
               ...cur,
               state: "paused",
               tickets,
@@ -321,7 +323,7 @@ export async function spawnDirect(opts: {
       // Emit notif based on final pipeline state
       // transient 路徑已 emit pipeline_paused + 寫 state,跳過避免重複 notif
       if (!isTransient) try {
-        const final = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+        const final = (await readPipeline(projectPath, pipelineId)) as {
           state?: string;
           name?: string;
           baseBranch?: string;
@@ -409,7 +411,7 @@ export async function spawnDirect(opts: {
         } catch {}
       }
       try {
-        const finalForMeta = (await pipelineDir.readPipeline(projectPath, pipelineId).catch(() => null)) as {
+        const finalForMeta = (await readPipeline(projectPath, pipelineId).catch(() => null)) as {
           tickets?: Array<{ id?: string; status?: string }>;
         } | null;
         const meta = JSON.stringify({

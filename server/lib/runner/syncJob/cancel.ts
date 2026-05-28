@@ -1,5 +1,5 @@
-import * as pipelineDir from "../../pipelineDir";
-import * as worktree from "../../git/worktree";
+import { readPipeline } from "../../domain/pipeline";
+import * as worktree from "../../io/git/worktree";
 import * as orchestrator from "../orchestrator";
 import type { PipelineLike } from "./state";
 import { markFailed } from "./cleanup";
@@ -11,7 +11,7 @@ export async function cancelSync(opts: {
   pipelineId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { projectPath, projectHash, pipelineId } = opts;
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLike | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p || !p.syncJob) return { ok: false, error: "沒有進行中的 sync" };
 
   // kill AI(若在 running map)

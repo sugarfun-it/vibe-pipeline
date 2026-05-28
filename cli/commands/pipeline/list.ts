@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { isJsonMode, okJson, print, printLines, table } from "../../lib/output";
@@ -7,7 +7,7 @@ import type { Pipeline } from "../../../shared/types";
 export async function pipelineList(args: ParsedArgs): Promise<void> {
   const proj = await resolveProject(args.flags);
   await requireInit(proj.path);
-  const pipelines = (await pipelineDir.listPipelines(proj.path)) as Pipeline[];
+  const pipelines = (await pipelineStore.listPipelines(proj.path)) as Pipeline[];
   if (isJsonMode()) {
     okJson(pipelines);
     return;

@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../lib/pipelineDir";
+import * as pipelineStore from "../../lib/domain/pipeline";
 import * as draftStore from "../../lib/qa/draftStore";
 import { requireJsonUtf8, ok, err, readJson } from "../_http";
 import type { Pipeline, Ticket, TicketSpec } from "../../../shared/types";
@@ -31,7 +31,7 @@ export async function finalize(hash: string, draftId: string, req: Request): Pro
     return err("invalid_path", `Spec incomplete, missing: ${missing.join(", ")}`);
 
   // 預檢:pipeline 存在性。mutator 內 readPipeline 為 null 才 throw,外層轉 404
-  const existing = await pipelineDir.readPipeline(project.path, draft.pipelineId);
+  const existing = await pipelineStore.readPipeline(project.path, draft.pipelineId);
   if (!existing) return err("not_found", `Pipeline not found: ${draft.pipelineId}`, 404);
 
   // 用同一個 ts 避免 mutator 內呼叫 Date.now() 不一致(append 多張時 id 才齊整)
@@ -39,7 +39,7 @@ export async function finalize(hash: string, draftId: string, req: Request): Pro
   let newTickets: Ticket[] = [];
   let updatedPipeline: Pipeline;
   try {
-    updatedPipeline = await pipelineDir.mutatePipeline(project.path, draft.pipelineId, (p) => {
+    updatedPipeline = await pipelineStore.mutatePipeline(project.path, draft.pipelineId, (p) => {
       const existingTickets = Array.isArray(p.tickets) ? p.tickets : [];
       const built: Ticket[] =
         splitInto && splitInto.length > 0

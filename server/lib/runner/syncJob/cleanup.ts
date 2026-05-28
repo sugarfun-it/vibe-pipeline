@@ -1,10 +1,10 @@
 import { createWriteStream, type WriteStream } from "node:fs";
-import * as pipelineDir from "../../pipelineDir";
-import * as worktree from "../../git/worktree";
-import * as notifs from "../../notifs/store";
+import { listPipelines, readPipeline } from "../../domain/pipeline";
+import * as worktree from "../../io/git/worktree";
+import * as notifs from "../../remote/notifs";
 import * as orchestrator from "../orchestrator";
-import { vibeHome } from "../../paths";
-import { runCapture } from "../../spawn";
+import { vibeHome } from "../../io/paths";
+import { runCapture } from "../../io/childSpawn";
 import type { SyncJob } from "../../../../shared/types";
 import type { PipelineLike } from "./state";
 import { writeSyncJob } from "./state";
@@ -14,7 +14,7 @@ export async function markFailed(
   pipelineId: string,
   reason: string
 ): Promise<void> {
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLike | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p) return;
   const job: SyncJob = {
     state: "failed",
@@ -113,7 +113,7 @@ export async function waitAndFinish(opts: {
     }
   })();
 
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLike | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p || !p.syncJob) return;
   const startedAt = p.syncJob.startedAt;
   const baseBranch = p.baseBranch || "main";
@@ -180,7 +180,7 @@ export async function waitAndFinish(opts: {
 // (跟 recoverStale 對稱的補丁,因為 sync AI proc 隨 server 重啟蒸發)
 export async function recoverStaleSync(projectPath: string): Promise<void> {
   void vibeHome; // 抑制未用 import
-  const pipelines = (await pipelineDir.listPipelines(projectPath)) as Array<PipelineLike & {
+  const pipelines = (await listPipelines(projectPath)) as Array<PipelineLike & {
     id?: string;
   }>;
   for (const p of pipelines) {

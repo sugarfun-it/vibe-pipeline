@@ -4,7 +4,7 @@
 //
 // 任何修改/優化都不該寫在這裡 — 這層只負責「搬家」。
 
-import { runCapture, spawnStreaming } from "../spawn";
+import { runCapture, spawnStreaming } from "../io/childSpawn";
 import type {
   CliAdapter,
   QASpawnOpts,

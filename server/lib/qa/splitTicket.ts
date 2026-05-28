@@ -5,7 +5,7 @@
 
 import { isTestMode, getSplitScript } from "../testMode";
 import type { TicketSpec } from "../../../shared/types";
-import { getTaskConfigWithAdapter } from "../userConfig";
+import { getTaskConfigWithAdapter } from "../domain/userConfig";
 
 export class SplitError extends Error {
   constructor(public code: "not_available" | "exec_failed" | "parse_failed" | "empty_split", message: string) {

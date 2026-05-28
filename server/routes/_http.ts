@@ -1,7 +1,8 @@
 import type { ApiResponse, ApiErrorCode } from "../../shared/types";
-import * as projectStore from "../lib/projectStore";
-import * as pipelineDir from "../lib/pipelineDir";
-import * as auditLog from "../lib/auditLog";
+import * as projectStore from "../lib/domain/project";
+import { hasInit } from "../lib/domain/projectDir";
+import { readPipeline } from "../lib/domain/pipeline";
+import * as auditLog from "../lib/domain/auditLog";
 
 export type ProjectInfo = NonNullable<Awaited<ReturnType<typeof projectStore.findByHash>>>;
 
@@ -12,7 +13,7 @@ export async function withProject(
 ): Promise<Response> {
   const project = await projectStore.findByHash(hash);
   if (!project) return err("not_found", `Project not found: ${hash}`, 404);
-  if (opts?.requireInit !== false && !pipelineDir.hasInit(project.path)) {
+  if (opts?.requireInit !== false && !hasInit(project.path)) {
     return err("not_initialized", `.vibe-pipeline/ not found in ${project.path}`);
   }
   return fn(project);
@@ -25,7 +26,7 @@ export async function withPipeline(
   opts?: { requireInit?: boolean }
 ): Promise<Response> {
   return withProject(hash, async (project) => {
-    const pipeline = await pipelineDir.readPipeline(project.path, pipelineId);
+    const pipeline = await readPipeline(project.path, pipelineId);
     if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
     return fn(project, pipeline as Record<string, unknown>);
   }, opts);

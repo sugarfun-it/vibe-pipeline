@@ -1,4 +1,4 @@
-import * as userConfig from "../../server/lib/userConfig";
+import * as userConfig from "../../server/lib/domain/userConfig";
 import type { ParsedArgs } from "../lib/args";
 import { fail, isJsonMode, okJson, print, printLines, table } from "../lib/output";
 import { TASK_CLASSES } from "../../shared/types";

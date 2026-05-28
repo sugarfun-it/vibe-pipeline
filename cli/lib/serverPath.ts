@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { vibeHome } from "../../server/lib/paths";
+import { vibeHome } from "../../server/lib/io/paths";
 import { fail } from "./output";
 
 export type ServerInfo = {

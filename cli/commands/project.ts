@@ -1,6 +1,7 @@
-import * as projectStore from "../../server/lib/projectStore";
-import * as pipelineDir from "../../server/lib/pipelineDir";
-import { projectHash } from "../../server/lib/hash";
+import * as projectStore from "../../server/lib/domain/project";
+import * as projectDir from "../../server/lib/domain/projectDir";
+import * as projectConfig from "../../server/lib/domain/projectConfig";
+import { projectHash } from "../../server/lib/io/hash";
 import { resolve } from "node:path";
 import type { ParsedArgs } from "../lib/args";
 import { fail, isJsonMode, okJson, print, printLines, table } from "../lib/output";
@@ -83,7 +84,7 @@ async function projectShow(args: ParsedArgs): Promise<void> {
     proj = await projectStore.findByHash(projectHash(abs));
     if (!proj) {
       // Build one on the fly even if not in state.json
-      const hasInit = pipelineDir.hasInit(abs);
+      const hasInit = projectDir.hasInit(abs);
       proj = {
         path: abs,
         hash: projectHash(abs),
@@ -141,15 +142,15 @@ async function projectInit(args: ParsedArgs): Promise<void> {
   if (!rawPath) fail("INVALID_ARGS", "Usage: vbpl project init <path> | vbpl project init --here");
   const abs = resolve(rawPath!);
 
-  if (pipelineDir.hasInit(abs)) {
+  if (projectDir.hasInit(abs)) {
     print("Already initialized, nothing to do");
     return;
   }
 
   let proj: Project;
   try {
-    await pipelineDir.init(abs);
-    await pipelineDir.writeConfig(abs);
+    await projectDir.init(abs);
+    await projectConfig.writeConfig(abs);
     proj = await projectStore.open(abs);
   } catch (err) {
     fail("INVALID_PATH", (err as Error).message);

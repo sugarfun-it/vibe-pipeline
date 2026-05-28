@@ -1,10 +1,10 @@
-import { triggerMerge, autoMergeNoAI } from '../../lib/pipelineMerge';
+import { triggerMerge, autoMergeNoAI } from '../../lib/services/pipelineMerge';
 import { ok, err, withProject, withUserAudit } from '../_http';
 
 // AI merge(ticket-based):append 一張 mode=merge synthetic ticket 進 pipeline,
 // 然後觸發 runner 接管。merge ticket 由 sub-agent 在 main repo 跑(不在 worktree)。
 // 完成後 runner 主 agent 看到 mode=merge done,把 pipeline.state 設 merged + mergeCommit。
-// 真實邏輯抽到 lib/pipelineMerge.triggerMerge,handler 跟 auto-trigger 共用。
+// 真實邏輯抽到 lib/services/pipelineMerge.triggerMerge,handler 跟 auto-trigger 共用。
 // 2026-05-13:跟 auto-merge 對稱化 — 先試 backend git merge --no-ff
 // clean → 回 {mode:"mechanical", mergeCommit};撞衝突 → fallback triggerMerge(AI)回 {mode:"ai", ticketId}
 // 其他失敗(dirty/no_git/...)→ 對應 error code

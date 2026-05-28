@@ -16,7 +16,7 @@ test.afterEach(() => {
 });
 
 function worktreeDir(projHash: string, pipelineId: string): string {
-  // 對應 server/lib/git/worktree.ts worktreePath:vibeHome()/.vibe-pipeline/worktrees/<hash>/<id>
+  // 對應 server/lib/io/git/worktree.ts worktreePath:vibeHome()/.vibe-pipeline/worktrees/<hash>/<id>
   const home = process.env.VP_HOME_OVERRIDE;
   if (!home) throw new Error("VP_HOME_OVERRIDE 未設,本 spec 必須在 mock e2e 環境跑");
   return join(home, ".vibe-pipeline", "worktrees", projHash, pipelineId);

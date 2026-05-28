@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
-import * as pipelineDir from "../../pipelineDir";
-import * as worktree from "../../git/worktree";
+import { readPipeline } from "../../domain/pipeline";
+import * as worktree from "../../io/git/worktree";
 import * as orchestrator from "../orchestrator";
-import { getTaskConfigWithAdapter } from "../../userConfig";
+import { getTaskConfigWithAdapter } from "../../domain/userConfig";
 import { syncAiPrompt } from "../syncAiPrompt";
 import type { PipelineLike } from "./state";
 import { writeSyncJob } from "./state";
@@ -24,7 +24,7 @@ export async function confirmAi(opts: {
   if (orchestrator.isRunning(projectHash, pipelineId)) {
     return { ok: false, error: "Pipeline 已有別的東西在跑" };
   }
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as PipelineLike | null;
+  const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p) return { ok: false, error: "Pipeline not found" };
   if (!p.syncJob || p.syncJob.state !== "conflict_await") {
     return { ok: false, error: "syncJob 不在 conflict_await 狀態" };

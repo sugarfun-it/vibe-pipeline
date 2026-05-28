@@ -1,5 +1,5 @@
-import * as pipelineDir from "../../pipelineDir";
-import * as notifs from "../../notifs/store";
+import { listPipelines, writePipeline } from "../../domain/pipeline";
+import * as notifs from "../../remote/notifs";
 import { isLegacyPausePendingState } from "./helpers";
 
 // Crash recovery:server 啟動時掃 pipelines。兩種 inconsistency 都修:
@@ -10,7 +10,7 @@ import { isLegacyPausePendingState } from "./helpers";
 // (b) 處理上一次 server 死前 ticket 已寫 running,但 pipeline state 改回 paused 後沒同步 ticket
 // 的殘留(畫面會出現 RunButton 顯「繼續」+ TicketCard 卻仍顯「執行中」的錯位)。
 export async function recoverStale(projectPath: string): Promise<void> {
-  const pipelines = (await pipelineDir.listPipelines(projectPath)) as Array<{
+  const pipelines = (await listPipelines(projectPath)) as Array<{
     id?: string;
     state?: string;
     tickets?: Array<{ status?: string; [k: string]: unknown }>;
@@ -38,7 +38,7 @@ export async function recoverStale(projectPath: string): Promise<void> {
         ? { ...t, status: "failed_transient", endedAt: now }
         : { ...t, status: "paused" };
     });
-    await pipelineDir.writePipeline(projectPath, p.id, {
+    await writePipeline(projectPath, p.id, {
       ...p,
       state: nextState,
       tickets,

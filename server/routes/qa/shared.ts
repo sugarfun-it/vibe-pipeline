@@ -1,5 +1,5 @@
-import * as projectStore from "../../lib/projectStore";
-import * as pipelineDir from "../../lib/pipelineDir";
+import * as projectStore from "../../lib/domain/project";
+import * as projectDir from "../../lib/domain/projectDir";
 import { err } from "../_http";
 import type { PartialSpec } from "../../../shared/types";
 
@@ -50,7 +50,7 @@ type ProjectFor =
 export async function projectFor(hash: string): Promise<ProjectFor> {
   const p = await projectStore.findByHash(hash);
   if (!p) return { error: err("not_found", `Project not found: ${hash}`, 404) };
-  if (!pipelineDir.hasInit(p.path))
+  if (!projectDir.hasInit(p.path))
     return { error: err("not_initialized", `.vibe-pipeline/ not found in ${p.path}`) };
   return { project: p };
 }

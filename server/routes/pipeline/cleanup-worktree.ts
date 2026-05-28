@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import * as git from '../../lib/git';
-import * as worktree from '../../lib/git/worktree';
+import * as git from '../../lib/io/git';
+import * as worktree from '../../lib/io/git/worktree';
 import { ok, err, withPipeline } from '../_http';
 
 // POST /api/projects/:hash/pipelines/:id/worktree/cleanup

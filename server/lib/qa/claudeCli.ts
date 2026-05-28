@@ -2,8 +2,8 @@ import { QA_BEHAVIOR_PROMPT } from "./systemPrompt";
 import type { QAReply } from "../../../shared/types";
 import type { TicketSpec } from "../../../shared/types";
 import { isTestMode, nextQAReply } from "../testMode";
-import { projectHash } from "../hash";
-import { getTaskConfigWithAdapter } from "../userConfig";
+import { projectHash } from "../io/hash";
+import { getTaskConfigWithAdapter } from "../domain/userConfig";
 
 export class ClaudeCliError extends Error {
   constructor(public code: "not_available" | "exec_failed" | "parse_failed", message: string) {

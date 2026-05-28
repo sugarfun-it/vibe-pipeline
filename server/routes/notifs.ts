@@ -1,4 +1,4 @@
-import * as notifs from "../lib/notifs/store";
+import * as notifs from "../lib/remote/notifs";
 import { ok, err, withProject, withJsonBody } from "./_http";
 
 export async function listNotifs(hash: string): Promise<Response> {

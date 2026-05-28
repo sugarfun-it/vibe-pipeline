@@ -1,6 +1,6 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import * as syncJob from "../../../server/lib/runner/syncJob";
-import * as auditLog from "../../../server/lib/auditLog";
+import * as auditLog from "../../../server/lib/domain/auditLog";
 import { resolveProject, requireInit } from "../../lib/project";
 import { ensureBackend } from "../../lib/ensureBackend";
 import { post } from "../../lib/api";
@@ -38,7 +38,7 @@ export async function pipelineSync(args: ParsedArgs): Promise<void> {
     return;
   }
   if (wantDismiss) {
-    const p = (await pipelineDir.readPipeline(proj.path, id)) as { syncJob?: { state?: string }; [k: string]: unknown } | null;
+    const p = (await pipelineStore.readPipeline(proj.path, id)) as { syncJob?: { state?: string }; [k: string]: unknown } | null;
     if (!p) fail("NOT_FOUND", `Pipeline not found: ${id}`);
     if (!p.syncJob) {
       if (isJsonMode()) { okJson({ dismissed: true, noop: true }); return; }
@@ -50,7 +50,7 @@ export async function pipelineSync(args: ParsedArgs): Promise<void> {
     }
     const { syncJob: _drop, ...rest } = p;
     void _drop;
-    await pipelineDir.writePipeline(proj.path, id, rest, {
+    await pipelineStore.writePipeline(proj.path, id, rest, {
       source: "cli-sync-dismiss",
       sourceDetail: "dismiss syncJob",
       prevStateHint: typeof (p as { state?: string }).state === "string" ? (p as { state: string }).state : undefined,

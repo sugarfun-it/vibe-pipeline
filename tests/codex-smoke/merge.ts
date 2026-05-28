@@ -10,7 +10,7 @@
 //
 // 跑法:bun tests/codex-smoke/merge.ts
 
-import { patchUserConfig, getTaskConfigWithAdapter, loadUserConfig, writeUserConfig } from "../../server/lib/userConfig";
+import { patchUserConfig, getTaskConfigWithAdapter, loadUserConfig, writeUserConfig } from "../../server/lib/domain/userConfig";
 import { CodexAdapter } from "../../server/lib/cli/codexAdapter";
 import { mergeTicketPrompt } from "../../server/lib/runner/mergeTicketPrompt";
 

@@ -1,7 +1,7 @@
-import * as pipelineDir from "../../pipelineDir";
-import * as projectStore from "../../projectStore";
-import * as worktree from "../../git/worktree";
-import * as notifs from "../../notifs/store";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
+import * as projectStore from "../../domain/project";
+import * as worktree from "../../io/git/worktree";
+import * as notifs from "../../remote/notifs";
 import * as ticketWatcher from "../ticketWatcher";
 import { isLegacyPausePendingState } from "./helpers";
 import { dispatch } from "./queue";
@@ -72,7 +72,7 @@ export async function watchdogTick(): Promise<void> {
         continue;
       }
       try {
-        const p = (await pipelineDir.readPipeline(project.path, entry.pipelineId)) as {
+        const p = (await readPipeline(project.path, entry.pipelineId)) as {
           state?: string;
           name?: string;
           syncJob?: { state?: string };
@@ -86,7 +86,7 @@ export async function watchdogTick(): Promise<void> {
             console.error(`[watchdog ${entry.pipelineId}] sync abort failed:`, e);
           }
           if (p?.syncJob && p.syncJob.state === "ai_running") {
-            await pipelineDir.writePipeline(project.path, entry.pipelineId, {
+            await writePipeline(project.path, entry.pipelineId, {
               ...p,
               syncJob: {
                 ...p.syncJob,
@@ -108,7 +108,7 @@ export async function watchdogTick(): Promise<void> {
           }
         } else if (p && (p.state === "running" || isLegacyPausePendingState(p.state))) {
           // ticket runner 死亡後收斂成 paused,保留 worktree 進度
-          await pipelineDir.writePipeline(project.path, entry.pipelineId, {
+          await writePipeline(project.path, entry.pipelineId, {
             ...p,
             state: "paused",
           }, {

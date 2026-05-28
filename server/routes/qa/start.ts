@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../lib/pipelineDir";
+import * as pipelineStore from "../../lib/domain/pipeline";
 import * as draftStore from "../../lib/qa/draftStore";
 import * as cli from "../../lib/qa/claudeCli";
 import { ok, err } from "../_http";
@@ -9,7 +9,7 @@ export async function start(hash: string, pipelineId: string, _req: Request): Pr
   if ("error" in r) return r.error;
   const { project } = r;
 
-  const pipeline = await pipelineDir.readPipeline(project.path, pipelineId);
+  const pipeline = await pipelineStore.readPipeline(project.path, pipelineId);
   if (!pipeline) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
 
   const existing = await draftStore.findActiveByPipeline(project.path, pipelineId);

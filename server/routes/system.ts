@@ -1,6 +1,6 @@
 import { ok, err } from "./_http";
-import { getVersionStatus } from "../lib/systemVersion";
-import { preflightCheck, spawnInstallScript } from "../lib/updater";
+import { getVersionStatus } from "../lib/system/version";
+import { preflightCheck, spawnInstallScript } from "../lib/system/update";
 import { server } from "../index";
 
 export async function version(): Promise<Response> {

@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../lib/pipelineDir";
+import * as pipelineStore from "../../lib/domain/pipeline";
 import { ok, err } from "../_http";
 import { projectFor } from "./shared";
 
@@ -15,14 +15,14 @@ export async function deleteTicket(
 
   // 預檢:pipeline 存在性與 ticket 狀態。mutator 內基於最新 p.tickets 重找 idx,
   // 不依賴外層 snapshot(防慢操作期間 tickets 被改動)
-  const existing = await pipelineDir.readPipeline(project.path, pipelineId);
+  const existing = await pipelineStore.readPipeline(project.path, pipelineId);
   if (!existing) return err("not_found", `Pipeline not found: ${pipelineId}`, 404);
 
   let notFound = false;
   let runningConflict = false;
   let syntheticConflict = false;
   try {
-    await pipelineDir.mutatePipeline(project.path, pipelineId, (p) => {
+    await pipelineStore.mutatePipeline(project.path, pipelineId, (p) => {
       const cur = Array.isArray(p.tickets) ? p.tickets : [];
       const curIdx = cur.findIndex((t) => t.id === ticketId);
       if (curIdx === -1) {

@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
@@ -58,7 +58,7 @@ export async function ticketUpdate(args: ParsedArgs): Promise<void> {
     if (!isNaN(n)) updated.iterLimit = n;
   }
 
-  await pipelineDir.mutatePipeline(proj.path, pipelineId!, (p) => {
+  await pipelineStore.mutatePipeline(proj.path, pipelineId!, (p) => {
     const arr = [...(p.tickets ?? [])];
     const i = arr.findIndex((t) => String(t.n) === ticketRef || t.id === ticketRef);
     if (i !== -1) arr[i] = updated;

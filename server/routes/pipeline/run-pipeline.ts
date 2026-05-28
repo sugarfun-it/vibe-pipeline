@@ -1,9 +1,9 @@
-import * as pipelineDir from '../../lib/pipelineDir';
+import * as pipelineStore from '../../lib/domain/pipeline';
 import * as orchestrator from '../../lib/runner/orchestrator';
 import { ok, err, withProject, withUserAudit } from '../_http';
 import type { ApiErrorCode } from '../../../shared/types';
 import { detectVia } from '../projects';
-import { isExistingDirectory as validProjectPath } from '../../lib/fs';
+import { isExistingDirectory as validProjectPath } from '../../lib/io/fs';
 
 export async function runPipeline(hash: string, pipelineId: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>
@@ -14,7 +14,7 @@ export async function runPipeline(hash: string, pipelineId: string, req?: Reques
     // 否則 runner 主迴圈規則「遇 failed_transient 立刻暫停」會讓 pipeline 秒退。
     // 設計初衷是「不自動重試燒 token」,但 user 主動點繼續就是 explicit consent。
     try {
-      await pipelineDir.mutatePipeline(project.path, pipelineId, (p) => {
+      await pipelineStore.mutatePipeline(project.path, pipelineId, (p) => {
         for (const t of p.tickets ?? []) {
           if (t.status === "failed_transient") {
             t.status = "paused";

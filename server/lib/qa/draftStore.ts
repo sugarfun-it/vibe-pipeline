@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { ensureRuntime } from "../pipelineDir";
-import { atomicWriteJson } from "../atomicWrite";
+import { ensureRuntime } from "../domain/projectDir";
+import { atomicWriteJson } from "../io/atomicWrite";
 import type { QAReply, Draft, PartialSpec } from "../../../shared/types";
 
 // 高水位 merge:新值有實質內容才覆蓋,否則保留 prev。

@@ -3,10 +3,10 @@
 
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import * as projectStore from "../lib/projectStore";
+import * as projectStore from "../lib/domain/project";
 import * as testMode from "../lib/testMode";
-import { fakeFcmCalls, resetFakeFcmCalls } from "../lib/fcm/index";
-import { vibeHome } from "../lib/paths";
+import { fakeFcmCalls, resetFakeFcmCalls } from "../lib/remote/fcm";
+import { vibeHome } from "../lib/io/paths";
 import type { QAReply } from "../../shared/types";
 import type { RunnerScript } from "../lib/testMode";
 import type { TicketSpec } from "../../shared/types";

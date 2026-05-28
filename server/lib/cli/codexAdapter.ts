@@ -27,7 +27,7 @@
 //   claude --disable-slash-commands    → 無對應(codex exec 本就 non-interactive)
 //   claude --no-session-persistence    → codex --ephemeral
 
-import { runCapture, spawnStreaming } from "../spawn";
+import { runCapture, spawnStreaming } from "../io/childSpawn";
 import type {
   CliAdapter,
   QASpawnOpts,

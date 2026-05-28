@@ -10,7 +10,7 @@
 
 import { readdirSync, existsSync, unlinkSync, statSync } from "node:fs";
 import { join } from "node:path";
-import * as pipelineDir from "../pipelineDir";
+import { runtimePath } from "../domain/projectDir";
 
 import type { RunSummary, RunDetail, Provider, RunTicketSnapshot } from "../../../shared/types";
 export type { RunSummary, RunDetail };
@@ -20,7 +20,7 @@ const FAILURE_REASON_MAX = 200;
 const FILENAME_RE = /^(.+)-(\d+)\.log$/;
 
 function logsDir(projectPath: string): string {
-  return pipelineDir.runtimePath(projectPath, "logs");
+  return runtimePath(projectPath, "logs");
 }
 
 // list 所有 run summary(parse JSON 但不回 stdout/stderr 全文)

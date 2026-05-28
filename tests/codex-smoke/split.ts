@@ -9,7 +9,7 @@
 //
 // 跑法:bun tests/codex-smoke/split.ts
 
-import { patchUserConfig, loadUserConfig, writeUserConfig } from "../../server/lib/userConfig";
+import { patchUserConfig, loadUserConfig, writeUserConfig } from "../../server/lib/domain/userConfig";
 import { splitTicketSpec } from "../../server/lib/qa/splitTicket";
 import type { TicketSpec } from "../../shared/types";
 import { mkdtempSync } from "node:fs";

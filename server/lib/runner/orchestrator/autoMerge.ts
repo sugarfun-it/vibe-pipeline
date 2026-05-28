@@ -1,6 +1,6 @@
-import * as pipelineDir from "../../pipelineDir";
-import * as notifs from "../../notifs/store";
-import { loadUserConfig } from "../../userConfig";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
+import * as notifs from "../../remote/notifs";
+import { loadUserConfig } from "../../domain/userConfig";
 
 // Pipeline 進入 ready 後,若 autoMerge=true 且當前 state=ready → 自動觸發 AI 合併。
 // 走跟手動 /merge 同一條 triggerMerge,因此 slot 滿會自然進 queue。
@@ -12,7 +12,7 @@ export async function maybeAutoMerge(opts: {
   pipelineId: string;
 }): Promise<void> {
   const { projectPath, projectHash, pipelineId } = opts;
-  const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const pipeline = (await readPipeline(projectPath, pipelineId)) as {
     state?: string;
     name?: string;
     autoMerge?: boolean;
@@ -34,7 +34,7 @@ export async function maybeAutoMerge(opts: {
 
   // 清掉之前的 lastAutoMergeError(重新嘗試)
   if (pipeline.lastAutoMergeError !== undefined) {
-    await pipelineDir.writePipeline(projectPath, pipelineId, {
+    await writePipeline(projectPath, pipelineId, {
       ...pipeline,
       lastAutoMergeError: undefined,
     }, {
@@ -52,7 +52,7 @@ export async function maybeAutoMerge(opts: {
     //    速度收益保留在 clean 場景(~90%),衝突場景跟過去一樣慢但無人值守
     // 其他失敗(dirty / git_error)→ 不 fallback AI(那不是 AI 能解的),emit merge_blocked 等 user
     // dynamic import 拆循環依賴
-    const { autoMergeNoAI, triggerMerge } = await import("../../pipelineMerge");
+    const { autoMergeNoAI, triggerMerge } = await import("../../services/pipelineMerge");
     const r = await autoMergeNoAI({
       projectPath,
       projectHash,
@@ -86,8 +86,8 @@ export async function maybeAutoMerge(opts: {
         try {
           const cfg = await loadUserConfig();
           if (!cfg.pushEvents.auto_merge_conflict) return;
-          const tokenStore = await import("../../push/tokenStore");
-          const { fanoutPush } = await import("../../fcm/index");
+          const tokenStore = await import("../../remote/push/tokenStore");
+          const { fanoutPush } = await import("../../remote/fcm");
           const records = await tokenStore.listTokens();
           if (records.length === 0) return;
           const dead = await fanoutPush(
@@ -115,12 +115,12 @@ export async function maybeAutoMerge(opts: {
         hasGit: true,
       });
       if (!ai.ok) {
-        const cur = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+        const cur = (await readPipeline(projectPath, pipelineId)) as {
           state?: string;
           [k: string]: unknown;
         } | null;
         if (cur) {
-          await pipelineDir.writePipeline(projectPath, pipelineId, {
+          await writePipeline(projectPath, pipelineId, {
             ...cur,
             lastAutoMergeError: ai.error,
           }, {
@@ -140,12 +140,12 @@ export async function maybeAutoMerge(opts: {
     }
 
     // dirty / git_error / not_found / running — 不適合 AI 自動解,emit merge_blocked
-    const cur = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+    const cur = (await readPipeline(projectPath, pipelineId)) as {
       state?: string;
       [k: string]: unknown;
     } | null;
     if (cur) {
-      await pipelineDir.writePipeline(projectPath, pipelineId, {
+      await writePipeline(projectPath, pipelineId, {
         ...cur,
         lastAutoMergeError: r.error,
       }, {

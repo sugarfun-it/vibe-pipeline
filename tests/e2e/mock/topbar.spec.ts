@@ -19,7 +19,7 @@ test("active project 名稱 + path 顯示在 TopBar", async ({ page }) => {
 });
 
 test("git branch chip 不顯示 (backend toProject 不 lazy fetch currentBranch)", async ({ page }) => {
-  // 2026-05 起 server/lib/projectStore.ts `toProject` 不呼 git(避免每次 list /
+  // 2026-05 起 server/lib/domain/project.ts `toProject` 不呼 git(避免每次 list /
   // status 都 spawn git);chip 渲染條件是 `hasGit && currentBranch`,currentBranch
   // 永遠 undefined → chip 不渲染。spec 改成驗證 chip 不存在,避免歷史假設誤導。
   await page.goto(`/board?project=${proj.hash}`);

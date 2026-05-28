@@ -1,4 +1,5 @@
-import * as pipelineDir from "../../pipelineDir";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
+import { getMaxParallel } from "../../domain/projectConfig";
 import { spawnDirect } from "./spawn";
 import { queues, type QueuedItem, runningCount } from "./state";
 
@@ -21,7 +22,7 @@ export function dequeue(projectHash: string, pipelineId: string): boolean {
 // 從 queue 撈下一張可跑的並 spawn。每次 ticket 跑完 / max_parallel 變動時呼叫。
 // 每次只取 1 張(if slot 還空就會被下一輪 dispatch 接著跑)。
 export async function dispatch(projectPath: string, projectHash: string): Promise<void> {
-  const max = await pipelineDir.getMaxParallel(projectPath);
+  const max = await getMaxParallel(projectPath);
   while (runningCount(projectHash) < max) {
     const arr = queues.get(projectHash);
     if (!arr || arr.length === 0) return;
@@ -29,7 +30,7 @@ export async function dispatch(projectPath: string, projectHash: string): Promis
     if (arr.length === 0) queues.delete(projectHash);
 
     // 嘗試 spawn — 若目標 pipeline 已不在 queued 狀態(被 user 改回 paused / 刪掉)就跳過
-    const cur = (await pipelineDir.readPipeline(projectPath, next.pipelineId)) as {
+    const cur = (await readPipeline(projectPath, next.pipelineId)) as {
       state?: string;
     } | null;
     if (!cur || cur.state !== "queued") continue;
@@ -48,12 +49,12 @@ export async function cancelQueued(opts: {
   const { projectPath, projectHash, pipelineId } = opts;
   const removed = dequeue(projectHash, pipelineId);
   if (!removed) return { ok: false, error: "Pipeline 不在排隊中" };
-  const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const pipeline = (await readPipeline(projectPath, pipelineId)) as {
     state?: string;
     [k: string]: unknown;
   } | null;
   if (pipeline && pipeline.state === "queued") {
-    await pipelineDir.writePipeline(projectPath, pipelineId, {
+    await writePipeline(projectPath, pipelineId, {
       ...pipeline,
       state: "paused",
     }, {

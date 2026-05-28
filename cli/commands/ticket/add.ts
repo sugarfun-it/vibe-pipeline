@@ -1,4 +1,4 @@
-import * as pipelineDir from "../../../server/lib/pipelineDir";
+import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
@@ -51,7 +51,7 @@ export async function ticketAdd(args: ParsedArgs): Promise<void> {
     ...(iterLimit != null && !isNaN(iterLimit) ? { iterLimit } : {}),
   };
 
-  await pipelineDir.mutatePipeline(proj.path, pipelineId!, (p) => ({
+  await pipelineStore.mutatePipeline(proj.path, pipelineId!, (p) => ({
     ...p,
     tickets: [...(p.tickets ?? []), ticket],
   }), {

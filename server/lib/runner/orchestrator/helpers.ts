@@ -1,6 +1,6 @@
 import type { WriteStream } from "node:fs";
 import { open as openFile } from "node:fs/promises";
-import * as pipelineDir from "../../pipelineDir";
+import { readPipeline, writePipeline } from "../../domain/pipeline";
 import * as runLog from "../runLog";
 
 const LOG_CODE_WIDTH = 10;
@@ -48,7 +48,7 @@ export function isLegacyPausePendingState(state: unknown): boolean {
 // 已 merged / failed / paused 也算。算不出來就當 0,絕不擋住 /run。
 export async function computePipelineSpent(projectPath: string, pipelineId: string): Promise<number> {
   try {
-    const pipeline = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+    const pipeline = (await readPipeline(projectPath, pipelineId)) as {
       tickets?: Array<{
         runs?: Array<{ cost?: number }>;
         [k: string]: unknown;
@@ -97,7 +97,7 @@ export async function mutateTicket(
   ticketId: string,
   update: (t: Record<string, unknown>) => Record<string, unknown>
 ): Promise<void> {
-  const p = (await pipelineDir.readPipeline(projectPath, pipelineId)) as {
+  const p = (await readPipeline(projectPath, pipelineId)) as {
     tickets?: Array<Record<string, unknown>>;
     [k: string]: unknown;
   } | null;
@@ -109,7 +109,7 @@ export async function mutateTicket(
   const prev = typeof (p as { state?: unknown }).state === "string"
     ? ((p as { state: string }).state)
     : undefined;
-  await pipelineDir.writePipeline(projectPath, pipelineId, { ...p, tickets }, {
+  await writePipeline(projectPath, pipelineId, { ...p, tickets }, {
     source: "mock-runner-ticket",
     sourceDetail: `update ticket ${ticketId}`,
     prevStateHint: prev,

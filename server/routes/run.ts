@@ -1,4 +1,4 @@
-import * as worktree from "../lib/git/worktree";
+import * as worktree from "../lib/io/git/worktree";
 import * as runLog from "../lib/runner/runLog";
 import { ok, err, withProject, withPipeline } from "./_http";
 

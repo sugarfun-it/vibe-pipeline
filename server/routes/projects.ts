@@ -1,12 +1,13 @@
 import { resolve } from "node:path";
-import * as projectStore from "../lib/projectStore";
-import * as pipelineDir from "../lib/pipelineDir";
-import * as git from "../lib/git";
+import * as projectStore from "../lib/domain/project";
+import * as projectConfig from "../lib/domain/projectConfig";
+import { init as initProjectDir } from "../lib/domain/projectDir";
+import * as git from "../lib/io/git";
 import * as orchestrator from "../lib/runner/orchestrator";
-import * as auditLog from "../lib/auditLog";
-import { pickFolder, revealFolder } from "../lib/dialog";
-import { projectHash } from "../lib/hash";
-import { isExistingDirectory } from "../lib/fs";
+import * as auditLog from "../lib/domain/auditLog";
+import { pickFolder, revealFolder } from "../lib/io/dialog";
+import { projectHash } from "../lib/io/hash";
+import { isExistingDirectory } from "../lib/io/fs";
 import { ok, err, withProject, withJsonBody } from "./_http";
 import type { ApiErrorCode, Project } from "../../shared/types";
 
@@ -136,7 +137,7 @@ export async function status(hash: string): Promise<Response> {
     let costLimitUsd: number | undefined;
     if (project.hasInit) {
       try {
-        const resolved = await pipelineDir.getResolvedDefaults(project.path);
+        const resolved = await projectConfig.getResolvedDefaults(project.path);
         defaultBaseBranch = resolved.base_branch;
         costLimitUsd = resolved.cost_limit_usd;
       } catch {
@@ -150,11 +151,11 @@ export async function status(hash: string): Promise<Response> {
 export async function init(hash: string): Promise<Response> {
   return withProject(hash, async (project) => {
     if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
-    // pipelineDir.init 已 idempotent(2026-05-12 改):.vibe-pipeline/ 已存在但內容缺 → 補齊,不再 throw already_initialized。
+    // initProjectDir 已 idempotent(2026-05-12 改):.vibe-pipeline/ 已存在但內容缺 → 補齊,不再 throw already_initialized。
     // init 只建 dir 結構;config.json 由 writeConfig 負責(沒檔才寫 default),兩步式。
     try {
-      await pipelineDir.init(project.path);
-      await pipelineDir.writeConfig(project.path);
+      await initProjectDir(project.path);
+      await projectConfig.writeConfig(project.path);
     } catch (e) { return err("internal_error", String(e), 500); }
     return ok(await projectStore.findByHash(hash));
   }, { requireInit: false });
@@ -193,7 +194,7 @@ export async function listProjectAudit(hash: string, req: Request): Promise<Resp
 }
 
 export async function getConfig(hash: string): Promise<Response> {
-  return withProject(hash, async (project) => ok({ defaults: await pipelineDir.getResolvedDefaults(project.path) }));
+  return withProject(hash, async (project) => ok({ defaults: await projectConfig.getResolvedDefaults(project.path) }));
 }
 
 // 回 400 with field-level error,body 結構 { ok:false, error:{ code, message, field } }
@@ -204,8 +205,8 @@ function fieldErr(field: string, message: string): Response {
 // PUT /api/projects/:hash/config — 接 partial body,只認可白名單欄位 + 型別驗證
 export async function updateConfig(hash: string, req: Request): Promise<Response> {
   return withProject(hash, async (project) => withJsonBody(req, async (body) => {
-  const cur = await pipelineDir.readConfig(project.path);
-  const nextDefaults: NonNullable<pipelineDir.ProjectConfig["defaults"]> = {
+  const cur = await projectConfig.readConfig(project.path);
+  const nextDefaults: NonNullable<projectConfig.ProjectConfig["defaults"]> = {
     ...(cur.defaults ?? {}),
   };
   const incomingDefaults = (body.defaults ?? {}) as Record<string, unknown>;
@@ -216,7 +217,7 @@ export async function updateConfig(hash: string, req: Request): Promise<Response
     if (typeof v !== "number" || !Number.isFinite(v)) {
       return fieldErr("max_parallel", "max_parallel 必須為 number");
     }
-    nextDefaults.max_parallel = pipelineDir.clampMaxParallel(v);
+    nextDefaults.max_parallel = projectConfig.clampMaxParallel(v);
   }
 
   // default_base_branch:string,trim 後非空
@@ -256,17 +257,17 @@ export async function updateConfig(hash: string, req: Request): Promise<Response
     nextDefaults.auto_merge = v;
   }
 
-  const next: pipelineDir.ProjectConfig = {
+  const next: projectConfig.ProjectConfig = {
     ...cur,
     defaults: nextDefaults,
     scripts: cur.scripts,
     qa: cur.qa,
   };
 
-  await pipelineDir.writeConfig(project.path, next);
+  await projectConfig.writeConfig(project.path, next);
   // max_parallel 變大可能補位,觸發 dispatch
   await orchestrator.triggerDispatch(project.path, hash);
-  const resolved = await pipelineDir.getResolvedDefaults(project.path);
+  const resolved = await projectConfig.getResolvedDefaults(project.path);
   return ok({ defaults: resolved });
   }));
 }
@@ -275,7 +276,7 @@ export async function updateConfig(hash: string, req: Request): Promise<Response
 export async function getRuntime(hash: string): Promise<Response> {
   return withProject(hash, async (project) => {
     // 即使 hasInit 還沒,也回 0/default(避免 TopBar 爆)
-    const maxParallel = project.hasInit ? await pipelineDir.getMaxParallel(project.path) : pipelineDir.DEFAULT_MAX_PARALLEL;
+    const maxParallel = project.hasInit ? await projectConfig.getMaxParallel(project.path) : projectConfig.DEFAULT_MAX_PARALLEL;
     return ok({ runningCount: orchestrator.runningCount(hash), maxParallel });
   }, { requireInit: false });
 }

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import * as auditLog from '../../lib/auditLog';
-import * as worktree from '../../lib/git/worktree';
-import { revealFolder } from '../../lib/dialog';
+import * as auditLog from '../../lib/domain/auditLog';
+import * as worktree from '../../lib/io/git/worktree';
+import { revealFolder } from '../../lib/io/dialog';
 import { ok, err, withProject } from '../_http';
 
 // GET /api/projects/:hash/pipelines/:id/audit?limit=50

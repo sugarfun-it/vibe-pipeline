@@ -11,7 +11,7 @@
 import { mkdtempSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getTaskConfigWithAdapter, patchUserConfig, loadUserConfig, writeUserConfig } from "../../server/lib/userConfig";
+import { getTaskConfigWithAdapter, patchUserConfig, loadUserConfig, writeUserConfig } from "../../server/lib/domain/userConfig";
 import { CodexAdapter } from "../../server/lib/cli/codexAdapter";
 
 const cwd = mkdtempSync(join(tmpdir(), "vp-runner-codex-"));
