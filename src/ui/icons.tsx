@@ -242,6 +242,15 @@ export const ExternalLinkIcon = (p: IconProps) => (
   </svg>
 );
 
+// 取代 toast info glyph `i`
+export const InfoIcon = (p: IconProps) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5" />
+    <circle cx="12" cy="8" r="0.8" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 // 通用點(status dot 等);size 由 width/height props 控制
 export const DotIcon = (p: IconProps) => (
   <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" {...p}>

@@ -5,13 +5,13 @@ import { BranchIcon } from "../../ui/icons";
 import { useToast } from "../../ui/Toast";
 import { NumberField } from "../../ui/forms/NumberField";
 import { SettingsField } from "./SettingsField";
+import { isAbortError, useAutosaveFields } from "../../hooks/useAutosaveFields";
 import "./SettingsPopover.css";
 
 const BASE_BRANCH_FALLBACK = ["main", "master"];
 
 const MIN = 1;
 const MAX = 8;
-const AUTOSAVE_DELAY_MS = 400;
 
 type ProjectField = "max_parallel" | "default_base_branch" | "cost_limit_usd" | "auto_merge";
 type AutosaveKey = `project:${ProjectField}`;
@@ -32,10 +32,6 @@ type ProjectConfirmedValues = {
   auto_merge: boolean;
 };
 
-function isAbortError(e: unknown): boolean {
-  return e instanceof Error && e.name === "AbortError";
-}
-
 export function ProjectTab({
   hash,
   onSaved,
@@ -53,9 +49,7 @@ export function ProjectTab({
   const [draftBaseBranch, setDraftBaseBranch] = useState<string>("");
   const [draftCostLimit, setDraftCostLimit] = useState<string>("0");
   const [draftAutoMerge, setDraftAutoMerge] = useState<boolean>(false);
-  const timersRef = useRef<Partial<Record<AutosaveKey, ReturnType<typeof setTimeout>>>>({});
-  const controllersRef = useRef<Partial<Record<AutosaveKey, AbortController>>>({});
-  const seqRef = useRef<Partial<Record<AutosaveKey, number>>>({});
+  const { scheduleAutosave, isCurrentSeq } = useAutosaveFields<AutosaveKey>();
   const savedProjectCfgRef = useRef<api.ProjectConfig | null>(null);
   const confirmedProjectValuesRef = useRef<ProjectConfirmedValues | null>(null);
 
@@ -114,30 +108,6 @@ export function ProjectTab({
     };
   }
 
-  function scheduleAutosave(
-    key: AutosaveKey,
-    run: (signal: AbortSignal, seq: number) => Promise<void>,
-    rollback: (e: unknown) => void
-  ) {
-    const seq = (seqRef.current[key] ?? 0) + 1;
-    seqRef.current[key] = seq;
-    const existingTimer = timersRef.current[key];
-    if (existingTimer) clearTimeout(existingTimer);
-    timersRef.current[key] = setTimeout(() => {
-      controllersRef.current[key]?.abort();
-      const controller = new AbortController();
-      controllersRef.current[key] = controller;
-      run(controller.signal, seq)
-        .catch((e: unknown) => {
-          if (seqRef.current[key] !== seq || isAbortError(e)) return;
-          rollback(e);
-        })
-        .finally(() => {
-          if (controllersRef.current[key] === controller) delete controllersRef.current[key];
-        });
-    }, AUTOSAVE_DELAY_MS);
-  }
-
   function mergeProjectSaved(field: ProjectField, next: api.ProjectConfig): api.ProjectConfig {
     const base = savedProjectCfgRef.current ?? next;
     const defaults = { ...base.defaults };
@@ -168,7 +138,7 @@ export function ProjectTab({
       key,
       async (signal, seq) => {
         const next = await api.updateConfig(hash, patch, signal);
-        if (seqRef.current[key] !== seq) return;
+        if (!isCurrentSeq(key, seq)) return;
         const merged = mergeProjectSaved(field, next);
         savedProjectCfgRef.current = merged;
         updateConfirmedProjectValue(field, next);
@@ -193,17 +163,6 @@ export function ProjectTab({
       }
     );
   }
-
-  useEffect(() => {
-    return () => {
-      for (const timer of Object.values(timersRef.current)) {
-        if (timer) clearTimeout(timer);
-      }
-      for (const controller of Object.values(controllersRef.current)) {
-        controller?.abort();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;

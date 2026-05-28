@@ -54,20 +54,7 @@ export function Composer({
         </div>
       )}
       <div className="qadr-composer-row">
-        <label
-          htmlFor={taId}
-          style={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            padding: 0,
-            margin: -1,
-            overflow: "hidden",
-            clip: "rect(0,0,0,0)",
-            whiteSpace: "nowrap",
-            border: 0,
-          }}
-        >
+        <label htmlFor={taId} className="sr-only">
           描述要建立的需求單內容
         </label>
         <textarea
