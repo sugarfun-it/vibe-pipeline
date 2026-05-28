@@ -87,6 +87,53 @@ t3: feature C 完整
 - 太小(<30 行單檔)→ 併進相關 slice,不獨立 ticket
 - 用 QA drawer 跟 AI 聊規格時,AI 看到跨多件獨立工作會自動建議拆 — 採納前確認「拆出來每張都是 vertical slice 不是 lifecycle stage」
 
+### 三欄分流(goal / prompt / acceptance — 寫對才不會白跑)
+
+ticket 三個 text 欄位**各有用途**,**runner 讀法完全不同**。新手最常踩雷:把整份 spec 塞 `goal`,結果 executor 跟 critic 都讀不到。
+
+| 欄位 | runner 怎麼讀 | 給誰看 | 寫什麼 | 上限 |
+|---|---|---|---|---|
+| `goal` | **UI display + git commit body + critic 不讀** | **人類**(列表 preview / commit log / drawer 標題下方) | 1 句「一塊完整可交付是什麼」 | **≤ 80 char(120 hard cap)** |
+| `prompt` | **executor sub-agent 真實讀的指示**(runnerPrompt.ts:173 `prompt = ticket.prompt + 上輪 feedback`) | executor AI | 實作規則 / 範圍 / 風險點 / Why | 不限,中等長度(500-2000 char 合理) |
+| `acceptance[]` | **critic 結構化驗收 + executor 一併收到「驗收條件」** | executor + critic | array of strings,每條 1 行驗收(可 grep / tsc / build / 行為等價測) | 5-10 條,每條 ≤ 100 char |
+
+**寫對的範例**(這次踩雷那張 `useInbox` extraction 該怎麼寫):
+
+```json
+{
+  "title": "抽 useInbox() 到 src/features/pipeline/useInbox.ts",
+  "goal": "把 BoardScreen 的 inbox state + effect 抽成 useInbox() hook",
+  "prompt": "從 BoardScreen.tsx 抽: inboxState / filter / items / highlightId 4 個 useState + 相關 useEffect / useCallback。新檔 src/features/pipeline/useInbox.ts,export function useInbox(projectHash)。規則: 不動其他 state、effect deps 1:1 保留(即使 lint warning)、biome-ignore 注釋原樣留。風險點: stale closure / 跨 state 交叉依賴 — 發現不能乾淨切就停回報,別硬抽。",
+  "acceptance": [
+    "src/features/pipeline/useInbox.ts 存在,export useInbox",
+    "BoardScreen.tsx 不再含 inboxState/filter/items/highlightId 的 useState 宣告",
+    "BoardScreen.tsx 改成 const { ... } = useInbox(projectHash)",
+    "grep 'useState<InboxState>|useState<InboxFilter>' src 全 repo 只 1 處(useInbox.ts)",
+    "bunx tsc --noEmit 0 errors",
+    "bun run build 成功"
+  ]
+}
+```
+
+**反面**(我這 session 踩過):
+
+```json
+{
+  "goal": "# Extract useInbox() ...\n\n## 任務\n... (2628 chars, 55 行 markdown 含 Why / 範圍 / 規則 / Acceptance / 風險點 6 個 section)",
+  "prompt": "",
+  "acceptance": []
+}
+```
+
+executor 收到空白(prompt 空),critic 收到空 array,兩個 AI 都在猜。git commit body 只拿 goal 前 200 chars(都是 markdown heading 不是 spec)。
+
+**自查清單**(建 ticket 前):
+
+1. `goal` 一句內塞得下嗎?塞不下 → 拆 ticket(可能想做太多)或內容該移 `prompt`
+2. `prompt` 寫的是 executor 該怎麼動手嗎?(規則 / 範圍 / 風險點)
+3. `acceptance` 每條 critic 能機械驗嗎?(grep / tsc / build / 行為等價)寫「程式碼乾淨」「合理重構」這種主觀條件 = critic 抓不到,該重寫成可驗條件
+4. CLI 用 `--input-json - <<'EOF' {...} EOF` heredoc,別 inline 各 flag(避 shell quoting + 一次填齊三欄)
+
 ## 你能做什麼(透過 vbpl CLI)
 
 **讀(不需 backend)**:
@@ -110,6 +157,16 @@ vbpl ticket update --pipeline <id> --ticket <n> [--title/--goal/--prompt/--accep
 vbpl ticket remove --pipeline <id> --ticket <n>
 vbpl config set <key> <value>                          # e.g. runner.model claude-opus-4-7
 ```
+
+**agent 建 ticket 預設走 `--input-json - <<'EOF'` heredoc**,不要先 Write 暫存檔再 `--prompt-file`(2 round-trip 慢 + 留 tmp 檔),也不要 inline `--prompt "..."`(markdown backtick / `$` / `!` 撞 shell escape)。一次 Bash call,JSON 自己處理 string escape,markdown 任意內容過:
+
+```bash
+vbpl ticket add --pipeline X --mode iter --input-json - --json <<'EOF'
+{"title":"...","goal":"...","prompt":"任意 markdown,backtick / $ / ! 全部安全","acceptance":["a","b"]}
+EOF
+```
+
+inline flag(`--title` / `--mode` / `--status` 等)會覆蓋 JSON 對應欄位,update 同樣語法 + 只覆蓋 JSON 內出現的欄位。`--input-json -` 跟 `--*-file -` 共用 stdin(同指令擇一)。
 
 **啟動 / 停 / 合併(會 auto-detect + auto-start local backend;也可先手動 `vbpl server start`)**:
 
@@ -146,22 +203,34 @@ vbpl pipeline sync <id> --cancel                       # 取消同步
 ### 怎麼跑(只是 CC 的你,離手讓 user 操作)
 
 1. **你自己用 vbpl 建 pipeline / ticket**(`vbpl pipeline create` + `vbpl ticket add` × N),**不要按 run**
-2. 告訴 user「pipeline 已備好,我幫你開 REPL 視窗」,然後用 Bash 跑:
+   - `vbpl ticket add` 帶 `--project <hash>`(或在 target repo cwd 內跑),否則 fs 解析不到剛建的 pipeline → `NO_PIPELINE`
+   - 多張一次建:**逐行 jsonl + stdin loop** 比連續多個 heredoc 穩(某些 shell 包裹下多 heredoc / shell function 會噴 `unexpected EOF`)。每張 compact JSON 寫成一行存檔,再 `while IFS= read -r line; do printf '%s' "$line" | vbpl ticket add --pipeline <id> --project <hash> --mode iter --input-json -; done < file`
+2. **建 worktree + 裝依賴**(REPL 模式沒有 backend,`vbpl pipeline run` 那套「自動建 worktree + install」不會跑;不手動補,REPL 進去 cwd 不存在 / 缺 node_modules → executor 跑 tsc/build 全炸)。路徑全從 vbpl 輸出推,**不要寫死**:
+   ```bash
+   # projHash / projectPath ← vbpl project list --json
+   # pipelineId / branch / baseBranch ← vbpl pipeline show <id> --json
+   # worktree 慣例路徑 = ${VBPL_HOME:-$HOME}/.vibe-pipeline/worktrees/<projHash>/<pipelineId>
+   git -C "<projectPath>" worktree add "<worktreePath>" -b "<branch>" "<baseBranch>"
+   cd "<worktreePath>" && bun install
+   ```
+   - branch 已存在(resume / 重跑)→ 去掉末段 `-b "<branch>" "<baseBranch>"`,改 `git -C ... worktree add "<worktreePath>" "<branch>"` checkout 既有 branch
+   - **不要**用 `bun -e` import server 的 `worktree.ensure()`:它內部 `Bun.spawn('git')` 在 eval 情境會 `ENOENT`。直接 git CLI
+3. 告訴 user「pipeline 已備好,我幫你開 REPL 視窗」,然後用 Bash 跑:
    ```bash
    powershell -Command "Start-Process cmd -ArgumentList '/k claude --dangerously-skip-permissions' -WindowStyle Normal"
    ```
    (macOS / Linux 上換對應 terminal launcher;確認 user OS 後再執行)
-3. 給 user **4 行 paste-ready** 指令(替換成實際絕對路徑):
+4. 給 user **paste-ready** 指令(全用前面推出的絕對路徑填):
    ```
    Read <repo>/docs/vibe-pipeline/repl-runner.md
-   PIPELINE_JSON: <target-project>/.vibe-pipeline/pipelines/<pipelineId>.json
-   WORKTREE: ~/.vibe-pipeline/worktrees/<projHash>/<pipelineId>
+   PIPELINE_JSON: <projectPath>/.vibe-pipeline/pipelines/<pipelineId>.json
+   WORKTREE: <worktreePath>
    開始
    ```
-4. user 貼進新 cmd 視窗 Enter → REPL 自己 Read 兩個檔(`repl-runner.md` 框架 + `server/lib/runner/runnerPrompt.ts` 主 agent 行為)→ Task 派 sub-agent 跑完
-5. 跑完 user 回來告訴你結果,你決定下一步(看 diff / commit / merge / 啟新 pipeline)
+5. user 貼進新 cmd 視窗 Enter → REPL 自己 Read 兩個檔(`repl-runner.md` 框架 + 同 repo 的 `server/lib/runner/runnerPrompt.ts` 主 agent 行為)→ Task 派 sub-agent 跑完
+6. 跑完 user 回來告訴你結果,你決定下一步(看 diff / commit / merge / 啟新 pipeline)
 
-`docs/vibe-pipeline/repl-runner.md` 是 paste-ready 指令的標準範本,絕對路徑替換時兩個 placeholder(`__FILL_ME__`)很明顯。
+`docs/vibe-pipeline/repl-runner.md` 是 paste-ready 指令的標準範本;它只認你在「執行參數」段填的兩個絕對路徑(PIPELINE_JSON / WORKTREE),內部**不寫死任何機器路徑**(runnerPrompt.ts 由本檔自己的絕對路徑往上推同 repo 取得)。
 
 ### 注意事項
 

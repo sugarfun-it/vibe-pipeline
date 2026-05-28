@@ -9,8 +9,9 @@
 
 ## 第一步:載入完整 runner 行為規範
 
-**Read 這個檔**:
-`D:\sugarfungit\vibe-pipeline\server\lib\runner\runnerPrompt.ts`
+**Read 與本檔同 repo 的 runner 行為檔**:`server/lib/runner/runnerPrompt.ts`
+
+不靠寫死路徑定位:你是被 `Read <絕對路徑>/docs/vibe-pipeline/repl-runner.md` 載入的。那個絕對路徑往上兩層目錄就是 vibe-pipeline source repo root,runner 行為檔 = `<repo root>/server/lib/runner/runnerPrompt.ts`。(此檔與 runnerPrompt.ts 永遠同 repo / 同 bundle 一起分發,相對位置固定。)
 
 找 `buildRunnerBehaviorPrompt('claude')` 函式組出來的 prompt 文字,**完整照著做**。特別注意:
 - 核心職責 + 主迴圈
@@ -27,6 +28,8 @@
 - `PIPELINE_JSON 絕對路徑` — 你讀寫 pipeline state 的唯一檔案
 - `WORKTREE 絕對路徑` — 你的 `cwd` 應該設這(`cd` 過去或所有 Bash 帶 `cwd`)
 - Provider 永遠 `claude` — sub-agent 用 **`Task` tool** 派,**不要** Bash 自己 spawn `claude -p`
+
+**開跑前先確認 WORKTREE 就緒**:該 dir 必須存在且含 `node_modules`(REPL 模式沒有 backend 自動建,派你來的 CC 應已先 `git worktree add` + `bun install`)。若 dir 不存在或缺 node_modules → **停下回報**,別自己瞎建 worktree(路徑 / branch 算錯會跟 vbpl 認知不一致)。
 
 照 runnerPrompt 的主迴圈邏輯跑到結束(全 done → state=ready,或失敗 → state=paused)。
 
