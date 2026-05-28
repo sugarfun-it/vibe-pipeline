@@ -59,7 +59,7 @@ export function useQA(projectHash: string | null) {
       return await qaApi.getDraft(projectHash, draftId);
     },
     {
-      intervalMs: 3000,
+      intervalMs: 5000,
       gate: shouldPoll,
       refetchOnVisible: false,
       deps: [projectHash, draftId, lastRole, turnsLen],

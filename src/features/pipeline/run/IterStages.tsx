@@ -3,12 +3,15 @@ import { normalizeVerdict } from "../../../lib/pipelines";
 import { ArrowRightIcon } from "../../../ui/icons";
 import type { IterStage, TicketStatus } from "../../../../shared/types";
 
-export const STAGE_LABEL: Record<IterStage, string> = {
+export const STAGE_LABEL = {
   doer: "執行",
   critic: "審核",
   "✓": "結果",
-  done: "結果",
-};
+} satisfies Partial<Record<IterStage, string>>;
+
+function stageLabel(s: IterStage): string {
+  return STAGE_LABEL[s as keyof typeof STAGE_LABEL] ?? "結果";
+}
 
 // TICKET-SG-001 / TICKET-005 / TICKET-SG-006:visible verdict 改本地化(zh-TW)+ 完整動詞語意。
 // 過去用 PASS / FAIL / PART 英文 token 跟整體中文 UI 不一致;這層維持 normalizeVerdict
@@ -48,7 +51,7 @@ export const IterStages = memo(function IterStages({
   const normalized: IterStage =
     raw === "doer" || raw === "critic" || raw === "✓"
       ? (raw as IterStage)
-      : raw === "done" || /done|complete|pass|finish|✓/i.test(raw)
+      : /done|complete|pass|finish|✓/i.test(raw)
       ? "✓"
       : /crit|review|judge|check/i.test(raw)
       ? "critic"
@@ -56,10 +59,10 @@ export const IterStages = memo(function IterStages({
       ? "doer"
       : "doer";
   // stages 可能不含 critic(merge / sync 走 ["doer", "✓"]);如果 stage 落不到 stages 裡,fallback 到 doer 避免全顯 ?
-  let idx = stages.indexOf(normalized === "done" ? "✓" : normalized);
+  let idx = stages.indexOf(normalized);
   if (idx === -1) idx = 0;
   // a11y:整段給 SR 一個簡短描述。
-  const currentName = STAGE_LABEL[stages[idx] ?? "doer"];
+  const currentName = stageLabel(stages[idx] ?? "doer");
   const isResultStage = stages[idx] === "✓";
   const statusText = status === "running"
     ? "執行中"
@@ -115,7 +118,7 @@ export const IterStages = memo(function IterStages({
                 (status === "paused" && isCurrent ? " is-paused" : "")
               }
             >
-              {STAGE_LABEL[s]}
+              {stageLabel(s)}
               {mark && (
                 <>
                   <span className={"iter-stage-mark " + mark.cls} aria-hidden>
