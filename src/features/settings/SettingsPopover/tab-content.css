@@ -11,7 +11,7 @@
 .task-group {
   display: flex;
   flex-direction: column;
-  padding: 14px 14px 12px;
+  padding: 14px 14px var(--space-3);
   border-radius: 10px;
 }
 .task-group + .task-group { margin-top: 10px; }
@@ -32,7 +32,7 @@
   font-size: 12px;
   color: var(--fg-mute);
   line-height: 1.5;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 /* secondary 內的 task-group-hint 升格為 accent callout */
@@ -40,10 +40,10 @@
   display: flex;
   background: color-mix(in srgb, var(--accent) 5%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
-  padding: 8px 10px;
+  padding: var(--space-2) 10px;
   border-radius: 7px;
   color: var(--fg);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   line-height: 1.45;
   align-items: flex-start;
   gap: 6px;

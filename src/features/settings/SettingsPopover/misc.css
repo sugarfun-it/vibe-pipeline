@@ -30,7 +30,7 @@
     margin: 0 !important;
     /* close button 已併入 .settings-popover-header 同排,不再需要 top strip;
        top padding 改 safe-area-aware,避免撞瀏海 / status bar */
-    padding: max(14px, env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom)) !important;
+    padding: max(14px, env(safe-area-inset-top)) var(--space-4) calc(12px + env(safe-area-inset-bottom)) !important;
     border-radius: 0 !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
@@ -81,8 +81,8 @@
     width: 100% !important;
     min-width: 0;
     min-height: 40px;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
   }
 
   /* close icon size(44×44)走 shared `.drawer-close` mobile @media;
@@ -104,7 +104,7 @@
 
   .settings-field-controls {
     flex-wrap: wrap;
-    row-gap: 4px;
+    row-gap: var(--space-1);
     width: 100%;
     min-width: 0;
   }
@@ -113,8 +113,8 @@
      picker-trigger 不是 form primitive,獨留。 */
   .settings-popover .picker-trigger {
     min-height: 40px;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
   }
 
   .settings-popover .settings-form-field--narrow .form-input,
@@ -145,7 +145,7 @@
   .settings-field-row--tight {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--space-2);
   }
   .settings-field-row--tight .toggle-pill {
     width: 100%;
@@ -154,6 +154,6 @@
     white-space: normal;
     text-align: left;
     line-height: 1.35;
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
   }
 }

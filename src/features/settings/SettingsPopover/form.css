@@ -11,7 +11,7 @@
   display: grid;
   grid-template-columns: minmax(110px, var(--settings-label-col)) minmax(0, 1fr);
   align-items: center;
-  gap: 4px var(--settings-row-gap);
+  gap: var(--space-1) var(--settings-row-gap);
   margin-bottom: 6px;
 }
 
@@ -41,7 +41,7 @@
   line-height: 1.55;
   padding-left: calc(var(--settings-label-col) + var(--settings-row-gap));
   margin-top: 2px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .settings-subhint:last-child { margin-bottom: 0; }
 
@@ -69,7 +69,7 @@
   margin-bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .settings-section-title::before {
   content: "";
@@ -91,7 +91,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   row-gap: 6px;
   min-width: 0;
 }
@@ -130,7 +130,7 @@
   font-size: 12.5px;
   background: var(--bg);
   border-radius: 7px;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* sp-r2-001 / r3:settings-popover scope 內 off-state toggle 不該看起來像 disabled。

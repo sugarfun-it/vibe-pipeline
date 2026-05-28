@@ -5,7 +5,7 @@
   display: flex; flex-direction: column;
   border-right: 1px solid var(--line);
   background: var(--bg-elevated);
-  padding: 14px 10px 12px;
+  padding: 14px 10px var(--space-3);
   overflow-y: auto;
   min-height: 0;
 }
@@ -17,8 +17,8 @@
 }
 .rail-section-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 6px 8px;
-  gap: 8px;
+  padding: 0 6px var(--space-2);
+  gap: var(--space-2);
 }
 .rail-section-label {
   font-size: 10px; font-weight: 600;
@@ -34,7 +34,7 @@
 .rail-section-overflow-menu {
   min-width: 0;
 }
-.rail-list { display: flex; flex-direction: column; gap: 4px; }
+.rail-list { display: flex; flex-direction: column; gap: var(--space-1); }
 
 .rail-item {
   display: flex; flex-direction: column; gap: 6px;
@@ -145,7 +145,7 @@
    topbar action chips, signaling "add new" affordance). Sizing and radius
    align with shared control tokens; only the dashed border is exclusive. */
 .rail-add {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: var(--space-2);
   min-height: var(--control-h, 32px);
   padding: 7px 10px;
   border-radius: var(--radius-control, 6px);
@@ -172,7 +172,7 @@
    — refined 設計要 quieter,在 row 內當輔助 indicator,不該跟 status chip 搶視覺權重 */
 .rail-qa-badge {
   font-size: 9px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: 3px;
   background: transparent;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
@@ -186,7 +186,7 @@
    focus 欄不可見,rail 自己也要有方向感(不能只有孤零零的 + 新 pipeline 按鈕)。
    權重壓低(font-size + color)避免跟正式 rail-item 搶視線。 */
 .rail-empty-hint {
-  margin: 6px 8px 0;
+  margin: 6px var(--space-2) 0;
   padding: 0;
   font-size: 11px;
   line-height: 1.5;

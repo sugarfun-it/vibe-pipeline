@@ -1,7 +1,7 @@
 /* qa/checklist.css — checklist row layout rules. */
 .qadr-checklist {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px dashed var(--line);
 }
 .qadr-checklist-row {

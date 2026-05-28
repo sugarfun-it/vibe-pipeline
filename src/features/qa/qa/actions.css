@@ -25,24 +25,24 @@
 }
 .qadr-spec-ready-bar-btn {
   margin-left: auto;
-  padding: 6px 12px;
+  padding: 6px var(--space-3);
   font-size: 12.5px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
 /* close-confirm 改 inline alert(非 modal)— 視覺 + 結構強化,desktop / mobile 都讓
    message + actions 上下分層,而不是擠在 flex-wrap 邊緣 */
 .qadr-close-confirm {
-  padding: 12px 18px;
+  padding: var(--space-3) 18px;
   border-top: 1px solid color-mix(in srgb, var(--paused) 35%, var(--line));
   border-bottom: 1px solid color-mix(in srgb, var(--paused) 35%, var(--line));
   background: color-mix(in srgb, var(--paused) 12%, var(--panel-2));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   position: relative;
 }
 .qadr-close-confirm-msg {
@@ -50,11 +50,11 @@
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--fg);
-  padding-left: 24px;
+  padding-left: var(--space-6);
 }
 .qadr-close-confirm-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
 }

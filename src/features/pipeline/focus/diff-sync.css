@@ -15,7 +15,7 @@
 .focus-diff-added { color: var(--done); }
 .focus-diff-deleted { color: var(--failed); }
 .focus-diff-sep { margin: 0 3px; color: var(--fg-faint); }
-.focus-diff-files { color: var(--fg-faint); margin-left: 4px; }
+.focus-diff-files { color: var(--fg-faint); margin-left: var(--space-1); }
 
 /* sync chip color variants */
 .sync-chip.sync-chip-conflict { color: var(--accent); }
@@ -25,8 +25,8 @@
 .sync-chip-icon {
   background: transparent;
   border: 0;
-  padding: 1px 4px;
-  margin-left: 4px;
+  padding: 1px var(--space-1);
+  margin-left: var(--space-1);
   color: currentColor;
   opacity: 0.7;
 }

@@ -5,8 +5,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 48px 12px;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-3);
   /* iter-uiux 2026-05-25 focus-column.empty_pipeline (FC-EMPTY-001):
      讓 EmptyTickets 在 header 與欄底之間垂直置中,而不是貼在 header 下方。
      flex:1 撐滿剩餘 .focus 高度;min-height:0 防 overflow-y:auto container 計算問題。 */
@@ -36,5 +36,5 @@
 }
 
 .focus-empty-cta {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }

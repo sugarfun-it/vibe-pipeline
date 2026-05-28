@@ -10,12 +10,12 @@
   /* parallel-chip 視覺對齊兩個 icon-btn 高度,gap 6px 才看起來等距 */
   .topbar .parallel-chip {
     min-height: 40px;
-    padding: 4px 12px;
+    padding: var(--space-1) var(--space-3);
     border-radius: 8px;
   }
 
   .topbar {
-    gap: 8px;
+    gap: var(--space-2);
     padding: 0 10px;
   }
 
@@ -61,7 +61,7 @@
     flex: 1 1 auto;
     min-width: 0;
     max-width: 100%;
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     display: flex;
   }
 

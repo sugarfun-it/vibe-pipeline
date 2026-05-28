@@ -18,8 +18,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 /* 目前位置:強化 hierarchy(label + 路徑)— directory-picker 味,讓 user 一眼定位
@@ -30,7 +30,7 @@
   align-items: baseline;
   gap: 10px;
   margin-bottom: 10px;
-  padding: 9px 12px;
+  padding: 9px var(--space-3);
   background: var(--panel-2, var(--bg));
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -100,9 +100,9 @@
 .browse-drives-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding-left: 8px;
-  margin-left: 4px;
+  gap: var(--space-1);
+  padding-left: var(--space-2);
+  margin-left: var(--space-1);
   border-left: 1px solid var(--line);
 }
 
@@ -113,7 +113,7 @@
 }
 
 .browse-drive-btn {
-  padding: 4px 10px;
+  padding: var(--space-1) 10px;
   font-family: var(--font-mono);
   font-size: 12px;
 }
@@ -148,7 +148,7 @@
 }
 
 .browse-list-placeholder {
-  padding: 16px;
+  padding: var(--space-4);
   color: var(--fg-mute);
   list-style: none;
 }
@@ -160,12 +160,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   /* 佔滿 .browse-list 整個高度,避免 loading / empty / error 文字偏左上看起來像沒置中
      (advisor topbar browse-loading-r1) */
   min-height: 100%;
   height: 100%;
-  padding: 24px;
+  padding: var(--space-6);
 }
 
 .browse-list-placeholder-folder {

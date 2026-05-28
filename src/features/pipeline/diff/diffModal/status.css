@@ -60,7 +60,7 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 3px 10px;
   border-radius: 5px;
   border: 1px dashed var(--line);
@@ -91,7 +91,7 @@
   opacity: 0.85;
 }
 .diff-modal-retry {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   height: 28px;
   padding: 0 14px;
   display: inline-flex;

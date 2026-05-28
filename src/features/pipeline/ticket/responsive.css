@@ -28,7 +28,7 @@
   .tdrw-commit-hash-btn {
     min-height: 44px;
     min-width: 72px;
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
   }
 }
 

@@ -2,15 +2,15 @@
    V1 Refined RWD:padding 縮、actions btn 縮小、title 19px,
    避免 absolute-pinned actions 撞 title 跟 overflow ⋯ */
 @media (max-width: 919.98px) {
-  .focus { padding: 16px 18px 18px; }
-  .focus-head-title-row { padding-right: 240px; gap: 8px; min-height: 32px; }
-  .focus-actions { right: 38px; gap: 4px; height: 32px; }
+  .focus { padding: var(--space-4) 18px 18px; }
+  .focus-head-title-row { padding-right: 240px; gap: var(--space-2); min-height: 32px; }
+  .focus-actions { right: 38px; gap: var(--space-1); height: 32px; }
   .focus-overflow { height: 32px; }
-  .focus-actions .btn { padding: 4px 10px; font-size: 11.5px; min-height: 28px; }
+  .focus-actions .btn { padding: var(--space-1) 10px; font-size: 11.5px; min-height: 28px; }
   .focus-overflow > .btn,
   .rail-section-overflow > .btn,
   .focus-title-edit-confirm,
-  .focus-title-edit-cancel { padding: 4px 6px; min-height: 28px; }
+  .focus-title-edit-cancel { padding: var(--space-1) 6px; min-height: 28px; }
   .focus-title,
   .focus-title-input { font-size: 19px; }
 }
@@ -28,7 +28,7 @@
   .focus-head { margin-bottom: 10px !important; }
   .focus-head-top {
     gap: 6px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: var(--space-2) !important;
   }
   /* done count 字體略小,跟 state chip 同一視覺層 */
   .focus-count {
@@ -65,14 +65,14 @@
     right: auto !important;
     height: auto !important;
     margin: 0 !important;
-    margin-top: 8px !important;
+    margin-top: var(--space-2) !important;
     gap: 6px;
     flex: 0 0 100%;
     width: 100%;
     max-width: 100%;
     order: 99;
     justify-content: flex-end;
-    padding-top: 8px;
+    padding-top: var(--space-2);
     border-top: 1px dashed var(--line);
     flex-wrap: wrap;
   }
@@ -95,7 +95,7 @@
   .rail-section-overflow > .btn,
   .focus-title-edit-confirm,
   .focus-title-edit-cancel {
-    padding-inline: 8px;
+    padding-inline: var(--space-2);
   }
   /* rename confirm / cancel 跟 ⋯ overflow 同一節奏 — 不強制方形(原 aspect 1/1 顯得比 ⋯ 重) */
   .focus-title-edit-confirm,
@@ -223,7 +223,7 @@
   .banner[data-state="failed"] > .btn,
   .banner[data-state="merging"] > .btn {
     flex: 0 0 100%;
-    margin-top: 8px;
+    margin-top: var(--space-2);
     justify-content: center;
   }
 }
@@ -238,7 +238,7 @@
 /* ─── Ultra-narrow(<540px,小手機)── refined 額外壓縮 header padding
    meta-row 改 horizontal scroll(不 wrap),title 17px */
 @media (max-width: 539.98px) {
-  .focus { padding: 12px 10px 14px !important; }
+  .focus { padding: var(--space-3) 10px 14px !important; }
   .focus-title,
   .focus-title-input { font-size: 17px !important; }
   /* meta-row 維持 wrap(refined v2 矯正:之前用 nowrap+overflow-x:auto 會把 actions
@@ -246,11 +246,11 @@
   .focus-head-meta-row {
     font-size: 10.5px;
     flex-wrap: wrap !important;
-    row-gap: 4px;
+    row-gap: var(--space-1);
   }
   .focus-head-meta-row > .focus-count,
   .focus-head-meta-row > .chip:not(.chip-state),
-  .focus-head-meta-row > .sync-chip { padding: 0 8px; }
+  .focus-head-meta-row > .sync-chip { padding: 0 var(--space-2); }
 
   /* Action button 在這 size 範圍補 touch target(32-34 min-height)*/
   .focus-actions .btn {

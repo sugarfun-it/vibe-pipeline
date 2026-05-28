@@ -12,7 +12,7 @@
 }
 
 .init-scan {
-  display: flex; gap: 14px; padding: 22px 26px 16px;
+  display: flex; gap: 14px; padding: 22px 26px var(--space-4);
   border-bottom: 1px dashed var(--line);
 }
 .init-scan-icon {
@@ -44,7 +44,7 @@
 
 .init-body { padding: 22px 28px 6px; }
 .init-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: 22px; font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--fg);
@@ -59,7 +59,7 @@
 .init-section-label {
   font-size: 10px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--fg-faint); margin-bottom: 8px;
+  color: var(--fg-faint); margin-bottom: var(--space-2);
 }
 
 .init-tree-wrap { padding: 14px 28px 18px; }
@@ -69,7 +69,7 @@
 }
 .init-tree-row {
   padding-left: 14px;
-  display: grid; grid-template-columns: 28px minmax(100px, 130px) minmax(0, 1fr); gap: 4px;
+  display: grid; grid-template-columns: 28px minmax(100px, 130px) minmax(0, 1fr); gap: var(--space-1);
   align-items: baseline;
 }
 /* phase4-2026-05-23-002 — under 480px the third column has no room; stack the
@@ -81,7 +81,7 @@
   }
   .init-tree-glyph { grid-column: 1; grid-row: 1 / span 2; }
   .init-tree-name { grid-column: 2; grid-row: 1; }
-  .init-tree-cmt { grid-column: 2; grid-row: 2; padding-left: 4px; }
+  .init-tree-cmt { grid-column: 2; grid-row: 2; padding-left: var(--space-1); }
   .init-tree-line { display: none; }
 }
 .init-tree-glyph { color: var(--accent); margin-right: 6px; }
@@ -125,7 +125,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: start;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: 12px;
   color: var(--fg-mute);
   cursor: pointer;

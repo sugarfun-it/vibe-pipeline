@@ -6,7 +6,7 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
   }
   /* chips/meta past the title flow to a full-width second row */
   .ticket-row > .chip,
@@ -43,7 +43,7 @@
   .ticket-card__titleline {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: var(--space-1);
   }
   .ticket-card__titleline > .ticket-mode {
     align-self: flex-start;
@@ -56,7 +56,7 @@
      不改顯示邏輯(不折疊隱藏),純視覺密度。current in-progress row 跟 summary 保持原尺寸。 */
   .ticket.is-failed .ticket-iter-row,
   .ticket.is-done .ticket-iter-row {
-    padding: 5px 8px;
+    padding: 5px var(--space-2);
     gap: 10px;
     margin-top: 3px;
     font-size: 11px;
@@ -75,7 +75,7 @@
 /* tk-007:極窄 viewport(<=480px)再緊一點 padding */
 @media (max-width: 480px) {
   .ticket {
-    padding: 10px 12px 12px 18px;
+    padding: 10px var(--space-3) var(--space-3) 18px;
   }
   /* tk-001c:mobile 只改 indent token,所有 row 自動跟著變;不再個別重寫 margin-left */
   .ticket {
@@ -89,24 +89,24 @@
    iter row flex-wrap + stages wrap;livelog 字級壓低 */
 @media (max-width: 539.98px) {
   .ticket {
-    padding: 11px 12px 12px 14px;
+    padding: 11px var(--space-3) var(--space-3) 14px;
     border-radius: 8px;
   }
   .ticket-band { left: 4px; top: 10px; bottom: 10px; }
-  .ticket-card__header { flex-wrap: wrap; row-gap: 4px; }
+  .ticket-card__header { flex-wrap: wrap; row-gap: var(--space-1); }
   .ticket-card__titleline { flex-basis: 100%; min-width: 0; }
   .ticket-card__trailing { margin-left: auto; }
   .ticket-title { font-size: 13px; line-height: 1.35; }
   .ticket-num { font-size: 10px; width: 22px; }
   .ticket-iter-row {
     flex-wrap: wrap;
-    column-gap: 8px;
+    column-gap: var(--space-2);
     row-gap: 2px;
   }
   .iter-stages { flex-wrap: wrap; }
   .iter-meta { margin-left: auto; }
   .ticket-goal { font-size: 11.5px; }
-  .ticket-livelog { font-size: 10px; padding: 4px 7px; }
+  .ticket-livelog { font-size: 10px; padding: var(--space-1) 7px; }
 }
 
 @media (hover: none) {

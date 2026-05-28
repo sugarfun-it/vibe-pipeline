@@ -1,5 +1,5 @@
 /* ─── focus ticket list ───────────────────────────────────── */
-.focus-list { display: flex; flex-direction: column; gap: 8px; }
+.focus-list { display: flex; flex-direction: column; gap: var(--space-2); }
 /* iter-uiux 2026-05-25 focus-column.has_active_draft r2 — .focus-list 內含 .focus-empty
    時整個 ticket list 撐滿剩餘高度,讓 .focus-empty(flex column + justify-content:center)
    真的能在 header 下方的垂直可用區段中央。否則 .focus-list 高度為 0,.focus-empty 雖然

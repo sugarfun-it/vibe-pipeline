@@ -8,7 +8,7 @@
 .tdrw-commit-hash-btn {
   background: transparent;
   border: 1px dashed transparent;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
@@ -52,7 +52,7 @@
      sticky footer 約 56-64px,mobile body padding-bottom 從 80 → 112 給最後一列 breathing room
      (commit row / AuditTimeline toggle 才不會視覺貼齊 footer);safe-area 額外加 */
   .tdrw-body {
-    padding: 12px 16px calc(112px + env(safe-area-inset-bottom));
+    padding: var(--space-3) var(--space-4) calc(112px + env(safe-area-inset-bottom));
   }
   /* TDRW-SPLIT-RWD-001:split-confirm footer 比一般 actions 高出 ~120px
      (head + desc + actions stack),body clearance 必須加碼,
