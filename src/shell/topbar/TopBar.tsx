@@ -5,6 +5,7 @@ import { useAsyncAction } from "../../hooks/useAsyncAction";
 import { useLocalStorageState } from "../../hooks/useLocalStorageState";
 import { useUrlParam } from "../../hooks/useUrlParam";
 import { useProjectPicker } from "../../contexts/ProjectPickerContext";
+import { resolveTheme } from "../../lib/theme";
 import type { Project } from "../../../shared/types";
 import { Crumbs } from "./Crumbs";
 import { Actions } from "./Actions";
@@ -97,7 +98,7 @@ export function TopBar({
   // index.html inline script 負責第一個 frame,這裡只負責 user 互動切換
   const [urlTheme] = useUrlParam("theme");
   const [storedTheme, setStoredTheme] = useLocalStorageState<string | null>("vibe-pipeline:theme", null);
-  const isDark = urlTheme === "dark" || (urlTheme !== "light" && storedTheme === "dark");
+  const isDark = resolveTheme(urlTheme, storedTheme);
   function toggleTheme() {
     const next = !isDark;
     setStoredTheme(next ? "dark" : "light");

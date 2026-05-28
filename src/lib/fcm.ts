@@ -8,7 +8,7 @@ import {
   type Messaging,
   type MessagePayload,
 } from "firebase/messaging";
-import { apiFetch } from "../api/_client";
+import { registerPush, unregisterPush } from "../api/push";
 
 type FcmConfig = {
   apiKey: string;
@@ -20,7 +20,6 @@ type FcmConfig = {
   vapidKey: string;
 };
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const TOKEN_KEY = "fcm_token";
 
 // Firebase Web SDK config default:maintainer host(專案 `vibe-pipeline`)的公開 config。
@@ -137,14 +136,7 @@ export async function requestAndRegisterToken(): Promise<string> {
   });
   if (!token) throw new Error("getToken 回空,可能 VAPID / authDomain 不對");
   try {
-    const res = await apiFetch(`${API_BASE_URL}/api/push/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: JSON.stringify({ token, platform: "web" }),
-    });
-    if (!res.ok && res.status !== 404) {
-      throw new Error(`register 失敗: ${res.status}`);
-    }
+    await registerPush(token);
   } catch (e) {
     console.warn("[fcm] /api/push/register 失敗,token 仍保留 local:", e);
   }
@@ -166,14 +158,7 @@ export async function unregisterToken(): Promise<void> {
   }
   if (token) {
     try {
-      const res = await apiFetch(`${API_BASE_URL}/api/push/unregister`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify({ token }),
-      });
-      if (!res.ok && res.status !== 404) {
-        console.warn("[fcm] /api/push/unregister 回應", res.status);
-      }
+      await unregisterPush(token);
     } catch (e) {
       console.warn("[fcm] /api/push/unregister 失敗", e);
     }

@@ -28,6 +28,7 @@ export function SettingsPopover({
 }) {
   const { toast } = useToast();
   const [savedVisible, setSavedVisible] = useState(false);
+  const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
   const [savedFading, setSavedFading] = useState(false);
   const tablistRef = useRef<HTMLDivElement>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +110,47 @@ export function SettingsPopover({
     }, 0);
   }
 
+  // Tab 面板渲染走 switch + never default:加第 5 個 tab 卻忘了補 case 會編譯即 fail。
+  // project 面板一律掛載(用 hidden 切顯隱)以保留 ProjectTab 的載入 / autosave / draft 狀態,
+  // 故 project case 回傳 null,實際面板在 switch 外另行掛載。
+  function renderActivePanel() {
+    switch (activeTab) {
+      case "project":
+        return null;
+      case "ai":
+        return (
+          <div role="tabpanel" id={panelId("ai")} aria-labelledby={tabId("ai")}>
+            <AITab userCfg={userCfg} onTaskChange={updateTask} />
+          </div>
+        );
+      case "notifications":
+        return (
+          <div role="tabpanel" id={panelId("notifications")} aria-labelledby={tabId("notifications")}>
+            <NotificationsTab
+              userCfg={userCfg}
+              pushSaving={pushSaving}
+              onTogglePushEvent={updatePushEvent}
+            />
+          </div>
+        );
+      case "update":
+        return (
+          <div
+            role="tabpanel"
+            id={panelId("update")}
+            aria-labelledby={tabId("update")}
+            className="settings-tab-content"
+          >
+            <UpdateTab />
+          </div>
+        );
+      default: {
+        const _exhaustive: never = activeTab;
+        return _exhaustive;
+      }
+    }
+  }
+
   return (
     <Popover
       anchorRef={anchorRef}
@@ -179,37 +221,25 @@ export function SettingsPopover({
         aria-labelledby={tabId("project")}
         hidden={activeTab !== "project"}
       >
+        {activeTab === "project" && projectLoadError && (
+          <div className="settings-tab-content">
+            <span className="settings-subhint settings-subhint--error" role="alert">
+              載入專案設定失敗：{projectLoadError}
+            </span>
+          </div>
+        )}
         <ProjectTab
           hash={hash}
           onSaved={onSaved}
           onSavedNotify={showSaved}
+          onLoadError={(message) => {
+            setProjectLoadError(message);
+            if (message) toast(`載入專案設定失敗：${message}`, { variant: "danger" });
+          }}
         />
       </div>
 
-      {activeTab === "ai" && (
-        <div role="tabpanel" id={panelId("ai")} aria-labelledby={tabId("ai")}>
-          <AITab
-            userCfg={userCfg}
-            onTaskChange={updateTask}
-          />
-        </div>
-      )}
-
-      {activeTab === "notifications" && (
-        <div role="tabpanel" id={panelId("notifications")} aria-labelledby={tabId("notifications")}>
-          <NotificationsTab
-            userCfg={userCfg}
-            pushSaving={pushSaving}
-            onTogglePushEvent={updatePushEvent}
-          />
-        </div>
-      )}
-
-      {activeTab === "update" && (
-        <div role="tabpanel" id={panelId("update")} aria-labelledby={tabId("update")} className="settings-tab-content">
-          <UpdateTab />
-        </div>
-      )}
+      {renderActivePanel()}
     </Popover>
   );
 }
