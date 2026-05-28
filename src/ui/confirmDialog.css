@@ -76,6 +76,31 @@
 .confirm-desc.confirm-desc--rich > ul + p {
   margin-top: 8px;
 }
+/* rich list contract — caller 給 <ul><li> 就有一致 bullet / 縮排 / 行距,
+   不必各自 local CSS(對齊 primitive ownership)。 */
+.confirm-desc.confirm-desc--rich ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.confirm-desc.confirm-desc--rich li {
+  margin: 0;
+}
+.confirm-desc.confirm-desc--rich li + li {
+  margin-top: 4px;
+}
+.confirm-desc.confirm-desc--rich code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  word-break: break-all;
+}
+.confirm-desc.confirm-desc--rich strong {
+  color: var(--fg);
+  font-weight: 600;
+}
 
 .confirm-actions {
   display: flex;

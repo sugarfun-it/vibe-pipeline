@@ -47,25 +47,6 @@ Phase 8 候選清單。動工時搬進 pipeline ticket(`vbpl ticket add --pipeli
 - 同樣問題也存在主 agent 派 Task sub-agent(無 critic 全靠 user review);本 TODO 先解 VP path,Task 路徑靠紀律
 - 規格待寫;先補 ref doc 拆設計細節
 
-### 6. Primitive polish 殘留(ownership cleanup 主體已落地)
-
-> 核心 ownership cleanup(Popover z-index / `.menu-surface` 拆 / form-field inline-block variant / 抽 `<SettingsField>` / Overlay ref-counted scroll-lock)已落地,見「已落地」段。只剩兩個 Phase-4 polish:
-
-- **toggle-pill 換 native iOS-switch pattern** — 目前 `.toggle-pill`(`src/styles/board/toggle-pill.css`)是 pill + border 變色,`is-on` 靠邊框/底色區分,off / disabled 視覺仍偏弱。真解換 track / thumb / labels 的 iOS-switch,全 app `.toggle-pill` consumer 跟著改。規模:小-中(1 個 css + ~14 處 consumer 視覺驗)
-- **OverflowMenu copy migration to `descriptionRich`** — ConfirmDialog 已有 `descriptionRich?: ReactNode` API,但 OverflowMenu 內部 confirm 還用舊 string,沒享 rich text(粗體 / 行高 / icon)。規模:小(consumer migration)
-
-### 7. EmptyProject CTA → 提升 shared context
-
-- 痛點:`EmptyProject` 的「選擇專案資料夾」CTA 直接呼叫 `setBrowseOpen` — 但這個 state owner 在 TopBar 內,EmptyProject 沒法直接 trigger,目前是 deferred 沒接線
-- 2026-05-24 iter-uiux Phase 4 揭露(`empty-project` unit)
-- 設計方向:
-  - 把 `browseOpen` / `setBrowseOpen` 從 TopBar local state 升到 `ProjectPickerContext`(新建)
-  - TopBar 跟 EmptyProject 都從 context 拿,EmptyProject CTA 直接可開 browse modal
-  - 順手把 browse modal JSX 也搬出 TopBar(目前 inline 在 TopBar.tsx 內 ~150 行),改成自己 component
-- 落點:新建 `src/contexts/ProjectPickerContext.tsx`、抽 `src/features/pipelineCreate/BrowseProjectModal.tsx`、改 `TopBar.tsx` + `EmptyProject.tsx` 兩 consumer
-- 規模:小-中(~3 個 new files、~2 個改),step ticket 即可
-- 風險:browse modal 內部有 keyboard / focus / fetch loading state,搬家時 e2e 要重跑
-
 ### 8. i18n message-table 抽 ~50 strings
 
 - 痛點:全 app 散佈硬寫繁中字串,沒 message-table 層 → 任何 copy 改要 grep + 多檔同步;遠期想支援英文 / 簡中也卡在這步
@@ -107,6 +88,7 @@ Phase 8 候選清單。動工時搬進 pipeline ticket(`vbpl ticket add --pipeli
 - ~~FCM push gateway~~ — fcm-gateway pipeline t1-t5 落地(2026-05-19);Cloud Run asia-east1 / Firestore per-token registry / max-instances=1 / $1 budget alert / backend 拔 firebase-admin 改 POST gateway(hard cutover)。ref → [`refs/archive/fcm-push-gateway-2026-05-17.md`](refs/archive/fcm-push-gateway-2026-05-17.md)
 - ~~pause-simplify 8 follow-up bug~~ — 2026-05-19 verify 後全 ship。B1-B5 已落地 / B6-B7 pause-simplify 主軸已 ship / B8 phase8 t5 順手覆蓋 / B9 = TODO #2 runner lifecycle。ref → [`refs/pause-simplify-run-postmortem-2026-05-17.md`](refs/pause-simplify-run-postmortem-2026-05-17.md)
 - ~~Runner + QA spawn 限制鬆綁:MCP + slash commands 拿掉~~ — 2026-05-23 ship。`claudeAdapter.ts` spawnRunner / spawnQA 拿掉 `--strict-mcp-config` + `--mcp-config` + `--disable-slash-commands`。Runner / QA 現在能用 user 配的 MCP(codegraph)+ `superpowers:*` / project skill;QA 仍禁 Edit/Write/Task。Split / codex path 不動。
-- ~~Primitive ownership cleanup 主體(#6)~~ — `frontend-primitives-refactor` pipeline(17 tickets,merged)+ 後續 follow-up 落地。Overlay / Popover / TextField / NumberField primitive 抽出 + consumer migration;Popover 自帶 `.popover-surface` z-index(`tokens.css`);`.focus-overflow-menu` 拆共用 `.menu-surface`(`src/ui/menu/menu.css`);form-field 改 `.form-field--inline` modifier + `inline` prop 取代 specificity hack;抽 `<SettingsField>`(`src/features/settings/SettingsField.tsx`);Overlay module-level `scrollLockCount` ref-count。殘留 toggle-pill iOS-switch + OverflowMenu descriptionRich 兩小項留 active #6。
+- ~~Primitive ownership cleanup(#6,全項)~~ — `frontend-primitives-refactor` pipeline(17 tickets,merged)+ 後續 follow-up 落地。Overlay / Popover / TextField / NumberField primitive 抽出 + consumer migration;Popover 自帶 `.popover-surface` z-index(`tokens.css`);`.focus-overflow-menu` 拆共用 `.menu-surface`(`src/ui/menu/menu.css`);form-field 改 `.form-field--inline` modifier + `inline` prop 取代 specificity hack;抽 `<SettingsField>`(`src/features/settings/SettingsField.tsx`);Overlay module-level `scrollLockCount` ref-count;toggle-pill 已是 track/thumb iOS-switch(`src/styles/board/toggle-pill.css`)。**2026-05-28 收尾**:OverflowMenu 重置/刪除 confirm 從 `description` string 改 `descriptionRich` JSX(真 `<ul>` bullet + `<code>` + `<strong>`),`.confirm-desc--rich` 補 ul/li/code/strong 樣式契約。
+- ~~EmptyProject CTA → shared context(#7)~~ — `frontend-primitives-refactor` pipeline「拆 3 個 Context」落地。`src/contexts/ProjectPickerContext.tsx`(browseOpen / openBrowse / openRequestNonce);browse modal 抽 `src/shell/topbar/BrowseProjectModal.tsx`;TopBar + EmptyProject 都從 `useProjectPicker()` 拿,EmptyProject CTA 直呼 `picker.openBrowse()`。
 - ~~server/lib 五層分層重構~~ — 2026-05-28 落地(push 至 `248c8aa`)。io / domain / remote / system / services 分層 + `pipelineDir.ts` 拆 `domain/{projectDir,projectConfig,pipeline,mergeTicket}`;186 import 改寫,build + e2e 93 passed。design / plan → [`refs/2026-05-28-server-lib-restructure-design.md`](refs/2026-05-28-server-lib-restructure-design.md)。
 - ~~Merge 前 secret 洩漏偵測~~ — 2026-05-19 決定不做(scope creep)。`.worktreeinclude` 第一層已落地(消除 AI hardcode 誘因);plan B 自製 secret scanner 越界(VP 是 pipeline orchestrator,不該管 user repo 安全)。建議 user 自己裝 gitleaks pre-commit hook(廣 pattern + 業界標準)。ref → [`refs/archive/worktree-env-2026-05-15.md`](refs/archive/worktree-env-2026-05-15.md)

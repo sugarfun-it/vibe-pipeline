@@ -142,14 +142,21 @@ export function OverflowMenu({
                   warning: isMerged
                     ? undefined
                     : `未 merge 進 base 的 commit 會永久丟失(branch 會被刪)`,
-                  description:
-                    `會做三件事:\n` +
-                    ` · 刪 worktree dir(~/.vibe-pipeline/worktrees/<projHash>/${pipeline.id}/)\n` +
-                    ` · 刪 branch(pipeline/${pipeline.name})— 下次 Run 從 base 重建,不會落後\n` +
-                    ` · tickets 狀態回 draft:${ndone} done + ${nfail} failed\n\n` +
-                    (isMerged
-                      ? `已 merged,branch 的內容都在 base 上,刪 branch 無風險。`
-                      : `要保留 branch 上的 commit 請先 merge 或 cherry-pick → 再重置。`),
+                  descriptionRich: (
+                    <>
+                      <p>會做三件事:</p>
+                      <ul>
+                        <li>刪 worktree dir(<code>{`~/.vibe-pipeline/worktrees/<projHash>/${pipeline.id}/`}</code>)</li>
+                        <li>刪 branch(<code>{`pipeline/${pipeline.name}`}</code>)— 下次 Run 從 base 重建,不會落後</li>
+                        <li>tickets 狀態回 draft:{ndone} done + {nfail} failed</li>
+                      </ul>
+                      <p>
+                        {isMerged
+                          ? "已 merged,branch 的內容都在 base 上,刪 branch 無風險。"
+                          : "要保留 branch 上的 commit 請先 merge 或 cherry-pick → 再重置。"}
+                      </p>
+                    </>
+                  ),
                   confirmLabel: "重置",
                   danger: true,
                 });
@@ -175,13 +182,19 @@ export function OverflowMenu({
                   warning: isMerged
                     ? undefined
                     : `未 merge 進 base：未 commit 的變動會永久丟失。`,
-                  description: isMerged
-                    ? `已 merged，刪除無風險。\n` +
-                      `會清掉 pipeline.json + 對應 worktree（~/.vibe-pipeline/worktrees/...）。\n` +
-                      `branch 跟已 commit 的內容仍在 base 上看得到。`
-                    : `會清掉 pipeline.json + 對應 worktree。\n` +
-                      `已提交的 ticket commit 仍留在 branch 內（可手動 git checkout 該 branch 取回，但 vibe-pipeline UI 不會顯示）。\n` +
-                      `要保留請先 merge 或備份 → 再刪。`,
+                  descriptionRich: isMerged ? (
+                    <>
+                      <p><strong>已 merged，刪除無風險。</strong></p>
+                      <p>會清掉 pipeline.json + 對應 worktree（<code>~/.vibe-pipeline/worktrees/...</code>）。</p>
+                      <p>branch 跟已 commit 的內容仍在 base 上看得到。</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>會清掉 pipeline.json + 對應 worktree。</p>
+                      <p>已提交的 ticket commit 仍留在 branch 內（可手動 <code>git checkout</code> 該 branch 取回，但 vibe-pipeline UI 不會顯示）。</p>
+                      <p>要保留請先 merge 或備份 → 再刪。</p>
+                    </>
+                  ),
                   confirmLabel: isMerged ? "刪除" : "強制刪除",
                   danger: true,
                 });
