@@ -51,6 +51,7 @@ export const MODELS_BY_PROVIDER: Record<Provider, readonly ModelName[]> = {
   // claude:full ID 鎖明確版本(2026-05 主力組合)
   // 第一個是該 provider 的預設值。新 model 出現就在這 array 加(`claude --model invalid` 會印錯誤但不列清單)。
   claude: [
+    "claude-opus-4-8",
     "claude-opus-4-7",
     "claude-sonnet-4-6",
     "claude-haiku-4-5-20251001",
@@ -91,12 +92,12 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   defaults: {
     qa: { provider: "claude", model: "claude-sonnet-4-6", effort: "low" },
     split: { provider: "claude", model: "claude-sonnet-4-6", effort: "low" },
-    runner: { provider: "claude", model: "claude-opus-4-7", effort: "medium" },
+    runner: { provider: "claude", model: "claude-opus-4-8", effort: "medium" },
     // 執行AI:真的改 code,要 capability
-    executor: { provider: "claude", model: "claude-opus-4-7", effort: "high" },
+    executor: { provider: "claude", model: "claude-opus-4-8", effort: "high" },
     // 審核AI:讀 diff 判 PASS/FAIL,sonnet + medium 已夠用,省 token
     critic: { provider: "claude", model: "claude-sonnet-4-6", effort: "medium" },
-    merge: { provider: "claude", model: "claude-opus-4-7", effort: "high" },
+    merge: { provider: "claude", model: "claude-opus-4-8", effort: "high" },
   },
   pushEvents: {
     ticket_done: true,
