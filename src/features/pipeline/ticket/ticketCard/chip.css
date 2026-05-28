@@ -11,11 +11,13 @@
   letter-spacing: 0.02em;
   font-weight: 500;
 }
+/* iter chip 提升明顯度(中力度,2026-05-29):soft tint 底 + 稍強邊框 + 粗一級。
+   step(單次)維持 transparent outline,讓迭代靠底色對比一眼跳出來。 */
 .ticket-mode.is-iter {
-  background: transparent;
-  border-color: color-mix(in srgb, var(--iter) 45%, transparent);
+  background: var(--iter-soft);
+  border-color: color-mix(in srgb, var(--iter) 55%, transparent);
   color: var(--iter);
-  font-weight: 500;
+  font-weight: 600;
 }
 /* mode chip 可切換時(button 元素)— hover 加邊框 + 浮起,看得出可點 */
 button.ticket-mode {
