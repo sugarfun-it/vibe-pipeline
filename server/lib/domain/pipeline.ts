@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import { atomicWriteJson } from "../io/atomicWrite";
 import { exists as worktreeExists } from "../io/git/worktree";
-import { appendStateChange } from "../auditLog";
+import { appendStateChange } from "./auditLog";
 import * as projectDir from "./projectDir";
 import type { Pipeline } from "../../../shared/types";
 
