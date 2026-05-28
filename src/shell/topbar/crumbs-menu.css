@@ -59,18 +59,18 @@
   transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
 }
 
-.proj-menu-row:hover .proj-menu-remove:not(:disabled),
-.proj-menu-row:focus-within .proj-menu-remove:not(:disabled),
-.proj-menu-remove:focus-visible {
-  opacity: 1;
-}
-
 /* touch / coarse pointer:X 永遠顯示(沒有 hover affordance,不能藏)
    advisor topbar-r1:把 opacity 拉到 1,touch 用戶才有可靠的移除入口 */
 @media (hover: none), (pointer: coarse) {
   .proj-menu-remove:not(:disabled) {
     opacity: 1;
   }
+}
+
+.proj-menu-row:hover .proj-menu-remove:not(:disabled),
+.proj-menu-row:focus-within .proj-menu-remove:not(:disabled),
+.proj-menu-remove:focus-visible {
+  opacity: 1;
 }
 
 .proj-menu-remove:hover:not(:disabled) {

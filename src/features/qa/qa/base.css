@@ -8,10 +8,6 @@
   position: fixed;
   pointer-events: none;
 }
-.qadr-stage > .drawer-scrim,
-.qadr-stage > .qadr-drawer {
-  pointer-events: auto;
-}
 
 /* QADrawer is narrower than the canonical 600px ticket drawer (520px feels
    right for chat composer width) — override only width.
@@ -21,6 +17,11 @@
     width: 520px;
     max-width: calc(100vw - 80px);
   }
+}
+
+.qadr-stage > .drawer-scrim,
+.qadr-stage > .qadr-drawer {
+  pointer-events: auto;
 }
 
 .qadr-body {

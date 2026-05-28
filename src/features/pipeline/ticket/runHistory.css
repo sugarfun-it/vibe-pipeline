@@ -130,7 +130,7 @@
   color: var(--failed);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 899.98px) {
   .tdrw-drawer {
     width: 100vw;
     border-radius: 0;

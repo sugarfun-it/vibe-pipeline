@@ -19,6 +19,15 @@
   --ticket-content-indent: calc(var(--ticket-num-width) + var(--ticket-header-gap));
 }
 .ticket:hover { border-color: var(--line-2); background: var(--panel-2); }
+/* tk-003:chevron affordance,提示卡片可開 drawer */
+.ticket-card__chevron {
+  color: var(--fg-mute);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: color 120ms, transform 120ms, opacity 120ms;
+}
 /* V1 Refined:可點擊 hover 用 panel-2(原本 hover),affordance 仍清楚 */
 .ticket.is-clickable:hover {
   border-color: var(--line-2);
@@ -105,15 +114,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-/* tk-003:chevron affordance,提示卡片可開 drawer */
-.ticket-card__chevron {
-  color: var(--fg-mute);
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.5;
-  transition: color 120ms, transform 120ms, opacity 120ms;
 }
 .ticket.is-clickable:hover .ticket-card__chevron { opacity: 1; }
 /* tk-005:sub row 只保留給 step+meta 用(iter 改去 iter-row,chip 已 inline 到 title) */

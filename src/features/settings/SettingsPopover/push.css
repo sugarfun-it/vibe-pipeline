@@ -162,7 +162,7 @@
   background: color-mix(in srgb, var(--done) 80%, transparent);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
   .push-state { max-width: 100%; }
   .push-events-grid {
     grid-template-columns: 1fr;

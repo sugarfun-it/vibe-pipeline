@@ -72,8 +72,8 @@
   }
 }
 
-/* tk-007:極窄 viewport(<=480px)再緊一點 padding */
-@media (max-width: 480px) {
+/* tk-007:極窄 viewport(<=479.98px)再緊一點 padding */
+@media (max-width: 479.98px) {
   .ticket {
     padding: 10px var(--space-3) var(--space-3) 18px;
   }

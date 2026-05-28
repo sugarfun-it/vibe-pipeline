@@ -1,4 +1,19 @@
 /* vibe-flow prototype — tokens & primitives */
+
+/* ─── RWD breakpoint 慣例(SSOT 清單)──────────────────────────────
+   CSS custom property 不能用於 @media query,故無法做成 var;此處集中列出
+   全 repo max-width breakpoint 的固定集合,所有 @media 一律對齊 .98 慣例
+   (避免整數值在邊界 px 同時命中相鄰 query 造成雙觸發):
+     359.98px  · ultra-narrow 小手機
+     479.98px  · 極窄手機
+     539.98px  · 窄手機 / small mobile
+     639.98px  · settings push grid
+     719.98px  · rail mobile(避 tab bar)
+     767.98px  · 主 mobile 斷點(配 min-width: 768px 上界)
+     899.98px  · run history drawer fullwidth
+     919.98px  · narrow desktop(rail+inbox 擠壓區)
+   新增 @media 從本集合挑值,不要再寫整數 px。
+   ───────────────────────────────────────────────────────────────── */
 :root {
   /* dark (default) */
   --bg: #0c0e12;

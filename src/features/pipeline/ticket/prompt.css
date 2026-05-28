@@ -192,9 +192,9 @@
 }
 .tdrw-run-pre-toggle {
   align-self: flex-start;
-  font-size: 10.5px !important;
-  padding: 3px 10px !important;
-  min-height: 24px !important;
+  font-size: 10.5px;
+  padding: 3px 10px;
+  min-height: 24px;
   border-radius: var(--radius-control, 6px);
   font-family: var(--font-mono);
   background: transparent;
@@ -217,7 +217,7 @@
   /* hist-003:header 改 grid:chev / title / status-cluster / meta(provider+ticket count) — runner/model 推到第二 meta row,header 只負時間 + 狀態 */
   display: grid;
   grid-template-columns: auto auto 1fr auto;
-  align-items: start !important;
+  align-items: start;
   gap: var(--space-2, 8px) var(--space-3, 12px);
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
   cursor: pointer;
@@ -273,14 +273,14 @@
 }
 /* hist-008 / hist-020:狀態 badge 對齊 .vp-chip 系統 — 共用 radius / min-height / 一致 padding */
 .tdrw-run-status {
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   white-space: nowrap;
   flex: 0 0 auto;
-  font-size: 10.5px !important;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 2px var(--space-2) 2px 7px !important;
-  border-radius: 999px !important;
+  padding: 2px var(--space-2) 2px 7px;
+  border-radius: 999px;
   letter-spacing: 0.02em;
   text-transform: none;
   border: 1px solid transparent;

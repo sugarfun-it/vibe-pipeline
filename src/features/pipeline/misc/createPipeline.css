@@ -213,6 +213,17 @@ html.light .create-card { background: var(--bg-elevated); }
   cursor: not-allowed;
   box-shadow: none;
 }
+.kbd-inline {
+  font-size: 10px;
+  padding: 0 var(--space-1);
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+}
+.btn-primary .kbd-inline {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
 .create-submit:disabled .kbd-inline,
 .create-submit[disabled] .kbd-inline {
   background: transparent;
@@ -247,17 +258,6 @@ html.light .create-card { background: var(--bg-elevated); }
 .create-counter[hidden] { display: none; }
 .create-counter.is-near { color: var(--paused); }
 .create-counter.is-limit { color: var(--failed); font-weight: 600; }
-.kbd-inline {
-  font-size: 10px;
-  padding: 0 var(--space-1);
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 3px;
-}
-.btn-primary .kbd-inline {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.95);
-}
 
 /* Focus column · empty state during create */
 .focus-create-empty {

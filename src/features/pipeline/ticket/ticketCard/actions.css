@@ -20,8 +20,8 @@ html.light .ticket-livelog {
   border: 1px solid color-mix(in srgb, var(--running) 28%, var(--line));
   color: var(--fg);
 }
-html.light .livelog-cursor { color: var(--running); }
 .livelog-cursor { color: var(--running); }
+html.light .livelog-cursor { color: var(--running); }
 
 /* ── paused actions ──
    V1 Refined:dashed top border + 小一階 padding,跟整卡密度同步 */

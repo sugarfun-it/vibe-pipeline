@@ -69,19 +69,19 @@
 .confirm-desc.confirm-desc--rich > p {
   margin: 0;
 }
-.confirm-desc.confirm-desc--rich > * + * {
-  margin-top: 10px;
-}
-.confirm-desc.confirm-desc--rich > p + ul,
-.confirm-desc.confirm-desc--rich > ul + p {
-  margin-top: var(--space-2);
-}
 /* rich list contract — caller 給 <ul><li> 就有一致 bullet / 縮排 / 行距,
    不必各自 local CSS(對齊 primitive ownership)。 */
 .confirm-desc.confirm-desc--rich ul {
   margin: 0;
   padding-left: 18px;
   list-style: disc;
+}
+.confirm-desc.confirm-desc--rich > * + * {
+  margin-top: 10px;
+}
+.confirm-desc.confirm-desc--rich > p + ul,
+.confirm-desc.confirm-desc--rich > ul + p {
+  margin-top: var(--space-2);
 }
 .confirm-desc.confirm-desc--rich li {
   margin: 0;

@@ -10,7 +10,7 @@
   min-height: 0;
 }
 /* mobile: rail 是 Pipeline tab 的 full-screen 內容,底部要避開 mobile tab bar(避免最後一個 item 被擋) */
-@media (max-width: 720px) {
+@media (max-width: 719.98px) {
   .rail {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
@@ -79,12 +79,6 @@
   white-space: nowrap;
 }
 
-/* active rail-item 內 count chip 對比拉開(bg panel-2 → bg) */
-.rail-item.is-active .rail-item-count {
-  background: var(--bg);
-  color: var(--fg);
-}
-
 /* creating mode:其他 row 變 muted,chip 跟著淡掉 */
 .rail-item.is-muted .rail-status-chip { opacity: 0.55; }
 /* min-width:0 so flex truncation owns the name column; QA badge + count stay full-width on either side */
@@ -105,6 +99,11 @@
   color: var(--fg-mute);
   letter-spacing: 0;
   flex-shrink: 0;
+}
+/* active rail-item 內 count chip 對比拉開(bg panel-2 → bg) */
+.rail-item.is-active .rail-item-count {
+  background: var(--bg);
+  color: var(--fg);
 }
 
 .rail-mini {

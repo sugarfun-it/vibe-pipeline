@@ -27,6 +27,15 @@
   word-break: break-word;
 }
 
+/* refined form-input / picker-trigger — 限制 scope 在 settings popover,
+   不影響其他 feature 的 form atom 視覺 */
+.settings-popover .form-input {
+  border-radius: 7px;
+  background: var(--bg);
+  border-color: var(--line-2);
+  transition: border-color 140ms, box-shadow 140ms, background 120ms;
+}
+
 /* form primitive 包進 .settings-field-controls 的限寬版型 — wrapper 走 form-field--inline
    (TextField / NumberField 帶 inline prop 自動加),不再 specificity 蓋 width。
    三控件(平行上限 / 基礎分支 / 單次成本上限)鎖同寬,右邊緣對齊。 */
@@ -112,14 +121,6 @@
   max-width: 100%;
 }
 
-/* refined form-input / picker-trigger — 限制 scope 在 settings popover,
-   不影響其他 feature 的 form atom 視覺 */
-.settings-popover .form-input {
-  border-radius: 7px;
-  background: var(--bg);
-  border-color: var(--line-2);
-  transition: border-color 140ms, box-shadow 140ms, background 120ms;
-}
 .settings-popover .form-input:hover:not(:focus-visible) {
   border-color: color-mix(in srgb, var(--fg) 18%, var(--line-2));
 }

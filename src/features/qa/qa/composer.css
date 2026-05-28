@@ -73,6 +73,13 @@
   scroll-margin-bottom: 80px;
   border-left: 3px solid var(--accent);
 }
+.qadr-multi-status {
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  padding: 0 2px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
 .qadr-inline-multi .qadr-options-multi {
   margin: 0;
 }
@@ -86,13 +93,6 @@
   .qadr-inline-multi .qadr-multi-send {
     align-self: stretch;
   }
-}
-.qadr-multi-status {
-  font-size: 10.5px;
-  color: var(--fg-mute);
-  padding: 0 2px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
 }
 @media (pointer: coarse), (max-width: 767.98px) {
   /* multi-select 選項 / 送出按鈕在 mobile 給足 44px hit-target,跟 starter chip 對齊 */

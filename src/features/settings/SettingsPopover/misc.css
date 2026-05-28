@@ -1,7 +1,7 @@
-/* SettingsPopover/misc.css — mobile responsive overrides (@media max-width: 767px and 480px) */
+/* SettingsPopover/misc.css — mobile responsive overrides (@media max-width: 767.98px) */
 /* ─── Mobile ─────────────────────────────────────────────────── */
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
   .settings-popover {
     box-sizing: border-box;
   }
