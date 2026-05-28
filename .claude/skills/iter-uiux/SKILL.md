@@ -42,7 +42,7 @@ Canonical source files. Look up symbols by name within the file; do not chase li
 - **State enums** — `shared/types.ts`: `PipelineState`, `TicketStatus`, `TicketMode`, `Verdict`, `SyncJobState`, `NotifEventType`, `NotifSeverity`, `NOTIF_EVENTS`, `Project.hasInit`, `Project.hasGit`.
 - **Routes** — `src/App.tsx`: only `/board` (single SPA surface; auth flow 已拔除).
 - **Pipeline state transitions + notif emit sites** — `server/lib/runner/orchestrator.ts`: state transitions to `queued` / `running` / `paused` / `failed`, conflict_await / ai_running handlers, ~25 notif emit sites.
-- **Notification consumer** — `server/lib/notifs/store.ts` plus frontend `frontend_action_*` types from `src/features/pipeline/BoardScreen.tsx` (notifyError / notifyWarn / notifyInfo helpers).
+- **Notification consumer** — `server/lib/remote/notifs.ts` plus frontend `frontend_action_*` types from `src/features/pipeline/BoardScreen.tsx` (notifyError / notifyWarn / notifyInfo helpers).
 - **Mock channel** — `server/lib/testMode.ts` + `server/index.ts`: `/api/__test/{register-project,script/qa,script/runner,script/split,reset,fcm/calls,fcm/reset,push/file-content}`. Requires `VP_TEST_MODE=mock` env on backend.
 
 ## Macro state inventory

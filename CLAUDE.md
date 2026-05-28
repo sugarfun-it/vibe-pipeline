@@ -33,7 +33,7 @@ path-specific rules(動到對應 path 加讀,別只讀 SKILL):
 | 動到 path | 加讀 |
 |---|---|
 | `public/firebase-messaging-sw.js` / `vite.config.ts` PWA 段 / `src/lib/swUpdate.ts` / `src/lib/fcm.ts` / `src/features/system/SwUpdateBanner.tsx` | [`.claude/rules/pwa-sw.md`](.claude/rules/pwa-sw.md) |
-| `server/index.ts` / `server/lib/push/**` / `server/lib/fcm/**` / `.env*` | [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md) |
+| `server/index.ts` / `server/lib/remote/push/**` / `server/lib/remote/fcm.ts` / `.env*` | [`.claude/rules/remote-access.md`](.claude/rules/remote-access.md) |
 | `server/lib/cli/codexAdapter.ts` | [`.claude/rules/cli-codex.md`](.claude/rules/cli-codex.md) |
 
 ## 不踩的雷(全 repo always-on)
@@ -53,7 +53,7 @@ path-specific rules(動到對應 path 加讀,別只讀 SKILL):
 11. **新增 / 重命名 / 刪除 SKILL 或 rule 直接改本檔表** — claude 自動讀本檔;codex 走 [`AGENTS.md`](AGENTS.md) 指回本檔。SKILL routing SSOT 在 dir 表 SKILL 欄,rule routing SSOT 在「path-specific rules」表。AGENTS.md 純 pointer,改 SKILL / rule 都不必動 AGENTS.md。
 12. **QA forceChat 不能在送訊息時清** — race condition:user 送訊息瞬間清 forceChat,backend 處理中 frontend poll 看到 disk 上仍 `draft.complete=true`(舊狀態)→ SpecReview 又跳出。改 `viewOverride: 'chat' | 'review' | null` 雙向 sticky,user 用「→ 回最終預覽」按鈕主動切。對應 backend 也修兩處:claudeCli systemPrompt 加 reopen 規則(rule 6) + draftStore auto-complete 改成只在 `!wasComplete && reply.complete !== false && 5/5` 時 fire。
 13. **Pause 路徑簡化 — stop = SIGKILL child → state=paused immediate**(跟 server 重啟標 paused 同語意,user 按「繼續」從 critic 階段接續)。沒有 graceful、沒有 `stopping` 中介。歷史 graceful 設計 → [`refs/archive/integration-plan-v3-runner-2026-05-10.md`](docs/refs/archive/integration-plan-v3-runner-2026-05-10.md)。
-14. **self-dogfood pipeline 加新 npm dep 後 main repo node_modules 不會自動同步(已 mitigate)** — sub-agent 在 worktree `bun add` 裝的套件存 worktree `node_modules`,跟 main repo 不共享。merge 回 main 時 `package.json` + `bun.lock` 帶過來。**2026-05-18 backend merge handler 已加 `ensureDepsAfterMerge`**(`server/lib/depInstall.ts`):mechanical / AI 兩條 merge path 結束都 diff `mergeCommit^1..mergeCommit` 的 `package.json` deps keys + `bun.lock`,有變就同步跑 `bun install`(失敗 emit `pipeline_merge_cleanup_failed` notif,不阻斷 merge 成功)。例外:user 自己手動 `git merge` 不會觸發,得自己 `bun install`。
+14. **self-dogfood pipeline 加新 npm dep 後 main repo node_modules 不會自動同步(已 mitigate)** — sub-agent 在 worktree `bun add` 裝的套件存 worktree `node_modules`,跟 main repo 不共享。merge 回 main 時 `package.json` + `bun.lock` 帶過來。**2026-05-18 backend merge handler 已加 `ensureDepsAfterMerge`**(`server/lib/system/depInstall.ts`):mechanical / AI 兩條 merge path 結束都 diff `mergeCommit^1..mergeCommit` 的 `package.json` deps keys + `bun.lock`,有變就同步跑 `bun install`(失敗 emit `pipeline_merge_cleanup_failed` notif,不阻斷 merge 成功)。例外:user 自己手動 `git merge` 不會觸發,得自己 `bun install`。
 15. **`vbpl server start` 用 spawn,不用 fork** — Windows detach 是雷區;Node #36808 類型問題會讓 `fork` child 跟 parent terminal / IPC 綁太緊,terminal 關掉或 parent exit 容易帶死 backend。CLI server manager 固定用 `Bun.spawn(["bun","run","server/index.ts"], { detached:true, stdio:file, windowsHide:true })` + pid/log file;不要改回 `fork` 或需要 IPC 的啟動方式。
 
 ## 設計信條(改 code 前對齊)

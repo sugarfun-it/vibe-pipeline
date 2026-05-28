@@ -34,7 +34,7 @@ dev clone 從 source 跑 CLI 直接 `bun run cli/vbpl.ts <noun> <verb>`(沒 `bun
 
 ### 1. Read 直 fs,mutate spawn / kill 走 HTTP
 
-**Read 操作**(list / show / status / log / config get):直接 `import * as pipelineDir from "../../server/lib/pipelineDir"` 然後 `pipelineDir.readPipeline(path, id)`。理由:
+**Read 操作**(list / show / status / log / config get):直接 `import { readPipeline } from "../../server/lib/domain/pipeline"` 然後 `readPipeline(path, id)`(原 `pipelineDir.ts` 已拆 `server/lib/domain/{projectDir,projectConfig,pipeline,mergeTicket}`)。理由:
 - backend server 沒起也能用 CLI(state.json / pipeline.json 都在 fs)
 - 沒網路 round-trip,本地操作毫秒級
 - 共享同套驗證 / 寫盤邏輯,行為一致
@@ -131,7 +131,7 @@ dev clone 從 source 跑 CLI 直接 `bun run cli/vbpl.ts <noun> <verb>`(沒 `bun
 
 ## 開工前
 
-- 改 `server/lib/projectStore` / `pipelineDir` / `runner/orchestrator` 等 → CLI 同樣會吃到,grep `from "../../server/lib"` 看影響面
+- 改 `server/lib/domain/project` / `domain/pipeline` / `runner/orchestrator` 等 → CLI 同樣會吃到,grep `from "../../server/lib"` 看影響面
 - 預期 `--json` 行為 → 跑 `bun run cli/vbpl.ts <noun> <verb> --json | jq .` 驗
 - 跨平台:Windows / macOS / Linux 都該過,path / spawn 都要小心(`node:path` + Bun.spawn array form)
 

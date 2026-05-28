@@ -1,8 +1,8 @@
 ---
 paths:
   - server/index.ts
-  - server/lib/push/**
-  - server/lib/fcm/**
+  - server/lib/remote/push/**
+  - server/lib/remote/fcm.ts
   - .env
   - .env.example
 description: 手機遠端 setup(Tailscale + FCM)相關雷區
@@ -47,9 +47,9 @@ backend 同 serve API + dist/ PWA,單一 port 3001;SW 只在 build 後的 `dist/
 
 2026-05-19 起 VP backend 拔掉 `firebase-admin`,改 POST maintainer host 的 push gateway(`https://vp-gateway-799841449136.asia-east1.run.app`,Cloud Run asia-east1 / max-instances=1 / $1/mo budget alert)。同日 lazy auto-issue 落地後,enduser **完全零設定**:Firebase Web SDK config + gateway URL hardcode 進 build,token 自動跟 gateway 申請。
 
-- enduser `.env` 不必填任何 push 相關 var;Firebase config 跟 gateway URL 由 `src/lib/fcm.ts` `DEFAULT_FCM_CONFIG` 跟 `server/lib/fcm/index.ts` `DEFAULT_GATEWAY_URL` 內建(`VITE_FCM_*` / `PUSH_GATEWAY_URL` env 仍可 override 給 forker)
-- token lazy 取得:`server/lib/push/gatewayToken.ts` SSOT 在 `~/.vibe-pipeline/gateway-token`(atomic .tmp→rename + posix chmod 0600 + in-flight Promise 合併並發);`tokenStore.register/unregister` 進入點呼 `ensureToken` → 沒檔 → POST gateway `/tokens/auto-issue`(無 auth,IP rate-limit 5/UTC day);`listTokens` 走被動 `getToken` 不誤觸 issue
-- `server/lib/fcm/index.ts` `fanoutPush` 改 `getToken` 取本地檔;`PUSH_GATEWAY_TOKEN` env 仍是 read-only override(forker / CI 用)
+- enduser `.env` 不必填任何 push 相關 var;Firebase config 跟 gateway URL 由 `src/lib/fcm.ts` `DEFAULT_FCM_CONFIG` 跟 `server/lib/remote/fcm.ts` `DEFAULT_GATEWAY_URL` 內建(`VITE_FCM_*` / `PUSH_GATEWAY_URL` env 仍可 override 給 forker)
+- token lazy 取得:`server/lib/remote/push/gatewayToken.ts` SSOT 在 `~/.vibe-pipeline/gateway-token`(atomic .tmp→rename + posix chmod 0600 + in-flight Promise 合併並發);`tokenStore.register/unregister` 進入點呼 `ensureToken` → 沒檔 → POST gateway `/tokens/auto-issue`(無 auth,IP rate-limit 5/UTC day);`listTokens` 走被動 `getToken` 不誤觸 issue
+- `server/lib/remote/fcm.ts` `fanoutPush` 改 `getToken` 取本地檔;`PUSH_GATEWAY_TOKEN` env 仍是 read-only override(forker / CI 用)
 - 沒拿到 token → `fanoutPush` warn + return [],不報錯;backend 啟動正常
 - 死 token 偵測由 gateway 端 Firestore registry 做;`tokenStore` 本地不存 device tokens
 - gateway source 在 repo 內 `gateway/`(Bun + Firestore + firebase-admin),含 `/tokens/auto-issue` 端點 + `vp-gw-admin` 管理 CLI;deploy 步驟見 `gateway/README.md`

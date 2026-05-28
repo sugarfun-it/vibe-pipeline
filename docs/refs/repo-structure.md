@@ -70,32 +70,39 @@ vibe-pipeline/
 │   │   ├── push.ts            /api/push/{config,register,unregister,tokens,test}
 │   │   ├── system.ts          /api/system/{version,update}(self-update tarball flow)
 │   │   └── test.ts            test-mode only endpoint
-│   └── lib/                   純 IO + 邏輯,不知道 HTTP
-│       ├── projectStore.ts    ~/.vibe-pipeline/state.json 讀寫(toProject 純 fs 不呼 git)
-│       ├── pipelineDir.ts     <target-repo>/.vibe-pipeline/ 偵測 / 建立 / json 讀寫
-│       ├── hash.ts            absolute path → 8-char sha256
-│       ├── paths.ts           ~/.vibe-pipeline 等 path 集中
-│       ├── dialog.ts          OS native folder picker (osascript/powershell/zenity) + revealFolder
-│       ├── userConfig.ts      ~/.vibe-pipeline/config.json
-│       ├── git.ts             hasGit / gitInit
-│       ├── fs.ts              isExistingDirectory 等小 fs helper
-│       ├── jsonFile.ts        legacy json 讀寫 helper(新 code 走 atomicWrite)
-│       ├── spawn.ts           runCapture / spawnStreaming / spawnFireForget(default windowsHide)
-│       ├── atomicWrite.ts     atomicWriteJson / atomicWriteText(Win EPERM retry + chmod + JSON validate)
-│       ├── jsonl.ts           readJsonl<T> / appendJsonl<T>(audit log + notifs 用)
-│       ├── auditLog.ts        user_action / system 事件 append .runtime/audit.jsonl
-│       ├── systemVersion.ts   GitHub releases/latest 拉 + git HEAD diff(/api/system/version 用)
-│       ├── updater.ts         tarball self-update(performUpdate + spawnNewBackend)
-│       ├── testMode.ts        E2E / 測試 flag 中央開關
-│       ├── depInstall.ts      merge 後動 deps → 自動 bun install(見 CLAUDE.md §self-dogfood 加 npm dep)
-│       ├── pipelineMerge.ts   mechanical(git --no-ff)+ AI fallback merge
-│       ├── git/worktree.ts    ensure / remove / prune (per pipeline)
-│       ├── cli/               CliAdapter + claudeAdapter + codexAdapter + factory(prompt 走 stdin + workerEnv)
-│       ├── push/              tokenStore(轉 gateway HTTP) + gatewayToken(lazy auto-issue + SSOT ~/.vibe-pipeline/gateway-token)
-│       ├── fcm/index.ts       fanoutPush 走 maintainer-host gateway(無 firebase-admin)
-│       ├── runner/            orchestrator(killProcessTree 跨平台) / ticketWatcher / runnerPrompt / runLog / syncJob
-│       ├── notifs/store.ts    emit / list / markRead / dismiss → .runtime/notifs.jsonl
-│       └── qa/                claudeCli / draftStore / systemPrompt / splitTicket / schema
+│   └── lib/                   純 IO + 邏輯,不知道 HTTP。五層分層(依賴單向 io ← domain ← remote/runner/qa/cli ← system/services)
+│       ├── io/                  純 platform primitive,零 domain 知識
+│       │   ├── atomicWrite.ts     atomicWriteJson / atomicWriteText(Win EPERM retry + chmod + JSON validate)
+│       │   ├── jsonl.ts           readJsonl<T> / appendJsonl<T>(audit log + notifs 用)
+│       │   ├── fs.ts              isExistingDirectory 等小 fs helper
+│       │   ├── hash.ts            absolute path → 8-char sha256
+│       │   ├── paths.ts           ~/.vibe-pipeline 等 path 集中
+│       │   ├── dialog.ts          OS native folder picker (osascript/powershell/zenity) + revealFolder
+│       │   ├── childSpawn.ts      runCapture / spawnStreaming / spawnFireForget(default windowsHide;原 spawn.ts)
+│       │   └── git/{index,worktree}.ts  hasGit / gitInit / currentBranch + worktree ensure/remove/prune
+│       ├── domain/              repo / project / pipeline / config 概念(只 import io)
+│       │   ├── project.ts         ~/.vibe-pipeline/state.json 讀寫(原 projectStore.ts)
+│       │   ├── userConfig.ts      ~/.vibe-pipeline/config.json(per-task-class model defaults)
+│       │   ├── auditLog.ts        user_action / system 事件 append .runtime/audit.jsonl
+│       │   ├── projectDir.ts      <target-repo>/.vibe-pipeline/ init + gitignore + worktreeinclude(不碰 config.json)
+│       │   ├── projectConfig.ts   per-target config.json 讀寫 + clamp + getResolvedDefaults(config 唯一寫入口)
+│       │   ├── pipeline.ts        pipeline.json CRUD + race-safe mutatePipeline + generatePipelineId
+│       │   └── mergeTicket.ts     synthetic merge ticket(appendMergeTicket)
+│       ├── remote/              push 鏈(本地 emit → gateway → FCM)
+│       │   ├── notifs.ts          emit / list / markRead / dismiss → .runtime/notifs.jsonl
+│       │   ├── fcm.ts             fanoutPush 走 maintainer-host gateway(無 firebase-admin)
+│       │   └── push/{gatewayToken,tokenStore}.ts  lazy auto-issue token + 轉 gateway HTTP
+│       ├── system/             VP 自己的元件(可 import 全部下層)
+│       │   ├── version.ts         GitHub releases/latest 拉 + git HEAD diff(/api/system/version 用)
+│       │   ├── update.ts          tarball self-update(performUpdate + spawnNewBackend;preflight 看 runner)
+│       │   └── depInstall.ts      merge 後動 deps → 自動 bun install(見 CLAUDE.md §self-dogfood 加 npm dep)
+│       ├── services/           cross-domain 高階組合
+│       │   └── pipelineMerge.ts   mechanical(git --no-ff)+ AI fallback merge
+│       ├── runner/             orchestrator(killProcessTree 跨平台) / ticketWatcher / runnerPrompt / runLog / syncJob
+│       ├── cli/                CliAdapter + claudeAdapter + codexAdapter + factory(prompt 走 stdin + workerEnv)
+│       ├── qa/                 claudeCli / draftStore / systemPrompt / splitTicket / schema
+│       └── testMode.ts         E2E / 測試 flag 中央開關(cross-cutting,被各 layer 讀)
+│       (五層分層 + pipelineDir 拆 4 檔的完整設計 → 2026-05-28-server-lib-restructure-design.md)
 │
 ├── shared/
 │   └── types.ts               跨 backend/frontend 持久化型別

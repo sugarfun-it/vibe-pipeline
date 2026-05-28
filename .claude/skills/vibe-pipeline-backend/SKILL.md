@@ -26,10 +26,10 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - **`server/lib/qa/*`** QA 子系統 — claude CLI 整合 / draft store / 系統 prompt / parsing
 - **`server/lib/cli/*`** Provider 抽象 — claude / codex adapter,給 QA / split / runner 三處用同一介面
 - **`server/lib/runner/*`** Pipeline runner — orchestrator / runnerPrompt / runLog / ticketWatcher / syncJob
-- **`server/lib/push/*` + `server/lib/fcm/*`** Web Push token store + firebase-admin fanout
-- **`server/lib/spawn.ts`**(2026-05-20 集中)Subprocess 起點唯一統一入口:`runCapture` / `spawnStreaming` / `spawnFireForget` — **default `windowsHide:true`**(別自己 `Bun.spawn` 跳過,Windows 偶發跳 console window);`spawnStreaming` default `detached:true`(POSIX process group,給 killProcessTree 殺整棵用)
-- **`server/lib/atomicWrite.ts`**(2026-05-20 集中)`atomicWriteJson` / `atomicWriteText` 內含 Windows EPERM/EBUSY retry + posix chmod + JSON round-trip validation。任何 `~/.vibe-pipeline/*.json` / `pipelines/*.json` 寫入走這個,不要直接 `writeFileSync`
-- **`server/lib/jsonl.ts`**(2026-05-20 集中)`readJsonl<T>` / `appendJsonl<T>` 給 audit log + notifs 用,別自己 split `\n`
+- **`server/lib/remote/push/*` + `server/lib/remote/fcm.ts`** Web Push token store + firebase-admin fanout
+- **`server/lib/io/childSpawn.ts`**(2026-05-20 集中)Subprocess 起點唯一統一入口:`runCapture` / `spawnStreaming` / `spawnFireForget` — **default `windowsHide:true`**(別自己 `Bun.spawn` 跳過,Windows 偶發跳 console window);`spawnStreaming` default `detached:true`(POSIX process group,給 killProcessTree 殺整棵用)
+- **`server/lib/io/atomicWrite.ts`**(2026-05-20 集中)`atomicWriteJson` / `atomicWriteText` 內含 Windows EPERM/EBUSY retry + posix chmod + JSON round-trip validation。任何 `~/.vibe-pipeline/*.json` / `pipelines/*.json` 寫入走這個,不要直接 `writeFileSync`
+- **`server/lib/io/jsonl.ts`**(2026-05-20 集中)`readJsonl<T>` / `appendJsonl<T>` 給 audit log + notifs 用,別自己 split `\n`
 - **`server/routes/_http.ts`** Response 包裝(`ok` / `err` / `requireJsonUtf8` / `readJson` / `isJsonUtf8`),route handler 統一用
 - **`shared/types.ts`** 跨前後端持久化 schema 的 single source of truth(`Pipeline / Ticket / TicketSpec / QAReply / Turn / Draft / NOTIF_EVENTS / TaskClass`)。**不要兩邊各定一份**
 - **`~/.vibe-pipeline/state.json`** 只存 global runtime(projects 清單 / last opened)。不存 pipeline / ticket 細節
@@ -89,14 +89,14 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 - `alreadyMerged`(ahead=0)路徑也自動清:state=merged + 殘存 failed merge ticket 改 done + 清 lastAutoMergeError
 - **Sync 成功判定靠 git 三條件**(不靠 AI stdout):`!MERGE_HEAD && !conflictMarkers && behindBaseCount===0`。理由見 root CLAUDE.md §AI sync 成功判定靠 git
 - `syncJob.recoverStaleSync()`:server boot 收 `state ∈ {merging, ai_running}` 殘骸 → `merge --abort` + 標 failed
-- **`ensureDepsAfterMerge`**(`server/lib/depInstall.ts`):mechanical / AI merge path 結束都 diff `mergeCommit^1..mergeCommit` 的 `package.json` deps keys + `bun.lock`,變動就同步跑 `bun install`;失敗 emit `pipeline_merge_cleanup_failed` notif 不阻斷 merge 成功。背景:self-dogfood pipeline 加新 dep 後 main repo node_modules 不會自動同步(雷區 #12)
+- **`ensureDepsAfterMerge`**(`server/lib/system/depInstall.ts`):mechanical / AI merge path 結束都 diff `mergeCommit^1..mergeCommit` 的 `package.json` deps keys + `bun.lock`,變動就同步跑 `bun install`;失敗 emit `pipeline_merge_cleanup_failed` notif 不阻斷 merge 成功。背景:self-dogfood pipeline 加新 dep 後 main repo node_modules 不會自動同步(雷區 #12)
 - 完整設計 → [`docs/refs/archive/sync-redesign-2026-05-13.md`](../../../docs/refs/archive/sync-redesign-2026-05-13.md)
 
 ### Pipeline delete cascade(`routes/projects.ts:deletePipeline`)
 
 `DELETE /api/projects/:hash/pipelines/:id` 一條清完:worktree dir(`worktree.removeQuiet` + git worktree prune)+ git branch `-D pipeline/<name>` + `pipelines/<id>.json` + emit `pipeline_deleted` notif。**running / queued state 拒絕**(回 `STATE_GUARD`「先 stop」),paused / ready / merged / failed 都可砍。中間任一步失敗回 partial result(report 哪步失敗 + 哪些清掉),user 看 message 手動補。
 
-### Audit log via(`server/lib/auditLog.ts`)
+### Audit log via(`server/lib/domain/auditLog.ts`)
 
 `user_action` entry 加 `via?: "cli" | "browser" | "other"` 欄。`routes/projects.ts:detectVia(req)` 讀 `User-Agent` header → "vbpl-cli" 命中 cli;"Mozilla" 命中 browser;其他歸 other。debug「mystery run」(audit 抓到 user 沒按)時可秒判 source。`withUserAudit` 從 router 收 req 傳入,handler 加 `via: detectVia(req)` 到 meta。新加 mutation handler 想標 via 也是同模式。
 
@@ -104,7 +104,7 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 
 VP app 不再有 TOTP / cookie / session 層。`server/lib/auth/`、`server/routes/auth.ts`、middleware、`auth.json` 全砍;Tailscale ACL + tailnet membership 是唯一存取邊界(見 [`.claude/rules/remote-access.md`](../../../.claude/rules/remote-access.md))。`apiFetch` (`src/api/_client.ts`) 保留 `credentials:include` 給未來 cookie-based feature,但目前無 401 redirect。
 
-### Push(`server/lib/push/` + `server/lib/fcm/`)
+### Push(`server/lib/remote/push/` + `server/lib/remote/fcm.ts`)
 
 **2026-05-19 後架構**:VP backend 拔 `firebase-admin`,push 走 maintainer host 的 gateway(Cloud Run asia-east1 `https://vp-gateway-...run.app`)。service account key 集中在 gateway 端;同日 lazy auto-issue 落地後,enduser 端 token 由 backend 在 register 觸發點自動跟 gateway 申請,無需任何手動設定。
 
@@ -146,7 +146,7 @@ Module 分工:
 - **`scripts/install.ps1` / `install.sh`** Single source of truth:install + update 同一 script。Windows ASCII-only(PS 5.1 ANSI 雷)。Layout:`~/.vibe-pipeline/{versions/v<tag>/, current, bin/vbpl[.cmd]}`。`KeepVersions` 控制保留舊版數。
 - **`cli/commands/update.ts`**(`vbpl update`):thin wrapper,直接 spawn install script(local `scripts/install.{ps1,sh}` 優先 → fallback GitHub raw)。`--check` 只查不裝;`--json` 印 structured。
 - **`server/routes/system.ts`**:`version` 回 `/api/system/version`(current / latest / hasUpdate);`update` 是 v0.2.4 加回的 PWA UX 入口(`/api/system/update`)— **邏輯極簡**:`preflightCheck` → `spawnInstallScript` detached + `-AutoStart` → response 200 → 500ms 後 `process.exit` → install script 接手(stop → download → swap → start 新 backend)。後端不做 download / extract / swap,純 spawn。CLI(`vbpl update`)走 install script 不走本 endpoint(避 bash 端 stdio chain bug)。
-- **`server/lib/systemVersion.ts`**:`getCurrentVersion()` 優先序 `BUILD_VERSION > cwd/package.json(installed mode = 沒 .git/)> git describe(dev clone)> "dev-unknown"`。
+- **`server/lib/system/version.ts`**:`getCurrentVersion()` 優先序 `BUILD_VERSION > cwd/package.json(installed mode = 沒 .git/)> git describe(dev clone)> "dev-unknown"`。
 
 Windows tar 必走 `%WINDIR%\System32\tar.exe`(install.ps1 內)避 git-for-Windows MSYS bsdtar 把 `C:\path` mangle 成 `C\:\\path`。
 
@@ -176,18 +176,19 @@ dev clone:沒 `~/.vibe-pipeline/current/`,Settings 顯示「複製指令」仍�
   claudeAdapter 3 處 spawn 全套;codexAdapter 也同步套(codex 不認那些 env 但設了無害,統一 spawn
   環境減心智負擔)。改 adapter 新 spawn 點要記得帶 `env: workerEnv()`。
 
-### User config(`server/lib/userConfig.ts`)
+### User config(`server/lib/domain/userConfig.ts`)
 
 - `~/.vibe-pipeline/config.json` per-task-class:`qa / split / runner / executor / critic / merge` → `{ provider, model, effort }`
 - `coerceConfig` migration:舊 `subAgent` key → `executor`,critic 走 default
 - `getTaskConfig(tc)` 給 spawn 點用;`patchUserConfig()` PUT 白名單 + 三欄獨立驗
 
-### Pipeline dir(`server/lib/pipelineDir.ts`)
+### Pipeline / project dir(`server/lib/domain/{projectDir,projectConfig,pipeline,mergeTicket}.ts`)
 
-- `init()` idempotent — partial init 殘骸補齊不報錯
-- `.gitignore` 自動補 `.vibe-pipeline/.runtime/` + `.vibe-pipeline/pipelines/`
-- `listPipelines` 用 `Pipeline.createdAt` 排序,無欄位 backfill 用 id-ts
-- 寫入路徑 normalize 防 `..` 跳出 project root(safety invariant)
+原 `pipelineDir.ts` 已拆 4 檔(2026-05-28 分層重構,見 `docs/refs/2026-05-28-server-lib-restructure-design.md`):
+- `projectDir.ts` — `.vibe-pipeline/` init + gitignore + worktreeinclude。`init()` idempotent(partial init 殘骸補齊不報錯),**不碰 config.json**
+- `projectConfig.ts` — per-target config.json 讀寫 + clamp + getResolvedDefaults。**`writeConfig` 是 config 唯一寫入口**(沒帶 cfg 時沒檔才寫 default);init 完要 config 預設改 `init()` + `writeConfig()` 兩步
+- `pipeline.ts` — pipeline.json CRUD + race-safe `mutatePipeline` + `generatePipelineId`。`listPipelines` 用 `Pipeline.createdAt` 排序,無欄位 backfill 用 id-ts
+- `mergeTicket.ts` — synthetic merge ticket `appendMergeTicket`
 
 ## 安全 invariants
 
