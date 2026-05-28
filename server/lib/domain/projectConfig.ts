@@ -6,6 +6,7 @@ import { existsSync } from "node:fs";
 import { atomicWriteJson } from "../io/atomicWrite";
 import { currentBranch } from "../io/git";
 import * as projectDir from "./projectDir";
+import type { ProjectConfigDefaults } from "../../../shared/types";
 
 export const DEFAULT_MAX_PARALLEL = 2;
 export const MAX_PARALLEL_MIN = 1;
@@ -46,12 +47,8 @@ export type ProjectConfig = {
 };
 
 // 已 fallback / 驗證過的完整 config defaults。GET / status 拿這個即可,不用每處再 ?? "main"。
-export type ResolvedDefaults = {
-  base_branch: string;
-  max_parallel: number;
-  cost_limit_usd: number;
-  auto_merge: boolean;
-};
+// 形狀 = shared ProjectConfigDefaults(GET/PUT /config 回傳契約),前後端同 import 一份。
+export type ResolvedDefaults = ProjectConfigDefaults;
 
 export async function readConfig(projectPath: string): Promise<ProjectConfig> {
   const file = join(projectDir.rootPath(projectPath), "config.json");

@@ -20,16 +20,9 @@
 
 import { join } from "node:path";
 import { readJsonl, appendJsonl } from "../io/jsonl";
+import type { StateChangeEntry } from "../../../shared/types";
 
-export type StateChangeEntry = {
-  ts: number;
-  pipelineId: string;
-  type: "state_change";
-  from: string;
-  to: string;
-  source: string;
-  sourceDetail?: string;
-};
+export type { StateChangeEntry };
 
 export type UserActionResult = "pending" | "ok" | "error";
 

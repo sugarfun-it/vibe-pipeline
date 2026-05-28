@@ -1,7 +1,10 @@
 // Pipeline run history(per-pipeline JSONL)+ audit timeline。
 
-import type { RunSummary, RunDetail } from "../../shared/types";
+import type { RunSummary, RunDetail, StateChangeEntry } from "../../shared/types";
 import { call } from "./_client";
+
+// audit timeline entry 用 shared StateChangeEntry 單一來源(原本本地複製 backend 型別,已去重)。
+export type AuditEntry = StateChangeEntry;
 
 export function listPipelineRuns(hash: string, pipelineId: string): Promise<RunSummary[]> {
   return call<RunSummary[]>(`/api/projects/${hash}/pipelines/${pipelineId}/runs`);
@@ -16,16 +19,6 @@ export function getPipelineRun(
     `/api/projects/${hash}/pipelines/${pipelineId}/runs/${encodeURIComponent(filename)}`
   );
 }
-
-export type AuditEntry = {
-  ts: number;
-  pipelineId: string;
-  type: "state_change";
-  from: string;
-  to: string;
-  source: string;
-  sourceDetail?: string;
-};
 
 export function getPipelineAudit(
   hash: string,

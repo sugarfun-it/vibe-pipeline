@@ -1,8 +1,10 @@
 // Project lifecycle / config / runtime stats.
 // 切自 api/projects.ts 第一段(L15-105)— recent / browse / open / init / config / runtime。
 
-import type { Project } from "../../shared/types";
+import type { Project, ProjectConfig, ProjectConfigPatch } from "../../shared/types";
 import { call } from "./_client";
+
+export type { ProjectConfig, ProjectConfigPatch };
 
 export function listRecent(): Promise<Project[]> {
   return call<Project[]>("/api/projects");
@@ -51,24 +53,6 @@ export function reveal(hash: string): Promise<{ ok: true }> {
 export function listBranches(hash: string): Promise<string[]> {
   return call<string[]>(`/api/projects/${hash}/branches`);
 }
-
-export type ProjectConfig = {
-  defaults: {
-    base_branch: string;
-    max_parallel: number;
-    cost_limit_usd: number;
-    auto_merge: boolean;
-  };
-};
-
-export type ProjectConfigPatch = {
-  defaults?: {
-    max_parallel?: number;
-    default_base_branch?: string;
-    cost_limit_usd?: number;
-    auto_merge?: boolean;
-  };
-};
 
 export function getConfig(hash: string): Promise<ProjectConfig> {
   return call<ProjectConfig>(`/api/projects/${hash}/config`);

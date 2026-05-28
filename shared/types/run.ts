@@ -39,3 +39,15 @@ export type RunDetail = RunSummary & {
   stderr: string;
 };
 
+// ─── Audit timeline(.runtime/audit.jsonl 的 state_change 行) ───
+// 單一定義源:後端 auditLog 寫 / 讀、前端 api/run.ts 讀同 import 本檔,不各自複製漂走。
+export type StateChangeEntry = {
+  ts: number;
+  pipelineId: string;
+  type: "state_change";
+  from: string;
+  to: string;
+  source: string;
+  sourceDetail?: string;
+};
+
