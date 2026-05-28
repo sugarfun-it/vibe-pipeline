@@ -151,7 +151,11 @@ export async function init(hash: string): Promise<Response> {
   return withProject(hash, async (project) => {
     if (!validProjectPath(project.path)) return err("invalid_path", `Path missing: ${project.path}`);
     // pipelineDir.init 已 idempotent(2026-05-12 改):.vibe-pipeline/ 已存在但內容缺 → 補齊,不再 throw already_initialized。
-    try { await pipelineDir.init(project.path); } catch (e) { return err("internal_error", String(e), 500); }
+    // init 只建 dir 結構;config.json 由 writeConfig 負責(沒檔才寫 default),兩步式。
+    try {
+      await pipelineDir.init(project.path);
+      await pipelineDir.writeConfig(project.path);
+    } catch (e) { return err("internal_error", String(e), 500); }
     return ok(await projectStore.findByHash(hash));
   }, { requireInit: false });
 }

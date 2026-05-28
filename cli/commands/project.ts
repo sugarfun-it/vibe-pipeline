@@ -149,6 +149,7 @@ async function projectInit(args: ParsedArgs): Promise<void> {
   let proj: Project;
   try {
     await pipelineDir.init(abs);
+    await pipelineDir.writeConfig(abs);
     proj = await projectStore.open(abs);
   } catch (err) {
     fail("INVALID_PATH", (err as Error).message);
