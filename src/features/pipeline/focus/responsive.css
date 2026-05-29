@@ -19,37 +19,37 @@
 @media (max-width: 767.98px) {
   /* 手機 FocusColumn 縮小 padding,標題小一點,降低上方密度 */
   .focus {
-    padding: 14px 14px 18px;
+    padding: 14px 14px 18px !important;
   }
   .focus-title,
   .focus-title-input {
-    font-size: 18px;
+    font-size: 18px !important;
   }
-  .focus-head { margin-bottom: 10px; }
+  .focus-head { margin-bottom: 10px !important; }
   .focus-head-top {
-    gap: 6px;
-    margin-bottom: var(--space-2);
+    gap: 6px !important;
+    margin-bottom: var(--space-2) !important;
   }
   /* done count 字體略小,跟 state chip 同一視覺層 */
   .focus-count {
-    font-size: 11px;
+    font-size: 11px !important;
   }
 
   /* V1 Refined desktop 用絕對定位釘 actions / overflow 到 title-row 右上;
      mobile 還原回 flow:title-row nowrap(title 撐滿,overflow ⋯ 釘右邊靠 margin-left:auto),
      actions 改自己一列(order:99 / width:100% / dashed top),允許 flex-wrap 給多按鈕情境。 */
   .focus-head-title-row {
-    padding-right: 0;
-    min-height: 0;
+    padding-right: 0 !important;
+    min-height: 0 !important;
     align-items: center;
-    flex-wrap: nowrap;
-    gap: 6px;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
   }
   .focus-head-meta-row {
-    flex-wrap: wrap;
-    row-gap: 6px;
-    column-gap: 0;
-    overflow: visible;
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+    column-gap: 0 !important;
+    overflow: visible !important;
   }
   /* meta-row chips:mobile 不再 ellipsis,讓 diff/sync info 完整顯示並換行 */
   .focus-head-meta-row > .focus-count,
@@ -238,14 +238,14 @@
 /* ─── Ultra-narrow(<540px,小手機)── refined 額外壓縮 header padding
    meta-row 改 horizontal scroll(不 wrap),title 17px */
 @media (max-width: 539.98px) {
-  .focus { padding: var(--space-3) 10px 14px; }
+  .focus { padding: var(--space-3) 10px 14px !important; }
   .focus-title,
-  .focus-title-input { font-size: 17px; }
+  .focus-title-input { font-size: 17px !important; }
   /* meta-row 維持 wrap(refined v2 矯正:之前用 nowrap+overflow-x:auto 會把 actions
      塞 100% 寬硬撐爆 viewport,chips 又被壓到只剩 · 符號) */
   .focus-head-meta-row {
     font-size: 10.5px;
-    flex-wrap: wrap;
+    flex-wrap: wrap !important;
     row-gap: var(--space-1);
   }
   .focus-head-meta-row > .focus-count,
