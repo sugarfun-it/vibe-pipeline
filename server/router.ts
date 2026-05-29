@@ -213,7 +213,7 @@ export async function handle(req: Request): Promise<Response> {
       const id = pipelineMatch[1];
       if (method === "GET") return pipelineRoutes.getPipeline(hash, id);
       if (method === "PUT") return pipelineRoutes.savePipeline(hash, id, req);
-      if (method === "DELETE") return pipelineRoutes.deletePipeline(hash, id);
+      if (method === "DELETE") return pipelineRoutes.deletePipeline(hash, id, req);
     }
 
     const pipelineRunMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/(run|pause|stop|merge|sync)$/);
@@ -223,13 +223,20 @@ export async function handle(req: Request): Promise<Response> {
       if (action === "run") return pipelineRoutes.runPipeline(hash, id, req);
       // pause 與 stop 共用 handler;固定立即停止
       if (action === "pause" || action === "stop") return pipelineRoutes.pausePipeline(hash, id, req);
-      if (action === "merge") return pipelineRoutes.mergePipeline(hash, id);
-      if (action === "sync") return syncRoutes.syncPipeline(hash, id);
+      if (action === "merge") return pipelineRoutes.mergePipeline(hash, id, req);
+      if (action === "sync") return syncRoutes.syncPipeline(hash, id, req);
     }
 
     const syncStatusMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/sync-status$/);
     if (syncStatusMatch && method === "GET") {
       return syncRoutes.syncStatus(hash, syncStatusMatch[1]);
+    }
+
+    // 執行態(running / queued / queuePosition)由 orchestrator in-memory map 持有,
+    // 只有 backend process 知道 — CLI status 走此端點查(設計信條 #6)。
+    const execStateMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)\/exec-state$/);
+    if (execStateMatch && method === "GET") {
+      return pipelineRoutes.pipelineExecState(hash, execStateMatch[1]);
     }
 
     const syncSubMatch = rest.match(
@@ -238,8 +245,8 @@ export async function handle(req: Request): Promise<Response> {
     if (syncSubMatch && method === "POST") {
       const id = syncSubMatch[1];
       const sub = syncSubMatch[2];
-      if (sub === "ai") return syncRoutes.syncConfirmAi(hash, id);
-      if (sub === "cancel") return syncRoutes.syncCancel(hash, id);
+      if (sub === "ai") return syncRoutes.syncConfirmAi(hash, id, req);
+      if (sub === "cancel") return syncRoutes.syncCancel(hash, id, req);
       if (sub === "dismiss") return syncRoutes.syncDismiss(hash, id);
     }
 

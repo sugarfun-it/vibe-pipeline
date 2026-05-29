@@ -1,6 +1,6 @@
 // RailItem + feature 邏輯(ticket-status→色映射 / merge 文案 / 活動時間推導 / aria-label 推導)。
 // 從 src/shell/Rail.tsx 搬過來 —— shell/Rail 只留通用 slotted 容器負責版面,feature 細節歸 features/。
-import { STATE_LABEL } from "../../../lib/pipelines";
+import { STATE_LABEL, railMiniFill } from "../../../lib/pipelines";
 import { formatAgo } from "../../../lib/format";
 import type { Pipeline } from "../../../../shared/types";
 import "./rail.css";
@@ -63,23 +63,13 @@ export function RailItem({
         </span>
       </div>
       <div className="rail-mini" aria-hidden="true">
-        {p.tickets.map((t) => {
-          const fill =
-            t.status === "done"
-              ? "var(--done)"
-              : t.status === "running"
-              ? "var(--running)"
-              : t.status === "paused"
-              ? "var(--paused)"
-              : t.status === "failed" ||
-                t.status === "failed_iter_limit" ||
-                t.status === "failed_transient"
-              ? "var(--failed)"
-              : t.status === "ready"
-              ? "var(--running-soft)"
-              : "var(--line-2)";
-          return <span key={t.id} className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")} style={{ background: fill }} />;
-        })}
+        {p.tickets.map((t) => (
+          <span
+            key={t.id}
+            className={"rail-mini-cell" + (t.status === "running" ? " is-running" : "")}
+            style={{ background: railMiniFill(t.status) }}
+          />
+        ))}
       </div>
       <div className="rail-item-meta" aria-hidden="true" title={fullSecondary || secondary}>
         <span className="mono">{secondary}</span>

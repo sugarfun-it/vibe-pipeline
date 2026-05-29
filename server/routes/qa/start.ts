@@ -14,14 +14,7 @@ export async function start(hash: string, pipelineId: string, _req: Request): Pr
 
   const existing = await draftStore.findActiveByPipeline(project.path, pipelineId);
   if (existing) {
-    return Response.json(
-      {
-        ok: false,
-        error: { code: "already_initialized", message: "Active draft exists" },
-        data: { draftId: existing.draftId },
-      },
-      { status: 409 }
-    );
+    return err("already_initialized", `Active draft exists: ${existing.draftId}`, 409);
   }
 
   if (!(await cli.checkAvailable())) {

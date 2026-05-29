@@ -71,10 +71,13 @@
   color: var(--fg);
 }
 
-/* Rename inline error hint:跟 confirm/cancel 同列下緣對齊,失敗紅字 */
-.focus-title-edit > [role="status"] {
-  font-size: 10.5px;
+/* Rename inline error hint:跟 confirm/cancel 同列下緣對齊,失敗紅字。
+   font-size / margin-left / nowrap 從 FocusTitle.tsx inline style 移進來(走 token)。 */
+.focus-title-edit-error {
+  font-size: 11px;
   color: var(--failed);
+  margin-left: var(--space-1);
+  white-space: nowrap;
   align-self: flex-end;
   margin-bottom: var(--space-1);
 }

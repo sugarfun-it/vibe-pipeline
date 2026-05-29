@@ -14,6 +14,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { vibeHome } from "../../io/paths";
 import { atomicWriteText } from "../../io/atomicWrite";
+import { gatewayUrl } from "./gatewayConfig";
 
 function dir(): string {
   return join(vibeHome(), ".vibe-pipeline");
@@ -21,16 +22,6 @@ function dir(): string {
 
 function file(): string {
   return join(dir(), "gateway-token");
-}
-
-// maintainer-hosted gateway(對齊 server/lib/fcm/index.ts DEFAULT_GATEWAY_URL)
-// forker 自架 gateway → 用 PUSH_GATEWAY_URL env override
-const DEFAULT_GATEWAY_URL = "https://vp-gateway-799841449136.asia-east1.run.app";
-
-function gatewayUrl(): string {
-  const v = process.env.PUSH_GATEWAY_URL?.trim();
-  const raw = v && v.length > 0 ? v : DEFAULT_GATEWAY_URL;
-  return raw.replace(/\/+$/, "");
 }
 
 function envOverride(): string | null {

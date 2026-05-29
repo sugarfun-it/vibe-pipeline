@@ -76,6 +76,8 @@ export function RunButton({
       <button
         type="button"
         className="btn btn-queued"
+        data-testid="run-btn"
+        data-run-state="queued"
         onClick={() => onStop?.(pipeline.id)}
         aria-label={ariaLabel}
       >
@@ -99,6 +101,8 @@ export function RunButton({
         <button
           type="button"
           className="btn run-btn-sync-busy"
+          data-testid="run-btn"
+          data-run-state="syncActive"
           aria-disabled="true"
           aria-label={`助理處理中 — ${reason}`}
           title={reason}
@@ -125,6 +129,8 @@ export function RunButton({
         <button
           type="button"
           className="btn"
+          data-testid="run-btn"
+          data-run-state="spawning"
           aria-disabled="true"
           aria-label={`啟動中 — ${reason}`}
           title={reason}
@@ -167,6 +173,8 @@ export function RunButton({
               "btn run-btn-empty" +
               (s === "merged" ? " run-btn-empty-merged" : "")
             }
+            data-testid="run-btn"
+            data-run-state="empty"
             aria-disabled="true"
             aria-label={`無可執行 ticket — ${reason}`}
             title={reason}

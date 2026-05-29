@@ -7,8 +7,9 @@
 // backend 不主動戳 Tailscale CLI。
 
 import { join } from "node:path";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { vibeHome } from "./lib/io/paths";
+import { atomicWriteJson } from "./lib/io/atomicWrite";
 import { handle, logAccess, withCors } from "./router";
 
 const DESIRED_PORT = Number(process.env.PORT ?? 3001);
@@ -79,9 +80,7 @@ try {
     // server.json 不存在 / 壞 — 從零寫即可
   }
   const merged = { ...existing, pid: process.pid, port: server.port, started_at: Date.now() };
-  const tmp = `${file}.tmp`;
-  writeFileSync(tmp, JSON.stringify(merged, null, 2) + "\n", "utf8");
-  renameSync(tmp, file);
+  await atomicWriteJson(file, merged);
 } catch (e) {
   console.warn(`[server] 寫 server.json 失敗(不致命):${e instanceof Error ? e.message : String(e)}`);
 }

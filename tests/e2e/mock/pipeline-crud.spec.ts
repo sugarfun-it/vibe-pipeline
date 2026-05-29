@@ -4,9 +4,11 @@ import { resetMocks } from "../helpers/mock-control";
 
 let proj: TempProject;
 
+// beforeEach 只 resetMocks,不無條件建 project(對齊 runner-edge 慣例):
+// 無條件 createTempProject 會把 temp project 寫進 recents,跨 test 洩漏汙染
+// TopBar recents dropdown / lastProjectHash。需要 project 的 test 自己在 body 建。
 test.beforeEach(async () => {
   await resetMocks();
-  proj = await createTempProject();
 });
 
 test.afterEach(() => {
@@ -14,6 +16,7 @@ test.afterEach(() => {
 });
 
 test("空 project 顯示 create CTA,點 → 建立 pipeline → Rail 出現", async ({ page }) => {
+  proj = await createTempProject();
   await page.goto(`/board?project=${proj.hash}`);
 
   // 沒 pipeline 時 Rail 顯示「新 pipeline」按鈕
@@ -33,6 +36,7 @@ test("空 project 顯示 create CTA,點 → 建立 pipeline → Rail 出現", as
 });
 
 test("名稱重複 → 建立按鈕 disabled + 錯誤提示", async ({ page }) => {
+  proj = await createTempProject();
   await page.goto(`/board?project=${proj.hash}`);
 
   // 先建一條
@@ -49,6 +53,7 @@ test("名稱重複 → 建立按鈕 disabled + 錯誤提示", async ({ page }) =
 });
 
 test("名稱不合法 → 提示 + 建立 disabled", async ({ page }) => {
+  proj = await createTempProject();
   await page.goto(`/board?project=${proj.hash}`);
 
   await page.locator(".rail-add").click();
@@ -58,6 +63,7 @@ test("名稱不合法 → 提示 + 建立 disabled", async ({ page }) => {
 });
 
 test("Esc 取消建立 → CreateCard 收起,Rail 不變", async ({ page }) => {
+  proj = await createTempProject();
   await page.goto(`/board?project=${proj.hash}`);
 
   await page.locator(".rail-add").click();

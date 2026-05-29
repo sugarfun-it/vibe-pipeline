@@ -2,7 +2,7 @@ import * as pipelineStore from "../../../server/lib/domain/pipeline";
 import { resolveProject, requireInit } from "../../lib/project";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
-import type { Ticket, TicketMode, TicketStatus } from "../../../shared/types";
+import { TICKET_STATUSES, type Ticket, type TicketMode, type TicketStatus } from "../../../shared/types";
 import { jsonAcceptance, jsonText, readJsonInput, readPipeline, readTextArg, splitAcceptance, validateGoal } from "./_shared";
 
 export async function ticketUpdate(args: ParsedArgs): Promise<void> {
@@ -51,7 +51,11 @@ export async function ticketUpdate(args: ParsedArgs): Promise<void> {
     }
   }
   if (typeof args.flags["status"] === "string") {
-    updated.status = args.flags["status"] as TicketStatus;
+    const s = args.flags["status"];
+    if (!TICKET_STATUSES.includes(s as TicketStatus)) {
+      fail("INVALID_ARGS", `Invalid --status: ${s}. Valid: ${TICKET_STATUSES.join(", ")}`);
+    }
+    updated.status = s as TicketStatus;
   }
   if (typeof args.flags["iter-limit"] === "string") {
     const n = Number(args.flags["iter-limit"]);

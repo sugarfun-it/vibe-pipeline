@@ -3,6 +3,7 @@ import * as orchestrator from "../lib/runner/orchestrator";
 import * as syncJob from "../lib/runner/syncJob";
 import * as worktree from "../lib/io/git/worktree";
 import { ok, err, withProject, withPipeline, withUserAudit } from "./_http";
+import { detectVia } from "./projects";
 
 // GET sync 狀態:回 worktree 落後 base 幾個 commit
 // 給前端 chip 用,polling 1 次/3s 由前端控
@@ -22,9 +23,9 @@ export async function syncStatus(hash: string, pipelineId: string): Promise<Resp
 // - 衝突 → 寫 syncJob.state=conflict_await,前端跳 modal 讓 user 決定要不要 AI 解
 // - merge 失敗(非衝突)→ syncJob.failed
 // 前置:state ∈ {ready, paused, planning, failed} 才允許,running/queued/merged 擋
-export async function syncPipeline(hash: string, pipelineId: string): Promise<Response> {
+export async function syncPipeline(hash: string, pipelineId: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.sync", pipelineId }, async () => {
+    withUserAudit(project.path, { action: "pipeline.sync", pipelineId, via: detectVia(req) }, async () => {
       if (!project.hasGit) return err("invalid_path", "Project 沒 .git/", 400);
       if (orchestrator.isRunning(hash, pipelineId)) {
         return err("invalid_path", "Pipeline 在跑,先 pause 才能 sync", 409);
@@ -45,9 +46,9 @@ export async function syncPipeline(hash: string, pipelineId: string): Promise<Re
 }
 
 // POST /sync/ai:user 在 conflict_await 狀態確認讓 AI 解衝突
-export async function syncConfirmAi(hash: string, pipelineId: string): Promise<Response> {
+export async function syncConfirmAi(hash: string, pipelineId: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.sync.confirmAi", pipelineId }, async () => {
+    withUserAudit(project.path, { action: "pipeline.sync.confirmAi", pipelineId, via: detectVia(req) }, async () => {
       const res = await syncJob.confirmAi({ projectPath: project.path, projectHash: hash, pipelineId });
       if (!res.ok) return err("invalid_path", res.error, 409);
       return ok({ ok: true });
@@ -55,9 +56,9 @@ export async function syncConfirmAi(hash: string, pipelineId: string): Promise<R
 }
 
 // POST /sync/cancel:取消 sync(conflict_await 階段 = 不解了 / ai_running 階段 = 殺 AI)
-export async function syncCancel(hash: string, pipelineId: string): Promise<Response> {
+export async function syncCancel(hash: string, pipelineId: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.sync.cancel", pipelineId }, async () => {
+    withUserAudit(project.path, { action: "pipeline.sync.cancel", pipelineId, via: detectVia(req) }, async () => {
       const res = await syncJob.cancelSync({ projectPath: project.path, projectHash: hash, pipelineId });
       if (!res.ok) return err("invalid_path", res.error, 409);
       return ok({ ok: true });

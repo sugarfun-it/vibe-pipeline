@@ -1,6 +1,5 @@
 import { readPipeline, writePipeline } from "../../domain/pipeline";
 import * as notifs from "../../remote/notifs";
-import { loadUserConfig } from "../../domain/userConfig";
 
 // Pipeline 進入 ready 後,若 autoMerge=true 且當前 state=ready → 自動觸發 AI 合併。
 // 走跟手動 /merge 同一條 triggerMerge,因此 slot 滿會自然進 queue。
@@ -82,32 +81,15 @@ export async function maybeAutoMerge(opts: {
         pipelineId,
       });
       // FCM push:user 可能不在 UI(autoMerge 場景就是要無人值守);告知 AI 接手了
-      void (async () => {
-        try {
-          const cfg = await loadUserConfig();
-          if (!cfg.pushEvents.auto_merge_conflict) return;
-          const tokenStore = await import("../../remote/push/tokenStore");
-          const { fanoutPush } = await import("../../remote/fcm");
-          const records = await tokenStore.listTokens();
-          if (records.length === 0) return;
-          const dead = await fanoutPush(
-            records.map((rec) => rec.token),
-            {
-              notification: {
-                title: `🤖 ${name} AI 接手解衝突`,
-                body: `自動合併撞 ${fileCount} 個衝突檔,AI 開始處理`,
-              },
-              data: {
-                workUnitId: pipelineId,
-                url: `/board?project=${projectHash}&pipeline=${pipelineId}`,
-              },
-            }
-          );
-          if (dead.length > 0) await tokenStore.removeDeadTokens(dead);
-        } catch (e) {
-          console.error(`[autoMerge ${pipelineId}] push failed:`, e);
-        }
-      })();
+      const { pushToEvent, boardUrl } = await import("../../remote/push/pushToEvent");
+      pushToEvent({
+        eventKey: "auto_merge_conflict",
+        title: `🤖 ${name} AI 接手解衝突`,
+        body: `自動合併撞 ${fileCount} 個衝突檔,AI 開始處理`,
+        projectHash,
+        workUnitId: pipelineId,
+        url: boardUrl(projectHash, pipelineId),
+      });
       const ai = await triggerMerge({
         projectPath,
         projectHash,

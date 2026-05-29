@@ -1,5 +1,6 @@
 import { triggerMerge, autoMergeNoAI } from '../../lib/services/pipelineMerge';
 import { ok, err, withProject, withUserAudit } from '../_http';
+import { detectVia } from '../projects';
 
 // AI merge(ticket-based):append 一張 mode=merge synthetic ticket 進 pipeline,
 // 然後觸發 runner 接管。merge ticket 由 sub-agent 在 main repo 跑(不在 worktree)。
@@ -8,9 +9,9 @@ import { ok, err, withProject, withUserAudit } from '../_http';
 // 2026-05-13:跟 auto-merge 對稱化 — 先試 backend git merge --no-ff
 // clean → 回 {mode:"mechanical", mergeCommit};撞衝突 → fallback triggerMerge(AI)回 {mode:"ai", ticketId}
 // 其他失敗(dirty/no_git/...)→ 對應 error code
-export async function mergePipeline(hash: string, pipelineId: string): Promise<Response> {
+export async function mergePipeline(hash: string, pipelineId: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.merge", pipelineId }, async () => {
+    withUserAudit(project.path, { action: "pipeline.merge", pipelineId, via: detectVia(req) }, async () => {
 
   // 第 1 段:純 git merge
   const mech = await autoMergeNoAI({ projectPath: project.path, projectHash: hash, pipelineId, hasGit: project.hasGit });
@@ -35,7 +36,7 @@ export async function mergePipeline(hash: string, pipelineId: string): Promise<R
       case "no_git":     return err("invalid_path", ai.error, 400);
       case "running":    return err("invalid_path", ai.error, 409);
       case "working_tree_dirty":
-        return Response.json({ ok: false, error: { code: "invalid_path", message: ai.error, details: ai.details } }, { status: 409 });
+        return Response.json({ ok: false, error: { code: "working_tree_dirty", message: ai.error, details: ai.details } }, { status: 409 });
       case "append_failed": return err("invalid_path", ai.error, 409);
       case "spawn_failed":  return err("invalid_path", ai.error, 500);
     }
@@ -46,7 +47,7 @@ export async function mergePipeline(hash: string, pipelineId: string): Promise<R
     case "not_found":         return err("not_found", mech.error, 404);
     case "no_git":            return err("invalid_path", mech.error, 400);
     case "running":           return err("invalid_path", mech.error, 409);
-    case "working_tree_dirty":return err("invalid_path", mech.error, 409);
+    case "working_tree_dirty":return err("working_tree_dirty", mech.error, 409);
     case "git_error":         return err("invalid_path", mech.error, 500);
   }
   }));

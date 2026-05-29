@@ -104,8 +104,12 @@ test("race regression:繼續討論後送訊息,SpecReview 不立刻跳回", asyn
   // 給 1s 短 window 內檢查
   await expect(page.locator("button", { hasText: "送出建立需求單" })).not.toBeVisible({ timeout: 1000 });
 
-  // 等 AI 第二輪回應(complete=false)→ 仍保持 chat
-  await page.waitForTimeout(800);
+  // 用「第二輪 AI 回應已落地」當確定 anchor 取代 waitForTimeout:
+  // REOPEN_REPLY 的 message 出現在 chat bubble = 第二輪 complete=false 已寫回 draft。
+  // 此 anchor 反映時序「送訊息 → 收回應」,且回應落地後仍須維持 chat(不跳回 SpecReview)。
+  await expect(
+    page.locator(".qadr-bubble-ai .qadr-bubble-msg", { hasText: "退回 chat 了" }),
+  ).toBeVisible({ timeout: 5000 });
   await expect(page.locator("button", { hasText: "送出建立需求單" })).not.toBeVisible();
   await expect(page.locator(".qadr-composer")).toBeVisible();
 });
@@ -136,8 +140,11 @@ test("reopen → 改 spec → 查看最終預覽 → finalize → ticket 出現"
   await composer.fill("acceptance 加一條:預設跟系統主題");
   await page.keyboard.press("Enter");
 
-  // 等 AI 回(spec 更新)+ 確認還在 chat
-  await page.waitForTimeout(800);
+  // 用「補充輪 AI 回應已落地」當確定 anchor 取代 waitForTimeout:
+  // ADJUSTED_REPLY 的 message 出現 = 第二輪 spec 更新已寫回 draft,且仍維持 chat。
+  await expect(
+    page.locator(".qadr-bubble-ai .qadr-bubble-msg", { hasText: "acceptance 加了一條" }),
+  ).toBeVisible({ timeout: 5000 });
   await expect(page.locator(".qadr-composer")).toBeVisible();
 
   // 點 查看最終預覽 → SpecReview 顯

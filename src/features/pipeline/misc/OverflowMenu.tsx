@@ -114,11 +114,6 @@ export function OverflowMenu({
               role="separator"
               aria-orientation="horizontal"
               className="focus-overflow-sep"
-              style={{
-                height: 1,
-                background: "var(--line)",
-                margin: "4px 6px",
-              }}
             />
           )}
           {onResetPipeline && (

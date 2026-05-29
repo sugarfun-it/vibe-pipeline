@@ -41,3 +41,23 @@ export async function post<T = unknown>(path: string, body?: unknown): Promise<T
   }
   return j.data;
 }
+
+// GET wrapper — 讀 backend in-memory 狀態(e.g. orchestrator 執行態)時用。
+// read 純 fs 資料仍直接 reuse server/lib/*,不走這個。
+export async function get<T = unknown>(path: string): Promise<T> {
+  await requireBackend();
+  const url = `${apiBase()}${path}`;
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "GET", headers: { "user-agent": "vbpl-cli" } });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    fail("IO_ERROR", `GET ${path} 連線失敗:${msg}`);
+  }
+  const j = (await res.json()) as ApiResult<T>;
+  if (!j.ok) {
+    const code = j.error?.code?.toUpperCase() || "IO_ERROR";
+    fail(code, j.error?.message || `${path} 失敗(${res.status})`);
+  }
+  return j.data;
+}

@@ -55,7 +55,9 @@ test("ticket finalStatus=failed_iter_limit → ticket 顯示 iter 上限狀態",
 
   // 跑完 paused + ticket finalStatus=failed_iter_limit(terminal failure)→ RunButton
   // 顯示「無可執行 ticket」(failed_iter_limit 不在 runnable list — user 要先重置 ticket)
-  await expect(page.locator(".run-btn-empty")).toBeVisible({ timeout: 10000 });
+  await expect(
+    page.locator("[data-testid='run-btn'][data-run-state='empty']"),
+  ).toBeVisible({ timeout: 10000 });
 
   // 點開 ticket drawer → iter rounds 顯示兩條 FAIL verdict
   await page.locator(".ticket", { hasText: "iter-failed" }).click();

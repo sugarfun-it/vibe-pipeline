@@ -5,10 +5,8 @@
 import { watch, type FSWatcher } from "node:fs";
 import { pipelineFile, readPipeline } from "../domain/pipeline";
 import * as notifs from "../remote/notifs";
-import { fanoutPush } from "../remote/fcm";
-import * as tokenStore from "../remote/push/tokenStore";
+import { pushToEvent, boardUrl } from "../remote/push/pushToEvent";
 import * as testMode from "../testMode";
-import { loadUserConfig } from "../domain/userConfig";
 import { appendStateChange, listAudit } from "../domain/auditLog";
 import type { NotifEventType, PushEventKey } from "../../../shared/types";
 
@@ -72,26 +70,14 @@ function pushAsync(opts: {
   pipelineId: string;
   ticketId: string;
 }): void {
-  void (async () => {
-    try {
-      const cfg = await loadUserConfig();
-      if (!cfg.pushEvents[opts.eventKey]) return;
-      const records = await tokenStore.listTokens();
-      const dead = await fanoutPush(
-        records.map((r) => r.token),
-        {
-          notification: { title: opts.title, body: opts.body },
-          data: {
-            workUnitId: opts.ticketId,
-            url: `/board?project=${opts.projectHash}&pipeline=${opts.pipelineId}`,
-          },
-        }
-      );
-      if (dead.length > 0) await tokenStore.removeDeadTokens(dead);
-    } catch (e) {
-      console.error(`[ticketWatcher ${opts.pipelineId}] push failed:`, e);
-    }
-  })();
+  pushToEvent({
+    eventKey: opts.eventKey,
+    title: opts.title,
+    body: opts.body,
+    projectHash: opts.projectHash,
+    workUnitId: opts.ticketId,
+    url: boardUrl(opts.projectHash, opts.pipelineId),
+  });
 }
 
 export async function start(opts: {

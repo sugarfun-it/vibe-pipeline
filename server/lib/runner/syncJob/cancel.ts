@@ -14,16 +14,16 @@ export async function cancelSync(opts: {
   const p = (await readPipeline(projectPath, pipelineId)) as PipelineLike | null;
   if (!p || !p.syncJob) return { ok: false, error: "沒有進行中的 sync" };
 
-  // kill AI(若在 running map)
+  // kill AI(若在 running map)。拿 in-memory proc 走 killProcessTree(對齊
+  // stopImmediate):Windows taskkill /T 殺整棵,單殺 disk-read PID 的 SIGTERM 殺父不
+  // 殺孫,codex/claude sub-agent 會留 orphan 吃 token(雷區 #13 stop = immediate kill)。
   if (orchestrator.runningKind(projectHash, pipelineId) === "sync") {
-    // 透過 running map 拿 proc — 但目前 orchestrator 沒露 proc。直接用 OS kill PID
-    const pid = p.syncJob.aiPid;
-    if (typeof pid === "number") {
-      try {
-        process.kill(pid, "SIGTERM");
-      } catch {
-        // already dead — ignore
-      }
+    const proc = orchestrator.getRunningProc(projectHash, pipelineId);
+    const pid = proc?.pid ?? p.syncJob.aiPid;
+    try {
+      await orchestrator.killProcessTree(pid);
+    } catch {
+      // already dead — ignore
     }
     orchestrator.unregisterRunning(projectHash, pipelineId);
   }

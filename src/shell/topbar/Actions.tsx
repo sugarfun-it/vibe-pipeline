@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { MoonIcon, SunIcon } from "../../ui/icons";
-import { ParallelChip } from "./StatusPill";
+import { ParallelChip } from "./ParallelChip";
 
 type ActionsProps = {
   hash: string | null;

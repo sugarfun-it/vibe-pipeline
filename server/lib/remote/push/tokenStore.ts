@@ -8,9 +8,7 @@
 // register 進入點主動 ensureToken,send 是被動 getToken(沒有就 soft-fail)。
 
 import { ensureToken, getToken } from "./gatewayToken";
-
-// 對齊 gatewayToken.ts / fcm/index.ts 的 DEFAULT_GATEWAY_URL — forker 自架才走 env override
-const DEFAULT_GATEWAY_URL = "https://vp-gateway-799841449136.asia-east1.run.app";
+import { gatewayUrl } from "./gatewayConfig";
 
 export type DeviceTokenRecord = {
   id: string;
@@ -19,12 +17,6 @@ export type DeviceTokenRecord = {
   created_at: string;
   last_seen_at: string;
 };
-
-function gatewayUrl(): string {
-  const v = process.env.PUSH_GATEWAY_URL?.trim();
-  const raw = v && v.length > 0 ? v : DEFAULT_GATEWAY_URL;
-  return raw.replace(/\/+$/, "");
-}
 
 async function postGatewayWithToken(
   path: string,

@@ -1,5 +1,6 @@
 import * as orchestrator from '../../lib/runner/orchestrator';
 import { ok, err, withProject, withUserAudit } from '../_http';
+import { detectVia } from '../projects';
 import type { ApiErrorCode } from '../../../shared/types';
 
 // /pause 跟 /stop 共用本 handler。
@@ -8,10 +9,10 @@ import type { ApiErrorCode } from '../../../shared/types';
 export async function pausePipeline(
   hash: string,
   pipelineId: string,
-  _req?: Request
+  req?: Request
 ): Promise<Response> {
   return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.pause", pipelineId }, async () => {
+    withUserAudit(project.path, { action: "pipeline.pause", pipelineId, via: detectVia(req) }, async () => {
     // queued 狀態走 cancelQueued(直接從 queue 拔 + 標 paused);running 走立即停止。
     if (orchestrator.isQueued(hash, pipelineId)) {
       const r = await orchestrator.cancelQueued({ projectPath: project.path, projectHash: hash, pipelineId });
@@ -21,7 +22,7 @@ export async function pausePipeline(
 
     const r = await orchestrator.stopImmediate({ projectPath: project.path, projectHash: hash, pipelineId });
     if (!r.ok) {
-      const code: ApiErrorCode = r.code === "not_found" ? "not_found" : "invalid_path";
+      const code: ApiErrorCode = r.code === "not_found" ? "not_found" : "state_guard";
       const status = code === "not_found" ? 404 : 409;
       return err(code, r.error, status);
     }

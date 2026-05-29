@@ -1,7 +1,8 @@
 import { join } from "node:path";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { ensureRuntime } from "../domain/projectDir";
 import { readJsonl, appendJsonl } from "../io/jsonl";
+import { atomicWriteTextSync } from "../io/atomicWrite";
 import type { NotifEventType, NotifRecord, NotifSeverity } from "../../../shared/types";
 export type { NotifRecord };
 
@@ -56,7 +57,7 @@ function rewrite(projectPath: string, fn: (r: NotifRecord) => NotifRecord | null
       out.push(line);
     }
   }
-  writeFileSync(f, out.join("\n") + (out.length ? "\n" : ""));
+  atomicWriteTextSync(f, out.join("\n") + (out.length ? "\n" : ""));
 }
 
 export function markRead(projectPath: string, id: string): void {
@@ -77,7 +78,7 @@ export function dismissAll(projectPath: string): void {
   const f = file(projectPath);
   if (!existsSync(f)) return;
   try {
-    writeFileSync(f, "");
+    atomicWriteTextSync(f, "");
   } catch {
     // 失敗安靜忽略
   }
@@ -98,7 +99,7 @@ export function pruneOldRecords(projectPath: string, keep = 500): number {
   if (lines.length <= keep) return 0;
   const kept = lines.slice(-keep);
   try {
-    writeFileSync(f, kept.join("\n") + "\n");
+    atomicWriteTextSync(f, kept.join("\n") + "\n");
     return lines.length - keep;
   } catch {
     return 0;

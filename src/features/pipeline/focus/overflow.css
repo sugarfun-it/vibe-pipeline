@@ -82,3 +82,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* safe / danger section 之間的 1px 分隔線 — 從 OverflowMenu.tsx inline style 移進來 */
+.focus-overflow-sep {
+  height: 1px;
+  background: var(--line);
+  margin: var(--space-1) 6px;
+}

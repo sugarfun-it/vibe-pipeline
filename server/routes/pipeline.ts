@@ -1,6 +1,7 @@
 export * from './pipeline/pipeline-crud';
 export * from './pipeline/delete-pipeline';
 export * from './pipeline/run-pipeline';
+export * from './pipeline/exec-state';
 export * from './pipeline/pause-pipeline';
 export * from './pipeline/merge-pipeline';
 export * from './pipeline/pipeline-audit';

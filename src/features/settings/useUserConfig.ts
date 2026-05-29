@@ -6,6 +6,7 @@ import {
   defaultModelForProvider,
   isValidEffort,
   isValidModel,
+  PROVIDERS,
   type Effort,
   type ModelName,
   type Provider,
@@ -53,9 +54,10 @@ export function useUserConfig({
     field: TaskField,
     value: TaskConfirmedValue
   ): UserConfig["defaults"][TaskClass] {
-    if (field === "provider") return { ...task, provider: value as Provider };
-    if (field === "model") return { ...task, model: value as ModelName };
-    return { ...task, effort: value as Effort };
+    // model / effort 皆為 string,直接賦值;provider 是窄 union,runtime guard 收斂
+    if (field === "model") return { ...task, model: value };
+    if (field === "effort") return { ...task, effort: value };
+    return PROVIDERS.includes(value as Provider) ? { ...task, provider: value as Provider } : task;
   }
 
   function scheduleTaskSave(tc: TaskClass, field: TaskField, patch: TaskModelPatch, rollback: () => void) {

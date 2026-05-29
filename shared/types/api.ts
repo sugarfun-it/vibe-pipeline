@@ -10,6 +10,8 @@ export type ApiErrorCode =
   | "invalid_path"
   | "not_initialized"
   | "already_initialized"
+  | "state_guard"
+  | "working_tree_dirty"
   | "budget_exceeded"
   | "not_merged"
   | "internal_error";

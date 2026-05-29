@@ -56,6 +56,27 @@ export const TICKET_STATUS_COLOR: Record<string, string> = {
   failed_transient: "var(--failed)",
 };
 
+// rail-mini bar 的 ticket.status → fill 顏色。**故意跟 TICKET_STATUS_COLOR 不同**:
+// rail-mini 是 pipeline 列表內 3px 高的微型進度條,語意是「這格 ticket 跑到哪了」,
+// 不是 ticket 卡片的狀態色。差異:
+//   - ready:走 var(--running-soft)(淡 running,「即將執行」),非 TICKET_STATUS_COLOR.ready 的 var(--draft)
+//   - 未知 / draft / planned:走 var(--line-2)(中性 track 底色),非 var(--draft)
+// 其餘(done / running / paused / failed*)與 TICKET_STATUS_COLOR 一致。
+// 改這裡前確認是否真要動 rail mini-bar 視覺,別跟 TicketCard 的狀態色混為一談。
+export const RAIL_MINI_FILL: Record<string, string> = {
+  done: "var(--done)",
+  running: "var(--running)",
+  paused: "var(--paused)",
+  failed: "var(--failed)",
+  failed_iter_limit: "var(--failed)",
+  failed_transient: "var(--failed)",
+  ready: "var(--running-soft)",
+};
+
+export function railMiniFill(status: string): string {
+  return RAIL_MINI_FILL[status] ?? "var(--line-2)";
+}
+
 export function fmtElapsed(s: number): string {
   const m = Math.floor(s / 60),
     sec = s % 60;

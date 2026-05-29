@@ -1,24 +1,15 @@
 import { getToken } from "./push/gatewayToken";
+import { gatewayUrl } from "./push/gatewayConfig";
 
 export type FcmPayload = {
   notification?: { title?: string; body?: string };
   data?: Record<string, string>;
 };
 
-export const fakeFcmCalls: Array<{ tokens: string[]; payload: object; ts: number }> = [];
+export const fakeFcmCalls: Array<{ payload: object; ts: number }> = [];
 
 function isMockMode(): boolean {
   return process.env.VP_TEST_MODE === "mock";
-}
-
-// Push gateway URL default:maintainer host 的 Cloud Run gateway。
-// forker 自架 gateway → 用 `PUSH_GATEWAY_URL` env override。
-const DEFAULT_GATEWAY_URL = "https://vp-gateway-799841449136.asia-east1.run.app";
-
-function gatewayUrl(): string | null {
-  const v = process.env.PUSH_GATEWAY_URL?.trim();
-  const raw = v && v.length > 0 ? v : DEFAULT_GATEWAY_URL;
-  return raw.replace(/\/+$/, "");
 }
 
 // initFCM / isFCMReady:gateway url 有設就視為「結構上可用」;
@@ -38,11 +29,11 @@ type SendResponse = {
   failed?: Array<{ deviceToken?: string; deviceId?: string; code?: string; error?: string }>;
 };
 
-export async function fanoutPush(tokens: string[], payload: FcmPayload): Promise<string[]> {
+// tokens 參數已移除(2026-05-29):real 模式下 gateway 端 device registry 是 SSOT,
+// VP backend 不持有 device list,傳什麼 tokens 都被無視;mock 模式也只記 payload。
+export async function fanoutPush(payload: FcmPayload): Promise<string[]> {
   if (isMockMode()) {
-    const normalizedTokens = Array.from(new Set(tokens.map((t) => t.trim()).filter(Boolean)));
     fakeFcmCalls.push({
-      tokens: normalizedTokens,
       payload: {
         notification: payload.notification ? { ...payload.notification } : undefined,
         data: payload.data ? { ...payload.data } : undefined,
@@ -53,10 +44,6 @@ export async function fanoutPush(tokens: string[], payload: FcmPayload): Promise
   }
 
   const url = gatewayUrl();
-  if (!url) {
-    console.warn("[FCM] PUSH_GATEWAY_URL 未設定,跳過 fanout");
-    return [];
-  }
 
   // send 是被動觸發,不該 auto-issue token;沒 token = 此 backend 從沒 register 過,正常,soft fail。
   const tok = await getToken();
@@ -65,8 +52,7 @@ export async function fanoutPush(tokens: string[], payload: FcmPayload): Promise
     return [];
   }
 
-  // tokens arg 被 gateway 端 device registry 取代(gateway 是 SSOT);
-  // 這裡只是為了維持 signature 與 mock fakeFcmCalls 行為一致。
+  // device list 由 gateway 端 registry 解析(gateway 是 SSOT);此處只送 payload。
   const title = payload.notification?.title ?? "";
   const body = payload.notification?.body ?? "";
   if (!title || !body) {

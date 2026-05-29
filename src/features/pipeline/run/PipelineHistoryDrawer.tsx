@@ -4,7 +4,9 @@ import "../ticket/ticket.css";
 import { RunHistory } from "./RunHistory";
 import { AuditTimeline } from "../diff/AuditTimeline";
 import { Overlay } from "../../../ui/Overlay";
+import { CloseIcon } from "../../../ui/icons";
 import { formatDateTime } from "../../../lib/format";
+import { localizeAuditState, SOURCE_LABEL_ZH } from "../../../lib/auditLocalize";
 import * as api from "../../../api";
 import type { AuditEntry } from "../../../api";
 
@@ -67,9 +69,7 @@ export function PipelineHistoryDrawer({
             title="關閉執行紀錄 (Esc)"
             aria-label="關閉執行紀錄"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
+            <CloseIcon width={16} height={16} aria-hidden />
           </button>
         </div>
         <div className="drawer-titlerow">
@@ -105,7 +105,7 @@ export function PipelineHistoryDrawer({
             <div className="pipeline-history-top-summary">
               <div className="pipeline-history-top-summary-line">
                 <span className="pipeline-history-top-summary-label">目前狀態</span>
-                <span className="pipeline-history-top-summary-state">{stateLabel(topAudit.to)}</span>
+                <span className="pipeline-history-top-summary-state">{localizeAuditState(topAudit.to)}</span>
               </div>
               <div className="pipeline-history-top-summary-line pipeline-history-top-summary-line-meta">
                 {/* HD-CODEX-003 round 1 (2026-05-25):flex gap 在兩個 span 中間多塞 8px,
@@ -134,30 +134,7 @@ export function PipelineHistoryDrawer({
   );
 }
 
-// HD-EMPTY-001 round 1 (2026-05-25):state enum → zh user-facing 標籤,未知保留原 enum
-const STATE_LABEL_TOP: Record<string, string> = {
-  planning: "規劃中",
-  queued: "排隊中",
-  running: "執行中",
-  paused: "已暫停",
-  ready: "可合併",
-  failed: "失敗",
-  merged: "已合併",
-};
-function stateLabel(s: string): string {
-  return STATE_LABEL_TOP[s.toLowerCase()] ?? s;
-}
-// minimal 中譯 — AuditTimeline 內有完整 SOURCE_LABEL,本 1-line summary 只用 5 種主要 source
-// HD-EMPTY-001 round 1 (2026-05-25):補 api-create-pipeline / api-handler 等 backend 常 emit 的 source,
-//   未知值 fallback「系統」(不再 dump raw debug 字串到 user-facing summary)
-const TOP_AUDIT_SOURCE: Record<string, string> = {
-  "user-action": "使用者操作",
-  "api-handler-explicit": "API 明確指定",
-  "api-create-pipeline": "建立 pipeline",
-  "runner-self-detected": "Runner 自動偵測",
-  "orchestrator.spawnDirect": "Orchestrator 啟動",
-  "ticketWatcher-detected": "Ticket Watcher 偵測",
-};
+// state enum → zh 標籤與 source 中譯共用 src/lib/auditLocalize.ts(SSOT,跟 AuditTimeline 同源)。
 // HD-EMPTY-001 round 1 (2026-05-25):sourceDetail 常是 raw debug 串(含 = / POST / path),
 //   塞進 user-facing summary 會讓 readability 崩。判定為 debug-ish → 不 inline,移到 title;
 //   保留 cleanly localized 的 detail(沒有 = 沒有 / 沒有 \ ,且在 DETAIL_KNOWN 內或全中文)
@@ -170,7 +147,7 @@ function isDebugDetail(s: string): boolean {
   return /[=/\\]|POST|GET|PUT|DELETE/.test(s);
 }
 function topAuditSourceLabel(e: AuditEntry): { text: string; rawTitle?: string } {
-  const known = TOP_AUDIT_SOURCE[e.source];
+  const known = SOURCE_LABEL_ZH[e.source];
   const rawDetail = e.sourceDetail;
   const cleanDetail = rawDetail
     ? (DETAIL_KNOWN_TOP[rawDetail] ?? (isDebugDetail(rawDetail) ? null : rawDetail))

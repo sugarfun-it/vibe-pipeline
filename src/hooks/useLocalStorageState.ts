@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // useLocalStorageState — 收斂 localStorage.getItem/setItem/removeItem + storage event 樣板
 //
@@ -41,15 +41,30 @@ export function useLocalStorageState<T>(
     opts.deserialize ??
     ((s: string) => (isStringDefault ? (s as unknown as T) : (JSON.parse(s) as T)));
 
-  const [value, setValueState] = useState<T>(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw === null) return defaultValue;
-      return deserialize(raw);
-    } catch {
-      return defaultValue;
-    }
-  });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: defaultValue/deserialize treated as stable, same as storage-event effect below
+  const readKey = useCallback(
+    (k: string): T => {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw === null) return defaultValue;
+        return deserialize(raw);
+      } catch {
+        return defaultValue;
+      }
+    },
+    [],
+  );
+
+  const [value, setValueState] = useState<T>(() => readKey(key));
+
+  // key 動態變動時重讀新 key 的 LS 值(value 的 lazy init 只在 mount 跑一次)。
+  // ref 記前一個 key,skip mount(initializer 已讀過 mount 時的 key),只在 key 真的換掉時 resync。
+  const prevKeyRef = useRef(key);
+  useEffect(() => {
+    if (prevKeyRef.current === key) return;
+    prevKeyRef.current = key;
+    setValueState(readKey(key));
+  }, [key, readKey]);
 
   const setValue = useCallback(
     (next: T) => {

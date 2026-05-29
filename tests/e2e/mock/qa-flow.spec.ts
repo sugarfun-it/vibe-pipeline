@@ -118,13 +118,21 @@ test("QA 多輪 → spec checklist 進度 → 最後一輪 complete", async ({ p
   // 4 輪 — 第一輪用 starter chip(.qadr-suggestion);後續輪 partial reply 沒帶
   // optionsMode → default "single" → Composer 渲染 .qadr-option chips,點即送
   // (multi-mode 才用 InlineMultiSelect + 「送出已選」)
+  // 每輪點完用「該輪 AI 回應已落地」當確定 anchor 取代 waitForTimeout —
+  // 等對應 reply 的 message bubble 出現,才確定該輪 render 完、下一輪 option 已就緒。
+  // 末輪 final complete=true → 切 SpecReview(QATranscript 卸載,bubble 不再渲染),
+  // 改 anchor 在 SpecReview 的 finalize 按鈕(等同下方收尾斷言)。
+  const roundReplyMsgs = ["先收 title 跟 goal", "驗收條件呢?", "再給 prompt 用詞"];
   for (let i = 0; i < 4; i++) {
     const sel = i === 0 ? ".qadr-suggestion" : ".qadr-option";
     const opt = page.locator(sel).first();
     await expect(opt).toBeVisible({ timeout: 5000 });
     await opt.click();
-    // 每輪後給時間 React render
-    await page.waitForTimeout(200);
+    const anchor =
+      i < 3
+        ? page.locator(".qadr-bubble-ai .qadr-bubble-msg", { hasText: roundReplyMsgs[i] })
+        : page.locator("button", { hasText: "送出建立需求單" });
+    await expect(anchor).toBeVisible({ timeout: 5000 });
   }
 
   // 收尾應該 complete

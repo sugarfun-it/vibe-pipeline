@@ -93,13 +93,7 @@ export function FocusTitle({
             id={errorId}
             role="status"
             aria-live="polite"
-            style={{
-              // 視覺可見的 inline 錯誤訊息 — sighted user 跟 SR 都看得到
-              fontSize: 11,
-              color: "var(--failed)",
-              marginLeft: 4,
-              whiteSpace: "nowrap",
-            }}
+            className="focus-title-edit-error"
           >
             {errorMsg}
           </span>

@@ -57,6 +57,16 @@ export function runningKind(
   return running.get(key(projectHash, pipelineId))?.kind ?? null;
 }
 
+// 暴露 running entry 的 live proc,給需要殺整棵 process tree 的 caller(syncJob.cancel)用。
+// 拿 in-memory proc.pid 走 killProcessTree(對齊 stopImmediate),取代從 disk 讀單 PID
+// 後 process.kill SIGTERM(Windows 殺父不殺孫 → orphan sub-agent)。
+export function getRunningProc(
+  projectHash: string,
+  pipelineId: string
+): Bun.Subprocess | null {
+  return running.get(key(projectHash, pipelineId))?.proc ?? null;
+}
+
 export function isRunning(projectHash: string, pipelineId: string): boolean {
   return running.has(key(projectHash, pipelineId));
 }

@@ -48,22 +48,10 @@ export const TICKET_STATUS_LABELS: Record<string, string> = {
 // 「3 個 ticket 全 PASS、3 commit。pipeline.state=ready,可 merge。」
 //   → 「3 個 ticket 全數通過,3 個 commit。pipeline.state=ready,可合併。」
 export function renderResult(raw: string): JSX.Element {
-  // domain term(ticket / pipeline / commit / Runner)保留英文,不翻中文。
-  // 只翻 PASS→通過、merge→合併 等動作/結果詞。
-  // HIST-RUN-003 round 1 (2026-05-25):補幾個常見 token(commit→個 commit、可 merge→可合併、
-  //   pipeline.狀態→pipeline 狀態、單獨 PASS/FAIL),統一中文標點(半形逗號→全形;半形冒號→全形)。
-  let s = raw;
-  s = s.replace(/全\s*PASS/gi, "全數通過");
-  // 「3 commit」→「3 個 commit」(個量詞)
-  s = s.replace(/(\d+)\s*commit(?![=:\-])/gi, "$1 個 commit");
-  // 可 merge / 能 merge → 可合併
-  s = s.replace(/可\s*merge/gi, "可合併");
-  // pipeline.狀態 / pipeline.state.X → pipeline 狀態(避免中文裡夾半形句點看起來像錯字)
-  s = s.replace(/pipeline\.狀態/g, "pipeline 狀態");
-  // 半形逗號 / 冒號 → 全形(已是 zh 句子內;state=key=value 內保留半形)
-  s = s.replace(/,(?=\S)/g, ", ");
-  // 同時把舊 state token 透過 localizeResult 翻 zh-TW
-  s = localizeResult(s);
+  // i18n 替換(全 PASS / commit 量詞 / 可 merge / pipeline.狀態 / state= / ticket draft→done /
+  //   中文標點與中英 spacing)全收斂在 localizeResult 一處,renderResult 不再重跑同一批 replace。
+  //   token <code> wrap 在 localize 之後跑,輸入字串與舊版一致(localize 不產生新的 key=value token)。
+  const s = localizeResult(raw);
   // 把 `key=value` 或 `key.field=value` 包 <code>(保 mono 樣式)
   const parts: Array<string | JSX.Element> = [];
   const re = /([a-z_][a-z0-9_.]*=[a-z0-9_\-]+)/gi;

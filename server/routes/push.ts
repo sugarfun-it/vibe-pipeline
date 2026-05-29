@@ -1,4 +1,4 @@
-import { err, readJson } from "./_http";
+import { ok, err, readJson } from "./_http";
 import * as tokenStore from "../lib/remote/push/tokenStore";
 import { fanoutPush, isFCMReady } from "../lib/remote/fcm";
 
@@ -15,7 +15,7 @@ export async function register(req: Request): Promise<Response> {
   if (!token) return err("invalid_path", "token 必須為非空字串", 400);
   const platform = typeof body.platform === "string" ? body.platform : "unknown";
   const record = await tokenStore.registerToken(token, platform);
-  return Response.json({ token: record }, { status: 201 });
+  return ok({ token: record });
 }
 
 export async function unregister(req: Request): Promise<Response> {
@@ -23,11 +23,11 @@ export async function unregister(req: Request): Promise<Response> {
   const token = readToken(body);
   if (!token) return err("invalid_path", "token 必須為非空字串", 400);
   await tokenStore.unregisterToken(token);
-  return new Response(null, { status: 204 });
+  return ok({ ok: true });
 }
 
 export async function tokens(): Promise<Response> {
-  return Response.json({ tokens: await tokenStore.listTokens() });
+  return ok({ tokens: await tokenStore.listTokens() });
 }
 
 // Smoke test:對所有 registered tokens fan-out 一發測試 push,驗證鏈路
@@ -40,18 +40,15 @@ export async function test(): Promise<Response> {
     return err("invalid_path", "沒任何已註冊的 device token(先在 Settings → 通知 啟用)", 400);
   }
   const ts = new Date().toLocaleTimeString();
-  const dead = await fanoutPush(
-    records.map((r) => r.token),
-    {
-      notification: {
-        title: "vibe-pipeline 測試推播",
-        body: `從 backend 發送 · ${ts}`,
-      },
-      data: { url: "/board" },
-    }
-  );
+  const dead = await fanoutPush({
+    notification: {
+      title: "vibe-pipeline 測試推播",
+      body: `從 backend 發送 · ${ts}`,
+    },
+    data: { url: "/board" },
+  });
   if (dead.length > 0) await tokenStore.removeDeadTokens(dead);
-  return Response.json({
+  return ok({
     sent: records.length,
     dead: dead.length,
     ts,
@@ -59,7 +56,7 @@ export async function test(): Promise<Response> {
 }
 
 export function config(): Response {
-  return Response.json({
+  return ok({
     apiKey: process.env.FCM_API_KEY ?? "",
     authDomain: process.env.FCM_AUTH_DOMAIN ?? "",
     projectId: process.env.FCM_PROJECT_ID ?? "",

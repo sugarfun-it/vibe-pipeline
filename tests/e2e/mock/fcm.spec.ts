@@ -61,7 +61,6 @@ function pipelineWithTickets() {
 }
 
 type FakeFcmCall = {
-  tokens: string[];
   payload: {
     notification?: { title?: string; body?: string };
     data?: Record<string, string>;
@@ -78,7 +77,9 @@ async function registerToken(request: APIRequestContext, token: string) {
   const res = await request.post(`${API}/push/register`, {
     data: { token, platform: "e2e" },
   });
-  expect(res.status()).toBe(201);
+  expect(res.ok()).toBeTruthy();
+  const body = (await res.json()) as { ok: boolean };
+  expect(body.ok).toBe(true);
 }
 
 async function getFcmCalls(request: APIRequestContext): Promise<FakeFcmCall[]> {

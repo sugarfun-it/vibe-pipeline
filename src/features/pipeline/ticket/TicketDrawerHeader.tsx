@@ -1,4 +1,5 @@
 import type { Ticket } from "../../../../shared/types";
+import { CloseIcon } from "../../../ui/icons";
 import { TicketStatusMeta } from "./TicketStatusMeta";
 
 export function TicketDrawerHeader({
@@ -33,9 +34,7 @@ export function TicketDrawerHeader({
           title="關閉 (Esc)"
           aria-label="關閉 ticket drawer"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          <CloseIcon width={16} height={16} aria-hidden />
         </button>
       </div>
       <div className="drawer-titlerow tdrw-titlerow">

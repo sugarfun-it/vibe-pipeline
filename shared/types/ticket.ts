@@ -12,6 +12,17 @@ export type TicketStatus =
   | "failed_iter_limit"
   | "failed_transient";
 
+export const TICKET_STATUSES: TicketStatus[] = [
+  "draft",
+  "ready",
+  "running",
+  "paused",
+  "done",
+  "failed",
+  "failed_iter_limit",
+  "failed_transient",
+];
+
 // 1/0/-1 是舊 prototype mock 格式;runner 寫回是字串 "PASS"/"FAIL"/"PARTIAL"
 export type Verdict = 1 | 0 | -1 | "PASS" | "FAIL" | "PARTIAL";
 

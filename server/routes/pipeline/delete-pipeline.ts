@@ -4,6 +4,7 @@ import * as orchestrator from '../../lib/runner/orchestrator';
 import * as worktree from '../../lib/io/git/worktree';
 import * as notifs from '../../lib/remote/notifs';
 import { ok, err, withProject, withUserAudit } from '../_http';
+import { detectVia } from '../projects';
 
 // DELETE /api/projects/:hash/pipelines/:id — cascade 清 worktree + branch + json
 // 流程(每步可獨立失敗,partial 結果回給 caller 不靜默吞):
@@ -14,9 +15,9 @@ import { ok, err, withProject, withUserAudit } from '../_http';
 //   5. emit notif pipeline_deleted
 // 任一步失敗 → 仍回 200(部分清完),body.partial=true + body.steps 標哪步壞
 // 完全 not_found(連 pipeline.json 都沒)→ 404
-export async function deletePipeline(hash: string, id: string): Promise<Response> {
+export async function deletePipeline(hash: string, id: string, req?: Request): Promise<Response> {
   return withProject(hash, async (project) =>
-    withUserAudit(project.path, { action: "pipeline.delete", pipelineId: id }, async () => {
+    withUserAudit(project.path, { action: "pipeline.delete", pipelineId: id, via: detectVia(req) }, async () => {
     // preflight — running / queued 拒絕
     if (orchestrator.isRunning(hash, id)) {
       return err("invalid_path", "Pipeline 在 running,先 stop 才能刪", 409);

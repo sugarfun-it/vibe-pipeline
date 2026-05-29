@@ -4,6 +4,12 @@ import type { AuditEntry } from "../../../api";
 import { ArrowRightIcon, ChevronIcon } from "../../../ui/icons";
 import { useToast } from "../../../ui/Toast";
 import { formatDateTime } from "../../../lib/format";
+import {
+  DETAIL_LABEL_ZH,
+  localizeAuditDetail,
+  localizeAuditState,
+  SOURCE_LABEL_ZH,
+} from "../../../lib/auditLocalize";
 import "./auditTimeline.css";
 
 // Pipeline 狀態變動歷史 timeline。
@@ -124,62 +130,16 @@ export function AuditTimeline({
   );
 }
 
-// audit-long-05a / history-audit-011 round 4 (2026-05-24):
-//   sourceDetail 是 backend orchestrator 寫進 audit.jsonl 的 raw 字串(`stop button` /
-//   `iter_stop_at_limit` / `pipeline created` 等)。對最常見的 detail token 做 user-facing
-//   中譯,visible 與 aria-label 都用中譯;未知 detail 保留 raw 給 dev/debug。
-//   不全 cover — 完整 enum dictionary 屬 backend / sourceDetail schema 改動,defer。
-const DETAIL_LABELS: Record<string, string> = {
-  "stop button": "停止按鈕",
-  resume: "繼續執行",
-  "iter_stop_at_limit": "已達 iter 上限",
-  "iter_limit": "已達 iter 上限",
-  "iter_limit_reached": "已達 iter 上限",
-  "pipeline created": "Pipeline 建立",
-  "all tickets done": "所有 ticket 完成",
-  "click 合併入 main": "點擊「合併入 main」",
-  "tickets added (3)": "新增 3 張 ticket",
-  "QA draft created": "建立 QA 草稿",
-  "QA draft promoted": "QA 草稿轉正",
-  "ticket 2 started": "ticket 2 開始執行",
-};
-function localizeDetail(raw: string | undefined): string | undefined {
-  if (!raw) return raw;
-  return DETAIL_LABELS[raw] ?? raw;
-}
-
-const STATE_ARIA_LABELS: Record<string, string> = {
-  planning: "規劃中",
-  queued: "排隊中",
-  running: "執行中",
-  paused: "已暫停",
-  ready: "可合併",
-  failed: "失敗",
-  merged: "已合併",
-  done: "完成",
-  draft: "草稿",
-};
-function ariaState(s: string): string {
-  return STATE_ARIA_LABELS[s.toLowerCase()] ?? s;
-}
-
-// 把後端 source 機器代號翻成中文,user 不需要懂 runner-self-detected / api-handler-explicit;
-// 找不到對應就 fallback 原值(保開發者可讀性)
-const SOURCE_LABEL: Record<string, string> = {
-  "user-action": "使用者操作",
-  "api-handler-explicit": "API 明確指定",
-  "runner-self-detected": "Runner 自動偵測",
-  "orchestrator.spawnDirect": "Orchestrator 啟動",
-  "ticketWatcher-detected": "Ticket Watcher 偵測",
-};
+// label maps(state / source / sourceDetail 中譯)搬到 src/lib/auditLocalize.ts 與
+// PipelineHistoryDrawer top summary 共用,避免漂移。
 
 // a11y:每 row 給 SR 一句完整描述(時間、from→to、來源)— mono chip 與符號
 // 在語意上會被拆散,額外加 aria-label 涵蓋完整轉移。
 // audit-long-05a (2026-05-24):state 值用中文映射(visible mono chip 仍保 raw enum 給 dev)。
 function AuditRow({ entry }: { entry: AuditEntry }) {
-  const srcLabel = SOURCE_LABEL[entry.source] ?? entry.source;
-  const detailLabel = localizeDetail(entry.sourceDetail);
-  const ariaLabel = `${formatDateTime(entry.ts)}:由「${ariaState(entry.from)}」變為「${ariaState(entry.to)}」,來源 ${srcLabel}${detailLabel ? `(${detailLabel})` : ""}`;
+  const srcLabel = SOURCE_LABEL_ZH[entry.source] ?? entry.source;
+  const detailLabel = localizeAuditDetail(entry.sourceDetail);
+  const ariaLabel = `${formatDateTime(entry.ts)}:由「${localizeAuditState(entry.from)}」變為「${localizeAuditState(entry.to)}」,來源 ${srcLabel}${detailLabel ? `(${detailLabel})` : ""}`;
   return (
     <li className="audit-row" role="listitem" aria-label={ariaLabel}>
       <span className="audit-ts mono" aria-hidden>{formatDateTime(entry.ts)}</span>
@@ -195,7 +155,7 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
         {detailLabel && (
           // 已知 token 中譯;raw token 保留原樣 + mono 樣式提示為 dev 取用
           <span
-            className={DETAIL_LABELS[entry.sourceDetail ?? ""] ? "audit-detail" : "audit-detail mono"}
+            className={DETAIL_LABEL_ZH[entry.sourceDetail ?? ""] ? "audit-detail" : "audit-detail mono"}
             title={entry.sourceDetail !== detailLabel ? entry.sourceDetail : undefined}
           >
             {" · "}

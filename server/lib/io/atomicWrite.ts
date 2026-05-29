@@ -12,10 +12,43 @@
 //   Date 物件等惡作劇 partial 寫出),附 trailing newline(POSIX 慣例 / git diff 友善)
 
 import { writeFile, rename, chmod, unlink } from "node:fs/promises";
+import {
+  writeFileSync,
+  renameSync,
+  chmodSync,
+  unlinkSync,
+} from "node:fs";
 
 export type AtomicWriteOpts = {
   chmod?: number;
 };
+
+// Windows EPERM / EBUSY 來源同 renameWithWindowsRetry,但 caller 是 sync 簽名(notifs store
+// 的 rewrite / dismissAll / pruneOldRecords 同步呼)→ 不能 await。用 Atomics.wait 做 sync sleep。
+const RETRY_DELAYS = [0, 30, 80, 160, 320, 640, 1200, 2000];
+const SYNC_SLEEP_BUF = new Int32Array(new SharedArrayBuffer(4));
+
+function syncSleep(ms: number): void {
+  if (ms <= 0) return;
+  Atomics.wait(SYNC_SLEEP_BUF, 0, 0, ms);
+}
+
+function renameWithWindowsRetrySync(tmp: string, path: string): void {
+  const delays = process.platform === "win32" ? RETRY_DELAYS : [0];
+  let lastErr: unknown;
+  for (const delay of delays) {
+    if (delay > 0) syncSleep(delay);
+    try {
+      renameSync(tmp, path);
+      return;
+    } catch (e) {
+      lastErr = e;
+      const code = (e as { code?: string }).code;
+      if (code !== "EPERM" && code !== "EBUSY") break;
+    }
+  }
+  throw lastErr;
+}
 
 async function renameWithWindowsRetry(tmp: string, path: string): Promise<void> {
   // Windows EPERM / EBUSY 來源:防毒 / Explorer indexer / fs.watch reader / Bun.spawn child
@@ -73,4 +106,32 @@ export async function atomicWriteJson(
   // round-trip:確認自己生的 JSON 真能 parse 回(防 BigInt / Date 物件等被 stringify 後再讀炸)
   JSON.parse(text);
   await atomicWriteText(path, text, opts);
+}
+
+// Sync 版本 — 給對外 sync 簽名的 caller(notifs store)用,語意 / Windows retry 跟 async 版一致。
+// 不能改 async 的場景才用這個;新 code 預設用上面的 async 版。
+export function atomicWriteTextSync(
+  path: string,
+  text: string,
+  opts?: AtomicWriteOpts,
+): void {
+  const tmp = path + ".tmp";
+  writeFileSync(tmp, text, "utf8");
+  if (typeof opts?.chmod === "number") {
+    try {
+      chmodSync(tmp, opts.chmod);
+    } catch {
+      // Windows NTFS / 權限不足:silent ignore
+    }
+  }
+  try {
+    renameWithWindowsRetrySync(tmp, path);
+  } catch (e) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+      // ignore
+    }
+    throw e;
+  }
 }
