@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from "react";
-import type { CSSProperties, JSX } from "react";
+import type { JSX } from "react";
 import * as api from "../../../api";
 import type { RunSummary, RunDetail } from "../../../api";
 import { fmtDuration } from "../../../lib/pipelines";
@@ -18,20 +18,6 @@ import {
 // stdout raw 預設只顯前 N 行,避免 10-50KB JSONL 整段渲染拖慢 drawer 滾動。
 // user 點「展開全部」才完整顯示。
 const STDOUT_PREVIEW_LINES = 80;
-
-// 視覺隱藏但保留 SR 可讀(等同標準 sr-only utility)— RunHistory 沒掛 src/styles 全域 class,
-// 用 inline style 在元件內 self-contained,避免依賴 phase4 才會加上的 .sr-only。
-const visuallyHidden: CSSProperties = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-};
 
 // 每張 RunCard 自管 open / detail / loading state。多張可同時展開,user 想 compare 兩輪(e.g.「第 3 輪 fail 第 4 輪 pass 差在哪」)直接開兩張看;
 // detail close 後仍留在 state,re-open 不重 fetch。
@@ -131,7 +117,7 @@ export function RunCard({
         }}
       >
         {/* hist-010:chevron 仍 aria-hidden,但配 sr-only 文字補強「收合 / 展開」狀態給 SR */}
-        <span style={visuallyHidden}>{open ? "收合" : "展開"}</span>
+        <span className="sr-only">{open ? "收合" : "展開"}</span>
         <span
           className="tdrw-run-head-chev"
           aria-hidden="true"
@@ -392,7 +378,7 @@ function CopyableBlock({
           {copied ? "已複製" : "複製"}
         </button>
         {/* RH-010:aria-live 對 SR 報「已複製」狀態 */}
-        <span style={visuallyHidden} aria-live="polite">{copied ? "已複製" : ""}</span>
+        <span className="sr-only" aria-live="polite">{copied ? "已複製" : ""}</span>
       </div>
     </>
   );

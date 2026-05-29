@@ -2,7 +2,7 @@
 .qadr-composer {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   width: 100%;
 }
 .qadr-options {
@@ -16,7 +16,7 @@
   text-align: left;
   font-weight: 400;
   font-size: 12.5px;
-  padding: 8px 14px;
+  padding: var(--space-2) 14px;
   min-height: 36px;
   border-radius: 7px;
   background: var(--bg-elevated);
@@ -73,6 +73,13 @@
   scroll-margin-bottom: 80px;
   border-left: 3px solid var(--accent);
 }
+.qadr-multi-status {
+  font-size: 10.5px;
+  color: var(--fg-mute);
+  padding: 0 2px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
 .qadr-inline-multi .qadr-options-multi {
   margin: 0;
 }
@@ -86,13 +93,6 @@
   .qadr-inline-multi .qadr-multi-send {
     align-self: stretch;
   }
-}
-.qadr-multi-status {
-  font-size: 10.5px;
-  color: var(--fg-mute);
-  padding: 0 2px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
 }
 @media (pointer: coarse), (max-width: 767.98px) {
   /* multi-select 選項 / 送出按鈕在 mobile 給足 44px hit-target,跟 starter chip 對齊 */
@@ -120,7 +120,7 @@
 }
 .qadr-composer-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: stretch;
   width: 100%;
 }

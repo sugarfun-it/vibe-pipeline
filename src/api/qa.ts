@@ -4,6 +4,7 @@ import type {
   QAReply,
   Turn,
   Draft,
+  Pipeline,
 } from "../../shared/types";
 import { call, ApiError } from "./_client";
 
@@ -13,9 +14,9 @@ export { ApiError };
 
 type StartResp = { draft: Draft; reply: QAReply };
 type TurnResp = { draft: Draft; reply: QAReply };
-type FinalizeResp = {
+export type FinalizeResp = {
   tickets: Array<{ id: string; n: number; title: string }>;
-  pipeline: unknown;
+  pipeline: Pipeline;
   splitCount: number;
 };
 

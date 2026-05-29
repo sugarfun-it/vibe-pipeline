@@ -14,7 +14,7 @@ export function OutcomeSections({ ticket }: { ticket: Ticket }) {
               marginBottom: ticket.iter.rounds && ticket.iter.rounds.length > 0 ? 10 : 0,
             }}
           >
-            第 {ticket.iter.current} 輪 · {ticket.iter.verdicts.length} 次審核
+            第 {Math.max(1, ticket.iter.current)} 輪 · {ticket.iter.verdicts.length} 次審核
           </div>
           {ticket.iter.rounds && ticket.iter.rounds.length > 0 && (
             <IterRounds rounds={ticket.iter.rounds} />

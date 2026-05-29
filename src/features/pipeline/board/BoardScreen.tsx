@@ -13,7 +13,6 @@ import { ActiveProjectProvider, type ActiveProjectContextValue } from "../../../
 import { useActiveProjectHash } from "../../../hooks/useActiveProject";
 import { useLocalStorageState } from "../../../hooks/useLocalStorageState";
 import * as api from "../../../api";
-import type { Pipeline } from "../../../../shared/types";
 import type { Project } from "../../../../shared/types";
 import { InboxColumn } from "../../notifications/InboxColumn";
 import { useActivePipeline } from "./useActivePipeline";
@@ -98,7 +97,7 @@ export function BoardScreen({ density = "medium", startCreating = false }: {
     if (!project) return;
     const body = { name, branch: "pipeline/" + name, baseBranch, state: "planning" as const, tickets: [], autoMerge };
     try {
-      const created = (await api.createPipeline(project.hash, body)) as Pipeline;
+      const created = await api.createPipeline(project.hash, body);
       setPipelines((arr) => [created, ...arr]);
       setActiveId(created.id);
       setActiveTab("focus");

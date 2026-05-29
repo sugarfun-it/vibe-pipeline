@@ -59,7 +59,7 @@
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 /* head 段名(pipeline branch)可 ellipsis;base 永不縮 — 即使 mobile 窄屏 user 也看得到對比對象
    (rwd-008 / copy-002)。 */

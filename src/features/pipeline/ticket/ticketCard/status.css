@@ -22,9 +22,9 @@
    不再是「卡中卡」結構。stage chip / round-num / iter-meta 字級全壓低,讓密度提升。 */
 .ticket-iter {
   display: flex; align-items: center; gap: 10px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   margin-left: var(--ticket-content-indent);
-  padding: 4px 0 0;
+  padding: var(--space-1) 0 0;
   border: 0;
   background: transparent;
   font-size: 10.5px;
@@ -58,7 +58,7 @@
    V1 Refined 每輪整行加 1px 外框 + panel-2 微底色 + 6px radius,讓多輪歷史像一條 status log */
 .ticket-iter-row {
   display: flex; align-items: center; gap: 10px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   padding: 5px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -66,7 +66,7 @@
   /* margin-left 由 .ticket-iter 處理(JSX 永遠是 "ticket-iter ticket-iter-row" 並用) */
 }
 .ticket-iter-row + .ticket-iter-row {
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 /* step / merge / sync ticket 單次任務,無 round-num,卸 chrome 維持原 inline 視覺 */
 .ticket-iter-row--single {
@@ -152,7 +152,7 @@
 .iter-meta strong { color: var(--fg); font-weight: 600; }
 .ticket-iter-summary {
   font-size: 10px;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   opacity: 0.75;
   color: var(--fg-mute);
   border-top: 0;

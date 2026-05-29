@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { CheckIconSm, WarnIcon, InfoIcon } from "./icons";
 import "./toast.css";
 
 export type ToastVariant = "info" | "success" | "warning" | "danger";
@@ -288,11 +289,11 @@ function ToastStageInternal({
   );
 }
 
-const VARIANT_ICON: Record<ToastVariant, string> = {
-  success: "✓",
-  warning: "!",
-  danger: "!",
-  info: "i",
+const VARIANT_ICON: Record<ToastVariant, ReactNode> = {
+  success: <CheckIconSm width="12" height="12" aria-hidden="true" focusable="false" />,
+  warning: <WarnIcon width="12" height="12" aria-hidden="true" focusable="false" />,
+  danger: <WarnIcon width="12" height="12" aria-hidden="true" focusable="false" />,
+  info: <InfoIcon width="12" height="12" aria-hidden="true" focusable="false" />,
 };
 
 const VARIANT_SR: Record<ToastVariant, string> = {
@@ -315,6 +316,7 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
       aria-atomic="true"
     >
       <span className={"toast-icon toast-icon-" + item.variant} aria-hidden="true">{VARIANT_ICON[item.variant]}</span>
+      {/* sr text below carries the variant semantics for AT */}
       <span className="sr-only">{VARIANT_SR[item.variant]}:</span>
       <div className="toast-message">{item.message}</div>
       <div className="toast-actions">
@@ -340,12 +342,4 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
       </div>
     </div>
   );
-}
-
-// 給外部「手動 render stage」的需求(若 ToastProvider 之外想另外擺位置可單獨用)。
-// 預設 ToastProvider 已內含 stage,正常情況不需要再 render 這個。
-export function ToastStage() {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("ToastStage 要在 ToastProvider 內用");
-  return null;
 }

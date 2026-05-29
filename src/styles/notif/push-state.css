@@ -1,10 +1,10 @@
 /* styles/notif/push-state.css — inbox empty and footer controls */
 
 .inbox-empty {
-  padding: 60px 24px; text-align: center;
+  padding: 60px var(--space-6); text-align: center;
   color: var(--fg-faint);
   font-size: 12.5px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
 }
 .inbox-empty-icon {
   width: 36px; height: 36px;
@@ -16,9 +16,9 @@
 }
 
 .inbox-foot {
-  padding: 8px 14px;
+  padding: var(--space-2) 14px;
   border-top: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2);
   font-size: 11px;
   color: var(--fg-faint);
   background: var(--bg);
@@ -34,7 +34,7 @@
   color: var(--fg-mute);
   font-family: inherit;
   font-size: inherit;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 5px;
   cursor: pointer;
   text-decoration: none;

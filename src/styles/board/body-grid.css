@@ -35,17 +35,17 @@
   position: fixed; inset: 0; z-index: var(--z-modal, 1000);
   background: var(--scrim-modal, color-mix(in srgb, #000 72%, transparent));
   display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
 }
 .modal-card {
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-panel, 10px);
   max-width: 520px; width: 100%;
-  padding: 20px 22px;
+  padding: var(--space-5) 22px;
   box-shadow: var(--shadow-overlay, var(--shadow-lg, 0 10px 40px rgba(0,0,0,0.4)));
 }
-.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--fg); }
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: var(--space-2); color: var(--fg); }
 .modal-body { color: var(--fg); font-size: 14px; line-height: 1.55; }
 .modal-actions {
   margin-top: 18px;

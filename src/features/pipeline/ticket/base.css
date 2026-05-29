@@ -36,7 +36,7 @@
   position: sticky;
   bottom: 0;
   z-index: 1;
-  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  padding: var(--space-3) 18px calc(12px + env(safe-area-inset-bottom));
   background: var(--bg-elevated);
   border-top: 1px solid var(--line);
   box-shadow: 0 -1px 0 0 color-mix(in srgb, var(--accent) 12%, transparent);
@@ -44,13 +44,13 @@
 .tdrw-actions {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
 }
 .tdrw-actions-primary {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   flex: 1 1 auto;
   min-width: 0;
@@ -137,11 +137,11 @@
   font-size: 11.5px;
   color: var(--fg-mute);
   line-height: 1.6;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 .tdrw-split-confirm-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 .tdrw-split-confirm-actions .tdrw-action {
@@ -269,11 +269,11 @@
 .tdrw-section {
   padding-block: var(--space-4, 16px) var(--space-2, 8px);
   border-top: 1px solid var(--line);
-  padding: 18px 0 8px;
+  padding: 18px 0 var(--space-2);
 }
 .tdrw-section:first-child {
   border-top: 0;
-  padding-top: 12px;
+  padding-top: var(--space-3);
 }
 /* td-010:section title 更清楚(13px / 700 / fg-mute),跟 body 距離 8px。
    TDRW-DESIGN-001:section heading 是人類文字(目標 / 驗收 / 迭代輪次 / commit 紀錄),
@@ -308,7 +308,7 @@
   font-style: normal;
   font-size: 12px;
   font-family: var(--font-mono);
-  padding: 10px 14px 10px 32px;
+  padding: 10px 14px 10px var(--space-8);
   border: 1px dashed var(--line);
   border-radius: 6px;
   background: var(--panel-2);

@@ -1,4 +1,19 @@
 /* vibe-flow prototype — tokens & primitives */
+
+/* ─── RWD breakpoint 慣例(SSOT 清單)──────────────────────────────
+   CSS custom property 不能用於 @media query,故無法做成 var;此處集中列出
+   全 repo max-width breakpoint 的固定集合,所有 @media 一律對齊 .98 慣例
+   (避免整數值在邊界 px 同時命中相鄰 query 造成雙觸發):
+     359.98px  · ultra-narrow 小手機
+     479.98px  · 極窄手機
+     539.98px  · 窄手機 / small mobile
+     639.98px  · settings push grid
+     719.98px  · rail mobile(避 tab bar)
+     767.98px  · 主 mobile 斷點(配 min-width: 768px 上界)
+     899.98px  · run history drawer fullwidth
+     919.98px  · narrow desktop(rail+inbox 擠壓區)
+   新增 @media 從本集合挑值,不要再寫整數 px。
+   ───────────────────────────────────────────────────────────────── */
 :root {
   /* dark (default) */
   --bg: #0c0e12;
@@ -284,7 +299,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; bo
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: var(--control-h, 32px);
-  padding: 6px 12px; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+  padding: 6px var(--space-3); border-radius: 7px; font-size: 12.5px; font-weight: 500;
   border: 1px solid var(--line-2); color: var(--fg);
   background: var(--panel-2);
   transition: background 120ms, border-color 120ms, transform 80ms;

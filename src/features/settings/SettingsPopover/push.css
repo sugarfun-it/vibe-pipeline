@@ -3,14 +3,14 @@
 
 .push-action-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .push-toggle-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
@@ -18,13 +18,13 @@
   font-size: 12px;
   color: var(--fg-mute);
   line-height: 1.5;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 
 .push-hint--inline { margin: 0; }
 .push-hint-list {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   padding-left: 18px;
   display: flex;
   flex-direction: column;
@@ -33,9 +33,9 @@
 
 /* events grid 從 left-rail accent → bordered card 容器,2-col grid 排列 toggle */
 .push-events-grid {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   margin-left: 0;
-  padding: 4px;
+  padding: var(--space-1);
   border-left: none;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -62,7 +62,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
   border-radius: 9px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 70%, transparent);
@@ -75,7 +75,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .push-state-title {
   font-weight: 600;
@@ -88,11 +88,11 @@
   word-break: break-word;
 }
 .push-state-steps {
-  margin: 4px 0 0;
+  margin: var(--space-1) 0 0;
   padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   color: var(--fg-mute);
   font-size: 12px;
 }
@@ -104,7 +104,7 @@
   display: inline-flex;
   align-items: center;
   height: 22px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border-radius: 11px;
   font-size: 11.5px;
   font-weight: 600;
@@ -140,7 +140,7 @@
 
 /* events grid 內 toggle:左對齊、padding 收緊、bg / border 透明,符合 card 內次級 control 語意 */
 .settings-popover .push-events-grid .toggle-pill {
-  padding: 8px 10px;
+  padding: var(--space-2) 10px;
   border-radius: 6px;
   justify-content: flex-start;
   color: var(--fg-mute);
@@ -162,13 +162,13 @@
   background: color-mix(in srgb, var(--done) 80%, transparent);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
   .push-state { max-width: 100%; }
   .push-events-grid {
     grid-template-columns: 1fr;
     width: auto;
     max-width: 100%;
   }
-  .settings-popover .push-events-grid .toggle-pill { width: auto; padding: 8px 10px; }
+  .settings-popover .push-events-grid .toggle-pill { width: auto; padding: var(--space-2) 10px; }
 }
 

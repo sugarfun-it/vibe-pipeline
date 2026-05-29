@@ -17,7 +17,7 @@
 .task-row-head {
   display: grid;
   grid-template-columns: 1fr;
-  row-gap: 8px;
+  row-gap: var(--space-2);
 }
 
 .task-row-label {
@@ -26,7 +26,7 @@
   color: var(--fg);
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
   line-height: 1.3;
@@ -55,7 +55,7 @@
   -webkit-appearance: none;
   font-family: var(--font-mono);
   font-size: 12px;
-  padding: 6px 24px 6px 10px;
+  padding: 6px var(--space-6) 6px 10px;
   background-color: var(--bg);
   border: 1px solid var(--line-2);
   border-radius: 7px;
@@ -82,12 +82,12 @@
 .task-row-selects > select.task-row-provider {
   background-color: var(--panel-2);
   font-size: 11px;
-  padding-left: 8px;
+  padding-left: var(--space-2);
   font-weight: 500;
 }
 .task-row-selects > select.task-row-effort {
   background-color: var(--panel-2);
   font-size: 11px;
-  padding-left: 8px;
+  padding-left: var(--space-2);
 }
 

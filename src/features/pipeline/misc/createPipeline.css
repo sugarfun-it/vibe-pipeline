@@ -15,8 +15,8 @@
 .create-card {
   position: relative;
   display: flex; flex-direction: column; gap: 10px;
-  padding: 13px 12px 12px;
-  margin: 2px 0 4px;
+  padding: 13px var(--space-3) var(--space-3);
+  margin: 2px 0 var(--space-1);
   background: var(--bg);
   border: 1px solid color-mix(in srgb, var(--draft) 30%, var(--line-2));
   border-radius: 8px;
@@ -51,7 +51,7 @@ html.light .create-card { background: var(--bg-elevated); }
   margin-top: 1px;
 }
 .create-card-head .rail-status-chip {
-  padding: 2px 8px 2px 7px;
+  padding: 2px var(--space-2) 2px 7px;
 }
 /* 縮成跟 chip 同等級的密度,避免關閉鈕視覺壓過 chip */
 .create-x {
@@ -89,7 +89,7 @@ html.light .create-card { background: var(--bg-elevated); }
    Form-field rendering now goes through TextField + shared .form-input / .form-hint
    contract (forms.css) plus .create-field-form is-error wrapper. */
 
-.create-field { display: flex; flex-direction: column; gap: 4px; }
+.create-field { display: flex; flex-direction: column; gap: var(--space-1); }
 /* section eyebrow 樣式由 <SectionEyebrow> primitive 持有(src/ui/sectionEyebrow.css)。
    先前借 .form-label 充 eyebrow → primitive visual hijack,已拔。 */
 .create-field-desc {
@@ -106,7 +106,7 @@ html.light .create-card { background: var(--bg-elevated); }
   display: flex; align-items: center; gap: 6px;
   width: 100%;
   min-height: var(--control-h-sm, 26px);
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   background: var(--panel);
   border: 1px solid var(--line-2);
   border-radius: var(--radius-control, 6px);
@@ -150,13 +150,13 @@ html.light .create-card { background: var(--bg-elevated); }
    it already grabs the right with margin-left:auto; the check then sits to its
    right with a 4px gap. */
 .picker-item-check { color: var(--accent); display: inline-flex; margin-left: auto; }
-.picker-item-hint + .picker-item-check { margin-left: 4px; }
+.picker-item-hint + .picker-item-check { margin-left: var(--space-1); }
 
 /* CreateCard's picker dropdown: bump option density a bit so it doesn't read as a tooltip
    relative to the surrounding form fields. Mobile gets the full a11y bump in the media query below. */
 .create-card .picker-item {
   min-height: 36px;
-  padding: 9px 8px;
+  padding: 9px var(--space-2);
   font-size: 12px;
 }
 .create-card .picker-menu {
@@ -197,7 +197,7 @@ html.light .create-card { background: var(--bg-elevated); }
   border-radius: 3px;
 }
 .create-submit {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
   font-size: 11.5px;
   width: 100%;
   min-width: 0;
@@ -212,6 +212,17 @@ html.light .create-card { background: var(--bg-elevated); }
   opacity: 1;
   cursor: not-allowed;
   box-shadow: none;
+}
+.kbd-inline {
+  font-size: 10px;
+  padding: 0 var(--space-1);
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+}
+.btn-primary .kbd-inline {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
 }
 .create-submit:disabled .kbd-inline,
 .create-submit[disabled] .kbd-inline {
@@ -233,7 +244,7 @@ html.light .create-card { background: var(--bg-elevated); }
 .create-field-meta {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 8px;
+  column-gap: var(--space-2);
   align-items: start;
 }
 .create-counter {
@@ -247,17 +258,6 @@ html.light .create-card { background: var(--bg-elevated); }
 .create-counter[hidden] { display: none; }
 .create-counter.is-near { color: var(--paused); }
 .create-counter.is-limit { color: var(--failed); font-weight: 600; }
-.kbd-inline {
-  font-size: 10px;
-  padding: 0 4px;
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 3px;
-}
-.btn-primary .kbd-inline {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.95);
-}
 
 /* Focus column · empty state during create */
 .focus-create-empty {
@@ -305,13 +305,13 @@ html.light .focus-create-empty {
 
   /* a11y: 44px minimum touch targets on mobile.
      Mobile-only — desktop keeps its denser sizing for the narrow rail. */
-  .create-card { gap: 11px; padding: 12px 12px 13px; }
+  .create-card { gap: 11px; padding: var(--space-3) var(--space-3) 13px; }
   .create-x { width: 44px; height: 44px; }
   .create-x svg { width: 20px; height: 20px; }
 
   .create-card .picker-trigger {
     min-height: 44px;
-    padding: 8px 10px;
+    padding: var(--space-2) 10px;
     font-size: 13px;
   }
   .create-card .picker-item {
@@ -319,10 +319,10 @@ html.light .focus-create-empty {
     padding: 10px 10px;
     font-size: 13px;
   }
-  .create-card .toggle-pill { min-height: 44px; padding: 8px 10px; }
+  .create-card .toggle-pill { min-height: 44px; padding: var(--space-2) 10px; }
   /* .form-input mobile a11y(44px / padding / 字級)已收回 primitive forms.css 處理。 */
 
-  .create-actions { gap: 8px; margin-top: 4px; }
+  .create-actions { gap: var(--space-2); margin-top: var(--space-1); }
   .create-cancel,
   .create-submit { min-height: 44px; font-size: 13px; }
   .create-cancel > span:first-child { font-size: 10.5px; padding: 2px 6px; }

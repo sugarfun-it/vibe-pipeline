@@ -27,8 +27,8 @@
 .empty-project-topbar-hint {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: var(--space-1);
+  padding: var(--space-1) 10px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);

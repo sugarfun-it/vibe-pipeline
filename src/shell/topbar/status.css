@@ -10,7 +10,7 @@
 .parallel-chip-overload {
   display: inline-flex;
   align-items: center;
-  margin-left: 4px;
+  margin-left: var(--space-1);
   padding: 0 6px;
   background: var(--failed);
   color: var(--bg);

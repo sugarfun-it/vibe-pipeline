@@ -34,7 +34,12 @@ export async function call<T>(path: string, init?: CallInit): Promise<T> {
     opts.headers = { "Content-Type": "application/json; charset=utf-8", ...(init.headers || {}) };
   }
   const res = await apiFetch(`${API_BASE_URL}${path}`, opts);
-  const json = (await res.json()) as ApiResponse<T> & { data?: T; message?: string };
+  let json: ApiResponse<T> & { data?: T; message?: string };
+  try {
+    json = (await res.json()) as ApiResponse<T> & { data?: T; message?: string };
+  } catch {
+    throw new ApiError("internal_error", "回應解析失敗(非預期格式)");
+  }
   if (!json.ok) {
     const message = typeof json.message === "string" ? json.message : json.error.message;
     throw new ApiError(json.error.code, message);

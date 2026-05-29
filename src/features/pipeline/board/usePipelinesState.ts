@@ -77,7 +77,7 @@ export function usePipelinesState({
         const tsHex = (p.id ?? "").split("-")[0];
         return tsHex && /^[0-9a-f]+$/i.test(tsHex) ? parseInt(tsHex, 16) : 0;
       };
-      const sorted = [...((arr as Pipeline[]) ?? [])].sort((a, b) => tsOf(b) - tsOf(a));
+      const sorted = [...(arr ?? [])].sort((a, b) => tsOf(b) - tsOf(a));
       return { projectHash, pipelines: sorted };
     },
     {

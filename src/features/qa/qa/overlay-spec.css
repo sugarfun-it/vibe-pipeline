@@ -17,7 +17,7 @@
   background: var(--panel);
   border: 1px solid var(--line-2);
   border-radius: 7px;
-  padding: 9px 12px;
+  padding: 9px var(--space-3);
   font-size: 13px;
   color: var(--fg);
   line-height: 1.55;
@@ -73,7 +73,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   padding: 2px 7px;
-  margin-right: 8px;
+  margin-right: var(--space-2);
   border-radius: 3px;
   background: var(--iter);
   color: var(--bg);
@@ -94,7 +94,7 @@
 .chip.ticket-mode.qadr-split-mode-chip {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 2px var(--space-2);
   border-radius: 999px;
   font-family: var(--font-ui);
   font-size: 10px;

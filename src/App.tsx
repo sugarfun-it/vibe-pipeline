@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { BoardScreen } from "./features/pipeline/board/BoardScreen";
 import { ConfirmProvider } from "./ui/ConfirmDialog";
-import { ToastProvider, ToastStage } from "./ui/Toast";
+import { ToastProvider } from "./ui/Toast";
 import { OnlineStatusBadge } from "./shell/OnlineStatusBadge";
 import { ProjectPickerProvider } from "./contexts/ProjectPickerContext";
 import { initFCM, setupForegroundHandler } from "./lib/fcm";
 import { useUrlParam } from "./hooks/useUrlParam";
 import { useLocalStorageState } from "./hooks/useLocalStorageState";
+import { resolveTheme } from "./lib/theme";
 
 // Theme priority: URL ?theme=  →  localStorage  →  default light
 // 第一個 frame 的 theme class 由 index.html inline script 設(避 flash),這裡只負責
@@ -14,8 +15,7 @@ import { useLocalStorageState } from "./hooks/useLocalStorageState";
 function useTheme() {
   const [urlTheme] = useUrlParam("theme");
   const [stored] = useLocalStorageState<string | null>("vibe-pipeline:theme", null);
-  const dark =
-    urlTheme === "dark" || (urlTheme == null && stored === "dark");
+  const dark = resolveTheme(urlTheme, stored);
   useEffect(() => {
     document.documentElement.classList.toggle("light", !dark);
   }, [dark]);
@@ -81,7 +81,6 @@ export default function App() {
         <ProjectPickerProvider>
           <OnlineStatusBadge />
           <BoardRoute />
-          <ToastStage />
         </ProjectPickerProvider>
       </ToastProvider>
     </ConfirmProvider>

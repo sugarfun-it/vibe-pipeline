@@ -10,9 +10,9 @@ html.light .tdrw-drawer .tdrw-prompt-fade {
   background: linear-gradient(to bottom, transparent, var(--panel));
 }
 
-@media (max-width: 360px) {
+@media (max-width: 359.98px) {
   .tdrw-drawer .tdrw-actions-primary > .tdrw-action {
-    padding: 8px 8px;
+    padding: var(--space-2) var(--space-2);
     font-size: 12.5px;
   }
   .tdrw-drawer .drawer-title.tdrw-title {

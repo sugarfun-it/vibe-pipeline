@@ -1,7 +1,7 @@
 /* ─── banners(ReadyBanner / paused banner)─────────────── */
 .banner {
   display: flex; align-items: center; gap: var(--space-3, 14px);
-  padding: 12px 14px;
+  padding: var(--space-3) 14px;
   border-radius: 10px;
   border: 1px solid;
   margin-top: 14px;
@@ -59,4 +59,4 @@
 
 /* density compact — focus padding 收一點 */
 [data-density="compact"] .focus-list { gap: 6px; }
-[data-density="compact"] .focus { padding: 16px 24px 24px; }
+[data-density="compact"] .focus { padding: var(--space-4) var(--space-6) var(--space-6); }

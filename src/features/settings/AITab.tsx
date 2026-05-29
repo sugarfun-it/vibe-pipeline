@@ -99,7 +99,8 @@ export function AITab({
   userCfg: UserConfig | null;
   onTaskChange: (tc: TaskClass, patch: TaskModelPatch) => void;
 }) {
-  void TASK_CLASSES;
+  const primaryTasks = TASK_CLASSES.slice(0, 3);
+  const secondaryTasks = TASK_CLASSES.slice(3);
   return (
     <div className="settings-tab-content">
       {userCfg ? (
@@ -107,7 +108,7 @@ export function AITab({
           <div className="task-group task-group--primary">
             <div className="settings-section-title">全域 provider / model 設定</div>
             <div className="settings-popover-task-grid">
-              {(["qa", "split", "runner"] as const).map((tc) => (
+              {primaryTasks.map((tc) => (
                 <TaskModelRow
                   key={tc}
                   label={TASK_CLASS_LABELS[tc]}
@@ -127,7 +128,7 @@ export function AITab({
               <ArrowUpIcon aria-hidden /> 為了加快速度和節省 Token，預設跟隨上方 Main Agent 設定。
             </div>
             <div className="settings-popover-task-grid">
-              {(["executor", "critic", "merge"] as const).map((tc) => (
+              {secondaryTasks.map((tc) => (
                 <TaskModelRow
                   key={tc}
                   label={TASK_CLASS_LABELS[tc]}

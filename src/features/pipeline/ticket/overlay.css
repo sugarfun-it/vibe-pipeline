@@ -7,7 +7,7 @@
    過去用 .tdrw-drawer { width 620 / shadow accent }、.tdrw-title { 21px } 等差異化,
    跟 RunHistory / QA drawer 看起來不一致;一律收回 SSOT 18px / 600px / shadow-overlay。 */
 .drawer-meta.tdrw-status-row {
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
   flex-wrap: wrap;
   align-items: center;
@@ -44,7 +44,7 @@
 .tdrw-meta-chip.ticket-mode {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 3px 10px;
   font-family: var(--font-ui);
   font-size: 11px;
@@ -84,7 +84,7 @@
 .tdrw-section-label.tdrw-section-title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0 0 10px;
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -99,7 +99,7 @@
   height: 1px;
   background: linear-gradient(90deg, var(--line) 0%, transparent 90%);
   max-width: 220px;
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 .tdrw-prompt-md > p {
   font-family: var(--font-mono);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSwUpdate } from "../lib/swUpdate";
+import { CloseIcon } from "../ui/icons";
 
 export function SwUpdateBanner() {
   const { needRefresh, updateSW } = useSwUpdate();
@@ -23,7 +24,7 @@ export function SwUpdateBanner() {
         aria-label="關閉更新提示"
         onClick={() => setDismissed(true)}
       >
-        ×
+        <CloseIcon aria-hidden="true" focusable="false" />
       </button>
     </div>
   );

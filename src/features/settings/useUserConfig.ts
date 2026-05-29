@@ -14,18 +14,13 @@ import {
   type UserConfig,
 } from "../../../shared/types";
 import { useToast } from "../../ui/Toast";
-
-const AUTOSAVE_DELAY_MS = 400;
+import { useAutosaveFields } from "../../hooks/useAutosaveFields";
 
 type TaskModelPatch = { provider?: Provider; model?: ModelName; effort?: Effort };
 type TaskField = "provider" | "model" | "effort";
 type AutosaveKey = `task:${TaskClass}:${TaskField}`;
 type TaskConfirmedValue = Provider | ModelName | Effort;
 type TaskConfirmedValues = Partial<Record<`task:${TaskClass}:${TaskField}`, TaskConfirmedValue>>;
-
-function isAbortError(e: unknown): boolean {
-  return e instanceof Error && e.name === "AbortError";
-}
 
 export function useUserConfig({
   open,
@@ -39,9 +34,7 @@ export function useUserConfig({
   const { toast } = useToast();
   const [userCfg, setUserCfg] = useState<UserConfig | null>(null);
   const [pushSaving, setPushSaving] = useState<Partial<Record<PushEventKey, boolean>>>({});
-  const timersRef = useRef<Partial<Record<AutosaveKey, ReturnType<typeof setTimeout>>>>({});
-  const controllersRef = useRef<Partial<Record<AutosaveKey, AbortController>>>({});
-  const seqRef = useRef<Partial<Record<AutosaveKey, number>>>({});
+  const { scheduleAutosave, isCurrentSeq } = useAutosaveFields<AutosaveKey>();
   const savedUserCfgRef = useRef<UserConfig | null>(null);
   const confirmedTaskValuesRef = useRef<TaskConfirmedValues>({});
 
@@ -65,37 +58,13 @@ export function useUserConfig({
     return { ...task, effort: value as Effort };
   }
 
-  function scheduleAutosave(
-    key: AutosaveKey,
-    run: (signal: AbortSignal, seq: number) => Promise<void>,
-    rollback: (e: unknown) => void
-  ) {
-    const seq = (seqRef.current[key] ?? 0) + 1;
-    seqRef.current[key] = seq;
-    const existingTimer = timersRef.current[key];
-    if (existingTimer) clearTimeout(existingTimer);
-    timersRef.current[key] = setTimeout(() => {
-      controllersRef.current[key]?.abort();
-      const controller = new AbortController();
-      controllersRef.current[key] = controller;
-      run(controller.signal, seq)
-        .catch((e: unknown) => {
-          if (seqRef.current[key] !== seq || isAbortError(e)) return;
-          rollback(e);
-        })
-        .finally(() => {
-          if (controllersRef.current[key] === controller) delete controllersRef.current[key];
-        });
-    }, AUTOSAVE_DELAY_MS);
-  }
-
   function scheduleTaskSave(tc: TaskClass, field: TaskField, patch: TaskModelPatch, rollback: () => void) {
     const key: AutosaveKey = `task:${tc}:${field}`;
     scheduleAutosave(
       key,
       async (signal, seq) => {
         const fresh = await userConfigApi.updateUserConfig({ defaults: { [tc]: patch } }, signal);
-        if (seqRef.current[key] !== seq) return;
+        if (!isCurrentSeq(key, seq)) return;
         savedUserCfgRef.current = fresh;
         setUserCfg(fresh);
         setConfirmedTaskValues(fresh);
@@ -107,19 +76,6 @@ export function useUserConfig({
       }
     );
   }
-
-  useEffect(() => {
-    const timers = timersRef.current;
-    const controllers = controllersRef.current;
-    return () => {
-      for (const timer of Object.values(timers)) {
-        if (timer) clearTimeout(timer);
-      }
-      for (const controller of Object.values(controllers)) {
-        controller?.abort();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!open) return;

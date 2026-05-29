@@ -61,15 +61,15 @@ export const TicketCard = memo(function TicketCard({
     const inProgEndCap = isRunning
       ? Date.now()
       : isTerminal
-      ? ((ticket as { endedAt?: number }).endedAt ?? inProg?.endedAt)
+      ? (ticket.endedAt ?? inProg?.endedAt)
       : undefined;
     const liveSec = inProg?.startedAt && typeof inProgEndCap === "number"
       ? Math.max(0, (inProgEndCap - inProg.startedAt) / 1000)
       : 0;
     elapsed = Math.round(completedSec + liveSec);
   } else {
-    const ts = (ticket as { startedAt?: number; endedAt?: number }).startedAt;
-    const te = (ticket as { startedAt?: number; endedAt?: number }).endedAt;
+    const ts = ticket.startedAt;
+    const te = ticket.endedAt;
     if (typeof ts === "number") {
       const end = isRunning ? Date.now() : (te ?? Date.now());
       elapsed = Math.max(0, Math.round((end - ts) / 1000));
@@ -249,10 +249,10 @@ export const TicketCard = memo(function TicketCard({
               const inProg = rounds.find((r) => !isRoundComplete(r));
               const completed = rounds.filter((r) => isRoundComplete(r));
               const lastEnded = completed[completed.length - 1]?.endedAt;
-              const roundStart = inProg?.startedAt ?? lastEnded ?? (ticket as { startedAt?: number }).startedAt;
+              const roundStart = inProg?.startedAt ?? lastEnded ?? ticket.startedAt;
               // terminal(失敗系列)時 timer 不再跑 → 用 ticket.endedAt / inProg.endedAt 上限,而不是 Date.now()
               const roundEnd = isTerminal
-                ? ((ticket as { endedAt?: number }).endedAt ?? inProg?.endedAt ?? Date.now())
+                ? (ticket.endedAt ?? inProg?.endedAt ?? Date.now())
                 : Date.now();
               const live = typeof roundStart === "number"
                 ? Math.max(0, Math.round((roundEnd - roundStart) / 1000))

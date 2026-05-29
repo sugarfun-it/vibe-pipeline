@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { CheckIconSm } from "./icons";
+import { CheckIconSm, ChevronIcon } from "./icons";
 import { Popover } from "./Popover";
 // phase4-2026-05-23-008 — pull in shared form-hint / form-hint--error styles
 import "./forms/forms.css";
@@ -235,9 +235,7 @@ export function PickerSelect({
         <span className={current?.mono ? "mono" : ""}>{labelText}</span>
         {current?.hint && <span className="picker-hint mono">({current.hint})</span>}
         <span style={{ flex: 1 }} />
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ChevronIcon width="10" height="10" aria-hidden="true" />
       </button>
       <Popover
         anchorRef={triggerRef}
