@@ -32,6 +32,7 @@ export function AuditTimeline({
   //   collapsed 永遠空。改成 mount 時就 fetch 一次當 count preview;展開時靠快取直接顯示。
   //   collapsed fetch 視為輕量 metadata(audit limit=50 entries ~ 5KB),N pipeline open drawer
   //   時最多多打 1 個 GET 不算重。失敗時 fall back 顯示 chevron only(不擋 user 展開)。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once fetch; `open` intentionally excluded to avoid refetch on expand
   useEffect(() => {
     let cancelled = false;
     api
@@ -50,7 +51,6 @@ export function AuditTimeline({
       cancelled = true;
     };
     // open 不在依賴內 — 只 mount 時 fetch 一次
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectHash, pipelineId, limit]);
 
   // hist-empty-016 / HD-013 round 4 (2026-05-24):

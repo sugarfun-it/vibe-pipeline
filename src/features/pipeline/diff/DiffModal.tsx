@@ -44,6 +44,7 @@ export function DiffModal({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadToken is an intentional refetch trigger
   useEffect(() => {
     let cancelled = false;
     setDiff(null);

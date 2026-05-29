@@ -69,6 +69,7 @@ export function useLocalStorageState<T>(
 
   // 跨 tab 同步:其他 tab setItem(key) → window 收到 storage event
   // (同 tab 內 setItem 不會 fire 自己的 storage event,所以 setValue 走 setValueState 直接更)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only key triggers re-bind; defaultValue/deserialize treated as stable
   useEffect(() => {
     function onStorage(e: StorageEvent) {
       if (e.key !== key) return;
@@ -85,7 +86,6 @@ export function useLocalStorageState<T>(
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
     // defaultValue / deserialize 視為穩定;只重綁 key
-    // biome-ignore lint/correctness/useExhaustiveDependencies: only key triggers re-bind
   }, [key]);
 
   return [value, setValue];

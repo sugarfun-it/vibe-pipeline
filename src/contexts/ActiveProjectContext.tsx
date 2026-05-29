@@ -23,6 +23,7 @@ export function ActiveProjectProvider({
   value: ActiveProjectContextValue;
   children: ReactNode;
 }) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: memoize context object by individual fields; intentionally not depending on the whole value object
   const memo = useMemo(() => value, [
     value.hash,
     value.project,

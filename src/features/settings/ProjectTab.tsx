@@ -164,6 +164,7 @@ export function ProjectTab({
     );
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load on hash change only; local ref-writer + onLoadError prop callback intentionally excluded
   useEffect(() => {
     let cancelled = false;
     onLoadError?.(null);

@@ -89,6 +89,7 @@ export function BoardScreen({ density = "medium", startCreating = false }: {
     if (project?.hash !== hash) return undefined;
     return pipelines.find((p) => p.id === activeId) || pipelines[0];
   }, [activeId, hash, pipelines, project?.hash]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stable useState setters (setActiveTab / setPipelines)
   const handleCreate = useCallback(async ({ name, baseBranch, autoMerge }: {
     name: string;
     baseBranch: string;

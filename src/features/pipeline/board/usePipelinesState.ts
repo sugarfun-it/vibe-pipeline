@@ -31,8 +31,8 @@ export function usePipelinesState({
 
   useTimeout(() => setActionError(null), actionError ? 6000 : null, [actionError]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: hash is the intentional trigger
   const prevHashRef = useRef<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hash is the intentional trigger; setters are stable
   useEffect(() => {
     setPopupDismissed(false);
     setActionError(null);
@@ -87,6 +87,7 @@ export function usePipelinesState({
       cacheKey: hash ? `pipelines:${hash}` : undefined,
     }
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setters are stable
   useEffect(() => {
     if (!project?.hasInit || project.hash !== hash) {
       setPipelines([]);

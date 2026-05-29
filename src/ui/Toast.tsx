@@ -89,6 +89,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     exitTimersRef.current.set(id, ex);
   }, [removeNow]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isPaused reads refs; stable behavior, excluded to keep callback identity
   const armTimer = useCallback((id: string, ms: number) => {
     const existing = timersRef.current.get(id);
     if (existing) clearTimeout(existing);
@@ -150,6 +151,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     });
     timersRef.current.clear();
   }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isPaused reads refs; stable behavior, excluded to keep callback identity
   const thawTimers = useCallback(() => {
     if (isPaused()) return;
     const now = Date.now();

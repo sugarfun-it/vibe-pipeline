@@ -123,6 +123,7 @@ export function Overlay({
   // 從 surface 往上走到 body,每一層把不含自己的兄弟元素都標掉(同時涵蓋 portal=true:root 直接掛 body 下,
   // 走一輪就結束)跟 portal=false:in-place 在 BoardScreen 子樹內,要一路標到 body)。
   // 開時自動 focus(initialFocus 決定要 focus root / first / close 按鈕);卸載時還焦點給原 trigger。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once focus-trap setup; initialFocus/restoreFocus stable over overlay lifetime
   useEffect(() => {
     const surface = internalSurfaceRef.current;
     if (!surface) return;
@@ -174,7 +175,6 @@ export function Overlay({
       }
     };
     // 一次性 mount/unmount,deps 故意空
-    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once setup
   }, []);
 
   // keydown:ESC + Tab focus trap。onRequestClose / surface ref 不變,但 onRequestClose 引用會變,放 deps。

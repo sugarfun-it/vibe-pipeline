@@ -77,6 +77,7 @@ export function useUserConfig({
     );
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: local ref-writer, intentionally excluded
   useEffect(() => {
     if (!open) return;
     let cancelled = false;

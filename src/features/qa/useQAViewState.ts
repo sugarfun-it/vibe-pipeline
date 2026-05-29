@@ -9,6 +9,7 @@ export function useQAViewState(draft: Draft | null) {
   // - null :跟 draft.complete 自動切
   // 切 draft(draftId 變)清掉
   const [viewOverride, setViewOverride] = useState<"chat" | "review" | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: draftId is the intentional reset trigger
   useEffect(() => {
     setViewOverride(null);
   }, [draft?.draftId]);
