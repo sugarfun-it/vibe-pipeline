@@ -15,7 +15,6 @@ export type UseFocusPipelineOpts = {
 
 export type UseFocusPipelineResult = {
   diffStat: api.DiffStat | null;
-  syncStatus: api.SyncStatus | null;
   runs: RunSummary[];
   spawning: boolean;
   onStart: (pipelineId: string) => void;
@@ -25,7 +24,6 @@ export type UseFocusPipelineResult = {
   stateLabel: string;
   done: number;
   total: number;
-  noWorktreeDiff: boolean;
   showMergeBanner: boolean;
   syncActive: boolean;
   lockedByState: boolean;
@@ -147,7 +145,6 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
 
   return {
     diffStat: diffStat ?? null,
-    syncStatus: syncStatus ?? null,
     runs,
     spawning,
     onStart,
@@ -156,7 +153,6 @@ export function useFocusPipeline(opts: UseFocusPipelineOpts): UseFocusPipelineRe
     stateLabel,
     done,
     total,
-    noWorktreeDiff,
     showMergeBanner,
     syncActive,
     lockedByState,

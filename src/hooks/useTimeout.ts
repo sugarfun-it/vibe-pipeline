@@ -12,6 +12,6 @@ export function useTimeout(fn: () => void, ms: number | null, deps: ReadonlyArra
       fnRef.current();
     }, ms);
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ms + caller deps 為刻意 trigger
   }, [ms, ...deps]);
 }

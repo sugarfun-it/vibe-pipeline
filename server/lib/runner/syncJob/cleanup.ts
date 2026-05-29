@@ -1,4 +1,5 @@
-import { createWriteStream, type WriteStream } from "node:fs";
+import { createWriteStream, existsSync, type WriteStream } from "node:fs";
+import { join } from "node:path";
 import { listPipelines, readPipeline } from "../../domain/pipeline";
 import * as worktree from "../../io/git/worktree";
 import * as notifs from "../../remote/notifs";
@@ -107,7 +108,7 @@ export async function waitAndFinish(opts: {
     .some((l) => /^(UU|AA|DD|AU|UA|DU|UD)\s/.test(l));
   const mergeHeadExists = await (async () => {
     try {
-      return require("node:fs").existsSync(require("node:path").join(wtPath, ".git", "MERGE_HEAD"));
+      return existsSync(join(wtPath, ".git", "MERGE_HEAD"));
     } catch {
       return false;
     }

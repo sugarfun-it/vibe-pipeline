@@ -176,20 +176,6 @@ export function useQA(projectHash: string | null) {
     await refreshDrafts();
   }, [projectHash, state.draft, refreshDrafts]);
 
-  // 跑 split-check 預覽(不寫)。回 { count, specs }。
-  const previewSplit = useCallback(
-    async (edits?: Partial<TicketSpec>) => {
-      if (!projectHash || !state.draft) return null;
-      setState((s) => ({ ...s, busy: true }));
-      try {
-        return await qaApi.previewSplitQA(projectHash, state.draft.draftId, edits);
-      } finally {
-        setState((s) => ({ ...s, busy: false }));
-      }
-    },
-    [projectHash, state.draft]
-  );
-
   // finalize: splitInto 帶就寫 N 張,沒帶就寫 1 張(原本 spec)。
   // 寫成功後關 drawer
   const finalize = useCallback(
@@ -220,7 +206,6 @@ export function useQA(projectHash: string | null) {
     sendTurn,
     cancel,
     finalize,
-    previewSplit,
     refreshDrafts,
   };
 }

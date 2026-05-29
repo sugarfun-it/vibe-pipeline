@@ -4,11 +4,6 @@ import { FocusTicketList } from "./FocusTicketList";
 import type { Pipeline, Ticket } from "../../../../shared/types";
 import "./focus.css";
 
-// 對外保留 re-export(歷史 callers 可能 import 這幾個 symbol)
-export { ReadyBanner } from "../banner/ReadyBanner";
-export { RunButton } from "../run/RunButton";
-export { TicketCard } from "../ticket/TicketCard";
-
 export function FocusColumn({
   pipeline,
   tick,

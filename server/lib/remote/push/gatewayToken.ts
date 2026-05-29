@@ -2,7 +2,6 @@
 // - SSOT 在 `~/.vibe-pipeline/gateway-token`(純文字,只放 token 字串)
 // - getToken: 讀檔,沒有回 null
 // - ensureToken: 沒有就 POST `${PUSH_GATEWAY_URL}/tokens/auto-issue` 拿、存(posix chmod 0o600)、return
-// - clearToken: debug / unregister 用
 //
 // backward compat:若 file 已存在(舊 user 從 PUSH_GATEWAY_TOKEN env 手動 migrate / 之前 auto-issue 過),
 // 直接沿用,不重新 issue。也支援 process.env.PUSH_GATEWAY_TOKEN 當 override(若 file 沒有就 fallback 到 env,
@@ -11,7 +10,7 @@
 // thread-safe:用記憶體 in-flight Promise 合併並發 ensure;寫檔走 atomic(.tmp → rename)。
 
 import { existsSync, mkdirSync } from "node:fs";
-import { readFile, unlink } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { vibeHome } from "../../io/paths";
 import { atomicWriteText } from "../../io/atomicWrite";
@@ -101,14 +100,4 @@ export async function ensureToken(): Promise<string> {
   })();
 
   return inflight;
-}
-
-export async function clearToken(): Promise<void> {
-  const p = file();
-  if (!existsSync(p)) return;
-  try {
-    await unlink(p);
-  } catch {
-    // ignore
-  }
 }

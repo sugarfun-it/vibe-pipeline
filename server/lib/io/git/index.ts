@@ -43,7 +43,8 @@ export async function workingTreeStatus(projectPath: string): Promise<WorkingTre
   for (const line of lines) {
     // porcelain format: "XY filename" 兩個 status code
     const code = line.slice(0, 2);
-    const file = line.slice(3);
+    const raw = line.slice(3);
+    const file = raw.includes(" -> ") ? raw.split(" -> ").pop()! : raw;
     if (code.startsWith("??")) untracked++;
     else modified++;
     if (files.length < 12) files.push(file); // 前 12 個給 UI 顯示

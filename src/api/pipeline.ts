@@ -1,7 +1,7 @@
 // Pipeline CRUD + lifecycle actions(worktree / reset / run / pause / merge)。
 
 import { call } from "./_client";
-import type { Pipeline } from "../../shared/types";
+import type { Pipeline, CommitRef } from "../../shared/types";
 
 // createPipeline 送的 body:無 id(backend 生),其餘 pipeline 欄位可帶
 export type CreatePipelineBody = {
@@ -36,16 +36,6 @@ export function deletePipeline(hash: string, id: string): Promise<{ ok: true }> 
 export function revealWorktree(hash: string, id: string): Promise<{ ok: true; path: string }> {
   return call<{ ok: true; path: string }>(
     `/api/projects/${hash}/pipelines/${id}/worktree/reveal`,
-    { method: "POST" }
-  );
-}
-
-export function cleanupWorktree(
-  hash: string,
-  id: string
-): Promise<{ removed: boolean; path: string }> {
-  return call<{ removed: boolean; path: string }>(
-    `/api/projects/${hash}/pipelines/${id}/worktree/cleanup`,
     { method: "POST" }
   );
 }
@@ -86,7 +76,7 @@ export function pausePipeline(hash: string, id: string): Promise<{ ok: true }> {
 //   mode="mechanical" → 純 git merge --no-ff,clean 立即完成(寫 mergeCommit / alreadyMerged)
 //   mode="ai"         → 撞衝突,自動 fallback spawn AI runner;前端 polling 看 ticket 進度
 export type MergeResult =
-  | { ok: true; mode: "mechanical"; mergeCommit?: { hash: string; subject: string; ts: number }; alreadyMerged?: boolean }
+  | { ok: true; mode: "mechanical"; mergeCommit?: CommitRef; alreadyMerged?: boolean }
   | { ok: true; mode: "ai"; ticketId: string; conflictFiles?: string[] };
 
 export function mergePipeline(hash: string, id: string): Promise<MergeResult> {

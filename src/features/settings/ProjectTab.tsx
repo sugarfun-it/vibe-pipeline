@@ -187,7 +187,7 @@ export function ProjectTab({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: hash 為刻意 trigger
   }, [hash]);
 
   useEffect(() => {

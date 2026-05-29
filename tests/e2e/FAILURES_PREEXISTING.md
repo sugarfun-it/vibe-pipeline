@@ -22,4 +22,4 @@ Mechanical spec changes in this ticket are limited to `http://127.0.0.1:3001` ->
 | `runner-flow.spec.ts` / `step ticket Run → running → done → ready,commit hash 寫回` | runner state never reaches expected ready/done | Pre-existing mock-runner persistence issue; WebServer logs show Windows `EPERM rename`. Spec was not changed by this ticket. |
 | `runner-flow.spec.ts` / `iter mode FAIL → PASS chain,verdicts 顯示` | runner state/verdicts never reach expected UI | Same pre-existing mock-runner persistence issue; not FCM. |
 | `ticket-drawer.spec.ts` / `點 ticket → drawer 開啟,goal/acceptance/prompt 各欄位顯示` | drawer field locator not found | Pre-existing UI selector/DOM drift. Spec was not changed by this ticket. |
-| `ticket-drawer.spec.ts` / `done ticket 顯示「重置 ticket 狀態」操作按鈕` | reset action locator not found | Pre-existing UI selector/DOM drift. Spec was not changed by this ticket. |
+| `ticket-drawer.spec.ts` / `done ticket 顯示「重開 ticket」操作按鈕` | reset action locator not found | Pre-existing UI selector/DOM drift. Spec was not changed by this ticket. |

@@ -1,7 +1,6 @@
 // Real-mode 專用 helper(不用 mock control endpoints)。
 
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
 
 export const VP_AUTOTEST_PATH = "d:/sugarfungit/vp-autotest";
 export const VP_AUTOTEST_HASH = "cf94d1b2";
@@ -45,5 +44,3 @@ export function ensureCleanMain(): void {
   autotestGit(["checkout", "main"]);
   autotestGit(["reset", "--hard", "HEAD"]);
 }
-
-void join; // 留著給後續用

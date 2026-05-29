@@ -2,7 +2,7 @@
 //
 // runCapture     — 純捕 stdout/stderr,await exited;最常見的「跑完拿輸出」型。
 // spawnStreaming — 拿 handle(runner main agent 用,要 .stdin / .exited / .kill / 長跑 stream)。
-// spawnFireForget — dialog open / explorer reveal,不關心結果。
+// spawnGuiFireForget — dialog open / explorer reveal,不關心結果(GUI launcher,不掛 windowsHide)。
 //
 // Windows 雷:`detached: true` 跟 `windowsHide: true` 並用時,Win32 API silently ignore
 // CREATE_NO_WINDOW(rprichard/win32-console-docs)→ child 可能 AllocConsole 起新 console
@@ -70,19 +70,6 @@ export function spawnStreaming<T extends Bun.Subprocess = Bun.PipedSubprocess>(
     ...(opts ?? {}),
   } as Parameters<typeof Bun.spawn>[1];
   return Bun.spawn(args, merged) as unknown as T;
-}
-
-// fire-and-forget:不 await,不關心結果。
-export function spawnFireForget(args: string[]): void {
-  try {
-    Bun.spawn(args, {
-      stdout: "ignore",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-  } catch {
-    // ignore
-  }
 }
 
 // GUI 變體:explorer / open / xdg-open 等 launcher。Bun.spawn 在 Windows 起 explorer 時

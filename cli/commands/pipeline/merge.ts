@@ -3,6 +3,7 @@ import { ensureBackend } from "../../lib/ensureBackend";
 import { post } from "../../lib/api";
 import type { ParsedArgs } from "../../lib/args";
 import { fail, isJsonMode, okJson, print } from "../../lib/output";
+import type { CommitRef } from "../../../shared/types";
 
 // AI merge:走 backend POST /merge,backend spawn runner 主 agent。CLI 立刻返回。
 export async function pipelineMerge(args: ParsedArgs): Promise<void> {
@@ -14,7 +15,7 @@ export async function pipelineMerge(args: ParsedArgs): Promise<void> {
 
   // 2026-05-13 後 backend 二段式:mechanical → mergeCommit;衝突 fallback ai → ticketId
   type MergeResp =
-    | { ok: true; mode: "mechanical"; mergeCommit?: { hash: string; subject: string; ts: number }; alreadyMerged?: boolean }
+    | { ok: true; mode: "mechanical"; mergeCommit?: CommitRef; alreadyMerged?: boolean }
     | { ok: true; mode: "ai"; ticketId: string; conflictFiles?: string[] };
   const res = await post<MergeResp>(`/api/projects/${proj.hash}/pipelines/${id}/merge`);
 

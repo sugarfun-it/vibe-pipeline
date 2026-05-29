@@ -185,6 +185,7 @@ function parseFullLog(filename: string, logPath: string, text: string): RunDetai
             output: j.usage.output_tokens ?? 0,
             cacheRead: j.usage.cache_read_input_tokens ?? 0,
             cacheCreate: j.usage.cache_creation_input_tokens ?? 0,
+            reasoning: 0,
           };
         }
         if (j.modelUsage && typeof j.modelUsage === "object") {

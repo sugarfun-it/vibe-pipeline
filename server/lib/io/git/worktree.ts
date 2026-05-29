@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { projectHash } from "../hash";
 import { vibeHome } from "../paths";
 import { runCapture } from "../childSpawn";
-import type { DiffStat, DiffFile, FullDiff } from "../../../../shared/types";
+import type { DiffStat, DiffFile, FullDiff, CommitRef } from "../../../../shared/types";
 export type { DiffStat, DiffFile, FullDiff };
 
 function worktreeRoot(): string {
@@ -212,7 +212,7 @@ export async function mergeFromBase(
   baseBranch: string
 ): Promise<
   | { ok: true; alreadyUpToDate: true }
-  | { ok: true; alreadyUpToDate?: false; commit: { hash: string; subject: string; ts: number } }
+  | { ok: true; alreadyUpToDate?: false; commit: CommitRef }
   | { ok: false; conflictFiles: string[] }
   | { ok: false; error: string }
 > {

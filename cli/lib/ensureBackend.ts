@@ -2,6 +2,7 @@ import { readFileSync, rmSync } from "node:fs";
 import { mkdir, open, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { serverStart } from "../commands/server";
+import { isPidAlive } from "../commands/server/common";
 import { fail } from "./output";
 import { apiBase, isLocalApiBase } from "./serverBase";
 import { serverStateDir } from "./serverPath";
@@ -27,16 +28,6 @@ function remainingMs(deadlineAt: number): number {
 
 function timeoutMessage(): string {
   return "backend 起不來,跑 vbpl server logs 看原因";
-}
-
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    return err.code === "EPERM";
-  }
 }
 
 async function tryConnect(timeoutMs: number): Promise<boolean> {

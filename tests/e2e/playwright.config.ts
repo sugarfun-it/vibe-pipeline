@@ -85,7 +85,7 @@ export default defineConfig({
       url: `http://127.0.0.1:${BACKEND_PORT}/api/health`,
       timeout: 30_000,
       // 本地開發 reuse 之前 playwright 起的 mock server(env 會延續);CI 永遠重啟。
-      // e2e backend 跑 PORT=3003 不撞 dev 用的 3001
+      // e2e backend 跑 E2E_BACKEND_PORT(default 3002)不撞 dev 用的 3001
       reuseExistingServer: !process.env.CI,
       env: TEST_ENV,
     },

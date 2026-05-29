@@ -21,8 +21,7 @@ export async function recoverStale(projectPath: string): Promise<void> {
     const isStaleRunning =
       p.state === "running" || isLegacyPausePendingState(p.state) || p.state === "queued";
     const hasOrphanTicket =
-      !isStaleRunning && p.state !== "running" &&
-      (p.tickets ?? []).some((t) => t.status === "running");
+      !isStaleRunning && (p.tickets ?? []).some((t) => t.status === "running");
     if (!isStaleRunning && !hasOrphanTicket) continue;
 
     const nextState = isStaleRunning ? "paused" : p.state;

@@ -1,4 +1,4 @@
-import type { Ticket } from './ticket';
+import type { Ticket, CommitRef } from './ticket';
 import type { SyncJob } from './sync';
 
 type CurrentPipelineState =
@@ -24,7 +24,7 @@ export type Pipeline = {
   // 用 id 內嵌的 hex timestamp backfill。排序 UI 都以這欄位為準(避免手 craft id 排錯)
   createdAt?: number;
   mergedAt?: number;
-  mergeCommit?: { hash: string; subject: string; ts: number };
+  mergeCommit?: CommitRef;
   // Pipeline ready 後是否自動觸發 AI 合併。建 pipeline 時若 body 未指定就讀 project config defaults.auto_merge
   autoMerge?: boolean;
   // 上一次自動 merge 嘗試失敗的訊息(preflight 失敗 / runner FAIL 都可寫)。重觸發時清掉

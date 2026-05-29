@@ -1,5 +1,4 @@
 /* styles/board/mobile-tabs.css — toggles, modal base, body grid, and mobile tabs */
 
 @import './toggle-pill.css';
-@import './modal.css';
 @import './body-grid.css';

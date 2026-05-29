@@ -77,10 +77,5 @@ async function main(): Promise<void> {
 
 main().catch((e) => {
   const msg = e instanceof Error ? e.message : String(e);
-  if (process.env["VBPL_JSON"] === "1") {
-    process.stdout.write(JSON.stringify({ ok: false, error: { code: "IO_ERROR", message: msg } }) + "\n");
-  } else {
-    process.stderr.write(`vbpl fatal: ${msg}\n`);
-  }
-  process.exit(1);
+  fail("IO_ERROR", msg);
 });

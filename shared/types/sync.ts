@@ -1,3 +1,5 @@
+import type { CommitRef } from './ticket';
+
 // Sync 流程的 state machine。
 // idle      → 沒在 sync(等同 syncJob undefined)
 // merging   → 純 git merge 進行中(<1s,user 看不太到)
@@ -27,5 +29,5 @@ export type SyncJob = {
   // failed 時填:失敗原因
   reason?: string;
   // done 時填:merge commit hash
-  mergeCommit?: { hash: string; subject: string; ts: number };
+  mergeCommit?: CommitRef;
 };

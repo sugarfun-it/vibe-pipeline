@@ -20,11 +20,6 @@ export type FinalizeResp = {
   splitCount: number;
 };
 
-type PreviewSplitResp = {
-  count: number;
-  specs: TicketSpec[];
-};
-
 export function startQA(hash: string, pipelineId: string): Promise<StartResp> {
   return call<StartResp>(`/api/projects/${hash}/pipelines/${pipelineId}/qa/start`, {
     method: "POST",
@@ -48,19 +43,6 @@ export function finalizeQA(
   return call<FinalizeResp>(`/api/projects/${hash}/qa/${draftId}/finalize`, {
     method: "POST",
     body: { edits: edits ?? {}, ...(splitInto ? { splitInto } : {}) },
-  });
-}
-
-// 跑 split-check,不寫 pipeline.json。前端按「送出 ticket」後先打這個,
-// 拿到 count + specs,再決定 finalize(splitInto=specs) 寫 N 張或預設寫 1 張
-export function previewSplitQA(
-  hash: string,
-  draftId: string,
-  edits?: Partial<TicketSpec>
-): Promise<PreviewSplitResp> {
-  return call<PreviewSplitResp>(`/api/projects/${hash}/qa/${draftId}/preview-split`, {
-    method: "POST",
-    body: { edits: edits ?? {} },
   });
 }
 

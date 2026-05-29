@@ -12,6 +12,7 @@ import { mergeTicketPrompt } from "../runner/mergeTicketPrompt";
 import { getTaskConfig } from "../domain/userConfig";
 import { ensureDepsAfterMerge, type DepInstallResult } from "../system/depInstall";
 import { runCapture } from "../io/childSpawn";
+import type { CommitRef } from "../../../shared/types";
 
 // Merge 完 worktree 已沒實質用途(branch 已併進 base,fs 是死副本)。
 // 不刪 branch ref — 之後加新 ticket 仍可重新 attach worktree。
@@ -157,7 +158,7 @@ export async function triggerMerge(opts: {
 // 心智:autoMerge 是「便利開關」,風險(燒 token 解衝突)決策回到 user
 
 export type AutoMergeResult =
-  | { ok: true; mergeCommit: { hash: string; subject: string; ts: number }; behindCount: number; depInstall?: DepInstallResult }
+  | { ok: true; mergeCommit: CommitRef; behindCount: number; depInstall?: DepInstallResult }
   | { ok: true; alreadyMerged: true }
   | { ok: false; reason: "no_git" | "not_found" | "running" | "working_tree_dirty"; error: string }
   | { ok: false; reason: "conflict"; error: string; conflictFiles: string[] }
