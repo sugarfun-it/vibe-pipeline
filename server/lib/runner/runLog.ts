@@ -101,9 +101,14 @@ function parseFullLog(filename: string, logPath: string, text: string): RunDetai
   if (!m) return null;
   const startedAt = Number(m[2]);
 
-  // header: "[runner <id>] exited code=<n>"
-  const headerMatch = text.match(/^\[runner [^\]]+\] exited code=(-?\d+)/m);
-  const exitCode = headerMatch ? Number(headerMatch[1]) : null;
+  // header: "[runner <id>] <active|exited> code=<n>"
+  // spawn 時寫 "active code=         "(code 空白);exit handler patch 成 "exited code=<n>"。
+  // 還是 active = run 進行中(或 crash 沒 patch 到),exitCode 維持 null。
+  const headerMatch = text.match(/^\[runner [^\]]+\] (active|exited) code=(-?\d+)?/m);
+  const inProgress = headerMatch ? headerMatch[1] === "active" : false;
+  const exitCode = headerMatch && headerMatch[1] === "exited" && headerMatch[2] != null
+    ? Number(headerMatch[2])
+    : null;
 
   // log 結構:[header]\n--- stdout ---\n<stdout>\n--- stderr ---\n<stderr>\n--- meta ---\n<json>
   // meta block 在最尾(orchestrator exit handler 寫),before snapshot 可能在 stdout 前
@@ -201,12 +206,14 @@ function parseFullLog(filename: string, logPath: string, text: string): RunDetai
     }
   }
 
-  const failureReason = extractFailureReason({ provider, stdout, stderr, exitCode });
+  // 進行中的 run 還沒結束,partial stdout 可能含 "Error:" 字樣 → 別誤判成失敗原因。
+  const failureReason = inProgress ? null : extractFailureReason({ provider, stdout, stderr, exitCode });
 
   return {
     filename,
     logPath,
     startedAt,
+    inProgress,
     exitCode,
     durationMs,
     costUsd,

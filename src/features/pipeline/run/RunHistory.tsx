@@ -8,10 +8,13 @@ import { RunCard } from "./RunCard";
 export function RunHistory({
   projectHash,
   pipelineId,
+  pipelineRunning = false,
   onCloseDrawer,
 }: {
   projectHash: string;
   pipelineId: string;
+  // pipeline 是否在跑 — 傳給 RunCard 判 inProgress run 顯「進行中」vs「已中斷」。
+  pipelineRunning?: boolean;
   // 由 PipelineHistoryDrawer 注入。empty state CTA「關閉並回 pipeline」用,
   // 不傳入時 empty state 不渲染該按鈕(degrade gracefully)。
   onCloseDrawer?: () => void;
@@ -147,6 +150,7 @@ export function RunHistory({
           run={r}
           projectHash={projectHash}
           pipelineId={pipelineId}
+          pipelineRunning={pipelineRunning}
         />
       ))}
     </div>

@@ -64,6 +64,12 @@
 .tdrw-run-card.is-fail::before {
   background: var(--failed);
 }
+.tdrw-run-card.is-running::before {
+  background: var(--running);
+}
+.tdrw-run-card.is-interrupted::before {
+  background: var(--paused);
+}
 .tdrw-run-card:hover {
   border-color: var(--line-2);
 }

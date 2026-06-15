@@ -301,6 +301,22 @@
   background: color-mix(in srgb, var(--chip-c) 12%, transparent);
   border-color: color-mix(in srgb, var(--chip-c) 35%, var(--line-2));
 }
+/* 進行中:run 還沒寫 exit code 且 pipeline 真在跑 — running token + 呼吸 dot */
+.tdrw-run-status.is-running,
+.tdrw-run-status[data-state="running"] {
+  --chip-c: var(--running);
+  color: var(--chip-c);
+  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c) 35%, var(--line-2));
+}
+/* 已中斷:log 停在 active 但 pipeline 沒在跑(server 重啟 / crash 沒 patch exit code)— 中性 paused 色 */
+.tdrw-run-status.is-interrupted,
+.tdrw-run-status[data-state="interrupted"] {
+  --chip-c: var(--paused);
+  color: var(--chip-c);
+  background: color-mix(in srgb, var(--chip-c) 12%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c) 35%, var(--line-2));
+}
 .tdrw-run-meta {
   /* hist-004:meta row 用 flex-wrap,每個 item 自然寬度,wrap 到下一列。
      原本用 grid auto-fit minmax(120px, max-content) 在窄容器(drawer ~700px)會把

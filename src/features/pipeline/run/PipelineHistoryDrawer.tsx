@@ -18,12 +18,15 @@ export function PipelineHistoryDrawer({
   pipelineBranch,
   pipelineId,
   projectHash,
+  pipelineRunning = false,
   onClose,
 }: {
   pipelineName: string;
   pipelineBranch: string;
   pipelineId: string;
   projectHash: string;
+  // pipeline 是否在跑 — 轉給 RunHistory → RunCard 區分 inProgress run 的「進行中 / 已中斷」。
+  pipelineRunning?: boolean;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -126,6 +129,7 @@ export function PipelineHistoryDrawer({
         <RunHistory
           projectHash={projectHash}
           pipelineId={pipelineId}
+          pipelineRunning={pipelineRunning}
           onCloseDrawer={onClose}
         />
         <AuditTimeline projectHash={projectHash} pipelineId={pipelineId} />

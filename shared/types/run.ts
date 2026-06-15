@@ -5,6 +5,9 @@ export type RunSummary = {
   filename: string;       // <pipelineId>-<ts>.log
   logPath: string;        // absolute path to runtime log file
   startedAt: number;      // 從 filename 拆 ts
+  // log header 仍是 "active code=" 未被 patch 成 "exited code=N" → run 尚未結束。
+  // 區分「進行中 / 已中斷」與「真失敗」,避免 exitCode==null 一律被當失敗顯示。
+  inProgress: boolean;
   exitCode: number | null;
   durationMs: number | null;
   costUsd: number | null;

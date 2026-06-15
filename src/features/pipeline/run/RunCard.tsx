@@ -25,10 +25,15 @@ export function RunCard({
   run,
   projectHash,
   pipelineId,
+  pipelineRunning = false,
 }: {
   run: RunSummary;
   projectHash: string;
   pipelineId: string;
+  // pipeline 當前是否真的在跑(running/planning/queued)。用來把 inProgress 的 run
+  // 區分成「進行中」(pipeline 還在跑)vs「已中斷」(log 停在 active 但 pipeline 沒在跑,
+  // 多半是 server 重啟 / crash 沒 patch 到 exit code)。
+  pipelineRunning?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<RunDetail | null>(null);
@@ -59,13 +64,25 @@ export function RunCard({
     }
   };
 
-  const ok = run.exitCode === 0;
+  // 四態:run 還沒寫 exit code(inProgress)時,pipeline 真在跑 → 進行中;否則 → 已中斷。
+  //   結束後才用 exitCode 判 成功 / 失敗。修掉「進行中的 run 被當失敗·退出碼 ?」的誤判。
+  const outcome: "success" | "failed" | "running" | "interrupted" = run.inProgress
+    ? pipelineRunning
+      ? "running"
+      : "interrupted"
+    : run.exitCode === 0
+      ? "success"
+      : "failed";
+  const ok = outcome === "success";
+  const isFail = outcome === "failed";
   // RH-005 / RH-016:exit X → 退出碼 X(原本 chip 同時混 zh / en「成功 · EXIT 0」現在改「成功 · 退出碼 0」)
   // RH-003 (2026-05-24):成功狀態 chip 不再顯「退出碼 0」雜訊 — 每筆都是 0 反而降低掃讀效率;
   //   退出碼仍保留在 title / aria-label 給 dev 取用。失敗時 chip 顯示退出碼(對診斷有意義)。
   const exitText = run.exitCode != null ? `退出碼 ${run.exitCode}` : "退出碼 ?";
-  const outcomeLabel = ok ? "成功" : "失敗";
-  const chipText = ok ? outcomeLabel : `${outcomeLabel} · ${exitText}`;
+  const OUTCOME_LABEL = { success: "成功", failed: "失敗", running: "進行中", interrupted: "已中斷" } as const;
+  const outcomeLabel = OUTCOME_LABEL[outcome];
+  // 只有「失敗」才在 chip 接退出碼;進行中 / 已中斷沒有 exit code 可顯。
+  const chipText = isFail ? `${outcomeLabel} · ${exitText}` : outcomeLabel;
   const cost = run.costUsd != null ? `$${run.costUsd.toFixed(2)}` : "—";
   const dur = run.durationMs != null ? fmtDuration(run.durationMs) : "—";
   const turns = run.numTurns != null ? `${run.numTurns}` : "—";
@@ -86,7 +103,8 @@ export function RunCard({
     : "—";
   // RH-006:provider chip 全文不能只塞 title(touch 看不到、SR 不可靠)— 同字串塞進可見內容的 aria-label,
   //         然後在 chip 外另放 sr-only 隱藏 span 給 SR 唸完整(visible chip 仍 ellipsis 防爆版)
-  const toggleAria = `${open ? "收合" : "展開"} ${formatDateTime(run.startedAt)} 的執行明細(${outcomeLabel}・${exitText})`;
+  const ariaOutcome = isFail ? `${outcomeLabel}・${exitText}` : outcomeLabel;
+  const toggleAria = `${open ? "收合" : "展開"} ${formatDateTime(run.startedAt)} 的執行明細(${ariaOutcome})`;
   // RH-002 (2026-05-24):chevron 在 mobile 上 affordance 偏弱 — 加個 visible 短 label 提示展開動作,
   //   user 一眼知道整個 head 可點開看詳情(stdout / stderr / session id)
   // HIST-RUN-001 round 1 (2026-05-25):卡片下方 meta(時間/成本/權杖/執行器/Ticket 進度)
@@ -94,7 +112,7 @@ export function RunCard({
   //   改更具體:展開後實際多 sessionId + 原始輸出(stdout) + stderr,所以 hint = 「查看輸出」/「收合輸出」。
   const toggleHint = open ? "收合輸出" : "查看輸出";
   return (
-    <div className={"tdrw-run-card" + (ok ? "" : " is-fail")}>
+    <div className={`tdrw-run-card is-${outcome}` + (isFail ? " is-fail" : "")}>
       <button type="button"
         id={headId}
         className="tdrw-run-head"
@@ -134,9 +152,9 @@ export function RunCard({
           {/* hist-003:header 只留時間 + 狀態 chip(成功 / 失敗 · 退出碼 N) + result 摘要;
               provider/model + ticket count 推到下面 meta row,不再擠在同一行 */}
           <span
-            className={"tdrw-run-status " + (ok ? "is-ok" : "is-fail")}
-            data-state={ok ? "success" : "failed"}
-            title={`${outcomeLabel} · ${exitText}`}
+            className={"tdrw-run-status " + (ok ? "is-ok" : isFail ? "is-fail" : "is-" + outcome)}
+            data-state={outcome}
+            title={isFail ? `${outcomeLabel} · ${exitText}` : outcomeLabel}
           >
             {chipText}
           </span>

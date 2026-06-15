@@ -209,6 +209,11 @@ export function FocusHeader({
           pipelineBranch={pipeline.branch}
           pipelineId={pipeline.id}
           projectHash={projectHash}
+          pipelineRunning={
+            pipeline.state === "running" ||
+            pipeline.state === "planning" ||
+            pipeline.state === "queued"
+          }
           onClose={() => setHistoryOpen(false)}
         />
       )}
