@@ -126,7 +126,7 @@ export async function handle(req: Request): Promise<Response> {
   }
 
   if (pathname === "/api/system/version" && method === "GET") {
-    return system.version();
+    return system.version(url.searchParams.get("force") === "1");
   }
   if (pathname === "/api/system/update" && method === "POST") {
     return system.update();

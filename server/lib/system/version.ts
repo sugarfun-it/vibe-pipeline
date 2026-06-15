@@ -10,6 +10,9 @@ import { runCapture } from "../io/childSpawn";
 
 const GITHUB_REPO = process.env.VP_GITHUB_REPO ?? "sugarfun-it/vibe-pipeline";
 const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
+// 暫時性失敗(網路 / 5xx / rate-limit / parse)只短 cache,避免 5 分鐘內 UI 一直紅字
+// 「無法取得發行版資訊」。真的沒 release(404)是穩定狀態,照常 5 分 cache。
+const RELEASE_NEGATIVE_TTL_MS = 30 * 1000;
 
 export type LatestRelease = {
   tag: string;
@@ -70,13 +73,21 @@ export async function getCurrentVersion(): Promise<string> {
 type CacheEntry = {
   value: LatestRelease | null;
   fetchedAt: number;
+  // transient=true(網路 / 5xx / rate-limit / parse 失敗)→ 用短 TTL,讓下次很快重抓。
+  // false(成功取到值,或 404 確定沒 release)→ 用正常 5 分 TTL。
+  transient: boolean;
 };
 let releaseCache: CacheEntry | null = null;
 let inflight: Promise<LatestRelease | null> | null = null;
 
-export async function fetchLatestRelease(): Promise<LatestRelease | null> {
+function cacheTtl(entry: CacheEntry): number {
+  return entry.transient ? RELEASE_NEGATIVE_TTL_MS : RELEASE_CACHE_TTL_MS;
+}
+
+// force=true 跳過 cache 強制重抓(「檢查更新」按鈕用),避免暫時性 null 被 cache 卡住。
+export async function fetchLatestRelease(opts?: { force?: boolean }): Promise<LatestRelease | null> {
   const now = Date.now();
-  if (releaseCache && now - releaseCache.fetchedAt < RELEASE_CACHE_TTL_MS) {
+  if (!opts?.force && releaseCache && now - releaseCache.fetchedAt < cacheTtl(releaseCache)) {
     return releaseCache.value;
   }
   if (inflight) return inflight;
@@ -89,8 +100,8 @@ export async function fetchLatestRelease(): Promise<LatestRelease | null> {
         },
       });
       if (!res.ok) {
-        // 404 = no release;其他 5xx / rate limit 也回 null(best-effort)
-        releaseCache = { value: null, fetchedAt: now };
+        // 404 = 確定沒 release(穩定狀態,正常 cache);其他(403 rate-limit / 5xx)= 暫時失敗,短 cache
+        releaseCache = { value: null, fetchedAt: now, transient: res.status !== 404 };
         return null;
       }
       const json = (await res.json()) as {
@@ -102,14 +113,16 @@ export async function fetchLatestRelease(): Promise<LatestRelease | null> {
       const url = typeof json.html_url === "string" ? json.html_url : null;
       const publishedAt = typeof json.published_at === "string" ? json.published_at : null;
       if (!tag || !url || !publishedAt) {
-        releaseCache = { value: null, fetchedAt: now };
+        // 200 但欄位缺 = 異常回應,當暫時性短 cache
+        releaseCache = { value: null, fetchedAt: now, transient: true };
         return null;
       }
       const value: LatestRelease = { tag, url, publishedAt };
-      releaseCache = { value, fetchedAt: now };
+      releaseCache = { value, fetchedAt: now, transient: false };
       return value;
     } catch {
-      releaseCache = { value: null, fetchedAt: now };
+      // 網路層失敗 = 暫時性,短 cache
+      releaseCache = { value: null, fetchedAt: now, transient: true };
       return null;
     } finally {
       inflight = null;
@@ -125,8 +138,8 @@ function normalizeTag(s: string): string {
   return s.replace(/^v/i, "").trim().toLowerCase();
 }
 
-export async function getVersionStatus(): Promise<VersionStatus> {
-  const [current, latest] = await Promise.all([getCurrentVersion(), fetchLatestRelease()]);
+export async function getVersionStatus(opts?: { force?: boolean }): Promise<VersionStatus> {
+  const [current, latest] = await Promise.all([getCurrentVersion(), fetchLatestRelease(opts)]);
   if (!latest) {
     return { current, latest: null, isLatest: false, hasUpdate: false };
   }

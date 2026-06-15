@@ -25,8 +25,10 @@ export type UpdateStarted = {
   message?: string;
 };
 
-export function getSystemVersion(signal?: AbortSignal): Promise<VersionStatus> {
-  return call<VersionStatus>("/api/system/version", { signal });
+// force=true → 後端跳過 release-info cache 強制重抓(user 點「檢查更新」用);
+// 預設(mount / 背景刷新)走 cache 不打爆 GitHub rate-limit。
+export function getSystemVersion(signal?: AbortSignal, force = false): Promise<VersionStatus> {
+  return call<VersionStatus>(`/api/system/version${force ? "?force=1" : ""}`, { signal });
 }
 
 export function triggerSystemUpdate(signal?: AbortSignal): Promise<UpdateStarted> {

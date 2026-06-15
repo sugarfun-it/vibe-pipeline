@@ -25,9 +25,11 @@ export function UpdateTab() {
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
 
-  const [fetchVersion, { pending: fetching }] = useAsyncAction(async () => {
+  const [fetchVersion, { pending: fetching }] = useAsyncAction(async (force: boolean = false) => {
     try {
-      const v = await getSystemVersion();
+      // user 主動「檢查更新」帶 force,跳過後端 release-info cache 強制重抓;
+      // mount / 自動刷新不帶,走 cache 不打爆 GitHub rate-limit。
+      const v = await getSystemVersion(undefined, force);
       setVersion(v);
       setLastCheckedAt(Date.now());
     } catch (e) {
@@ -178,7 +180,7 @@ export function UpdateTab() {
               <button
                 type="button"
                 className="btn"
-                onClick={() => void fetchVersion()}
+                onClick={() => void fetchVersion(true)}
                 disabled={loading || isUpdating}
               >
                 {loading ? "檢查中…" : "檢查更新"}
@@ -279,7 +281,7 @@ export function UpdateTab() {
                   className="btn"
                   onClick={() => {
                     setPhase({ kind: "idle" });
-                    void fetchVersion();
+                    void fetchVersion(true);
                   }}
                 >
                   重新檢查連線

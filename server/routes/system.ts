@@ -3,9 +3,10 @@ import { getVersionStatus } from "../lib/system/version";
 import { preflightCheck, spawnInstallScript } from "../lib/system/update";
 import { server } from "../index";
 
-export async function version(): Promise<Response> {
+// force=1 → 跳過 release-info cache 強制重抓(「檢查更新」按鈕用)
+export async function version(force = false): Promise<Response> {
   try {
-    const status = await getVersionStatus();
+    const status = await getVersionStatus({ force });
     return ok(status);
   } catch (e) {
     return err("internal_error", String(e), 500);
