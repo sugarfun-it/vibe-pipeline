@@ -171,7 +171,8 @@ inline flag(`--title` / `--mode` / `--status` 等)會覆蓋 JSON 對應欄位,up
 **啟動 / 停 / 合併(會 auto-detect + auto-start local backend;也可先手動 `vbpl server start`)**:
 
 ```bash
-vbpl pipeline run <pipelineId>                         # 啟動 runner
+vbpl pipeline run <pipelineId>                         # 啟動 runner(fire-and-forget,立即回)
+vbpl pipeline run <id> --wait [--timeout <sec>] [--poll <sec>]  # 阻塞到終態才回(見下「同步等結果」)
 vbpl pipeline stop <pipelineId>                        # 停止(SIGKILL runner → state=paused;按「繼續」從 critic 階段接續)
 vbpl pipeline merge <pipelineId>                       # 合併回 base(先試 git,衝突才 AI)
 vbpl pipeline sync <pipelineId>                        # 把 base 拉進 pipeline worktree
@@ -252,6 +253,11 @@ vbpl pipeline sync <id> --cancel                       # 取消同步
    - **替代(省 Agent SDK 額度)**:走 REPL 主 agent 模式 — 見上方「進階」段,適合 dogfood / CC 配 VP / 不過夜
    - 啟動後**不等完成**,告訴 user「已啟動,看 `vbpl pipeline status <id>` 或 web UI」
    - 不要 polling status 一直問;user 真要進度自己會問
+
+   **同步等結果(別的 AI / batch 用 CLI 啟動,要拿到終態才往下走)**:加 `--wait`。`vbpl pipeline run <id> --wait` 會阻塞到 pipeline 終態,印終態 JSON(`--json` 時)並用 exit code 帶結果,讓 caller 不必自己寫 poll loop:
+   - exit `0` = `ready` / `merged`(成功);`2` = `paused`(要人介入);`3` = `failed`;`124` = timeout
+   - `--timeout <sec>` 最長等待(預設 7200;`0`=無限);`--poll <sec>` 輪詢間隔(預設 10)
+   - 阻塞期間那個 CLI process 不能死、terminal 不能關 → 適合「另一個 AI session 專門等這條」;無人值守 / 過夜 / 要 FCM 仍用 fire-and-forget(不加 `--wait`)+ backend push
 
 3. **「進度?」/「跑完了嗎?」**
    - `vbpl pipeline status <id> --json` 看 `state` + `tickets[].status`

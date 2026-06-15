@@ -24,6 +24,7 @@ const BOOLEAN_FLAGS = new Set([
   "dismiss",
   "follow",
   "f",
+  "wait",
   "here",
   "help",
   "version",

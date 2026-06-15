@@ -21,7 +21,7 @@ SUBCOMMANDS
   show   <id>                            看 pipeline 全文(tickets / state / commits)
   create <name>                          建新 pipeline(綁定 new branch)
   delete <id>                            砍 worktree + branch + json(預設 confirm)
-  run    <id>                            backend 啟動 runner
+  run    <id>                            backend 啟動 runner(--wait 阻塞到終態)
   stop   <id>                            SIGKILL runner → state=paused
   status <id>                            即時狀態(state / tickets[].status)
   log    <id>                            執行紀錄摘要(cost / duration / verdict)
@@ -36,6 +36,10 @@ OPTIONS
                             加 flag = 強制開,不加 = 沿用 project 預設
   --base-branch <branch>    【create 用】base branch 名,預設 main
   --force                   【delete 用】跳過 confirm
+  --wait                    【run 用】阻塞到 pipeline 終態才回應(exit code: 0=ready/merged,
+                            2=paused,3=failed,124=timeout)。供 batch / 別的 AI CLI 同步等結果
+  --timeout <sec>           【run --wait 用】最長等待秒數,預設 7200;0=無限
+  --poll <sec>              【run --wait 用】輪詢間隔秒數,預設 10
   --follow|-f               【log 用】持續輸出新 log
   --ai                      【sync 用】衝突時讓 AI 解
   --cancel                  【sync 用】取消進行中的 sync
@@ -45,6 +49,7 @@ EXAMPLES
   vbpl pipeline create my-feature                          # 沿用 project 預設 auto-merge
   vbpl pipeline create my-feature --auto-merge             # 強制開 auto-merge
   vbpl pipeline create my-feature --base-branch develop    # 從 develop 切
+  vbpl pipeline run <id> --wait --json                     # 阻塞到終態,印終態 JSON + 帶 exit code
   vbpl pipeline status <id> --json                         # structured output 給 agent 解析
   vbpl pipeline log <id> -f                                # tail 持續看新 run
 
