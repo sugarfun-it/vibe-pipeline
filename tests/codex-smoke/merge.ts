@@ -1,11 +1,10 @@
-// 場景 4 — Merge + codex (config wire-through smoke,不實際 spawn merge)。
+// 場景 4 — Merge + codex (config wire-through smoke,不實際跑 AI)。
 //
-// merge task class 不獨立 spawn(merge ticket 由 runner 主 agent 跑,sub-agent 透過 Task 派)。
-// CodexAdapter.spawn(kind:"merge") 預期 throw。
+// merge task class 由 backend code orchestrator 直接以 subagent spawn。
 //
 // 本檔驗:
 // 1. patchUserConfig 寫 merge.provider=codex 後 getTaskConfigWithAdapter("merge") 回 CodexAdapter
-// 2. CodexAdapter.spawn({kind:"merge"}) 預期 throw
+// 2. CodexAdapter.spawn({kind:"merge"}) 這種舊呼叫仍會 throw
 // 3. mergeTicketPrompt 拿 modelHint 後 prompt 內有對應字串
 //
 // 跑法:bun tests/codex-smoke/merge.ts

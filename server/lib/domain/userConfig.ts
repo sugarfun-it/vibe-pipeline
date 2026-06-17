@@ -6,10 +6,8 @@
 //   --model <model>   model alias(opus / sonnet / haiku ...),直接帶 alias 即可
 //   --effort <level>  effort level(low / medium / high / xhigh / max);本檔只露 low/medium/high
 //
-// Sub-agent 與 Merge 兩種 task class 不是後端直接 spawn(由 runner 主 agent 透過 Task tool 派出),
-// 所以是把 "model" / "effort" 字串塞進主 agent 的 system prompt,讓主 agent 在呼叫 Task tool
-// 時指定 model 參數;effort 沒對應 Task tool 參數,以「effort 偏好」文字提示寫進 prompt
-// (best-effort,sub-agent 自己決定要不要照辦)。
+// Executor / critic / merge 由 backend code orchestrator 直接 spawn 成 top-level process,
+// provider/model/effort 都在 adapter spawn 參數落實。
 //
 // atomic write 對齊 projectStore.ts:.tmp + JSON.parse round-trip + Bun.$ mv。
 
@@ -110,13 +108,6 @@ function coerceConfig(raw: unknown): UserConfig {
   for (const tc of TASK_CLASSES) {
     out[tc] = coerceTaskModel(rawDefaults[tc], fallback.defaults[tc]);
   }
-  // executor/critic/merge 整組對稱 runner;不齊 → snap 整套(provider + model + effort)= runner
-  const runnerCfg = out.runner;
-  for (const tc of ["executor", "critic", "merge"] as const) {
-    if (out[tc].provider !== runnerCfg.provider) {
-      out[tc] = { ...runnerCfg };
-    }
-  }
   return { defaults: out, pushEvents: coercePushEvents(o.pushEvents) };
 }
 
@@ -138,7 +129,7 @@ export async function writeUserConfig(cfg: UserConfig): Promise<UserConfig> {
   return cfg;
 }
 
-// PUT 接 partial body,白名單 defaults.{qa,runner,executor,critic,merge}.{model,effort}。
+// PUT 接 partial body,白名單 defaults.{qa,split,executor,critic,merge}.{provider,model,effort}。
 // 其他鍵忽略。型別錯 → 拋 invalid_path err,routes 層轉 400。
 export class UserConfigPatchError extends Error {
   constructor(public field: string, message: string) {
@@ -202,42 +193,6 @@ export async function patchUserConfig(body: unknown): Promise<UserConfig> {
       }
     }
     nextDefaults[tc] = { provider, model, effort };
-  }
-  // executor/critic/merge.provider 必須跟 runner.provider 一致;
-  // 例外:同次 PUT body 同時改 runner + 該 tc 兩者新 provider 一致(用 nextDefaults.runner.provider 比較)
-  const finalRunnerProvider = nextDefaults.runner.provider;
-  for (const tc of ["executor", "critic", "merge"] as const) {
-    const incomingTc = incomingDefaults[tc];
-    const incomingHasProvider =
-      incomingTc &&
-      typeof incomingTc === "object" &&
-      "provider" in (incomingTc as Record<string, unknown>);
-    if (incomingHasProvider && nextDefaults[tc].provider !== finalRunnerProvider) {
-      throw new UserConfigPatchError(
-        `defaults.${tc}.provider`,
-        `defaults.${tc}.provider 必須跟 defaults.runner.provider 一致(runner=${finalRunnerProvider})`
-      );
-    }
-  }
-  // runner.provider 換了 → executor/critic/merge 整組對稱 runner(provider + model + effort 全跟);
-  // 例外:incoming 同次明確指定該 tc 的 model/effort,則尊重 incoming(且必須跟新 provider 相容,否則 fallback runner 值)
-  if (cur.defaults.runner.provider !== finalRunnerProvider) {
-    const runnerNext = nextDefaults.runner;
-    for (const tc of ["executor", "critic", "merge"] as const) {
-      const incomingTc = (incomingDefaults[tc] && typeof incomingDefaults[tc] === "object"
-        ? (incomingDefaults[tc] as Record<string, unknown>)
-        : {}) as Record<string, unknown>;
-      const provider: Provider = runnerNext.provider;
-      let model: ModelName = runnerNext.model;
-      let effort: Effort = runnerNext.effort;
-      if ("model" in incomingTc && isValidModel(provider, nextDefaults[tc].model)) {
-        model = nextDefaults[tc].model;
-      }
-      if ("effort" in incomingTc && isValidEffort(provider, nextDefaults[tc].effort)) {
-        effort = nextDefaults[tc].effort;
-      }
-      nextDefaults[tc] = { provider, model, effort };
-    }
   }
   const nextPushEvents: Record<PushEventKey, boolean> = { ...cur.pushEvents };
   if ("pushEvents" in bodyObj) {

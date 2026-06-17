@@ -22,7 +22,7 @@
 }
 
 /* secondary 改成跟 primary 同 card chrome,差異化靠 task-group-hint 的 accent callout
-   表達「跟隨上方 Main Agent」的繼承語意(原本用 dashed 邊框已不再使用) */
+   表達執行階段 agent 群組語意(原本用 dashed 邊框已不再使用) */
 .task-group--secondary {
   background: var(--panel);
   border: 1px solid var(--line);

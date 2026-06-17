@@ -10,9 +10,8 @@ export type ModelName = string;
 export type Effort = string;
 export type Provider = "claude" | "codex";
 // split = QA 拆 ticket 的 one-shot call(獨立 task class,可用便宜 model)
-// executor / critic 原本是同一個 subAgent,2026-05-12 拆開:執行用高 capability(opus/gpt-5.5),
-// 審核可用便宜 model(sonnet/gpt-5.4-mini)省 token
-export type TaskClass = "qa" | "split" | "runner" | "executor" | "critic" | "merge";
+// executor / critic / merge 是 backend code orchestrator 直接 spawn 的 AI sub-agent。
+export type TaskClass = "qa" | "split" | "executor" | "critic" | "merge";
 
 export type TaskModelConfig = {
   provider: Provider;
@@ -40,7 +39,7 @@ export type UserConfig = {
   pushEvents: Record<PushEventKey, boolean>;
 };
 
-export const TASK_CLASSES: TaskClass[] = ["qa", "split", "runner", "executor", "critic", "merge"];
+export const TASK_CLASSES: TaskClass[] = ["qa", "split", "executor", "critic", "merge"];
 export const PROVIDERS: Provider[] = ["claude", "codex"];
 
 // 每 provider 各自的 model / effort 允許字典。第一個元素是該 provider 預設值。
@@ -105,7 +104,6 @@ export const DEFAULT_USER_CONFIG: UserConfig = {
   defaults: {
     qa: { provider: "claude", model: "claude-sonnet-4-6", effort: "low" },
     split: { provider: "claude", model: "claude-sonnet-4-6", effort: "low" },
-    runner: { provider: "claude", model: "claude-opus-4-8", effort: "medium" },
     // 執行AI:真的改 code,要 capability
     executor: { provider: "claude", model: "claude-opus-4-8", effort: "high" },
     // 審核AI:讀 diff 判 PASS/FAIL,sonnet + medium 已夠用,省 token
@@ -128,7 +126,6 @@ export const EFFORT_LEVELS: readonly Effort[] = EFFORTS_BY_PROVIDER.claude;
 export const TASK_CLASS_LABELS: Record<TaskClass, string> = {
   qa: "QA Spec",
   split: "Ticket Split",
-  runner: "Main Agent",
   executor: "Executor",
   critic: "Critic",
   merge: "Merge Agent",
@@ -138,7 +135,6 @@ export const TASK_CLASS_LABELS: Record<TaskClass, string> = {
 export const TASK_CLASS_HINTS: Record<TaskClass, string> = {
   qa: "規格收斂",
   split: "大任務拆分 Ticket",
-  runner: "任務執行主 Agent",
   executor: "執行AI(改 code)",
   critic: "審核AI(判 PASS/FAIL)",
   merge: "合併衝突解決",

@@ -27,7 +27,7 @@ test("patchUserConfig 接受快取 catalog 內的新 model", async () => {
   mc.hydrateFromCacheSync();
   const userConfig = await import("./userConfig");
   const next = await userConfig.patchUserConfig({
-    defaults: { runner: { provider: "claude", model: "claude-future-9", effort: "high" } },
+    defaults: { executor: { provider: "claude", model: "claude-future-9", effort: "high" } },
   });
-  expect(next.defaults.runner.model).toBe("claude-future-9");
+  expect(next.defaults.executor.model).toBe("claude-future-9");
 });

@@ -8,10 +8,10 @@ import { runCapture, spawnStreaming } from "../io/childSpawn";
 import type {
   CliAdapter,
   QASpawnOpts,
-  RunnerSpawnOpts,
   SplitSpawnOpts,
   SpawnOpts,
   SpawnedProcess,
+  SubAgentSpawnOpts,
 } from "./adapter";
 
 // Windows cmd.exe re-tokenize bug(Ruflo issue #1852):長 prompt 當 positional arg 經 cmd.exe
@@ -46,12 +46,12 @@ export class ClaudeAdapter implements CliAdapter {
 
   spawn(opts: SpawnOpts): SpawnedProcess {
     if (opts.kind === "qa") return spawnQA(opts);
-    if (opts.kind === "runner") return spawnRunner(opts);
     if (opts.kind === "split") return spawnSplit(opts);
+    if (opts.kind === "subagent") return spawnSubAgent(opts);
     throw new Error(`ClaudeAdapter: unknown spawn kind ${(opts as { kind?: string }).kind}`);
   }
 
-  parseResult(_kind: "qa" | "split" | "runner", stdout: string): string {
+  parseResult(_kind: "qa" | "split" | "subagent", stdout: string): string {
     // claude --output-format json 包成 { type:"result", result:"<text>", session_id, ... }
     const outerJson = JSON.parse(stdout) as { result?: string; text?: string; [k: string]: unknown };
     const inner = outerJson.result ?? outerJson.text ?? outerJson;
@@ -101,34 +101,27 @@ function spawnQA(opts: QASpawnOpts): SpawnedProcess {
   return proc;
 }
 
-function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
-  const { cwd, sessionId, initialMessage, systemPrompt, model, effort, needsBypassPermissions } = opts;
+function spawnSubAgent(opts: SubAgentSpawnOpts): SpawnedProcess {
+  const { cwd, prompt, systemPrompt, model, effort, role } = opts;
   const args = [
     "claude",
     "-p",
     "--output-format",
     "json",
-    // perf:保留 --setting-sources 預設(user/project/local),因為 Task sub-agent 改 source code 時
-    // 仍可能需要 user CLAUDE.md / project lint config 等繼承。
-    // 2026-05-23:MCP / slash commands 改不限。runner 拿得到 user 配的 MCP(codegraph 等)
-    // + superpowers / project skill;destructive skill(/release / /dev / /init 等)誤觸風險靠
-    // runnerPrompt 約束 + worktree 邊界控管(實測 runner prompt 已 scope 清楚)。
     "--no-session-persistence",
-    "--session-id",
-    sessionId,
     "--model",
     model,
     "--effort",
     effort,
   ];
-  // 跨 provider:Task(codex-rescue) sub-agent 需要 Bash 跑 codex-companion.mjs,
-  // user 設 `permissions.defaultMode: auto` 對這種 absolute path node 不一定吃,
-  // 實測會 permission_denials → 主 agent 幻覺成功。同 provider (純 claude) 不需要。
-  if (needsBypassPermissions) {
+  if (role === "critic") {
+    args.push("--disallowedTools", "Edit Write Task");
+  } else {
     args.push("--dangerously-skip-permissions");
+    args.push("--disallowedTools", "Task");
   }
   args.push("--system-prompt", systemPrompt);
-  // initialMessage 走 stdin(雷區:Windows cmd.exe re-tokenize)
+  // prompt 走 stdin(雷區:Windows cmd.exe re-tokenize)
   const proc = spawnStreaming<SpawnedProcess>(args, {
     cwd,
     stdout: "pipe",
@@ -137,7 +130,7 @@ function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
     env: workerEnv(),
   });
   const sink = proc.stdin as { write: (s: string) => unknown; end: () => unknown };
-  sink.write(initialMessage);
+  sink.write(prompt);
   sink.end();
   return proc;
 }

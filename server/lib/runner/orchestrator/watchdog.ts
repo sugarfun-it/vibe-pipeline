@@ -116,10 +116,17 @@ export async function watchdogTick(): Promise<void> {
             });
           }
         } else if (p && (p.state === "running" || isLegacyPausePendingState(p.state))) {
-          // ticket runner 死亡後收斂成 paused,保留 worktree 進度
+          // ticket sub-agent 死亡後收斂成 failed_transient + paused,保留 worktree 進度
+          const now = Date.now();
+          const tickets = Array.isArray((p as { tickets?: unknown }).tickets)
+            ? ((p as { tickets: Array<{ status?: string; [k: string]: unknown }> }).tickets).map((t) =>
+                t.status === "running" ? { ...t, status: "failed_transient", endedAt: now, reason } : t
+              )
+            : undefined;
           await writePipeline(project.path, entry.pipelineId, {
             ...p,
             state: "paused",
+            ...(tickets ? { tickets } : {}),
           }, {
             source: "watchdog-crash-recover",
             sourceDetail: reason,
