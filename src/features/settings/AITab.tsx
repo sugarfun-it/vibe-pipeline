@@ -3,8 +3,6 @@ import {
   TASK_CLASSES,
   TASK_CLASS_HINTS,
   TASK_CLASS_LABELS,
-  effortsForProvider,
-  modelsForProvider,
   type Effort,
   type ModelName,
   type Provider,
@@ -12,6 +10,7 @@ import {
   type UserConfig,
 } from "../../../shared/types";
 import { ArrowUpIcon } from "../../ui/icons";
+import { useModelCatalog } from "./useModelCatalog";
 import "./SettingsPopover.css";
 
 type TaskModelPatch = { provider?: Provider; model?: ModelName; effort?: Effort };
@@ -24,6 +23,8 @@ function TaskModelRow({
   effort,
   disabled,
   showProvider = false,
+  models,
+  efforts,
   onChange,
 }: {
   label: string;
@@ -33,6 +34,8 @@ function TaskModelRow({
   effort: Effort;
   disabled?: boolean;
   showProvider?: boolean;
+  models: (p: Provider) => readonly string[];
+  efforts: (p: Provider) => readonly string[];
   onChange: (patch: { provider?: Provider; model?: ModelName; effort?: Effort }) => void;
 }) {
   return (
@@ -67,7 +70,7 @@ function TaskModelRow({
             aria-label={`${label} model`}
             onChange={(e) => onChange({ model: e.target.value as ModelName })}
           >
-            {modelsForProvider(provider).map((m) => (
+            {models(provider).map((m) => (
               <option key={m} value={m}>
                 {m.replace(/^claude-/, "")}
               </option>
@@ -80,7 +83,7 @@ function TaskModelRow({
             aria-label={`${label} effort`}
             onChange={(e) => onChange({ effort: e.target.value as Effort })}
           >
-            {effortsForProvider(provider).map((eff) => (
+            {efforts(provider).map((eff) => (
               <option key={eff} value={eff}>
                 {eff}
               </option>
@@ -99,6 +102,7 @@ export function AITab({
   userCfg: UserConfig | null;
   onTaskChange: (tc: TaskClass, patch: TaskModelPatch) => void;
 }) {
+  const catalog = useModelCatalog();
   const primaryTasks = TASK_CLASSES.slice(0, 3);
   const secondaryTasks = TASK_CLASSES.slice(3);
   return (
@@ -117,6 +121,8 @@ export function AITab({
                   model={userCfg.defaults[tc].model}
                   effort={userCfg.defaults[tc].effort}
                   showProvider
+                  models={catalog.models}
+                  efforts={catalog.efforts}
                   onChange={(patch) => onTaskChange(tc, patch)}
                 />
               ))}
@@ -136,6 +142,8 @@ export function AITab({
                   provider={userCfg.defaults[tc].provider}
                   model={userCfg.defaults[tc].model}
                   effort={userCfg.defaults[tc].effort}
+                  models={catalog.models}
+                  efforts={catalog.efforts}
                   onChange={(patch) => onTaskChange(tc, patch)}
                 />
               ))}
