@@ -4,7 +4,7 @@
 
 ## 索引
 
-- **歷次大改動 / 設計決策來源** → [`docs/CHANGELOG.md`](docs/CHANGELOG.md);Phase merge commit 查 `git log --grep "Merge pipeline/"`
+- **歷次大改動 / 設計決策來源** → `git log`(Phase merge commit 查 `git log --grep "Merge pipeline/"`)
 - **待動工** → [`docs/TODO.md`](docs/TODO.md)(對應 phase 8 pipeline `019e36fbea63-phase8`)
 - **Repo 物理結構**(檔案 / 目錄 SSOT)→ [`docs/refs/repo-structure.md`](docs/refs/repo-structure.md)
 - **refs 目錄**(設計文件 / 競品 / 歷史 spec)→ [`docs/refs/README.md`](docs/refs/README.md)
@@ -21,7 +21,7 @@ dir 概覽(細節去 `repo-structure.md`):
 | `server/` | Bun backend(API + runner + qa + fcm) | `vibe-pipeline-backend` |
 | `cli/` | `vbpl` CLI(import server/lib 直存 fs,不發 HTTP) | `vibe-pipeline-cli` |
 | `shared/` | 跨 backend/frontend 持久化型別 | (跟著用方走) |
-| `docs/` | CHANGELOG / TODO / refs / 散發給 enduser 的 SKILL bundle | — |
+| `docs/` | TODO / refs / superpowers specs+plans / 散發給 enduser 的 SKILL bundle | — |
 | `.claude/skills/` | maintainer 4 份 sub-SKILL | 自己 |
 | `.claude/rules/` | path-specific 雷區規則(動到對應 path 才相關) | 自己 |
 | `public/`, `scripts/`, `design/` | 靜態資產 / icon 生成腳本 / 設計 handoff 歷史 | — |
