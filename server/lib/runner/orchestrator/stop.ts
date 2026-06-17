@@ -2,6 +2,7 @@ import { readPipeline, writePipeline } from "../../domain/pipeline";
 import * as notifs from "../../remote/notifs";
 import * as ticketWatcher from "../ticketWatcher";
 import { dispatch } from "./queue";
+import { clearRunnerPid, readRunnerPid, verifyRunnerPid } from "./runnerPidFile";
 import { key, running } from "./state";
 import { killProcessTree } from "./watchdog";
 
@@ -54,8 +55,22 @@ export async function stopImmediate(opts: {
     }
   }
 
+  // 兜底:in-memory entry 不見(watchdog 誤判 recover / duplicate spawn 後舊 runner 變
+  // orphan)時,map 那條殺不到真正活著的 orphan。讀 sidecar pid,若還活就 killProcessTree。
+  // entry 存在且 pid 相同 → 上面已殺,這裡 isPidAlive 多半 false 直接跳過。
+  const sidecar = readRunnerPid(projectPath, pipelineId);
+  if (sidecar && sidecar.pid !== entry?.proc?.pid && (await verifyRunnerPid(sidecar))) {
+    console.warn(`[runner ${pipelineId}] stop: killing orphan runner pid=${sidecar.pid} (not tracked in map)`);
+    try {
+      await killProcessTree(sidecar.pid);
+    } catch (e) {
+      console.warn(`[runner ${pipelineId}] stop orphan kill failed:`, e);
+    }
+  }
+
   // 確保 in-memory entry 清掉(exit handler 通常也會清,但我們已經 SIGKILL,搶在前面或補)
   running.delete(k);
+  clearRunnerPid(projectPath, pipelineId);
   ticketWatcher.stop({ projectHash, pipelineId });
 
   // 重讀 pipeline(exit handler 可能已寫一輪)→ 校正狀態

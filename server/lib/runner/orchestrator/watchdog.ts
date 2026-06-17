@@ -5,6 +5,7 @@ import * as notifs from "../../remote/notifs";
 import * as ticketWatcher from "../ticketWatcher";
 import { isLegacyPausePendingState } from "./helpers";
 import { dispatch } from "./queue";
+import { clearRunnerPid } from "./runnerPidFile";
 import { running, watchdogTimer, setWatchdogTimer } from "./state";
 
 // === Liveness watchdog ===
@@ -64,6 +65,14 @@ export async function watchdogTick(): Promise<void> {
         ? `exit code=${entry.proc.exitCode} but stuck in running map`
         : `PID ${entry.proc.pid} no longer alive`;
       console.warn(`[watchdog ${entry.pipelineId}] ${reason} — recovering`);
+      // 先確保 process 真死再收尾。watchdog fire 的條件(exitCode 非 null / pidAlive=false)
+      // 在 Windows 偶發不準 — Bun 已標 exited 但 OS process 還活,或 pid 查詢誤判。若不殺就
+      // 留 orphan runner 續寫 pipeline.json(multi-writer 亂源)。真死時 killProcessTree 是 no-op。
+      try {
+        await killProcessTree(entry.proc.pid);
+      } catch (e) {
+        console.warn(`[watchdog ${entry.pipelineId}] killProcessTree failed (likely already dead):`, e);
+      }
       const [hashPart] = k.split(":");
       const projectHash = hashPart ?? "";
       const project = await projectStore.findByHash(projectHash);
@@ -127,6 +136,7 @@ export async function watchdogTick(): Promise<void> {
         console.error(`[watchdog ${entry.pipelineId}] cleanup failed:`, e);
       }
       running.delete(k);
+      clearRunnerPid(project.path, entry.pipelineId);
       if (entry.kind === "ticket") {
         ticketWatcher.stop({ projectHash, pipelineId: entry.pipelineId });
       }

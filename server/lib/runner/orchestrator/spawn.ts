@@ -17,6 +17,7 @@ import { dispatch, enqueue } from "./queue";
 import { computePipelineSpent, endStream, patchRunnerLogExitCode, runnerLogHeader, snapshotTickets } from "./helpers";
 import { key, queuePosition, running, runningCount, isQueued } from "./state";
 import { startMockRunner } from "./mock";
+import { writeRunnerPid, clearRunnerPid } from "./runnerPidFile";
 
 // 起 main agent。Pipeline 必須已存在,有 branch 欄位。
 // 行為:
@@ -211,7 +212,24 @@ export async function spawnDirect(opts: {
     return { ok: false, error: `spawn ${runnerCfg.adapter.name} failed: ${String(e)}` };
   }
 
-  running.set(k, { pipelineId, proc, startedAt: Date.now(), kind: "ticket" });
+  const startedAt = Date.now();
+  running.set(k, { pipelineId, proc, startedAt, kind: "ticket" });
+
+  // 落地 runner OS pid 到 runtime sidecar:in-memory map handle 一旦丟失(watchdog 誤判
+  // recover / server 重啟 / duplicate spawn),stop / watchdog / recoverStale 仍能用 pid
+  // 兜底殺整棵 tree,避免 orphan runner 續寫 pipeline.json。失敗不阻斷起跑。
+  if (typeof proc.pid === "number") {
+    try {
+      await writeRunnerPid(projectPath, pipelineId, {
+        pid: proc.pid,
+        sessionId,
+        startedAt,
+        kind: "ticket",
+      });
+    } catch (e) {
+      console.warn(`[runner ${pipelineId}] writeRunnerPid failed (non-fatal):`, e);
+    }
+  }
 
   notifs.emit(projectPath, {
     type: "pipeline_started",
@@ -425,6 +443,8 @@ export async function spawnDirect(opts: {
       } catch {}
     } finally {
       running.delete(k);
+      // 只在 sidecar 內 pid 仍是本 runner 時刪 — 防 duplicate spawn 下誤刪新 runner 的 sidecar
+      clearRunnerPid(projectPath, pipelineId, typeof proc.pid === "number" ? proc.pid : undefined);
       ticketWatcher.stop({ projectHash, pipelineId });
       // Auto-merge:pipeline 收尾後若 state=ready && autoMerge → 直接觸發 AI merge。
       // 必須在 running.delete 之後,讓 triggerMerge 內的 orchestrator.start 看得到空 slot。

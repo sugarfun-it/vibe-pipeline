@@ -1,6 +1,8 @@
 import { listPipelines, writePipeline } from "../../domain/pipeline";
 import * as notifs from "../../remote/notifs";
 import { isLegacyPausePendingState } from "./helpers";
+import { clearRunnerPid, readRunnerPid, verifyRunnerPid } from "./runnerPidFile";
+import { killProcessTree } from "./watchdog";
 
 // Crash recovery:server 啟動時掃 pipelines。兩種 inconsistency 都修:
 // (a) pipeline.state="running"/"queued" 或舊版 pause-pending state 但 process / queue 不在
@@ -23,6 +25,22 @@ export async function recoverStale(projectPath: string): Promise<void> {
     const hasOrphanTicket =
       !isStaleRunning && (p.tickets ?? []).some((t) => t.status === "running");
     if (!isStaleRunning && !hasOrphanTicket) continue;
+
+    // 跨重啟 orphan reap:前一個 server 被殺但 detached/non-detached child 可能還活
+    // (Windows 殺 parent 不保證殺 child),orphan runner 續寫 pipeline.json = multi-writer
+    // 亂源。boot 時讀 sidecar pid,還活就 killProcessTree 整棵殺掉,再標 paused。
+    if (isStaleRunning) {
+      const sidecar = readRunnerPid(projectPath, p.id);
+      if (sidecar && (await verifyRunnerPid(sidecar))) {
+        console.warn(`[runner] recoverStale: killing orphan runner pid=${sidecar.pid} for ${p.id}`);
+        try {
+          await killProcessTree(sidecar.pid);
+        } catch (e) {
+          console.error(`[runner] recoverStale orphan kill failed for ${p.id}:`, e);
+        }
+      }
+      clearRunnerPid(projectPath, p.id);
+    }
 
     const nextState = isStaleRunning ? "paused" : p.state;
     // stale running pipeline 視同 transient 失敗 — 主 agent 沒機會自標 paused 就被殺
