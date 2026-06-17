@@ -23,11 +23,6 @@ import {
   PROVIDERS,
   TASK_CLASSES,
   defaultEffortForProvider,
-  defaultModelForProvider,
-  effortsForProvider,
-  isValidEffort,
-  isValidModel,
-  modelsForProvider,
   type Effort,
   type ModelName,
   type Provider,
@@ -36,6 +31,13 @@ import {
   type TaskModelConfig,
   type UserConfig,
 } from "../../../shared/types";
+import {
+  getDefaultModel as defaultModelForProvider,
+  getEfforts as effortsForProvider,
+  getModels as modelsForProvider,
+  isValidEffort,
+  isValidModel,
+} from "./modelCatalog";
 
 function dir(): string {
   return join(vibeHome(), ".vibe-pipeline");
