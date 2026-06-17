@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import * as mc from "./modelCatalog";
@@ -33,6 +33,53 @@ describe("validateCatalog", () => {
     [{ version: 1, models: { claude: ["a"], codex: ["b"] }, efforts: { claude: ["x"], codex: ["y"] } }, "version 非 string"],
   ])("壞 shape → null (%#)", async (raw) => {
     expect(mc.validateCatalog(raw)).toBeNull();
+  });
+});
+
+describe("refresh", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    mc.setSnapshot(BUNDLED_CATALOG);
+  });
+
+  test("fetch 成功 → 更新 snapshot + 寫快取", async () => {
+    process.env.VP_MODEL_CATALOG_URL = "https://example.test/models.json";
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          version: "2031-02-02",
+          models: { claude: ["claude-x1"], codex: ["gpt-x1"] },
+          efforts: { claude: ["high"], codex: ["high"] },
+        }),
+        { status: 200 }
+      )) as unknown as typeof fetch;
+    const ok = await mc.refresh();
+    expect(ok).toBe(true);
+    expect(mc.getModels("claude")[0]).toBe("claude-x1");
+    const cached = readFileSync(mc.cachePath(), "utf8");
+    expect(JSON.parse(cached).models.claude[0]).toBe("claude-x1");
+    delete process.env.VP_MODEL_CATALOG_URL;
+  });
+
+  test("fetch 非 200 → 回 false,snapshot 不變", async () => {
+    globalThis.fetch = (async () => new Response("nope", { status: 500 })) as unknown as typeof fetch;
+    const before = mc.getModels("claude")[0];
+    expect(await mc.refresh()).toBe(false);
+    expect(mc.getModels("claude")[0]).toBe(before);
+  });
+
+  test("fetch throw → 回 false 不爆", async () => {
+    globalThis.fetch = (async () => {
+      throw new Error("network down");
+    }) as unknown as typeof fetch;
+    expect(await mc.refresh()).toBe(false);
+  });
+
+  test("回壞 shape → 回 false", async () => {
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ version: "x" }), { status: 200 })) as unknown as typeof fetch;
+    expect(await mc.refresh()).toBe(false);
   });
 });
 

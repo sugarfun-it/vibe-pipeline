@@ -1,8 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Effort, ModelCatalog, ModelName, Provider } from "../../../shared/types";
 import { BUNDLED_CATALOG, PROVIDERS } from "../../../shared/types";
 import { vibeHome } from "../io/paths";
+import { atomicWriteJson } from "../io/atomicWrite";
 
 let snapshot: ModelCatalog = BUNDLED_CATALOG;
 
@@ -63,6 +64,55 @@ export function isValidModel(p: Provider, m: string): boolean {
 }
 export function isValidEffort(p: Provider, e: string): boolean {
   return getEfforts(p).includes(e);
+}
+
+const DEFAULT_URL =
+  "https://raw.githubusercontent.com/sugarfun-it/vibe-pipeline/main/catalog/models.json";
+const TTL_MS = 6 * 60 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 5000;
+
+export function catalogUrl(): string {
+  return process.env.VP_MODEL_CATALOG_URL || DEFAULT_URL;
+}
+
+export async function refresh(): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch(catalogUrl(), { signal: ctrl.signal });
+    } finally {
+      clearTimeout(t);
+    }
+    if (!res.ok) {
+      console.warn(`[modelCatalog] fetch ${res.status}, 維持現狀`);
+      return false;
+    }
+    const parsed = validateCatalog(await res.json());
+    if (!parsed) {
+      console.warn("[modelCatalog] 遠端 shape 不合法,維持現狀");
+      return false;
+    }
+    setSnapshot(parsed);
+    try {
+      mkdirSync(join(vibeHome(), ".vibe-pipeline"), { recursive: true });
+      await atomicWriteJson(cachePath(), parsed);
+    } catch (e) {
+      console.warn("[modelCatalog] 寫快取失敗(snapshot 已更新):", e);
+    }
+    return true;
+  } catch (e) {
+    console.warn("[modelCatalog] refresh 失敗:", e);
+    return false;
+  }
+}
+
+let timer: ReturnType<typeof setInterval> | null = null;
+export function startRefresh(): void {
+  void refresh();
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => void refresh(), TTL_MS);
 }
 
 // module load 即同步 hydrate(backend & CLI 都不必顯式呼叫)
