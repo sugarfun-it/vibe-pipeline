@@ -2,10 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import * as userConfigApi from "../../api/userConfig";
 import {
   TASK_CLASSES,
-  defaultEffortForProvider,
-  defaultModelForProvider,
-  isValidEffort,
-  isValidModel,
   PROVIDERS,
   type Effort,
   type ModelName,
@@ -16,6 +12,7 @@ import {
 } from "../../../shared/types";
 import { useToast } from "../../ui/Toast";
 import { useAutosaveFields } from "../../hooks/useAutosaveFields";
+import { useModelCatalog } from "./useModelCatalog";
 
 type TaskModelPatch = { provider?: Provider; model?: ModelName; effort?: Effort };
 type TaskField = "provider" | "model" | "effort";
@@ -33,6 +30,7 @@ export function useUserConfig({
   onSaveError: (e: unknown) => void;
 }) {
   const { toast } = useToast();
+  const catalog = useModelCatalog();
   const [userCfg, setUserCfg] = useState<UserConfig | null>(null);
   const [pushSaving, setPushSaving] = useState<Partial<Record<PushEventKey, boolean>>>({});
   const { scheduleAutosave, isCurrentSeq } = useAutosaveFields<AutosaveKey>();
@@ -108,12 +106,12 @@ export function useUserConfig({
     const merged = { ...cur, ...patch };
     if (patch.provider && patch.provider !== cur.provider) {
       const np = patch.provider;
-      if (patch.model === undefined && !isValidModel(np, merged.model)) {
-        merged.model = defaultModelForProvider(np);
+      if (patch.model === undefined && !catalog.models(np).includes(merged.model)) {
+        merged.model = catalog.models(np)[0] as ModelName;
         sendPatch = { ...sendPatch, model: merged.model };
       }
-      if (patch.effort === undefined && !isValidEffort(np, merged.effort)) {
-        merged.effort = defaultEffortForProvider(np);
+      if (patch.effort === undefined && !catalog.efforts(np).includes(merged.effort)) {
+        merged.effort = catalog.efforts(np)[0] as Effort;
         sendPatch = { ...sendPatch, effort: merged.effort };
       }
     }

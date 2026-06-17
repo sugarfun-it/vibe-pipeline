@@ -69,6 +69,19 @@ export const EFFORTS_BY_PROVIDER: Record<Provider, readonly Effort[]> = {
   codex: ["minimal", "low", "medium", "high"],
 };
 
+export type ModelCatalog = {
+  version: string;
+  models: Record<Provider, readonly ModelName[]>;
+  efforts: Record<Provider, readonly Effort[]>;
+};
+
+// 最終 fallback:remote / 快取都失敗時用這份(= 上面兩個 const)。
+export const BUNDLED_CATALOG: ModelCatalog = {
+  version: "bundled",
+  models: MODELS_BY_PROVIDER,
+  efforts: EFFORTS_BY_PROVIDER,
+};
+
 export function modelsForProvider(p: Provider): readonly ModelName[] {
   return MODELS_BY_PROVIDER[p];
 }
