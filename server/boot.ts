@@ -8,6 +8,7 @@ import * as projectStore from "./lib/domain/project";
 import * as orchestrator from "./lib/runner/orchestrator";
 import * as syncJob from "./lib/runner/syncJob";
 import { initFCM } from "./lib/remote/fcm";
+import { startRefresh } from "./lib/domain/modelCatalog";
 
 // 2026-05-24 auth removal migration:啟動時若舊 ~/.vibe-pipeline/auth.json 仍在 → 直接刪。
 // 該檔在 auth feature 拔除後變孤兒,留著是垃圾(maintainer 確認 VP 無 user,no backup OK)。
@@ -23,6 +24,7 @@ try {
 }
 
 void initFCM();
+startRefresh();
 
 // Crash recovery: 啟動時掃所有有 .vibe-pipeline/ 的 recent project,
 // 若 pipeline.state="running" 但 process 不在 (server 重啟),標 paused

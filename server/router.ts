@@ -10,6 +10,7 @@ import * as syncRoutes from "./routes/sync";
 import * as qa from "./routes/qa";
 import * as push from "./routes/push";
 import * as userConfigRoutes from "./routes/userConfig";
+import { getCatalogRoute } from "./routes/catalog";
 import * as test from "./routes/test";
 import * as system from "./routes/system";
 import * as testMode from "./lib/testMode";
@@ -150,6 +151,10 @@ export async function handle(req: Request): Promise<Response> {
     if (pathname === "/api/__test/push/file-content" && method === "GET")
       return test.pushFileContent(req);
     return notFound();
+  }
+
+  if (pathname === "/api/catalog" && method === "GET") {
+    return getCatalogRoute();
   }
 
   // User-level config(~/.vibe-pipeline/config.json,跨 project)
