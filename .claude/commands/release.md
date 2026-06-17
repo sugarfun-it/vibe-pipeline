@@ -5,7 +5,7 @@ argument-hint: <version> 例 `0.2.0` 或 `v0.2.0`;或 `<ship-version> fake <loca
 
 # /release — VP GitHub release ship
 
-`/release 0.2.0`(自動補 `v`)。Tag 永遠指 HEAD(consolidate 模式)。
+`/release 0.2.0`(自動補 `v`)。Tag 永遠指 HEAD(consolidate 模式)。**Release 標題永遠 = 版號**(`v0.2.0`),不加描述/副標 — 描述全進 release notes(`docs/release/v<VERSION>.md`),標題保持乾淨可掃。
 
 前置:`docs/release/v<VERSION>.md` 寫好(規範見下);working tree clean。
 
@@ -141,11 +141,12 @@ git tag $VERSION HEAD
 git push origin $VERSION --force
 
 # 6. upload + sync notes
+# 標題永遠 = 版號($VERSION),不加任何描述(--title 顯式鎖死,別讓 gh 用 notes 首行當標題)
 if gh release view $VERSION >/dev/null 2>&1; then
   gh release upload $VERSION vibe-pipeline-$VERSION.tar.gz --clobber
-  gh release edit $VERSION --notes-file docs/release/$VERSION.md
+  gh release edit $VERSION --title "$VERSION" --notes-file docs/release/$VERSION.md
 else
-  gh release create $VERSION --notes-file docs/release/$VERSION.md vibe-pipeline-$VERSION.tar.gz
+  gh release create $VERSION --title "$VERSION" --notes-file docs/release/$VERSION.md vibe-pipeline-$VERSION.tar.gz
 fi
 
 # 7. cleanup
