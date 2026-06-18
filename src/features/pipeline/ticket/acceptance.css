@@ -332,6 +332,13 @@
   background: color-mix(in srgb, var(--paused) 10%, transparent);
   border-color: color-mix(in srgb, var(--paused) 45%, transparent);
 }
+/* 審核中(round 尚未寫 endedAt)— 中性,不套任何 verdict 色 */
+.tdrw-iter-verdict.is-pending {
+  color: var(--fg-mute);
+  background: color-mix(in srgb, var(--fg-mute) 8%, transparent);
+  border-color: color-mix(in srgb, var(--fg-mute) 30%, transparent);
+  text-transform: none;
+}
 .tdrw-iter-round-dur {
   margin-left: auto;
   font-size: 11px;

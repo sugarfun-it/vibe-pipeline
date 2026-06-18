@@ -5,16 +5,25 @@ export function IterRounds({ rounds }: { rounds: IterRound[] }) {
   return (
     <div className="tdrw-iter-rounds">
       {rounds.map((r) => {
+        // 一輪要寫了 endedAt 才算審核完成;之前(stage doer/critic)是「審核中」,
+        // 不顯示佔位 verdict(否則會誤顯成 PARTIAL)。
+        const pending = !r.endedAt;
         const n = normalizeVerdict(r.criticVerdict);
-        const cls =
-          n === "PASS"
-            ? "is-pass"
-            : n === "FAIL"
-            ? "is-fail"
-            : "is-partial";
-        // td-012:PASS / FAIL 顯示中文化標籤(domain term Runner / commit / branch 保留英文,
-        // 但審核結果 verdict 是純語意判定,翻譯不影響領域語)
-        const verdictLabel = n === "PASS" ? "通過" : n === "FAIL" ? "失敗" : r.criticVerdict;
+        const cls = pending
+          ? "is-pending"
+          : n === "PASS"
+          ? "is-pass"
+          : n === "FAIL"
+          ? "is-fail"
+          : "is-partial";
+        // td-012:PASS / FAIL 顯示中文化標籤(verdict 是純語意判定,翻譯不影響領域語)
+        const verdictLabel = pending
+          ? "審核中"
+          : n === "PASS"
+          ? "通過"
+          : n === "FAIL"
+          ? "失敗"
+          : r.criticVerdict;
         const dur =
           r.endedAt && r.startedAt
             ? fmtElapsed(Math.round((r.endedAt - r.startedAt) / 1000))
@@ -25,8 +34,8 @@ export function IterRounds({ rounds }: { rounds: IterRound[] }) {
               <span className="mono tdrw-iter-round-n">#{r.n}</span>
               <span
                 className={"tdrw-iter-verdict " + cls}
-                title={r.criticVerdict}
-                aria-label={`審核結果 ${verdictLabel}(原值 ${r.criticVerdict})`}
+                title={pending ? "審核中" : r.criticVerdict}
+                aria-label={pending ? "審核結果尚未產生(審核中)" : `審核結果 ${verdictLabel}(原值 ${r.criticVerdict})`}
               >
                 {verdictLabel}
               </span>
@@ -46,7 +55,7 @@ export function IterRounds({ rounds }: { rounds: IterRound[] }) {
                 <div className="tdrw-text">{r.criticFeedback}</div>
               ) : (
                 <div className="tdrw-text tdrw-feedback-empty">
-                  {n === "PASS" ? "（通過，無補充意見）" : "（無 feedback）"}
+                  {pending ? "（審核中…）" : n === "PASS" ? "（通過，無補充意見）" : "（無 feedback）"}
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@
 
 .diff-modal-content {
   overflow-y: auto;
-  padding: var(--space-2) 0;
+  padding: 0 0 var(--space-2);
   min-width: 0;
 }
 .diff-modal-file-block {

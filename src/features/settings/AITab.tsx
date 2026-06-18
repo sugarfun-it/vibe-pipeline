@@ -109,7 +109,7 @@ export function AITab({
       {userCfg ? (
         <>
           <div className="task-group task-group--primary">
-            <div className="settings-section-title">全域 provider / model 設定</div>
+            <div className="settings-section-title">規劃階段 Agent</div>
             <div className="settings-popover-task-grid">
               {primaryTasks.map((tc) => (
                 <TaskModelRow

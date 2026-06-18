@@ -185,7 +185,6 @@ async function runIter(ctx: Ctx, initialTicket: Ticket): Promise<{ stdout: strin
           ...rounds[current],
           n: roundN,
           startedAt,
-          criticVerdict: "PARTIAL",
         };
         return { ...t, iter: { ...iter, stage: "doer", rounds } };
       }, "iter doer start");
@@ -205,7 +204,6 @@ async function runIter(ctx: Ctx, initialTicket: Ticket): Promise<{ stdout: strin
         n: roundN,
         startedAt,
         executorSummary,
-        criticVerdict: "PARTIAL",
       };
       return { ...t, iter: { ...iter, stage: "critic", rounds } };
     }, "iter critic start");
@@ -275,7 +273,7 @@ async function runMerge(ctx: Ctx, ticket: Ticket): Promise<{ stdout: string; std
     await updateTicket(ctx, ticket.id, (t) => {
       const iter = ensureIterObj(t);
       const rounds = [...(iter.rounds ?? [])];
-      rounds[i] = { ...rounds[i], n: roundN, startedAt, criticVerdict: "PARTIAL" };
+      rounds[i] = { ...rounds[i], n: roundN, startedAt };
       return { ...t, iter: { ...iter, stage: "doer", rounds } };
     }, "merge round start");
 
