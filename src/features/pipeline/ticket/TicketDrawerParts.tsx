@@ -36,16 +36,16 @@ export function CollapsiblePrompt({
   label?: string;
 }) {
   const LONG = 400;
+  // 只有「真的長」才折疊;短內容(含 goal 這種一句)直接全顯,不長出展開鈕(沒超過一個高度不需要折)。
+  // defaultCollapsed 只決定「長內容初始是否收合」(done 時 spec 退後收),不會讓短內容也長出鈕。
   const isLong = text.length > LONG;
-  // done 狀態下短內容也預設折疊(td-006:done 時 outcome 在前,原始 spec 退到後面收合)
-  const shouldCollapse = isLong || defaultCollapsed;
-  const [expanded, setExpanded] = useState(!shouldCollapse);
-  const collapsed = shouldCollapse && !expanded;
+  const [expanded, setExpanded] = useState(!(isLong && defaultCollapsed));
+  const collapsed = isLong && !expanded;
   // TDRW-PROMPT-006:改用 inert(被裁切的 overflow 整塊讓 SR + 鍵盤都跳過),
   // 不再手動 patch tabindex。SR 改靠 .tdrw-prompt-sr-hint 提示「折疊中,可展開查看完整 N 字」。
   return (
     <div className="tdrw-prompt-collapse">
-      {shouldCollapse && collapsed && (
+      {collapsed && (
         <span className="sr-only">
           {label}目前為視覺折疊預覽,共 {text.length} 字,可按下「展開全部」查看完整內容。
         </span>
@@ -58,7 +58,7 @@ export function CollapsiblePrompt({
         <ReactMarkdown>{text}</ReactMarkdown>
         {collapsed && <div className="tdrw-prompt-fade" aria-hidden />}
       </div>
-      {shouldCollapse && (
+      {isLong && (
         <button
           type="button"
           className="tdrw-prompt-toggle"
