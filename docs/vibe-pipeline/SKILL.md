@@ -182,64 +182,6 @@ vbpl pipeline sync <id> --cancel                       # 取消同步
 
 **所有指令吃 `--json`**,給你結構化資料用 JSON.parse 後判斷;沒 `--json` 印給 human 看。
 
-## 進階:REPL 主 agent 模式(省 Agent SDK 額度)
-
-**背景**:2026-06-15 後 Anthropic 把 `claude -p`(non-interactive CLI)拆出獨立 Agent SDK 額度桶(Pro $20 / Max 5x $100 / Max 20x $200 / 月),用完按 full API rate。VP 預設的 `vbpl pipeline run` 走 backend orchestrator,backend spawn `claude -p` 跑主 agent + sub-agent → 全吃這個 Agent SDK 桶。
-
-**替代路徑**:讓**另一個 claude REPL session**(`claude --dangerously-skip-permissions`)扮演主 agent — REPL 屬 interactive,走 plan 互動池(大、補貼)。Task 派的 sub-agent 也算同 session,**整條 pipeline 走 interactive 池,不動 Agent SDK 桶**。
-
-### 何時建議走 REPL 模式
-
-- user 有 CC 在旁(像你正在跟他對話)、願意盯著看
-- 想省 Agent SDK 額度(尤其 Pro / Max 5x 桶小)
-- pipeline 不是過夜 / 遠端跑
-
-### 何時仍用 backend(`vbpl pipeline run`)
-
-- 過夜 / 長 pipeline / 無人值守
-- user 在手機 / 遠端、要 FCM push 通知
-- 需要平行多 pipeline(REPL 一次只能跑一條)
-- e2e mock 測試
-
-### 怎麼跑(只是 CC 的你,離手讓 user 操作)
-
-1. **你自己用 vbpl 建 pipeline / ticket**(`vbpl pipeline create` + `vbpl ticket add` × N),**不要按 run**
-   - `vbpl ticket add` 帶 `--project <hash>`(或在 target repo cwd 內跑),否則 fs 解析不到剛建的 pipeline → `NO_PIPELINE`
-   - 多張一次建:**逐行 jsonl + stdin loop** 比連續多個 heredoc 穩(某些 shell 包裹下多 heredoc / shell function 會噴 `unexpected EOF`)。每張 compact JSON 寫成一行存檔,再 `while IFS= read -r line; do printf '%s' "$line" | vbpl ticket add --pipeline <id> --project <hash> --mode iter --input-json -; done < file`
-2. **建 worktree + 裝依賴**(REPL 模式沒有 backend,`vbpl pipeline run` 那套「自動建 worktree + install」不會跑;不手動補,REPL 進去 cwd 不存在 / 缺 node_modules → executor 跑 tsc/build 全炸)。路徑全從 vbpl 輸出推,**不要寫死**:
-   ```bash
-   # projHash / projectPath ← vbpl project list --json
-   # pipelineId / branch / baseBranch ← vbpl pipeline show <id> --json
-   # worktree 慣例路徑 = ${VBPL_HOME:-$HOME}/.vibe-pipeline/worktrees/<projHash>/<pipelineId>
-   git -C "<projectPath>" worktree add "<worktreePath>" -b "<branch>" "<baseBranch>"
-   cd "<worktreePath>" && bun install
-   ```
-   - branch 已存在(resume / 重跑)→ 去掉末段 `-b "<branch>" "<baseBranch>"`,改 `git -C ... worktree add "<worktreePath>" "<branch>"` checkout 既有 branch
-   - **不要**用 `bun -e` import server 的 `worktree.ensure()`:它內部 `Bun.spawn('git')` 在 eval 情境會 `ENOENT`。直接 git CLI
-3. 告訴 user「pipeline 已備好,我幫你開 REPL 視窗」,然後用 Bash 跑:
-   ```bash
-   powershell -Command "Start-Process cmd -ArgumentList '/k claude --dangerously-skip-permissions' -WindowStyle Normal"
-   ```
-   (macOS / Linux 上換對應 terminal launcher;確認 user OS 後再執行)
-4. 給 user **paste-ready** 指令(全用前面推出的絕對路徑填):
-   ```
-   Read <repo>/docs/vibe-pipeline/repl-runner.md
-   PIPELINE_JSON: <projectPath>/.vibe-pipeline/pipelines/<pipelineId>.json
-   WORKTREE: <worktreePath>
-   開始
-   ```
-5. user 貼進新 cmd 視窗 Enter → REPL 自己 Read 兩個檔(`repl-runner.md` 框架 + 同 repo 的 `server/lib/runner/runnerPrompt.ts` 主 agent 行為)→ Task 派 sub-agent 跑完
-6. 跑完 user 回來告訴你結果,你決定下一步(看 diff / commit / merge / 啟新 pipeline)
-
-`docs/vibe-pipeline/repl-runner.md` 是 paste-ready 指令的標準範本;它只認你在「執行參數」段填的兩個絕對路徑(PIPELINE_JSON / WORKTREE),內部**不寫死任何機器路徑**(runnerPrompt.ts 由本檔自己的絕對路徑往上推同 repo 取得)。
-
-### 注意事項
-
-- REPL 那個 session 跟你**完全隔離**,不知道你跟 user 聊過什麼。Prompt 內所有它需要的 path 都要寫絕對路徑
-- pipeline.json 仍是 source of truth,REPL 寫,web UI 跟你照樣讀得到 state
-- **backend 的 `running` Map 不會有這條** → web UI 不會顯示「running indicator」、watchdog 不救;但 disk 真實狀態 OK
-- Pause = 直接 Ctrl+C 那個 REPL,不是 API
-- 長 pipeline 撐不撐得住看 REPL context window(超過 200k token 會出問題)
 
 ## 標準操作流(常見 user 意圖)
 
@@ -249,8 +191,7 @@ vbpl pipeline sync <id> --cancel                       # 取消同步
    - 用 `vbpl ticket add` 或建議 user 開 web UI 走 QA 對話讓 AI 收斂規格(複雜需求建議走 QA,簡單一張可用 CLI)
 
 2. **「跑這條 pipeline」**
-   - **首選**:走 backend — `vbpl pipeline run <id>`(會自動啟 local backend;失敗時請 user 跑 `vbpl server logs`)
-   - **替代(省 Agent SDK 額度)**:走 REPL 主 agent 模式 — 見上方「進階」段,適合 dogfood / CC 配 VP / 不過夜
+   - 走 backend: `vbpl pipeline run <id>`(會自動啟 local backend;失敗時請 user 跑 `vbpl server logs`)
    - 啟動後**不等完成**,告訴 user「已啟動,看 `vbpl pipeline status <id>` 或 web UI」
    - 不要 polling status 一直問;user 真要進度自己會問
 

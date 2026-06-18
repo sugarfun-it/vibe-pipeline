@@ -128,8 +128,7 @@ vibe-pipeline/
 │   │   └── enduser-install-update-design.md   tarball install + update 設計(v3,obsolete;檔頂有 banner 指向 backend SKILL §Self-update)
 │   └── vibe-pipeline/         enduser AI bundle(distributable)
 │       ├── SKILL.md
-│       ├── install.md
-│       └── repl-runner.md
+│       └── install.md
 │
 ├── .claude/
 │   ├── skills/                repo 內 maintainer SKILL
