@@ -7,18 +7,15 @@
 //    塞進 user prompt」,supportsSessionResume=false。caller 不需改,適 adapter 在 spawn 內處理。
 //    註:這是 functional 降級,QA history 會佔 token,但 codex 是 alt provider,trade-off 可接受。
 //
-// 2. Task tool dispatch:codex 沒對應的 sub-agent 工具,supportsTaskDispatch=false。runner kind 跑起來時
-//    主 agent 就是執行 agent(沒有「派 sub-agent 改 code」的層次),system prompt 內預先把「執行 / 審核」流程
-//    壓平成主 agent 自駕(Bash + 內建檔案編輯)。runnerPrompt 寫法現階段是 claude-flavored;codex 跑 runner 時
-//    capability 標 false 提醒上層「行為不等價」,真正要切 codex runner 需後續另寫 prompt 適配層
-//    (本 ticket 不做,標 TODO)。
+// 2. Runner orchestration is backend TypeScript. Codex is spawned only as a direct
+//    top-level sub-agent with role-specific sandbox.
 //
 // 3. stream JSON:codex 有 `exec --json` 輸出 JSONL,可解析。但 vibe-pipeline 既有 caller 是 buffer 全量再
 //    JSON.parse,本 adapter 用 `-o <tmpfile>` 把最終 assistant message 寫檔,再讀回。supportsStreamJson=false
 //    意指「不對外暴露 stream 介面」。
 //
 // 4. tool whitelist:claude 有 --disallowedTools / --allowedTools,codex 沒等價。codex 用 sandbox mode
-//    + approval policy 控制;QA / split 用 read-only sandbox,runner 用 workspace-write。
+//    控制;QA / split / critic 用 read-only sandbox,executor / merge 用 workspace-write。
 //    supportsToolWhitelist=false。
 //
 // Perf flag 對應(對齊 refs/archive/claude-cli-spawn-perf-2026-05-11.md):
@@ -31,10 +28,10 @@ import { runCapture, spawnStreaming } from "../io/childSpawn";
 import type {
   CliAdapter,
   QASpawnOpts,
-  RunnerSpawnOpts,
   SplitSpawnOpts,
   SpawnOpts,
   SpawnedProcess,
+  SubAgentSpawnOpts,
 } from "./adapter";
 
 // codex output last-message file 在 adapter 內管理。spawn 回去後 caller 仍只看 stdout,
@@ -62,12 +59,12 @@ export class CodexAdapter implements CliAdapter {
 
   spawn(opts: SpawnOpts): SpawnedProcess {
     if (opts.kind === "qa") return spawnQA(opts);
-    if (opts.kind === "runner") return spawnRunner(opts);
     if (opts.kind === "split") return spawnSplit(opts);
+    if (opts.kind === "subagent") return spawnSubAgent(opts);
     throw new Error(`CodexAdapter: unknown spawn kind ${(opts as { kind?: string }).kind}`);
   }
 
-  parseResult(_kind: "qa" | "split" | "runner", stdout: string): string {
+  parseResult(_kind: "qa" | "split" | "subagent", stdout: string): string {
     // codex 0.125.0 exec --json JSONL 形狀:
     //   {"type":"item.completed","item":{"type":"agent_message","text":"..."}}
     // 掃所有行,取最後一個 agent_message.text。
@@ -237,24 +234,17 @@ function spawnQA(opts: QASpawnOpts): SpawnedProcess {
   return spawnCodexWithStdinPrompt(args, cwd, prompt);
 }
 
-function spawnRunner(opts: RunnerSpawnOpts): SpawnedProcess {
-  const { cwd, initialMessage, systemPrompt, model, effort } = opts;
-  // runner 要改 source code:workspace-write sandbox + bypass approvals。
-  // 不加 --ephemeral:跟 QA / split 不對稱是刻意 — runner 長任務跨 round / 多次 spawn,
-  // 寫 rollout history 對後續除錯 / resume / 觀測有用。
-  const prompt = modelHint(model, effort) + wrapPrompt(systemPrompt, initialMessage);
+function spawnSubAgent(opts: SubAgentSpawnOpts): SpawnedProcess {
+  const { cwd, prompt: userPrompt, systemPrompt, model, effort, role } = opts;
+  const prompt = modelHint(model, effort) + wrapPrompt(systemPrompt, userPrompt);
+  const sandbox = role === "critic" ? "read-only" : "workspace-write";
   const args = [
     ...commonExecArgs(model, effort),
-    // 開 multi_agent feature flag,讓主 runner 在 codex 內可呼叫 spawn_agent / wait_agent / close_agent
-    // in-process sub-agent 原語(取代 Bash 直呼 codex exec subprocess)。對齊 runnerPrompt
-    // dispatchInstructions 的 codex 分支。
-    "-c",
-    "features.multi_agent=true",
     "-C",
     cwd,
     "-s",
-    "workspace-write",
-    "--dangerously-bypass-approvals-and-sandbox",
+    sandbox,
+    ...(role === "critic" ? ["--ephemeral"] : []),
     "-",
   ];
   return spawnCodexWithStdinPrompt(args, cwd, prompt);
@@ -274,4 +264,3 @@ function spawnSplit(opts: SplitSpawnOpts): SpawnedProcess {
   ];
   return spawnCodexWithStdinPrompt(args, cwd, prompt);
 }
-

@@ -26,7 +26,6 @@ async function resetUserConfig() {
       defaults: {
         qa: { provider: "claude", model: "claude-sonnet-4-6", effort: "low" },
         split: { provider: "claude", model: "claude-sonnet-4-6", effort: "low" },
-        runner: { provider: "claude", model: "claude-opus-4-7", effort: "medium" },
         executor: { provider: "claude", model: "claude-opus-4-7", effort: "high" },
         critic: { provider: "claude", model: "claude-sonnet-4-6", effort: "medium" },
         merge: { provider: "claude", model: "claude-opus-4-7", effort: "high" },
@@ -132,7 +131,7 @@ test("AI 任務 tab：改 qa.model autosave → reload 持久 + GET /user/config
 
   // 第一行是 QA Spec(對應 task class "qa"),預設 claude / sonnet-4-6 / low
   // 三個 select 順序:provider / model / effort
-  // AITab 渲染兩個 task-grid(primary = qa/split/runner,secondary = executor/critic/merge),
+  // AITab 渲染兩個 task-grid(primary = qa/split,secondary = executor/critic/merge),
   // strict mode 會撞 → 用 .first() 限定 primary grid。
   const taskGrid = popover.locator(".settings-popover-task-grid").first();
   await expect(taskGrid).toBeVisible();

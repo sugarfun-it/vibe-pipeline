@@ -9,7 +9,6 @@ import {
   type TaskClass,
   type UserConfig,
 } from "../../../shared/types";
-import { ArrowUpIcon } from "../../ui/icons";
 import { useModelCatalog } from "./useModelCatalog";
 import "./SettingsPopover.css";
 
@@ -103,8 +102,8 @@ export function AITab({
   onTaskChange: (tc: TaskClass, patch: TaskModelPatch) => void;
 }) {
   const catalog = useModelCatalog();
-  const primaryTasks = TASK_CLASSES.slice(0, 3);
-  const secondaryTasks = TASK_CLASSES.slice(3);
+  const primaryTasks: TaskClass[] = ["qa", "split"];
+  const secondaryTasks: TaskClass[] = TASK_CLASSES.filter((tc) => !primaryTasks.includes(tc));
   return (
     <div className="settings-tab-content">
       {userCfg ? (
@@ -130,9 +129,6 @@ export function AITab({
           </div>
           <div className="task-group task-group--secondary">
             <div className="settings-section-title">執行階段 Agent</div>
-            <div className="task-group-hint">
-              <ArrowUpIcon aria-hidden /> 為了加快速度和節省 Token，預設跟隨上方 Main Agent 設定。
-            </div>
             <div className="settings-popover-task-grid">
               {secondaryTasks.map((tc) => (
                 <TaskModelRow
@@ -142,6 +138,7 @@ export function AITab({
                   provider={userCfg.defaults[tc].provider}
                   model={userCfg.defaults[tc].model}
                   effort={userCfg.defaults[tc].effort}
+                  showProvider
                   models={catalog.models}
                   efforts={catalog.efforts}
                   onChange={(patch) => onTaskChange(tc, patch)}

@@ -1,5 +1,5 @@
 // CliAdapter:統一 claude / 將來 codex 等不同 AI CLI 的 spawn 介面。
-// 4 處原本散落的 spawn(QA / runner / split / merge dispatch)走這層介面,
+// QA / split / runner sub-agent 走這層介面,
 // adapter 內負責對應 CLI 的 args / parseReply 行為差異。
 //
 // 重要:每個 adapter 內 spawn 行為必須與既有實作 bit-exact 等價(包含 args 順序、
@@ -9,7 +9,8 @@ import type { TicketSpec } from "../../../shared/types";
 import type { QAReply } from "../../../shared/types";
 
 // 跟 shared/types 同步 — adapter.ts 維持自己一份(server/lib/cli 不依賴 shared)
-export type TaskClass = "qa" | "runner" | "split" | "executor" | "critic" | "merge";
+export type TaskClass = "qa" | "split" | "executor" | "critic" | "merge";
+export type SubAgentRole = "executor" | "critic" | "merge";
 
 // QA spawn opts:多輪對話、--resume / --session-id 視 isFirstTurn 切。
 export type QASpawnOpts = {
@@ -28,22 +29,6 @@ export type QASpawnOpts = {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 };
 
-// Runner spawn opts:主 agent,長跑,系統 prompt 自定流程。
-export type RunnerSpawnOpts = {
-  kind: "runner";
-  cwd: string;
-  sessionId: string;
-  initialMessage: string;
-  systemPrompt: string;
-  model: string;
-  effort: string;
-  // 跨 provider sub-agent(claude main → codex sub via codex-rescue plugin)需要
-  // 放寬 Bash 權限 — 否則 Task sub-agent 想跑 `node .../codex-companion.mjs` 被
-  // permission_denials 擋,主 agent 拿不到結果還會幻覺成功訊息(實測)。
-  // 由 orchestrator 偵測 subAgent.provider===codex || merge.provider===codex 時 true。
-  needsBypassPermissions?: boolean;
-};
-
 // Split spawn opts:one-shot,structured array output。
 export type SplitSpawnOpts = {
   kind: "split";
@@ -54,7 +39,19 @@ export type SplitSpawnOpts = {
   effort: string;
 };
 
-export type SpawnOpts = QASpawnOpts | RunnerSpawnOpts | SplitSpawnOpts;
+// Direct runner sub-agent. Backend TS is the conductor; this is the only AI worker
+// process for executor / critic / merge roles.
+export type SubAgentSpawnOpts = {
+  kind: "subagent";
+  role: SubAgentRole;
+  cwd: string;
+  prompt: string;
+  systemPrompt: string;
+  model: string;
+  effort: string;
+};
+
+export type SpawnOpts = QASpawnOpts | SplitSpawnOpts | SubAgentSpawnOpts;
 
 // adapter spawn 結果:stdout/stderr 一律 pipe(ReadableStream),caller 直接 new Response(proc.stdout).text()
 export type SpawnedProcess = Bun.PipedSubprocess;
@@ -74,5 +71,5 @@ export interface CliAdapter {
   // 從 stdout 萃取「LLM 最終訊息文字」(callers 再丟給 parseReply / parseSplitArray)。
   // claude:JSON.parse(stdout).result;codex:JSONL 掃 agent_message,或 fallback last line。
   // 拋例外 = 解析失敗,caller 走 parse_failed code。
-  parseResult(kind: "qa" | "split" | "runner", stdout: string): string;
+  parseResult(kind: "qa" | "split" | "subagent", stdout: string): string;
 }

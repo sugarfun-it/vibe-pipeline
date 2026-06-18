@@ -62,3 +62,6 @@ update-flow.*
 scripts/shim/target/
 scripts/shim/Cargo.lock
 
+
+# CC preview tooling (machine-local)
+.claude/launch.json

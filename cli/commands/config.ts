@@ -19,13 +19,12 @@ OPTIONS
 KEY FORMAT
   <taskClass>.<field>
 
-  taskClass = qa|split|runner|executor|critic|merge
+  taskClass = qa|split|executor|critic|merge
   field     = provider|model|effort
 
   taskClass 解釋:
     qa        QA drawer 對話收斂 spec 的 AI
     split     AI 拆 ticket 用的 AI
-    runner    pipeline 主 orchestrator(高 reasoning,長 plan)
     executor  寫 code 的 sub-agent(可貴 model)
     critic    驗收的 sub-agent(便宜 model 即可)
     merge     git 衝突 AI 解
@@ -36,8 +35,8 @@ KEY FORMAT
 
 EXAMPLES
   vbpl config list                                  # 全部 + 預設值
-  vbpl config get runner.model                      # 看單 key
-  vbpl config set runner.model claude-opus-4-7      # 改 runner model
+  vbpl config get executor.model                    # 看單 key
+  vbpl config set executor.model claude-opus-4-7    # 改 executor model
   vbpl config set critic.model claude-haiku-4-5     # 省 token:critic 走便宜 model
   vbpl config set executor.provider codex           # executor 換 codex
   vbpl config set executor.effort high              # codex 用 high reasoning

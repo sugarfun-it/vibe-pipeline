@@ -11,8 +11,8 @@ export type { CliAdapter, TaskClass } from "./adapter";
 export type {
   SpawnOpts,
   QASpawnOpts,
-  RunnerSpawnOpts,
   SplitSpawnOpts,
+  SubAgentSpawnOpts,
   SpawnedProcess,
 } from "./adapter";
 export { ClaudeAdapter } from "./claudeAdapter";

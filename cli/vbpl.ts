@@ -34,7 +34,7 @@ Examples:
   vbpl pipeline list --json
   vbpl pipeline run <pipelineId>
   vbpl ticket add --pipeline <id> --title "Fix bug" --goal "..." --prompt "..." --acceptance "a;b" --mode step
-  vbpl config set runner.model claude-opus-4-7
+  vbpl config set executor.model claude-opus-4-7
 `;
 
 async function main(): Promise<void> {

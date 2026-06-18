@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { readPipeline } from "../../domain/pipeline";
@@ -48,24 +47,17 @@ export async function confirmAi(opts: {
 
   // 用 merge task class 的 model/effort(衝突解算 merge 性質)
   const mergeCfg = await getTaskConfigWithAdapter("merge");
-  // 主 agent 永遠帶 bypass(對齊 orchestrator/spawn.ts:196 + 雷區 #10):跨 provider
-  // sub-agent 內部 Bash 在 auto 模式會被 permission_denials 擋(主 agent 還會幻覺成功),
-  // 所以不論 provider 一律 bypass。安全邊界:衝突解仍由 sub-agent 在 worktree 內改 code,
-  // 主 agent 只 Bash 派發 + 環境工具,risk 跟既有「sub-agent 改 code」同等級。
-  const needsBypassPermissions = true;
-
   let proc: Bun.Subprocess;
   try {
     proc = mergeCfg.adapter.spawn({
-      kind: "runner",
+      kind: "subagent",
+      role: "merge",
       cwd: wtPath,
-      sessionId: randomUUID(),
-      initialMessage: prompt,
+      prompt,
       systemPrompt:
         "你是專門解 git merge 衝突的 AI 助手。在被指定的 worktree 內以 Edit + Bash 完成衝突解決與 merge commit。不可動 main repo。",
       model: mergeCfg.model,
       effort: mergeCfg.effort,
-      needsBypassPermissions,
     });
   } catch (e) {
     const reason = `spawn ${mergeCfg.adapter.name} failed: ${String(e)}`;
