@@ -16,11 +16,23 @@ export async function pipelineRun(args: ParsedArgs): Promise<void> {
   if (!id) fail("INVALID_ARGS", "Usage: vbpl pipeline run <id> [--wait] [--timeout <sec>] [--poll <sec>]");
   await ensureBackend();
 
+  const wait = bool(args.flags["wait"]);
+
+  // --wait 對「已在進行中」的 pipeline:不重觸發 run(會被 backend state guard 擋成
+  // 「已在 running」直接 fail),改成直接等它到終態 =「這條已在跑,我就等它」。
+  if (wait) {
+    const existing = (await pipelineStore.readPipeline(proj.path, id)) as Pipeline | null;
+    if (existing && PROGRESSING.has(existing.state)) {
+      if (!isJsonMode()) print(`Pipeline already ${existing.state}, waiting for terminal: ${id}`);
+      await waitForTerminal(proj.path, id, args.flags);
+      return;
+    }
+  }
+
   const result = await post<{ ok: true; queued?: boolean; position?: number | null }>(
     `/api/projects/${proj.hash}/pipelines/${id}/run`
   );
 
-  const wait = bool(args.flags["wait"]);
   if (!wait) {
     if (isJsonMode()) {
       okJson({ started: true, pipelineId: id, queued: result.queued ?? false, position: result.position ?? null });
