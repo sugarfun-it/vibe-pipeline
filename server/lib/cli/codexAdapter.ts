@@ -237,13 +237,20 @@ function spawnQA(opts: QASpawnOpts): SpawnedProcess {
 function spawnSubAgent(opts: SubAgentSpawnOpts): SpawnedProcess {
   const { cwd, prompt: userPrompt, systemPrompt, model, effort, role } = opts;
   const prompt = modelHint(model, effort) + wrapPrompt(systemPrompt, userPrompt);
-  const sandbox = role === "critic" ? "read-only" : "workspace-write";
+  // Windows 雷:codex 的 workspace-write / read-only sandbox 在 Windows 會擋掉 pwsh 指令
+  // (rejected: blocked by policy)、HOME(C:\Users\...)與 C:\tmp(corepack 寫 pnpm.js 處),
+  // → gate(pnpm build)/ 檢視指令(Get-ChildItem、git ls-files)全跑不起來,critic 永遠不過。
+  // 對齊重構前行為:Windows 走 --dangerously-bypass-approvals-and-sandbox(全權限);
+  // POSIX 的 seatbelt/landlock sandbox 正常,保留 role-specific -s。
+  const sandboxArgs =
+    process.platform === "win32"
+      ? ["--dangerously-bypass-approvals-and-sandbox"]
+      : ["-s", role === "critic" ? "read-only" : "workspace-write"];
   const args = [
     ...commonExecArgs(model, effort),
     "-C",
     cwd,
-    "-s",
-    sandbox,
+    ...sandboxArgs,
     ...(role === "critic" ? ["--ephemeral"] : []),
     "-",
   ];
