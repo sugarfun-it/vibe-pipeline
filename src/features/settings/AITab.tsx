@@ -129,9 +129,6 @@ export function AITab({
           </div>
           <div className="task-group task-group--secondary">
             <div className="settings-section-title">執行階段 Agent</div>
-            <div className="task-group-hint">
-              各角色可分別設定 provider、model 與 effort。
-            </div>
             <div className="settings-popover-task-grid">
               {secondaryTasks.map((tc) => (
                 <TaskModelRow
@@ -141,6 +138,7 @@ export function AITab({
                   provider={userCfg.defaults[tc].provider}
                   model={userCfg.defaults[tc].model}
                   effort={userCfg.defaults[tc].effort}
+                  showProvider
                   models={catalog.models}
                   efforts={catalog.efforts}
                   onChange={(patch) => onTaskChange(tc, patch)}

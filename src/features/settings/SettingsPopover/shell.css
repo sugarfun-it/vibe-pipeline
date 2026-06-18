@@ -33,6 +33,7 @@ html.light .settings-popover {
 
 /* ─── Header row(segmented tabs + saved chip + close 同一排)─────── */
 .settings-popover-header {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -95,15 +96,32 @@ html.light .settings-popover-tab.is-active {
   border-radius: 6px;
 }
 
-/* 已儲存 chip:header row 內 inline,X 左側;不縮、不換行 */
-.settings-popover-saved {
-  flex-shrink: 0;
+/* 已儲存:懸浮 toast,不佔 header layout(出現/消失不 reflow tabs);
+   錨在 header 下緣右側,floating 風格(elevated + 陰影)有別於 tab pill 配色。
+   pointer-events:none → 不擋到下方/關閉鈕。 */
+.settings-popover-header .settings-popover-saved {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 3;
+  pointer-events: none;
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
   white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--done);
-  background: color-mix(in srgb, var(--done) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--done) 30%, var(--line));
+  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--done) 26%, var(--line));
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
   transition: opacity 350ms ease;
+}
+html.light .settings-popover-saved {
+  box-shadow: 0 4px 12px rgba(28, 25, 22, 0.1);
 }
 .settings-popover-saved.is-fading { opacity: 0; }
 
