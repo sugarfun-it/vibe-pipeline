@@ -59,14 +59,46 @@
     </div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // 10 秒 React 還沒 mount(main.tsx 載失敗 / network 卡 / SW stale)→ 顯重試按鈕
+      // 自救:unregister SW + 清所有快取 + reload。
+      // stale SW serve 到指向「已不存在資產(JS 404)」的舊 shell 時,plain reload 沒用
+      // (SW 還在攔截),必須清掉 SW + 快取才會從 server 抓新版。
+      window.__vpRecover = function () {
+        var reload = function () { location.reload(); };
+        try {
+          var jobs = [];
+          if (navigator.serviceWorker) {
+            jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+              return Promise.all(rs.map(function (r) { return r.unregister(); }));
+            }).catch(function () {}));
+          }
+          if (window.caches && caches.keys) {
+            jobs.push(caches.keys().then(function (ks) {
+              return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+            }).catch(function () {}));
+          }
+          Promise.all(jobs).then(reload, reload);
+        } catch (e) { reload(); }
+      };
+      // 10 秒 React 還沒 mount(main.tsx 載失敗 / network 卡 / SW stale)。
       setTimeout(function () {
         var el = document.getElementById('vp-mount-loader');
         if (!el) return; // React 已 mount,placeholder 不存在
+        var KEY = 'vp-sw-recovered';
+        var hasSW = ('serviceWorker' in navigator) && !!navigator.serviceWorker.controller;
+        var recovered = false;
+        try { recovered = !!sessionStorage.getItem(KEY); } catch (e) {}
+        // 有 SW 在控(stale-shell 嫌疑)且本 session 沒救過 → 自動清快取 + reload,一次為限防 loop。
+        if (hasSW && !recovered) {
+          try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+          el.textContent = '更新中…';
+          window.__vpRecover();
+          return;
+        }
+        // 沒 SW(純 server / network 問題)或自救後仍失敗 → 給手動「清快取重試」鈕。
         el.innerHTML =
           '<div style="display:flex;flex-direction:column;align-items:center;gap:10px">' +
           '<div>vibe-pipeline 載入失敗</div>' +
-          '<button type="button" onclick="location.reload()" style="padding:6px 14px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px">重新整理</button>' +
+          '<button type="button" onclick="__vpRecover()" style="padding:6px 14px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px">清除快取並重試</button>' +
           '</div>';
         el.style.animation = 'none';
         el.style.opacity = '0.85';

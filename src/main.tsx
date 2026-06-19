@@ -14,3 +14,11 @@ if (import.meta.env.PROD) {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// main.tsx 有執行到 = bundle 載成功 = 沒踩 stale-shell。清掉 index.html 自救旗標,
+// 讓下次更新若再撞 stale SW 還能自動自救一次(防 loop 的 sessionStorage flag reset)。
+try {
+  sessionStorage.removeItem("vp-sw-recovered");
+} catch {
+  /* private mode / 不支援 → 無妨 */
+}
