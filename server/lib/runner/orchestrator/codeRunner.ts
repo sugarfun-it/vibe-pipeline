@@ -371,7 +371,11 @@ async function runAgent(
   const exitCode = proc.exitCode ?? exited;
   if (exitCode !== 0 || /\b(turn\.failed|thread\.failed)\b/.test(stdout)) {
     if (!(await isPipelineRunning(ctx))) throw new OrchestratorStopped();
-    throw new TransientAgentError(role + " exited non-zero or provider failed; code=" + String(exitCode));
+    const providerErr = extractProviderError(stdout);
+    const reason = providerErr
+      ? role + " " + providerErr
+      : role + " exited non-zero or provider failed; code=" + String(exitCode);
+    throw new TransientAgentError(reason);
   }
   let text = "";
   try {
@@ -381,6 +385,57 @@ async function runAgent(
     throw new TransientAgentError(role + " result parse failed: " + String(e));
   }
   return { text, stdout, stderr, exitCode };
+}
+
+// 從 sub-agent stdout 解出真正的 provider 錯誤,讓 UI reason 一眼看懂(否則只有 generic「exited non-zero」)。
+// claude:--output-format json 的 result object 帶 is_error + api_error_status + result 文字。
+// codex:JSONL,error / turn.failed / thread.failed 事件帶 message。best-effort,解不出回 null 走 generic。
+function extractProviderError(stdout: string): string | null {
+  const trimmed = stdout.trim();
+  if (!trimmed) return null;
+  // claude:整段是一個 result JSON
+  try {
+    const obj = JSON.parse(trimmed) as {
+      is_error?: boolean;
+      api_error_status?: number;
+      result?: string;
+    };
+    if (obj && obj.is_error) {
+      const status = obj.api_error_status;
+      const msg = typeof obj.result === "string" ? obj.result.slice(0, 160) : "";
+      if (status === 401 || /\b401\b|invalid authentication|authenticate/i.test(msg)) {
+        return "認證失敗 (401) — 請重新登入 CLI(claude / codex login)後按繼續";
+      }
+      if (status) return "provider API " + status + (msg ? ": " + msg : "");
+      if (msg) return "provider error: " + msg;
+    }
+  } catch {
+    // 非單一 JSON,往下試 codex JSONL
+  }
+  // codex:逐行掃 error / *.failed 事件
+  for (const line of trimmed.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t[0] !== "{") continue;
+    try {
+      const ev = JSON.parse(t) as {
+        type?: string;
+        error?: { message?: string };
+        message?: string;
+        msg?: { message?: string };
+      };
+      const type = ev.type ?? "";
+      if (/error|failed/i.test(type)) {
+        const m = ev.error?.message ?? ev.message ?? ev.msg?.message ?? "";
+        if (/401|invalid authentication|unauthorized|authenticate/i.test(m + type)) {
+          return "認證失敗 (401) — 請重新登入 CLI(claude / codex login)後按繼續";
+        }
+        if (m) return "provider error: " + m.slice(0, 160);
+      }
+    } catch {
+      // 忽略非 JSON 行
+    }
+  }
+  return null;
 }
 
 async function isPipelineRunning(ctx: Ctx): Promise<boolean> {
