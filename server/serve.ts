@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { mkdirSync, readFileSync } from "node:fs";
 import { vibeHome } from "./lib/io/paths";
 import { atomicWriteJson } from "./lib/io/atomicWrite";
+import { killOrphanWorktreePreviews } from "./lib/system/portRecovery";
 import { handle, logAccess, withCors } from "./router";
 
 const DESIRED_PORT = Number(process.env.PORT ?? 3001);
@@ -52,19 +53,38 @@ const serveOpts: Parameters<typeof Bun.serve>[0] = {
   },
 };
 
-// Export server 給 routes/system.ts:update handler 用,做 graceful shutdown
-// 避免 process.exit 留 zombie socket(Windows port 3001 卡 TIME_WAIT,新 backend 起不來)
-export const server = ((): ReturnType<typeof Bun.serve> => {
+function isAddrInUse(e: unknown): boolean {
+  return (e as { code?: string })?.code === "EADDRINUSE";
+}
+
+// EADDRINUSE 自癒:DESIRED_PORT 通常是被「上一個 backend 的 sub-agent spawn 出來、繼承了 listening
+// socket handle 又沒死」的 worktree preview server 卡住(Windows handle 繼承,JS 擋不掉)。先殺那些
+// 孤兒再重試綁回 DESIRED_PORT;真的清不掉才退而求其次用 OS 派的閒置 port。
+function bindWithReclaim(): ReturnType<typeof Bun.serve> {
   try {
     return Bun.serve(serveOpts);
   } catch (e) {
-    if ((e as { code?: string })?.code === "EADDRINUSE") {
-      console.warn(`[server] port ${DESIRED_PORT} 被占用(orphan socket?),改用 OS 派閒置 port`);
-      return Bun.serve({ ...serveOpts, port: 0 });
+    if (!isAddrInUse(e)) throw e;
+    const killed = killOrphanWorktreePreviews();
+    console.warn(
+      `[server] port ${DESIRED_PORT} 被占用,清掉 ${killed} 個 worktree 孤兒 preview server,重試綁回...`
+    );
+    for (let i = 0; i < 6; i++) {
+      Bun.sleepSync(500);
+      try {
+        return Bun.serve(serveOpts);
+      } catch (e2) {
+        if (!isAddrInUse(e2)) throw e2;
+      }
     }
-    throw e;
+    console.warn(`[server] port ${DESIRED_PORT} 仍被占用,改用 OS 派閒置 port`);
+    return Bun.serve({ ...serveOpts, port: 0 } as Parameters<typeof Bun.serve>[0]);
   }
-})();
+}
+
+// Export server 給 routes/system.ts:update handler 用,做 graceful shutdown
+// 避免 process.exit 留 zombie socket(Windows port 3001 卡 TIME_WAIT,新 backend 起不來)
+export const server = bindWithReclaim();
 
 // 公告實際 port — CLI / vbpl 之後的指令從 server.json 讀 port,PWA 用 relative URL 不在乎。
 // merge 既有 server.json(CLI 在 spawn 後寫 repo_path / log_path / 初始 pid;backend 覆蓋 pid + port)。

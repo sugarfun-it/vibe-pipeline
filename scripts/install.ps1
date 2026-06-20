@@ -140,6 +140,22 @@ if ($ExistingShim) {
   Start-Sleep -Milliseconds 500
 }
 
+# 4.6) Reap orphan worktree preview servers. The old backend spawned sub-agents that
+#      spawn vite/proto dev servers under .vibe-pipeline\worktrees\; on Windows those
+#      inherit the backend's listening socket handle and can outlive it, pinning port
+#      3001 as a zombie so the new backend cannot bind it. Kill any node/bun whose
+#      command line is under a .vibe-pipeline\worktrees path (never touches the target
+#      repo's own dev servers, which live outside worktrees).
+try {
+  $orphans = Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='bun.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match '\.vibe-pipeline[\\/]+worktrees' }
+  $killed = 0
+  foreach ($o in $orphans) {
+    try { Stop-Process -Id $o.ProcessId -Force -ErrorAction Stop; $killed++ } catch {}
+  }
+  if ($killed -gt 0) { Info "Reaped $killed orphan worktree preview server(s)" }
+} catch {}
+
 # 5) Stage extract to versions\$Tag (independent dir, never touches running backend)
 New-Item -ItemType Directory -Force -Path $VersionsDir | Out-Null
 $VersionDir = Join-Path $VersionsDir $Tag
