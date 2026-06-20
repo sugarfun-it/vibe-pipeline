@@ -57,23 +57,14 @@ $KeepVersions = 2
 function Info($m) { Write-Host $m }
 function Err($m)  { Write-Host "ERROR: $m" -ForegroundColor Red }
 
-# 0) Stop running backend (so port 3001 is free + current/ has no cwd lock for swap)
-#    Try existing shim first (.exe preferred, then .cmd); if no shim, try via cwd current/.
-#    Errors are ignored (no backend running -> nothing to stop).
+# 0) Detect existing shim now, but DO NOT stop the backend yet.
+#    The actual stop happens AFTER the new release is fetched + downloaded (see below),
+#    so a transient GitHub failure (e.g. /releases/latest 504) never kills a running
+#    backend and then aborts, leaving the user with no backend at all.
 $ExistingShim = $null
 if (Test-Path $ShimExe) { $ExistingShim = $ShimExe }
 elseif (Test-Path $ShimCmd) { $ExistingShim = $ShimCmd }
 elseif (Test-Path $OldShim) { $ExistingShim = $OldShim }
-if ($ExistingShim) {
-  Info "Stopping any running backend ..."
-  try { & $ExistingShim server stop 2>$null } catch {}
-  Start-Sleep -Milliseconds 500
-} elseif ((Get-Command bun -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $Current "cli\vbpl.ts"))) {
-  Info "Stopping any running backend (via current/) ..."
-  $env:VBPL_HOME = $Current
-  try { & bun run "$Current\cli\vbpl.ts" server stop 2>$null } catch {}
-  Start-Sleep -Milliseconds 500
-}
 
 # 1) Bun check
 if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
@@ -84,14 +75,25 @@ if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
 }
 Info "OK Bun: $(bun --version)"
 
-# 2) Latest release
+# 2) Latest release (fetched BEFORE stopping backend).
+#    GitHub intermittently 504s the /releases/latest endpoint for a specific repo
+#    while the list endpoint stays healthy. Fall back to the releases list and pick
+#    the first non-draft / non-prerelease entry (list is published-desc ordered).
 Info "Fetching latest release ..."
+$api = $null
 try {
   $api = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$Repo/releases/latest"
 } catch {
-  Err "Failed to fetch release info: $_"
-  exit 1
+  Info "  /releases/latest failed ($($_.Exception.Message)); trying releases list ..."
+  try {
+    $list = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$Repo/releases?per_page=10"
+    $api = $list | Where-Object { -not $_.draft -and -not $_.prerelease } | Select-Object -First 1
+  } catch {
+    Err "Failed to fetch release info (latest + list both failed): $_"
+    exit 1
+  }
 }
+if (-not $api) { Err "No published release found"; exit 1 }
 $Tag = $api.tag_name
 if (-not $Tag) { Err "tag_name not found in release JSON"; exit 1 }
 Info "OK Latest tag: $Tag"
@@ -121,6 +123,21 @@ try {
   Invoke-WebRequest -UseBasicParsing -Uri $assetUrl -OutFile $tarball
 } catch {
   Err "Download failed: $_"; exit 1
+}
+
+# 4.5) Stop running backend NOW - release is fetched + downloaded, so from here on
+#      every failure path can safely leave the backend down (we are committed to the
+#      swap). Stopping frees port 3001 + releases the cwd/junction lock for step 7.
+#      Errors are ignored (no backend running -> nothing to stop).
+if ($ExistingShim) {
+  Info "Stopping any running backend ..."
+  try { & $ExistingShim server stop 2>$null } catch {}
+  Start-Sleep -Milliseconds 500
+} elseif ((Get-Command bun -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $Current "cli\vbpl.ts"))) {
+  Info "Stopping any running backend (via current/) ..."
+  $env:VBPL_HOME = $Current
+  try { & bun run "$Current\cli\vbpl.ts" server stop 2>$null } catch {}
+  Start-Sleep -Milliseconds 500
 }
 
 # 5) Stage extract to versions\$Tag (independent dir, never touches running backend)
