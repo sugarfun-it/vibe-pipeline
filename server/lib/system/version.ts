@@ -93,35 +93,23 @@ export async function fetchLatestRelease(opts?: { force?: boolean }): Promise<La
   if (inflight) return inflight;
   inflight = (async () => {
     try {
-      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-        headers: {
-          Accept: "application/vnd.github+json",
-          "User-Agent": "vibe-pipeline",
-        },
-      });
-      if (!res.ok) {
-        // 404 = 確定沒 release(穩定狀態,正常 cache);其他(403 rate-limit / 5xx)= 暫時失敗,短 cache
-        releaseCache = { value: null, fetchedAt: now, transient: res.status !== 404 };
+      const primary = await fetchLatestEndpoint();
+      if (primary.kind === "ok") {
+        releaseCache = { value: primary.value, fetchedAt: now, transient: false };
+        return primary.value;
+      }
+      if (primary.kind === "absent") {
+        // 404 = 確定沒 release(穩定狀態,正常 cache)
+        releaseCache = { value: null, fetchedAt: now, transient: false };
         return null;
       }
-      const json = (await res.json()) as {
-        tag_name?: unknown;
-        html_url?: unknown;
-        published_at?: unknown;
-      };
-      const tag = typeof json.tag_name === "string" ? json.tag_name : null;
-      const url = typeof json.html_url === "string" ? json.html_url : null;
-      const publishedAt = typeof json.published_at === "string" ? json.published_at : null;
-      if (!tag || !url || !publishedAt) {
-        // 200 但欄位缺 = 異常回應,當暫時性短 cache
-        releaseCache = { value: null, fetchedAt: now, transient: true };
-        return null;
+      // primary 失敗(5xx / rate-limit / 網路 / parse)。GitHub 對 /releases/latest 偶發整個
+      // 端點 504(其他端點正常),不該讓單一端點 flaky 擋掉更新檢查 → fallback 打 list 端點。
+      const fallback = await fetchLatestFromList();
+      if (fallback) {
+        releaseCache = { value: fallback, fetchedAt: now, transient: false };
+        return fallback;
       }
-      const value: LatestRelease = { tag, url, publishedAt };
-      releaseCache = { value, fetchedAt: now, transient: false };
-      return value;
-    } catch {
-      // 網路層失敗 = 暫時性,短 cache
       releaseCache = { value: null, fetchedAt: now, transient: true };
       return null;
     } finally {
@@ -129,6 +117,64 @@ export async function fetchLatestRelease(opts?: { force?: boolean }): Promise<La
     }
   })();
   return inflight;
+}
+
+type LatestEndpointResult =
+  | { kind: "ok"; value: LatestRelease }
+  | { kind: "absent" } // 404 — 確定沒 release
+  | { kind: "fail" }; // 5xx / rate-limit / 網路 / parse — 可 fallback
+
+async function fetchLatestEndpoint(): Promise<LatestEndpointResult> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "vibe-pipeline" },
+    });
+    if (res.status === 404) return { kind: "absent" };
+    if (!res.ok) return { kind: "fail" };
+    const json = (await res.json()) as { tag_name?: unknown; html_url?: unknown; published_at?: unknown };
+    const value = toLatestRelease(json);
+    return value ? { kind: "ok", value } : { kind: "fail" };
+  } catch {
+    return { kind: "fail" };
+  }
+}
+
+// fallback:list 端點取第一個非 draft / 非 prerelease(GitHub list 預設 published 降冪)。
+async function fetchLatestFromList(): Promise<LatestRelease | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=10`, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "vibe-pipeline" },
+    });
+    if (!res.ok) return null;
+    const arr = (await res.json()) as Array<{
+      tag_name?: unknown;
+      html_url?: unknown;
+      published_at?: unknown;
+      draft?: unknown;
+      prerelease?: unknown;
+    }>;
+    if (!Array.isArray(arr)) return null;
+    for (const r of arr) {
+      if (r.draft === true || r.prerelease === true) continue;
+      const value = toLatestRelease(r);
+      if (value) return value;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function toLatestRelease(json: {
+  tag_name?: unknown;
+  html_url?: unknown;
+  published_at?: unknown;
+}): LatestRelease | null {
+  const tag = typeof json.tag_name === "string" ? json.tag_name : null;
+  const url = typeof json.html_url === "string" ? json.html_url : null;
+  const publishedAt = typeof json.published_at === "string" ? json.published_at : null;
+  if (!tag || !url || !publishedAt) return null;
+  return { tag, url, publishedAt };
 }
 
 // 對齊邏輯:current 可能是 "v0.1.0" / "0.1.0" / "abc1234" / "dev-xxx";
