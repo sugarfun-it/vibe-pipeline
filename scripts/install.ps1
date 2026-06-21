@@ -360,27 +360,14 @@ if ($AutoStart) {
   } catch {
     Err "server start failed to launch: $_"
   }
-  # `vbpl server start` (launched above) already spawns the backend fully detached
-  # (stdio -> log file + unref) and waits for /api/health on its own. So here we only
-  # do a SHORT confirm (<= ~20s, breaks as soon as healthy) and then return no matter
-  # what. Blocking on the full double cold-start (used to poll ~90s) is exactly what
-  # kept this window hanging open. If health is not up yet it is almost certainly still
-  # coming up in the background; the app's own health/version UI shows the real state.
-  $healthy = $false
-  for ($i = 0; $i -lt 40; $i++) {
-    try {
-      $null = Invoke-RestMethod -UseBasicParsing -Uri "http://localhost:3001/api/health" -TimeoutSec 1
-      $healthy = $true; break
-    } catch {
-      Start-Sleep -Milliseconds 500
-    }
-  }
-  if ($healthy) {
-    Info "OK Backend up on http://localhost:3001"
-  } else {
-    Info "Backend still starting in the background (vbpl server start keeps waiting)."
-    Info "If it never comes up, check $VpHome\server.log or run: vbpl server start"
-  }
+  # Do NOT poll for health here. `vbpl server start` (launched above) already spawns the
+  # backend fully detached (stdio -> log file + unref) and waits for /api/health itself,
+  # and it survives this script exiting (proven: backend comes up after install ends).
+  # The backend's double Bun cold start on Windows routinely exceeds 20s, so any poll
+  # here just makes this window hang for the whole cold start (and spams failed health
+  # requests). Launch and return immediately; readiness shows in the app's health/version
+  # UI. If it ever does not come up, the user can run: vbpl server start
+  Info "Backend launching in the background. This window will close."
 } else {
   Info ""
   Info "Install complete. To start backend, run:"
