@@ -18,11 +18,13 @@ export async function pipelineRun(args: ParsedArgs): Promise<void> {
 
   const wait = bool(args.flags["wait"]);
 
-  // --wait 對「已在進行中」的 pipeline:不重觸發 run(會被 backend state guard 擋成
-  // 「已在 running」直接 fail),改成直接等它到終態 =「這條已在跑,我就等它」。
+  // --wait 對「已有 runner 在跑 / 排隊中」的 pipeline:不重觸發 run(會被 backend state guard
+  // 擋成「已在 running」直接 fail),改成直接等它到終態 =「這條已在跑,我就等它」。
+  // 雷:planning 不算「已在進行」— 它是「建好但還沒啟動」,必須 fall through 去 POST /run,
+  // 否則 --wait 會卡在 planning 永遠等不到終態(runner 從沒被啟動)。踩過。
   if (wait) {
     const existing = (await pipelineStore.readPipeline(proj.path, id)) as Pipeline | null;
-    if (existing && PROGRESSING.has(existing.state)) {
+    if (existing && ALREADY_ACTIVE.has(existing.state)) {
       if (!isJsonMode()) print(`Pipeline already ${existing.state}, waiting for terminal: ${id}`);
       await waitForTerminal(proj.path, id, args.flags);
       return;
@@ -49,8 +51,13 @@ export async function pipelineRun(args: ParsedArgs): Promise<void> {
   await waitForTerminal(proj.path, id, args.flags);
 }
 
-// 進行中(continue polling);其餘視為終態回應
+// 進行中(continue polling);其餘視為終態回應。planning 含在內:POST /run 後
+// planning→running 過渡期還要繼續 poll,不能當終態。
 const PROGRESSING = new Set<string>(["planning", "running", "queued", "stopping"]);
+
+// 「已有 runner 在跑 / 排隊中」— 重觸發 run 會被 backend guard 擋,--wait 直接等終態即可。
+// 刻意不含 planning:planning 需要被 /run 啟動(否則 --wait 卡死在 planning,runner 從沒啟動)。
+const ALREADY_ACTIVE = new Set<string>(["running", "queued", "stopping"]);
 
 // 終態 → exit code 約定,讓 batch / 別的 AI 用 exit code 直接分支
 const EXIT_CODE: Record<string, number> = {
