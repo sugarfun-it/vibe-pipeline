@@ -603,7 +603,14 @@ function mechanicalCommands(acceptance: string[]): string[][] {
 
 async function commitTicket(ctx: Ctx, ticketId: string, summary: string): Promise<void> {
   const status = await runCapture(["git", "-C", ctx.worktreePath, "status", "--porcelain"]);
-  if (!status.ok || !status.out.trim()) return;
+  // git 失敗(worktree 壞 / 無 .git)與「乾淨無改動」分開:前者必須顯性失敗,不能當沒改動靜默早退
+  // → 否則壞 worktree 一路 0-commit 假成功(信條 #6:ground truth 要驗)。
+  if (!status.ok) {
+    throw new TransientAgentError(
+      "git status 失敗(worktree 壞 / 無 .git?): " + (status.err || status.out || "exit " + status.exitCode)
+    );
+  }
+  if (!status.out.trim()) return; // 真的乾淨無改動,正常早退
   const ticket = await getTicket(ctx, ticketId);
   if (!ticket) return;
   const add = await runCapture(["git", "-C", ctx.worktreePath, "add", "-A"]);

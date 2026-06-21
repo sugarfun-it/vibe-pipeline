@@ -33,7 +33,20 @@ export async function ensure(
   baseBranch: string
 ): Promise<string> {
   const wt = worktreePath(projectPath, pipelineId);
-  if (existsSync(wt)) return wt;
+  if (existsSync(wt)) {
+    // 只看 dir 在不在不夠:上次 git worktree add 半途失敗 / 主 repo 做過 git 手術 / 被 prune
+    // 掉註冊但 dir 殘留 → dir 在但不是健康 worktree(無有效 .git)。直接回收會讓 sub-agent
+    // 在非 repo 目錄裡跑、自刻 stub 取代真 repo 檔、git -C 全 fail → commitTicket 0-commit。
+    // 驗 rev-parse 確認健康;壞了就 rm -rf + prune 失效註冊,fall through 重 add。
+    const healthy = await spawnGit(["rev-parse", "--is-inside-work-tree"], wt);
+    if (healthy.ok && healthy.out.trim() === "true") return wt;
+    try {
+      rmSync(wt, { recursive: true, force: true });
+    } catch {
+      // 被 lock 擋住也續走 — git worktree add 撞既有 dir 會自己報錯,不會默默壞
+    }
+    await spawnGit(["worktree", "prune"], projectPath);
+  }
 
   mkdirSync(join(worktreeRoot(), projectHash(projectPath)), { recursive: true });
 
@@ -119,29 +132,41 @@ export async function removeQuiet(
     if (existsSync(wt)) {
       const res = await spawnGit(["worktree", "remove", "--force", wt], projectPath);
       if (!res.ok) {
-        // remove 失敗常見:dir 已被外部刪掉 / locked / metadata 壞掉 → 走 fallback
+        // remove 失敗常見:dir 已被外部刪掉 / locked / metadata 壞掉 / 孤兒(git 不認)→ 走 fallback
         // 試著手動刪 dir + prune,把 git 註冊表清掉
         try {
           if (existsSync(wt)) rmSync(wt, { recursive: true, force: true });
         } catch {
-          // ignore
+          // 可能被 Windows file lock 擋掉 — 下面複驗會抓到
         }
         const pruneRes = await spawnGit(["worktree", "prune"], projectPath);
+        // ground truth(信條 #6):prune 成功 ≠ dir 真的刪了。rmSync 被 file lock 擋掉、
+        // 或孤兒 dir(prune 根本碰不到)時,dir 仍在。複驗 existsSync,還在就回 ok:false,
+        // 別假陽性報「已清」(否則 cleanup toast 顯成功但磁碟資料夾還在)。
+        if (existsSync(wt)) {
+          return {
+            ok: false,
+            error: `worktree dir 仍存在,清不掉(file lock / 孤兒?):remove=${res.err || res.out}`,
+          };
+        }
         if (!pruneRes.ok) {
           return {
             ok: false,
             error: `worktree remove + prune 都失敗:remove=${res.err || res.out};prune=${pruneRes.err || pruneRes.out}`,
           };
         }
-        // remove 失敗但 prune 救回 — 已從 git worktree list 拿掉,視為成功
+        // remove 失敗但 dir 已清掉 + prune 救回 — 視為成功
         return { ok: true };
       }
-      // remove 成功;若 dir 仍殘留(極少數)手動清
+      // remove 成功;若 dir 仍殘留(極少數)手動清,並複驗確認真的不在
       if (existsSync(wt)) {
         try {
           rmSync(wt, { recursive: true, force: true });
         } catch {
-          // ignore
+          // ignore — 複驗會抓
+        }
+        if (existsSync(wt)) {
+          return { ok: false, error: "git worktree remove 回成功但 dir 仍殘留,清不掉(file lock?)" };
         }
       }
       return { ok: true };
