@@ -37,7 +37,7 @@ export async function listPipelines(projectPath: string): Promise<unknown[]> {
         obj.createdAt = Number.isFinite(ts) ? ts : 0;
       }
       // hasWorktree:fs 真實狀態,讓 UI 不靠 state heuristic 判斷「開啟 worktree」可不可點。
-      // 涵蓋 merged 自動 cleanup、外部手動 rm、cleanup-merged bulk sweep 等 state 跟 fs 不一致情境。
+      // 涵蓋 merged 自動 cleanup、外部手動 rm、delete-merged bulk sweep 等 state 跟 fs 不一致情境。
       if (typeof obj.id === "string") {
         obj.hasWorktree = worktreeExists(projectPath, obj.id);
       }

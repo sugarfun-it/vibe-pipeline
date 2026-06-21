@@ -40,56 +40,53 @@ export const BoardRail = memo(function BoardRail({
   const confirmDialog = useConfirm();
   const existingNames = useMemo(() => pipelines.map((p) => p.name), [pipelines]);
 
-  async function handleCleanupAllMergedWorktrees() {
+  async function handleDeleteAllMergedPipelines() {
     if (!project) return;
     const mergedPipelines = pipelines.filter((p) => p.state === "merged");
     const n = mergedPipelines.length;
     if (n === 0) {
-      notifyInfo("目前沒有已合併的 pipeline,無需清除");
+      notifyInfo("目前沒有已合併的 pipeline");
       return;
     }
     const okay = await confirmDialog({
-      title: `清除所有已合併的 worktree?`,
+      title: `刪除所有已合併的 pipeline?`,
       description:
-        `將清除目前 project 內所有 state=merged 的 pipeline worktree(共 ${n} 個):\n` +
+        `將刪除目前 project 內所有 state=merged 的 pipeline(共 ${n} 個):\n` +
         mergedPipelines.map((p) => `  · ${p.name}`).join("\n") +
-        "\n\n只清磁碟,pipeline 紀錄 / branch 不動。",
-      confirmLabel: `清除 ${n} 個`,
+        "\n\n連 worktree + branch + 紀錄一起刪。程式碼已在 base、刪除安全;但 VP 側的 spec / QA / iter 歷史會一起消失。執行中的會跳過。",
+      confirmLabel: `刪除 ${n} 個`,
     });
     if (!okay) return;
     try {
-      const r = await api.cleanupMergedWorktrees(project.hash);
-      const cleanedN = r.cleaned.length;
-      const skippedN = r.skipped_not_merged.length;
-      const failedN = r.failed.length;
-      const parts: string[] = [];
-      parts.push(`清除 ${cleanedN} 個 worktree`);
-      if (skippedN > 0) parts.push(`跳過 ${skippedN} 個(未合併)`);
-      if (failedN > 0) parts.push(`失敗 ${failedN} 個`);
+      const r = await api.deleteMergedPipelines(project.hash);
+      const deletedN = r.deleted.length + r.partial.length;
+      const parts: string[] = [`刪除 ${deletedN} 個 pipeline`];
+      if (r.partial.length > 0) parts.push(`${r.partial.length} 個 worktree/branch 殘留待清`);
+      if (r.skipped_active.length > 0) parts.push(`跳過 ${r.skipped_active.length} 個(執行中)`);
+      if (r.failed.length > 0) parts.push(`失敗 ${r.failed.length} 個`);
       const msg = parts.join(",");
-      if (failedN > 0) {
+      if (r.failed.length > 0) {
         notifyError(`⚠ ${msg}`);
       } else {
         notifyInfo(`✓ ${msg}`);
       }
     } catch (e) {
-      notifyError(`清除 worktree 失敗: ${e instanceof Error ? e.message : String(e)}`);
+      notifyError(`刪除已合併 pipeline 失敗: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
   const mergedCount = pipelines.filter((p) => p.state === "merged").length;
   const sectionMenuItems: RailMenuItem[] = [
     {
-      key: "cleanup-all-merged-worktrees",
-      // 「清理」比「清除」語感較不像不可逆,但實際 git worktree remove 仍會動 fs,
-      // 維持 danger 樣式 + confirm dialog;label 保留 worktree 字以利定位實際動作。
-      label: "清理已合併 worktree",
+      key: "delete-all-merged-pipelines",
+      // 全刪語意(worktree + branch + 紀錄),維持 danger 樣式 + confirm dialog。
+      label: "刪除已合併 pipeline",
       icon: <TrashIcon />,
       danger: true,
       // hint 顯示在 menuitem 末段(focus-overflow-item-hint 會 ellipsis),短句不卡版面
       disabledReason: mergedCount === 0 ? "目前無已合併" : undefined,
       onClick: () => {
-        void handleCleanupAllMergedWorktrees();
+        void handleDeleteAllMergedPipelines();
       },
     },
   ];

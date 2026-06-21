@@ -210,9 +210,10 @@ export async function handle(req: Request): Promise<Response> {
     if (rest === "/config" && method === "PUT") return projects.updateConfig(hash, req);
     if (rest === "/runtime" && method === "GET") return projects.getRuntime(hash);
     if (rest === "/audit" && method === "GET") return projects.listProjectAudit(hash, req);
-    if (rest === "/worktrees/cleanup-merged" && method === "POST") return pipelineRoutes.cleanupMergedWorktrees(hash);
     if (rest === "/pipelines" && method === "GET") return pipelineRoutes.listPipelines(hash);
     if (rest === "/pipelines" && method === "POST") return pipelineRoutes.createPipeline(hash, req);
+    // 注意:必須排在下面 /pipelines/:id regex 之前,否則 "delete-merged" 會被當成 pipeline id
+    if (rest === "/pipelines/delete-merged" && method === "POST") return pipelineRoutes.deleteMergedPipelines(hash);
     const pipelineMatch = rest.match(/^\/pipelines\/([a-z0-9_-]+)$/);
     if (pipelineMatch) {
       const id = pipelineMatch[1];

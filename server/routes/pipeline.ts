@@ -5,6 +5,6 @@ export * from './pipeline/exec-state';
 export * from './pipeline/pause-pipeline';
 export * from './pipeline/merge-pipeline';
 export * from './pipeline/pipeline-audit';
-export * from './pipeline/cleanup-merged-worktrees';
+export * from './pipeline/delete-merged-pipelines';
 export * from './pipeline/cleanup-worktree';
 export * from './pipeline/reset-pipeline-route';

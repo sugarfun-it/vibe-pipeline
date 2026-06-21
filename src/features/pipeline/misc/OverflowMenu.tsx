@@ -83,7 +83,7 @@ export function OverflowMenu({
           )}
           {onRevealWorktree && isLocalHost() && (() => {
             // 用 backend 提供的 hasWorktree(existsSync 算出來)當真實 source。
-            // 涵蓋 planning(沒建)、merged 自動 cleanup、外部手動 rm、cleanup-merged bulk 等
+            // 涵蓋 planning(沒建)、merged 自動 cleanup、外部手動 rm、delete-merged bulk 等
             // state 跟 fs 不一致情境。沒帶該欄位(舊 backend / 載入中)就 fallback 用 state heuristic。
             const hasWorktree = typeof pipeline.hasWorktree === "boolean"
               ? pipeline.hasWorktree

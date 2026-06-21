@@ -40,16 +40,21 @@ export function revealWorktree(hash: string, id: string): Promise<{ ok: true; pa
   );
 }
 
-// Bulk:清 project 內所有 state===merged 的 worktree(磁碟,不動 pipeline.json / branch)
-export type CleanupMergedResult = {
-  cleaned: Array<{ pipelineId: string; path: string }>;
-  skipped_not_merged: string[];
+// Bulk:刪 project 內所有 state===merged 的 pipeline,cascade = worktree + branch + pipeline.json
+//   deleted        — pipeline.json 已刪(卡片消失)+ worktree/branch 也清乾淨
+//   partial        — 卡片已消失,但 worktree/branch 有殘留(多半 file lock)
+//   skipped_active — running/queued,跳過
+//   failed         — pipeline.json 刪不掉(卡片還在)
+export type DeleteMergedResult = {
+  deleted: string[];
+  partial: Array<{ pipelineId: string; error: string }>;
+  skipped_active: string[];
   failed: Array<{ pipelineId: string; error: string }>;
 };
 
-export function cleanupMergedWorktrees(hash: string): Promise<CleanupMergedResult> {
-  return call<CleanupMergedResult>(
-    `/api/projects/${hash}/worktrees/cleanup-merged`,
+export function deleteMergedPipelines(hash: string): Promise<DeleteMergedResult> {
+  return call<DeleteMergedResult>(
+    `/api/projects/${hash}/pipelines/delete-merged`,
     { method: "POST" }
   );
 }
