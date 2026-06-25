@@ -65,7 +65,7 @@ Stable id format: `<unit>.<state>`. Drive recipe column points at a recipe in `d
 | `settings.project.field_saving` | settings-popover / project-tab | edit max_parallel value + blur | per-field saving indicator visible briefly; on success `已儲存` chip 3s. |
 | `settings.project.field_invalid` | settings-popover / project-tab | enter negative max_parallel | error border + field-level message; saved chip not fired. |
 | `settings.project.base_picker_open` | settings-popover / project-tab | open base-branch picker | dropdown reachable by keyboard; selection persists; PickerSelect arrow chevron. |
-| `settings.ai_tab` | settings-popover / ai-tab | switch to AI tab | 6 task-class rows (qa/split/runner/executor/critic/merge); model + effort pickers per row; provider switch swaps allowed lists. |
+| `settings.ai_tab` | settings-popover / ai-tab | switch to AI tab | 5 task-class rows (qa/split/executor/critic/merge; primary qa/split, secondary executor/critic/merge); model + effort pickers per row; provider switch swaps allowed lists. |
 | `settings.notifications.permission_default` | settings-popover / notifications-tab | reset Notification permission to default | shows `啟用通知` button; not yet granted hint. |
 | `settings.notifications.permission_granted` | settings-popover / notifications-tab | grant permission | 5 event toggles editable; FCM token field shown. |
 | `settings.notifications.permission_denied` | settings-popover / notifications-tab | block in browser settings | inline guide to unblock; toggles disabled. |

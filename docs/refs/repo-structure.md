@@ -167,7 +167,7 @@ vibe-pipeline/
 └── .runtime/
     ├── qa-drafts/<id>.json    QA 對話 draft (含 session_id)
     ├── notifs.jsonl           backend emit 事件流(append-only)
-    └── logs/<pipelineId>-<ts>.log  runner 主 agent stdout/stderr
+    └── logs/<pipelineId>-<ts>.log  code orchestrator + sub-agent stdout/stderr
 ```
 
 `<target-repo>/.vibe-pipeline/` **不在這個 repo 內**(除非 self-dogfood),是 VP 操作的 target repo 才有。跟 user home 的 `~/.vibe-pipeline/`(global state)同名但位置不同,程式上不撞。

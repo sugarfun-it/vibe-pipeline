@@ -114,7 +114,7 @@ dev clone 從 source 跑 CLI 直接 `bun run cli/vbpl.ts <noun> <verb>`(沒 `bun
 4. **`--json` mode 嚴禁 print 任何非 JSON 字串到 stdout** — 否則 caller `JSON.parse(stdout)` 會炸。Debug 要走 stderr 或丟 env `DEBUG=1`
 5. **跨平台 path** — 用 `node:path` 的 `resolve` / `join`,不要拼 `\\` 或 `/`;Windows / POSIX 都吃
 6. **`pipeline run` 不等 runner 完成** — orchestrator.start spawn 後立刻返回,CLI 跟著 exit;真實狀態看 `pipeline status` / `pipeline log`。**不要加 `await proc.exited`**,會卡住 user terminal 半小時
-7. **對話 AI 改 pipeline state 一律走 vbpl,禁止直接寫 `.vibe-pipeline/pipelines/*.json`** — race guard / savePipeline validation / main agent dispatch 全在 backend,Python / Edit / mv 直接 patch 會 bypass 全部保護造成 state corruption。**詳規則見** [`vibe-pipeline-backend/SKILL.md`](../vibe-pipeline-backend/SKILL.md) §安全 invariants
+7. **對話 AI 改 pipeline state 一律走 vbpl,禁止直接寫 `.vibe-pipeline/pipelines/*.json`** — race guard / savePipeline validation / orchestrator dispatch 全在 backend,Python / Edit / mv 直接 patch 會 bypass 全部保護造成 state corruption。**詳規則見** [`vibe-pipeline-backend/SKILL.md`](../vibe-pipeline-backend/SKILL.md) §安全 invariants
 
 ## 加新 command 的 checklist
 

@@ -12,7 +12,7 @@ Phase 5 後 `src/` 加了 `lib/fcm.ts`(Web Push)+ Settings 4-tab UI(project / ai
 
 ## UI 防禦規則(來自 runner real-run 踩到的雷)
 
-Runner 寫進 pipeline.json 的欄位**不一定符合 type union 字面值**(主 agent 會自由發揮,即使 system prompt 寫死)。FocusColumn / TicketDrawer 渲染前要做 normalize:
+Sub-agent 寫進 pipeline.json 的欄位(經 orchestrator summarize)**不一定符合 type union 字面值**(executor 會自由發揮,即使 system prompt 寫死)。FocusColumn / TicketDrawer 渲染前要做 normalize:
 - `iter.totalElapsed` 可能 undefined → 用 `?? 0`,別直接 `+ tick`(NaN)
 - `iter.current` 可能 0(mid-run) → 顯示用 `Math.max(1, current)`
 - `iter.stage` 可能寫成 "executing" / "reviewing" 等 → regex normalize 成 doer / critic / done(在 IterStages 內)

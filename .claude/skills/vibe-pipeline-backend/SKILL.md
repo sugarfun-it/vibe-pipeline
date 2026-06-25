@@ -68,14 +68,14 @@ description: vibe-pipeline 後端 / 執行層的職責邊界、約定與 invaria
 
 ### Runner(`server/lib/runner/`)
 
-- 主 agent 支援 claude 與 codex(provider 鏈一致化:主 = X → sub 也用 X)
+- **Conductor = backend code orchestrator(`orchestrator/codeRunner.ts`),純 TS state machine,無 LLM 主 agent**(v0.3.0 重構,舊「LLM 主 agent 帶 sub-agent」已拆掉)。orchestrator 自己跑 step/iter/merge 迴圈,直接 spawn executor/critic/merge sub-agent
+- orchestrator 用 TS 做 git add/commit(`commitTicket`,`git commit -F <tmpfile>`)+ pipeline.json mutation;**source code 改動 100% 由 executor/merge sub-agent**
+- sub-agent spawn 走 `claudeAdapter` / `codexAdapter`.spawn({ kind:'subagent', role })(`server/lib/cli/`);每次 spawn 現讀 config(改 model/effort 立即生效)
 - **`--dangerously-skip-permissions` 永遠帶** — 跨 provider sub-agent 必要(codex sub-agent 內部 Bash 在 auto 模式會被擋)
-- 主 agent 工具白名單:Edit/Write 改 pipeline.json + worktree 外 tmp(commit message)+ Bash read-only + git add/commit;**source code 改動 100% 透過 sub-agent 派發**
-- Sub-agent 拆兩個 TaskClass:`executor`(改 code,高 capability)+ `critic`(讀 diff 判 PASS/FAIL,可便宜 model)
-- ticket commit 用 `git commit -F <tmpfile>` 多段 message,不用 `-m "...\n..."` 字面 \n
-- provider-aware dispatch:claude → Task tool;codex → 主 agent 用 `spawn_agent` → `wait_agent` → `close_agent` 三步 atomic in-process 序列(取代舊 Bash `codex exec` subprocess);`codexAdapter.spawnRunner` 自動加 `-c features.multi_agent=true`;工具限制走 sandbox 模式分流(executor / merge = `workspace-write`,critic = `read-only`)
+- Sub-agent TaskClass:`executor`(改 code,高 capability)+ `critic`(讀 diff 判 PASS/FAIL,可便宜 model)+ `merge`
+- sandbox 分流:executor / merge = `workspace-write`,critic = `read-only`;**Windows 改帶 `--dangerously-bypass-approvals-and-sandbox`**(codex sandbox 在 Windows 壞,見 `.claude/rules/cli-codex.md`)
 - **Stop = SIGKILL immediate**:user 按「停止」→ orchestrator SIGKILL child + 標 `state=paused`。**沒有 graceful 路徑、沒有 `stopping` 中介 state**(2026-05-17 簡化,見 root CLAUDE.md §Pause 路徑簡化)
-- **`killProcessTree(pid)` 跨平台**(2026-05-21):Windows `taskkill /T /F /PID <pid>`;POSIX `process.kill(-pid, "SIGKILL")` 殺整 process group(需 `spawnStreaming` default `detached:true` 建 group)+ fallback 殺單 pid。背景:Stop 只殺主 agent → orphan claude / codex children 留下吃 token
+- **`killProcessTree(pid)` 跨平台**(2026-05-21):Windows `taskkill /T /F /PID <pid>`;POSIX `process.kill(-pid, "SIGKILL")` 殺整 process group(需 `spawnStreaming` default `detached:true` 建 group)+ fallback 殺單 pid。背景:Stop 只殺當前 sub-agent → orphan claude / codex children 留下吃 token
 - `recoverStale` server boot 掃 stale `running` → paused;同時修 legacy `stopping` 殘留(舊 schema 升級無痛);watchdog 抓死 PID
 
 ### Merge / Sync 二段式(`pipelineMerge.ts` + `syncJob.ts`)
@@ -178,7 +178,7 @@ dev clone:沒 `~/.vibe-pipeline/current/`,Settings 顯示「複製指令」仍�
 
 ### User config(`server/lib/domain/userConfig.ts`)
 
-- `~/.vibe-pipeline/config.json` per-task-class:`qa / split / runner / executor / critic / merge` → `{ provider, model, effort }`
+- `~/.vibe-pipeline/config.json` per-task-class:`qa / split / executor / critic / merge` → `{ provider, model, effort }`(無 `runner` — v0.3.0 拆掉 LLM 主 agent 後該 class 移除)
 - `coerceConfig` migration:舊 `subAgent` key → `executor`,critic 走 default
 - `getTaskConfig(tc)` 給 spawn 點用;`patchUserConfig()` PUT 白名單 + 三欄獨立驗
 
@@ -196,7 +196,7 @@ dev clone:沒 `~/.vibe-pipeline/current/`,Settings 顯示「複製指令」仍�
 - json 寫入 atomic(tmp + rename),避免 crash 中斷後檔案半段
 - fs 操作 normalize 路徑,防 path traversal
 - `ALLOWED_ORIGINS` CORS 白名單不放 `*`(雷見 root CLAUDE.md 手機遠端段)
-- **pipelines/*.json mutation 一律走 backend(vbpl / API)**,**禁止任何外部 caller(包括對話 AI / Python 腳本 / Edit / Write / mv)直接 fs write**。理由:race guard / savePipeline validation / running 中 ticket 鎖 / main agent dispatch 全在 backend 內;直接 fs 繞過所有保護,造成 state corruption(已踩:reset/swap/race guard bypass 多次)。例外:**只有 backend 本身重啟 recovery 程式碼**可在 backend 內走 `pipelineDir.writePipeline` 直接寫
+- **pipelines/*.json mutation 一律走 backend(vbpl / API)**,**禁止任何外部 caller(包括對話 AI / Python 腳本 / Edit / Write / mv)直接 fs write**。理由:race guard / savePipeline validation / running 中 ticket 鎖 / orchestrator dispatch 全在 backend 內;直接 fs 繞過所有保護,造成 state corruption(已踩:reset/swap/race guard bypass 多次)。例外:**只有 backend 本身重啟 recovery 程式碼**可在 backend 內走 `pipelineDir.writePipeline` 直接寫
   - 對 AI:跑中 pipeline → 一律 `vbpl pipeline stop` + `vbpl ticket update/add/remove` + `vbpl pipeline run`,不准 Python / Edit / mv 直接 patch `.vibe-pipeline/pipelines/*.json`
   - paused pipeline 改動雖無 race risk,**仍走 vbpl** 維持單一 mutation 通道(future MCP scope / audit log 才能 cover)
 
