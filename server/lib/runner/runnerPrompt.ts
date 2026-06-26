@@ -24,6 +24,37 @@ export function buildExecutorPrompt(opts: {
   };
 }
 
+// integration critic:全 ticket done、轉 ready 前跑一次。各 ticket 自己的 critic 只看自己範圍,
+// 跨 ticket 契約(producer/consumer 對不對得上)沒人驗。這道只讀整合後 branch diff 抓那類不一致。
+export function buildIntegrationCriticPrompt(opts: {
+  pipeline: { name?: string; tickets?: Array<{ n?: number; title?: string; goal?: string; mode?: string }> };
+  diff: string;
+  config: TaskModelConfig;
+}): { systemPrompt: string; prompt: string } {
+  const goals = (opts.pipeline.tickets ?? [])
+    .filter((t) => t.mode !== "merge")
+    .map((t) => "#" + t.n + " " + (t.title ?? "") + "\n  goal: " + (t.goal ?? "(未提供)"))
+    .join("\n");
+  return {
+    systemPrompt: [
+      "你是 vibe-pipeline 的 integration critic。所有 ticket 各自已過自己的 acceptance,",
+      "但各自 critic 只看自己範圍,沒人檢查 ticket 之間兜不兜得起來。你只讀整合後 branch diff,不准改檔。",
+      "只看『跨 ticket 一致性』:producer/consumer 的 API 路徑/參數/型別/契約對不對得上、",
+      "前後端送收欄位有沒有漏(如必填參數沒帶)、import/export 名稱對不對、共用型別有沒有對齊。",
+      "不要重驗各 ticket 自己的功能,只抓『單 ticket 看不出、合起來才壞』的不一致。",
+      "回覆第一行只能是 verdict:PASS 或 FAIL。FAIL 時之後用中文列出具體不一致 + 在哪個檔 / 哪兩張 ticket 之間。",
+    ].join("\n"),
+    prompt: [
+      roleHeader("integration-critic", opts.config),
+      "Pipeline: " + (opts.pipeline.name ?? ""),
+      "各 ticket goal:",
+      goals || "(無)",
+      "整合後 branch diff(對 base):",
+      opts.diff || "(無 diff)",
+    ].join("\n\n"),
+  };
+}
+
 export function buildCriticPrompt(opts: {
   ticket: Ticket;
   executorSummary: string;

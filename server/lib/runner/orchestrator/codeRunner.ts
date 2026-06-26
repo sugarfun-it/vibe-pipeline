@@ -4,8 +4,10 @@ import { appendFile, unlink } from "node:fs/promises";
 import { readPipeline, mutatePipeline } from "../../domain/pipeline";
 import { getTaskConfigWithAdapter } from "../../domain/userConfig";
 import { runCapture } from "../../io/childSpawn";
+import { fullDiff } from "../../io/git/worktree";
+import * as notifs from "../../remote/notifs";
 import type { Pipeline, Ticket, TaskClass, TaskModelConfig } from "../../../../shared/types";
-import { buildCriticPrompt, buildExecutorPrompt, buildMergePrompt } from "../runnerPrompt";
+import { buildCriticPrompt, buildExecutorPrompt, buildIntegrationCriticPrompt, buildMergePrompt } from "../runnerPrompt";
 
 type ActiveProcess = (proc: Bun.Subprocess | null) => void | Promise<void>;
 
@@ -59,6 +61,20 @@ export async function runCodeOrchestrator(ctx: Ctx): Promise<CodeRunnerResult> {
       }
       const selected = selectNextTicket(p);
       if (selected.kind === "ready") {
+        const integ = await runIntegrationCritic(ctx, p);
+        if (!integ.pass) {
+          await mutatePipeline(ctx.projectPath, ctx.pipelineId, (cur) => ({ ...cur, state: "paused" }), {
+            source: "code-orchestrator.integration",
+            sourceDetail: "integration critic FAIL: " + integ.feedback.slice(0, 120),
+          });
+          notifs.emit(ctx.projectPath, {
+            type: "pipeline_paused",
+            title: (p.name || ctx.pipelineId) + " 整合檢查未過",
+            sub: integ.feedback.slice(0, 200) || "跨 ticket 契約不一致,詳見 runner log",
+            pipelineId: ctx.pipelineId,
+          });
+          return { exitCode: 0, stdout, stderr };
+        }
         await mutatePipeline(ctx.projectPath, ctx.pipelineId, (cur) => ({ ...cur, state: "ready" }), {
           source: "code-orchestrator",
           sourceDetail: "all tickets done",
@@ -116,6 +132,31 @@ function selectNextTicket(p: Pipeline):
     }
   }
   return { kind: "ready" };
+}
+
+// integration critic:全 ticket done、轉 ready 前,對整合後 branch 全 diff 跑一次,抓跨 ticket 契約不一致
+// (各 ticket 自己的 critic 只看自己範圍,producer/consumer 對不上會雙雙 PASS、跑起來才爆)。
+// guard:< 2 個非 merge ticket(無跨 ticket 問題)或沒 diff(已 merge / 無改動)→ 直接 pass。
+// fail-open:critic infra 出錯不卡 ready(漏一次檢查 < 卡死整條)。
+async function runIntegrationCritic(ctx: Ctx, p: Pipeline): Promise<{ pass: boolean; feedback: string }> {
+  try {
+    const realTickets = (p.tickets ?? []).filter((t) => t.mode !== "merge");
+    if (realTickets.length < 2) return { pass: true, feedback: "" };
+    const baseBranch = p.baseBranch || "main";
+    const diff = await fullDiff(ctx.projectPath, ctx.pipelineId, baseBranch);
+    if (!diff || !diff.raw.trim()) return { pass: true, feedback: "" };
+    const cfg = await getAgentConfig("critic");
+    const LIMIT = 40000;
+    const raw = diff.raw.length <= LIMIT ? diff.raw : diff.raw.slice(0, LIMIT) + "\n[... diff truncated ...]";
+    const prompt = buildIntegrationCriticPrompt({ pipeline: p, diff: raw, config: cfg });
+    const agent = await runAgent(ctx, "critic", cfg, prompt.systemPrompt, prompt.prompt);
+    return parseVerdict(agent.text) === "PASS"
+      ? { pass: true, feedback: "" }
+      : { pass: false, feedback: agent.text.slice(0, 1500) };
+  } catch (e) {
+    await log(ctx, "integration critic skipped (error): " + String(e) + "\n");
+    return { pass: true, feedback: "" }; // fail-open
+  }
 }
 
 async function runTicket(ctx: Ctx, ticketId: string): Promise<{ stdout: string; stderr: string }> {
