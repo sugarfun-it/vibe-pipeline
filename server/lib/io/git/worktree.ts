@@ -6,6 +6,12 @@ import { runCapture } from "../childSpawn";
 import type { DiffStat, DiffFile, FullDiff, CommitRef } from "../../../../shared/types";
 export type { DiffStat, DiffFile, FullDiff };
 
+// env-mirror backstop:這些大的可再生目錄就算 ignore 沒收斂乾淨,也絕不搬進 worktree
+// (主防線是「跳 ignored 目錄」,這是漏網單檔的第二層 segment 比對)。
+const HEAVY_DIR = new Set([
+  "node_modules", "dist", "build", ".next", ".nuxt", ".turbo", ".cache", "coverage", ".git",
+]);
+
 function worktreeRoot(): string {
   return join(vibeHome(), ".vibe-pipeline", "worktrees");
 }
@@ -88,7 +94,10 @@ async function copyWorktreeIncludes(projectPath: string, wt: string): Promise<vo
     const ig = await spawnGit(["ls-files", "-o", "-i", "--exclude-standard", "--directory"], projectPath);
     if (ig.ok) {
       for (const rel of ig.out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)) {
-        if (rel.endsWith("/")) continue; // ignored 目錄 → 跳
+        if (rel.endsWith("/")) continue; // ignored 目錄 → 跳(--directory 對整個 ignored 目錄收斂成 dir/)
+        // backstop:萬一 node_modules 沒被乾淨 ignore(內有 tracked 檔 + 散落 ignored 單檔),
+        // 漏網的單檔不帶尾斜線會穿過上面那條 → 用 segment 比對再擋一層,絕不把這類大目錄的檔搬進 worktree。
+        if (rel.split(/[\\/]/).some((seg) => HEAVY_DIR.has(seg))) continue;
         const dst = join(wt, rel);
         if (existsSync(dst)) continue;
         mkdirSync(dirname(dst), { recursive: true });
