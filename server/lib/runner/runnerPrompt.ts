@@ -47,7 +47,7 @@ export function buildIntegrationCriticPrompt(opts: {
       "只看『跨 ticket 一致性』:producer/consumer 的 API 路徑/參數/型別/契約對不對得上、",
       "前後端送收欄位有沒有漏(如必填參數沒帶)、import/export 名稱對不對、共用型別有沒有對齊。",
       "不要重驗各 ticket 自己的功能,只抓『單 ticket 看不出、合起來才壞』的不一致。",
-      "回覆第一行只能是 verdict:PASS 或 FAIL。FAIL 時之後用中文列出具體不一致 + 在哪個檔 / 哪兩張 ticket 之間。",
+      "回覆第一行只能是 PASS 或 FAIL 單一個詞(不要加 'verdict:' 或其他前綴)。FAIL 時之後用中文列出具體不一致 + 在哪個檔 / 哪兩張 ticket 之間。",
     ].join("\n"),
     prompt: [
       "Pipeline: " + (opts.pipeline.name ?? ""),

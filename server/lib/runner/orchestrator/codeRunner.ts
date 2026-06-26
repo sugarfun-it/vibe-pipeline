@@ -608,10 +608,15 @@ function normalizeStage(stage: unknown): "doer" | "critic" | "done" {
 }
 
 function parseVerdict(text: string): Verdict {
-  const first = text.trim().split(/\r?\n/, 1)[0]?.trim().toUpperCase();
+  // 容忍 "verdict: PASS" / "Verdict：PASS" 前綴(AI 常照 prompt 字面回 "verdict:PASS",
+  // 沒 strip 會被當 FAIL → 假 pause,踩過)。
+  const first = (text.trim().split(/\r?\n/, 1)[0] ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/^VERDICT\s*[:：]\s*/, "");
   if (first === "PASS" || first === "FAIL" || first === "PARTIAL") return first;
-  if (first?.startsWith("PASS")) return "PASS";
-  if (first?.startsWith("PARTIAL")) return "PARTIAL";
+  if (first.startsWith("PASS")) return "PASS";
+  if (first.startsWith("PARTIAL")) return "PARTIAL";
   return "FAIL";
 }
 
