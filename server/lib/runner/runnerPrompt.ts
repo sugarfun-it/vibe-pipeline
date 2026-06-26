@@ -18,6 +18,9 @@ export function buildExecutorPrompt(opts: {
       "完成後用中文簡短回報實際改了什麼、跑了哪些驗證、還有什麼風險。",
     ].join("\n"),
     prompt: [
+      // /goal:claude/codex 內建 command,設「沒達成前別停」的 session stop hook,治 executor 早退/半途交差。
+      // 用 ticket goal 當條件;goal 摺成單行(slash command 吃整行)。沒這 command 的 provider 退化成無害文字。
+      opts.ticket.goal ? "/goal " + opts.ticket.goal.replace(/\s+/g, " ").trim() : "",
       ticketBlock(opts.ticket),
       opts.round ? "目前是第 " + opts.round + " 輪。" : "",
       opts.feedback ? "上一輪 critic feedback:\n" + opts.feedback : "",
