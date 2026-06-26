@@ -165,7 +165,10 @@ async function ensureProduced(ctx: Ctx, ticketId: string, endedAt: number): Prom
   const r = await runCapture(["git", "-C", ctx.worktreePath, "status", "--porcelain"]);
   if (r.ok && r.out.trim().length > 0) return true;
   const reason =
-    "executor 跑完 worktree 無任何改動 — 可能去了 worktree 外動手(worktree 缺檔如 .env,補 .worktreeinclude)或真的沒做。已暫停。";
+    "executor 跑完 worktree 無可提交改動,ticket 沒有交付進 branch。三種可能:" +
+    "(1) 產出落在 gitignored 路徑(如生成的圖)→ 不會進 branch,把該資料夾移出該 repo 的 .gitignore;" +
+    "(2) executor 去了 worktree 外動手(worktree 缺檔如 .env,補 .worktreeinclude);" +
+    "(3) 真的沒做。已暫停。";
   await updateTicket(ctx, ticketId, (t) => ({ ...t, status: "failed", endedAt, reason }), "tripwire: worktree empty");
   await mutatePipeline(ctx.projectPath, ctx.pipelineId, (p) => ({ ...p, state: "paused" }), {
     source: "code-orchestrator.tripwire",
