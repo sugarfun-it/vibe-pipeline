@@ -149,9 +149,29 @@ async function runStep(ctx: Ctx, ticket: Ticket): Promise<{ stdout: string; stde
     });
     return { stdout: agent.stdout, stderr: agent.stderr };
   }
+  if (!(await ensureProduced(ctx, ticket.id, endedAt))) {
+    return { stdout: agent.stdout, stderr: agent.stderr };
+  }
   await updateTicket(ctx, ticket.id, (t) => ({ ...t, status: "done", endedAt }), "step done");
   await commitTicket(ctx, ticket.id, agent.text);
   return { stdout: agent.stdout, stderr: agent.stderr };
+}
+
+// 絆線:executor ticket 標 done 前,worktree 必須有可 commit 的改動。worktree clean =
+// executor 沒在 worktree 留東西(逃去 worktree 外動手 / 真的沒做)→ 不准靜默 done,
+// fail + pause 找人。env-mirror 已讓 worktree 帶 .env 等降低逃跑;這是兜底,避免再悄悄丟工作。
+// ponytail: 合法 no-op executor ticket 也會在這 pause,但那種幾乎不存在、值得人看一眼。
+async function ensureProduced(ctx: Ctx, ticketId: string, endedAt: number): Promise<boolean> {
+  const r = await runCapture(["git", "-C", ctx.worktreePath, "status", "--porcelain"]);
+  if (r.ok && r.out.trim().length > 0) return true;
+  const reason =
+    "executor 跑完 worktree 無任何改動 — 可能去了 worktree 外動手(worktree 缺檔如 .env,補 .worktreeinclude)或真的沒做。已暫停。";
+  await updateTicket(ctx, ticketId, (t) => ({ ...t, status: "failed", endedAt, reason }), "tripwire: worktree empty");
+  await mutatePipeline(ctx.projectPath, ctx.pipelineId, (p) => ({ ...p, state: "paused" }), {
+    source: "code-orchestrator.tripwire",
+    sourceDetail: reason,
+  });
+  return false;
 }
 
 async function runIter(ctx: Ctx, initialTicket: Ticket): Promise<{ stdout: string; stderr: string }> {
@@ -245,6 +265,11 @@ async function runIter(ctx: Ctx, initialTicket: Ticket): Promise<{ stdout: strin
     }, "iter round done");
 
     if (finalVerdict === "PASS") {
+      // 絆線:critic PASS 也要 worktree 真的有產出,否則 = critic 對著 worktree 外/summary 放行
+      // (踩過:t1 critic PASS、done,但 branch 上沒那份交付)。clean → fail + pause,不靜默 done。
+      if (!(await ensureProduced(ctx, ticket.id, endedAt))) {
+        return { stdout, stderr };
+      }
       await updateTicket(ctx, ticket.id, (t) => ({ ...t, status: "done", endedAt }), "iter done");
       await commitTicket(ctx, ticket.id, executorSummary);
       return { stdout, stderr };

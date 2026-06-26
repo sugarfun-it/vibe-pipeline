@@ -78,6 +78,27 @@ export async function ensure(
 // (tracked 檔被 git check-ignore 過濾掉,不會重複複製)。
 // best-effort:複製失敗不 throw,worktree 本身已建好,copy 只是加分。
 async function copyWorktreeIncludes(projectPath: string, wt: string): Promise<void> {
+  // base 預設:鏡像所有 gitignored 檔(.env / 憑證 / 本地 config),但**跳過 ignored 目錄**
+  // → node_modules / dist / .next / build 等大目錄自動不帶。讓 worktree 是可跑驗證的環境,
+  // sub-agent 不必逃去 main repo 跑 DB 測試(踩過:executor 改在 main、工作沒進 branch、靜默丟)。
+  // `ls-files -o -i --exclude-standard --directory` 把整個被 ignore 的目錄收斂成單一 "dir/" entry,
+  // 只 copy 檔、跳目錄。不靠 user 填 .worktreeinclude(那份常留範本全註解狀態)。
+  // ponytail: 要帶某個 ignored *目錄*(node_modules 等)→ 寫進 .worktreeinclude,下面 glob 那段處理。
+  try {
+    const ig = await spawnGit(["ls-files", "-o", "-i", "--exclude-standard", "--directory"], projectPath);
+    if (ig.ok) {
+      for (const rel of ig.out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)) {
+        if (rel.endsWith("/")) continue; // ignored 目錄 → 跳
+        const dst = join(wt, rel);
+        if (existsSync(dst)) continue;
+        mkdirSync(dirname(dst), { recursive: true });
+        await Bun.write(dst, Bun.file(join(projectPath, rel)));
+      }
+    }
+  } catch {
+    // best-effort
+  }
+  // .worktreeinclude 額外帶(base 沒涵蓋的:ignored 目錄內容、或自訂 pattern)
   try {
     const wtiPath = join(projectPath, ".worktreeinclude");
     if (!existsSync(wtiPath)) return;
